@@ -420,25 +420,33 @@ export const api = {
         const itemBytes = reader.readBytes();
         const dReader = new ProtoReader(itemBytes);
         const dev: Partial<Device> = { is_paired: true, is_online: false };
+        let orientationEnum = 1;
+        let screenW = 1920;
+        let screenH = 1080;
+
         while (dReader.hasMore()) {
           const dTag = dReader.readTag();
           if (!dTag) break;
           if (dTag.fieldNumber === 1) dev.id = dReader.readString();
           else if (dTag.fieldNumber === 2) dev.name = dReader.readString();
-          else if (dTag.fieldNumber === 4) dev.pairing_code = dReader.readString();
-          else if (dTag.fieldNumber === 5) dev.is_online = dReader.readBool();
-          else if (dTag.fieldNumber === 6) dev.ip_address = dReader.readString();
-          else if (dTag.fieldNumber === 7) dev.resolution = dReader.readString();
-          else if (dTag.fieldNumber === 8) dev.orientation = dReader.readString();
-          else if (dTag.fieldNumber === 9) dev.storage_free_bytes = dReader.readInt64();
-          else if (dTag.fieldNumber === 10) dev.memory_used_percent = dReader.readInt32();
-          else if (dTag.fieldNumber === 11) dev.last_heartbeat_at = dReader.readString();
-          else if (dTag.fieldNumber === 12) dev.current_layout_id = dReader.readString();
-          else if (dTag.fieldNumber === 13) dev.canary_group_id = dReader.readString();
-          else if (dTag.fieldNumber === 14) dev.created_at = dReader.readString();
-          else if (dTag.fieldNumber === 15) dev.updated_at = dReader.readString();
+          else if (dTag.fieldNumber === 3) dev.pairing_code = dReader.readString();
+          else if (dTag.fieldNumber === 4) dev.is_paired = dReader.readBool();
+          else if (dTag.fieldNumber === 6) screenW = dReader.readInt32();
+          else if (dTag.fieldNumber === 7) screenH = dReader.readInt32();
+          else if (dTag.fieldNumber === 8) orientationEnum = dReader.readVarint();
+          else if (dTag.fieldNumber === 9) dev.ip_address = dReader.readString();
+          else if (dTag.fieldNumber === 14) dev.storage_free_bytes = dReader.readInt64();
+          else if (dTag.fieldNumber === 15) dev.current_layout_id = dReader.readString();
+          else if (dTag.fieldNumber === 17) dev.canary_group_id = dReader.readString();
+          else if (dTag.fieldNumber === 18) dev.is_online = dReader.readBool();
+          else if (dTag.fieldNumber === 19) dev.last_heartbeat_at = dReader.readString();
+          else if (dTag.fieldNumber === 20) dev.created_at = dReader.readString();
+          else if (dTag.fieldNumber === 21) dev.updated_at = dReader.readString();
           else dReader.skip(dTag.wireType);
         }
+
+        dev.resolution = `${screenW || 1920}x${screenH || 1080}`;
+        dev.orientation = orientationEnum === 2 ? 'portrait' : 'landscape';
         if (dev.id) devices.push(dev as Device);
       } else if (tag.fieldNumber === 2 && tag.wireType === 2) {
         const pagBytes = reader.readBytes();
@@ -464,26 +472,33 @@ export const api = {
     const resBytes = await invokeGrpcMethod('signage.hardware.v1.device.DeviceService', 'GetDevice', writer);
     const reader = new ProtoReader(resBytes);
     const dev: Partial<Device> = { is_paired: true, is_online: false };
+    let orientationEnum = 1;
+    let screenW = 1920;
+    let screenH = 1080;
 
     while (reader.hasMore()) {
       const tag = reader.readTag();
       if (!tag) break;
       if (tag.fieldNumber === 1) dev.id = reader.readString();
       else if (tag.fieldNumber === 2) dev.name = reader.readString();
-      else if (tag.fieldNumber === 4) dev.pairing_code = reader.readString();
-      else if (tag.fieldNumber === 5) dev.is_online = reader.readBool();
-      else if (tag.fieldNumber === 6) dev.ip_address = reader.readString();
-      else if (tag.fieldNumber === 7) dev.resolution = reader.readString();
-      else if (tag.fieldNumber === 8) dev.orientation = reader.readString();
-      else if (tag.fieldNumber === 9) dev.storage_free_bytes = reader.readInt64();
-      else if (tag.fieldNumber === 10) dev.memory_used_percent = reader.readInt32();
-      else if (tag.fieldNumber === 11) dev.last_heartbeat_at = reader.readString();
-      else if (tag.fieldNumber === 12) dev.current_layout_id = reader.readString();
-      else if (tag.fieldNumber === 13) dev.canary_group_id = reader.readString();
-      else if (tag.fieldNumber === 14) dev.created_at = reader.readString();
-      else if (tag.fieldNumber === 15) dev.updated_at = reader.readString();
+      else if (tag.fieldNumber === 3) dev.pairing_code = reader.readString();
+      else if (tag.fieldNumber === 4) dev.is_paired = reader.readBool();
+      else if (tag.fieldNumber === 6) screenW = reader.readInt32();
+      else if (tag.fieldNumber === 7) screenH = reader.readInt32();
+      else if (tag.fieldNumber === 8) orientationEnum = reader.readVarint();
+      else if (tag.fieldNumber === 9) dev.ip_address = reader.readString();
+      else if (tag.fieldNumber === 14) dev.storage_free_bytes = reader.readInt64();
+      else if (tag.fieldNumber === 15) dev.current_layout_id = reader.readString();
+      else if (tag.fieldNumber === 17) dev.canary_group_id = reader.readString();
+      else if (tag.fieldNumber === 18) dev.is_online = reader.readBool();
+      else if (tag.fieldNumber === 19) dev.last_heartbeat_at = reader.readString();
+      else if (tag.fieldNumber === 20) dev.created_at = reader.readString();
+      else if (tag.fieldNumber === 21) dev.updated_at = reader.readString();
       else reader.skip(tag.wireType);
     }
+
+    dev.resolution = `${screenW || 1920}x${screenH || 1080}`;
+    dev.orientation = orientationEnum === 2 ? 'portrait' : 'landscape';
 
     if (!dev.id) throw new Error(`Perangkat ID ${id} tidak ditemukan`);
     return dev as Device;
