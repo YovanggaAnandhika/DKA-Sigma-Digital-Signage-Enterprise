@@ -30,96 +30,259 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-[#000000] text-slate-100">
-      {/* Background Glow */}
-      <div className="fixed inset-0 pointer-events-none flex items-center justify-center">
-        <div className="w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px]" />
-      </div>
+    <div
+      style={{
+        minHeight: '100vh',
+        width: '100vw',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#000000',
+        padding: '24px',
+        position: 'relative',
+        overflow: 'hidden',
+        color: 'var(--text-primary)',
+      }}
+    >
+      {/* Background Radial Glow */}
+      <div
+        style={{
+          position: 'absolute',
+          width: '600px',
+          height: '600px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, rgba(0, 0, 0, 0) 70%)',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
 
-      <div className="w-full max-w-md card-elevated p-8 relative z-10 space-y-6">
-        {/* Brand Logo & Headline */}
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30">
-            <Sparkles className="w-6 h-6" />
+      {/* Main Elevated Card Panel */}
+      <div
+        className="card-elevated"
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          width: '100%',
+          maxWidth: '440px',
+          padding: '40px 36px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '24px',
+          backgroundColor: '#0a0a0a',
+          border: '1px solid #222222',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75)',
+        }}
+      >
+        {/* Brand Header */}
+        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div
+            style={{
+              width: '54px',
+              height: '54px',
+              borderRadius: '14px',
+              backgroundColor: '#2563eb',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px',
+              boxShadow: '0 8px 24px rgba(37, 99, 235, 0.35)',
+            }}
+          >
+            <Sparkles size={28} />
           </div>
 
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">
-              OmniSign Enterprise
-            </h1>
-            <p className="text-xs text-muted-foreground mt-1">
-              Masuk ke panel kontrol signage via Rust Tonic gRPC & Envoy
-            </p>
-          </div>
+          <h1
+            style={{
+              fontSize: '1.625rem',
+              fontWeight: 800,
+              letterSpacing: '-0.025em',
+              color: '#ffffff',
+              lineHeight: 1.2,
+            }}
+          >
+            OmniSign Enterprise
+          </h1>
+          <p
+            style={{
+              fontSize: '0.8125rem',
+              color: '#a1a1aa',
+              marginTop: '8px',
+              lineHeight: 1.4,
+            }}
+          >
+            Masuk ke panel kontrol signage via Rust Tonic gRPC & Envoy
+          </p>
         </div>
 
         {/* Error Alert */}
         {errorMsg && (
-          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-            <div className="text-xs text-rose-200">
-              {errorMsg}
-            </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px',
+              padding: '12px 14px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(244, 63, 94, 0.1)',
+              border: '1px solid rgba(244, 63, 94, 0.3)',
+              color: '#fda4af',
+              fontSize: '0.8125rem',
+              lineHeight: 1.4,
+            }}
+          >
+            <AlertCircle size={18} style={{ color: '#f43f5e', flexShrink: 0, marginTop: '1px' }} />
+            <span>{errorMsg}</span>
           </div>
         )}
 
         {/* Login Form */}
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-white/80 flex items-center gap-1.5">
-              <Mail className="w-3.5 h-3.5 text-indigo-400" /> Email Administrator
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label
+              style={{
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                color: '#e4e4e7',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <Mail size={15} style={{ color: '#60a5fa' }} />
+              <span>Email Administrator</span>
             </label>
             <input
               type="email"
               required
-              className="w-full px-3.5 py-2.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white placeholder-white/30 focus:outline-none focus:border-indigo-500 transition-colors"
+              className="form-input"
+              style={{
+                padding: '10px 14px',
+                fontSize: '0.875rem',
+                backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                border: '1px solid #27272a',
+                borderRadius: '8px',
+                color: '#ffffff',
+              }}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@omnisign.io"
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-white/80 flex items-center gap-1.5">
-              <Lock className="w-3.5 h-3.5 text-indigo-400" /> Password
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label
+              style={{
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                color: '#e4e4e7',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <Lock size={15} style={{ color: '#60a5fa' }} />
+              <span>Password</span>
             </label>
             <input
               type="password"
               required
-              className="w-full px-3.5 py-2.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white placeholder-white/30 focus:outline-none focus:border-indigo-500 transition-colors"
+              className="form-input"
+              style={{
+                padding: '10px 14px',
+                fontSize: '0.875rem',
+                backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                border: '1px solid #27272a',
+                borderRadius: '8px',
+                color: '#ffffff',
+              }}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
             />
           </div>
 
-          <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" defaultChecked className="rounded accent-indigo-600 bg-white/10 border-white/20" />
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '0.8125rem',
+              color: '#a1a1aa',
+              paddingTop: '2px',
+            }}
+          >
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                defaultChecked
+                style={{ accentColor: '#2563eb', width: '15px', height: '15px', cursor: 'pointer' }}
+              />
               <span>Ingat sesi ini</span>
             </label>
-            <span className="text-[11px] font-mono text-indigo-400/80">Argon2id + JWT</span>
+            <span
+              style={{
+                fontFamily: 'monospace',
+                fontSize: '0.75rem',
+                color: '#60a5fa',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                border: '1px solid rgba(59, 130, 246, 0.2)',
+              }}
+            >
+              Argon2id + JWT
+            </span>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 font-semibold text-xs text-white shadow-lg shadow-indigo-600/20 transition-all disabled:opacity-50 mt-2"
+            className="btn btn-primary"
+            style={{
+              width: '100%',
+              padding: '12px',
+              fontSize: '0.875rem',
+              fontWeight: 700,
+              marginTop: '6px',
+              borderRadius: '8px',
+              backgroundColor: '#2563eb',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+            }}
           >
             {loading ? (
               <span>Menghubungkan ke gRPC...</span>
             ) : (
               <>
                 <span>Masuk ke Dashboard</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight size={16} />
               </>
             )}
           </button>
         </form>
 
-        {/* Security & System Info Footnote */}
-        <div className="pt-4 border-t border-white/5 flex items-center justify-center gap-2 text-[11px] text-muted-foreground">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+        {/* Footnote */}
+        <div
+          style={{
+            paddingTop: '18px',
+            borderTop: '1px solid #222222',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            fontSize: '0.75rem',
+            color: '#71717a',
+          }}
+        >
+          <ShieldCheck size={16} style={{ color: '#10b981' }} />
           <span>Multi-table RBAC • Envoy Proxy & TLS Active</span>
         </div>
       </div>
