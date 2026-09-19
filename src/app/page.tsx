@@ -2,7 +2,9 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { api, Device, Layout, MediaItem, Playlist } from '../lib/api';
+import { api } from '@/lib/api';
+import type { Device } from '@/lib/api/hardware';
+import type { Layout, MediaItem, Playlist } from '@/lib/api/studio';
 import { TimelineChart } from '../components/charts/TimelineChart';
 import { InsightCard, InsightItem } from '../components/InsightCard';
 import { Tv, Palette, ListMusic, FolderOpen, RefreshCw, Radio, Layers, CheckCircle2 } from 'lucide-react';
@@ -98,230 +100,338 @@ export default function DashboardPage() {
             <span>Segarkan Data</span>
           </button>
           <Link href="/displays/create" className="btn btn-primary">
-            <span>+ Daftarkan Display</span>
+            <Tv size={16} />
+            <span>Tambah Layar Baru</span>
           </Link>
         </div>
       </div>
 
-      {/* Smart Diagnostics Banner */}
+      {/* DKA RADIUS Style Diagnostics / Smart Insight Banner */}
       <InsightCard insights={insights} />
 
-      {/* KPI Stats Grid matching RADIUS cards */}
+      {/* KPI Cards Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-        {/* Active Displays */}
+        {/* Total Displays */}
         <div className="card-elevated" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Layar Player Aktif</span>
+            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              Total Layar Terdaftar
+            </span>
             <div
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                backgroundColor: 'rgba(37, 99, 235, 0.12)',
+                color: 'var(--primary-400)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: 'var(--accent-emerald)',
               }}
             >
-              <Radio size={16} className="animate-pulse" />
+              <Tv size={18} />
             </div>
           </div>
-          <div style={{ fontSize: '1.875rem', fontWeight: 800, marginTop: '10px', color: 'var(--text-primary)' }}>
-            {onlineDevices} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>/ {totalDevices} Unit</span>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '12px' }}>
+            {totalDevices}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-            <span style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>Terkoneksi Bi-Directional</span> via Stream gRPC
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', fontSize: '0.75rem' }}>
+            <span style={{ color: 'var(--accent-emerald)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--accent-emerald)' }} />
+              {onlineDevices} Online
+            </span>
+            <span style={{ color: 'var(--text-muted)' }}>•</span>
+            <span style={{ color: 'var(--text-muted)' }}>{totalDevices - onlineDevices} Offline</span>
           </div>
         </div>
 
-        {/* Layouts */}
+        {/* Total Layouts */}
         <div className="card-elevated" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Template Layout</span>
+            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              Layout Multi-Zona
+            </span>
             <div
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                backgroundColor: 'rgba(37, 99, 235, 0.12)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                color: 'var(--accent-emerald)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: 'var(--primary-400)',
               }}
             >
-              <Palette size={16} />
+              <Palette size={18} />
             </div>
           </div>
-          <div style={{ fontSize: '1.875rem', fontWeight: 800, marginTop: '10px', color: 'var(--text-primary)' }}>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '12px' }}>
             {layouts.length}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-            Canvas Multi-Zona siap dialokasikan ke layar
+          <div style={{ marginTop: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            Tata letak kanvas siap pakai
           </div>
         </div>
 
         {/* Playlists */}
         <div className="card-elevated" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Daftar Putar (Playlist)</span>
+            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              Daftar Putar Aktif
+            </span>
             <div
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
                 backgroundColor: 'rgba(245, 158, 11, 0.12)',
-                border: '1px solid rgba(245, 158, 11, 0.3)',
+                color: 'var(--accent-amber)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: 'var(--accent-amber)',
               }}
             >
-              <ListMusic size={16} />
+              <ListMusic size={18} />
             </div>
           </div>
-          <div style={{ fontSize: '1.875rem', fontWeight: 800, marginTop: '10px', color: 'var(--text-primary)' }}>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '12px' }}>
             {playlists.length}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-            Rotasi konten looping per zona layar
+          <div style={{ marginTop: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            Urutan media siaran terjadwal
           </div>
         </div>
 
-        {/* Media Assets */}
+        {/* Media Library */}
         <div className="card-elevated" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Pustaka Media</span>
+            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              Pustaka Media
+            </span>
             <div
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                backgroundColor: 'rgba(6, 182, 212, 0.12)',
-                border: '1px solid rgba(6, 182, 212, 0.3)',
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                backgroundColor: 'rgba(168, 85, 247, 0.12)',
+                color: '#c084fc',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: 'var(--accent-cyan)',
               }}
             >
-              <FolderOpen size={16} />
+              <FolderOpen size={18} />
             </div>
           </div>
-          <div style={{ fontSize: '1.875rem', fontWeight: 800, marginTop: '10px', color: 'var(--text-primary)' }}>
-            {mediaItems.length} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>Aset</span>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '12px' }}>
+            {mediaItems.length}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-            Diverifikasi dengan checksum SHA-256 riil
+          <div style={{ marginTop: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            Video MP4, banner gambar, web
           </div>
         </div>
       </div>
 
-      {/* Timeline Chart matching Image 1 */}
+      {/* Activity Timeline Chart (RADIUS Graph) */}
       <TimelineChart
-        title="Tren Aktivitas Pemutaran & Heartbeat Player (24 Jam Terakhir)"
-        description="Pantauan sinyal telemetri dan perputaran media player berdasarkan waktu"
+        title="Aktivitas Heartbeat & Penayangan Layar (24 Jam)"
+        description="Visualisasi beban lalu lintas event telemetri gRPC dari seluruh Android display player"
         data={timelineData}
-        primaryColor="#2563eb"
-        primaryLegend="Layar Aktif Memutar"
       />
 
-      {/* Audit Log Table matching Image 1 */}
-      <div className="card-elevated" style={{ overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Audit Log Aktivitas Display Signage (Terbaru)
-            </h3>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Catatan detail komunikasi telemetri dan status pairing dari player ke backend gRPC
-            </p>
+      {/* Bottom Section: Fleet Status Table & Quick Shortcuts */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+        {/* Displays Fleet List Table */}
+        <div className="card-elevated" style={{ padding: '20px', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Tv size={18} style={{ color: 'var(--primary-400)' }} />
+              <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Status Layar Retail Terkini
+              </h3>
+            </div>
+            <Link href="/displays" style={{ fontSize: '0.75rem', color: 'var(--primary-400)', fontWeight: 600 }}>
+              Lihat Semua →
+            </Link>
           </div>
-          <button onClick={loadData} className="btn btn-outline" style={{ padding: '6px 10px', fontSize: '0.75rem' }}>
-            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
-          </button>
-        </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Waktu</th>
-                <th>Nama Perangkat / Player</th>
-                <th>Kode Pairing</th>
-                <th>Status Telemetri</th>
-                <th>Resolusi & Arah</th>
-                <th>Alamat IP</th>
-                <th style={{ textAlign: 'right' }}>Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {devices.length === 0 ? (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="data-table">
+              <thead>
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                    Belum ada perangkat display terdaftar. Silakan klik &quot;+ Daftarkan Display&quot;.
-                  </td>
+                  <th>Nama Display</th>
+                  <th>Kode Pairing</th>
+                  <th>Status</th>
+                  <th>Alamat IP</th>
                 </tr>
-              ) : (
-                devices.map((d) => (
-                  <tr key={d.id}>
-                    <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>
-                      {d.last_heartbeat_at ? new Date(d.last_heartbeat_at).toLocaleTimeString('id-ID') : 'Baru saja'}
-                    </td>
-                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                      <Link href={`/displays/${d.id}`} style={{ textDecoration: 'underline' }}>
-                        {d.name}
-                      </Link>
-                    </td>
-                    <td style={{ fontFamily: 'monospace' }}>
-                      <span
-                        style={{
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          backgroundColor: 'var(--bg-surface-elevated)',
-                          border: '1px solid var(--border-subtle)',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                        }}
-                      >
-                        {d.pairing_code}
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        style={{
-                          padding: '2px 8px',
-                          borderRadius: '9999px',
-                          fontSize: '0.6875rem',
-                          fontWeight: 700,
-                          backgroundColor: d.is_online ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
-                          color: d.is_online ? 'var(--accent-emerald)' : 'var(--accent-rose)',
-                          border: d.is_online ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
-                        }}
-                      >
-                        {d.is_online ? 'ONLINE' : 'OFFLINE'}
-                      </span>
-                    </td>
-                    <td>
-                      {d.resolution} ({d.orientation})
-                    </td>
-                    <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>
-                      {d.ip_address || '127.0.0.1'}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <Link href={`/displays/${d.id}`} className="btn btn-outline" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>
-                        Detail →
-                      </Link>
+              </thead>
+              <tbody>
+                {devices.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
+                      {loading ? 'Memuat data dari gRPC backend...' : 'Belum ada display player terdaftar.'}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  devices.slice(0, 5).map((d) => (
+                    <tr key={d.id}>
+                      <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                        <Link href={`/displays/${d.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                          {d.name}
+                        </Link>
+                      </td>
+                      <td style={{ fontFamily: 'monospace' }}>
+                        <span
+                          style={{
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            backgroundColor: 'var(--bg-surface-elevated)',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                          }}
+                        >
+                          {d.pairing_code}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            padding: '2px 8px',
+                            borderRadius: '9999px',
+                            fontSize: '0.6875rem',
+                            fontWeight: 700,
+                            backgroundColor: d.is_online ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
+                            color: d.is_online ? 'var(--accent-emerald)' : 'var(--accent-rose)',
+                            border: d.is_online ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
+                          }}
+                        >
+                          {d.is_online ? 'ONLINE' : 'OFFLINE'}
+                        </span>
+                      </td>
+                      <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                        {d.ip_address || '127.0.0.1'}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Quick Operations & gRPC Service Overview */}
+        <div className="card-elevated" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Radio size={18} style={{ color: 'var(--accent-emerald)' }} />
+            <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Layanan Streaming & Telemetri
+            </h3>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div
+              style={{
+                padding: '12px 14px',
+                borderRadius: '8px',
+                backgroundColor: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Envoy gRPC-Web Ingress
+                </span>
+                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                  Port 8080 • HTTP/1.1 & HTTP/2 Bridging
+                </span>
+              </div>
+              <span
+                style={{
+                  fontSize: '0.6875rem',
+                  fontWeight: 700,
+                  color: 'var(--accent-emerald)',
+                  backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                  padding: '3px 8px',
+                  borderRadius: '4px',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                }}
+              >
+                TERHUBUNG
+              </span>
+            </div>
+
+            <div
+              style={{
+                padding: '12px 14px',
+                borderRadius: '8px',
+                backgroundColor: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Rust Tonic gRPC Service
+                </span>
+                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                  Port 50051 • Hardware, Studio, IAM Modules
+                </span>
+              </div>
+              <span
+                style={{
+                  fontSize: '0.6875rem',
+                  fontWeight: 700,
+                  color: 'var(--accent-emerald)',
+                  backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                  padding: '3px 8px',
+                  borderRadius: '4px',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                }}
+              >
+                AKTIF
+              </span>
+            </div>
+
+            <div
+              style={{
+                padding: '12px 14px',
+                borderRadius: '8px',
+                backgroundColor: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  PostgreSQL Database Pool
+                </span>
+                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                  Port 54321 • SQLx Migrations & RBAC Seeder
+                </span>
+              </div>
+              <span
+                style={{
+                  fontSize: '0.6875rem',
+                  fontWeight: 700,
+                  color: 'var(--accent-emerald)',
+                  backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                  padding: '3px 8px',
+                  borderRadius: '4px',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                }}
+              >
+                TERSEDIA
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
