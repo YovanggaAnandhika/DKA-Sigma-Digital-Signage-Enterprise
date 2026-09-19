@@ -10,7 +10,8 @@ import {
   Clock,
   Play,
   Pause,
-  RotateCw
+  RotateCw,
+  Sparkles
 } from 'lucide-react';
 import { api, Playlist, Layout } from '@/lib/api';
 
@@ -57,153 +58,392 @@ export default function SimulatorPage() {
   const currentItem = playlistItems[slideIndex];
 
   return (
-    <div className="space-y-6 pb-12">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '32px' }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Tv className="w-6 h-6 text-indigo-400" />
-            <h1 className="text-2xl font-bold tracking-tight text-white">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div
+            style={{
+              padding: '12px',
+              borderRadius: '16px',
+              backgroundColor: 'rgba(37, 99, 235, 0.12)',
+              color: 'var(--primary-400)',
+              border: '1px solid rgba(59, 130, 246, 0.25)',
+            }}
+          >
+            <Tv size={24} />
+          </div>
+          <div>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
               Live Player Screen Simulator
             </h1>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Simulasi visual pemutaran multi-zona layout dan perputaran playlist pada perangkat Android retail
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Simulasi visual pemutaran multi-zona layout dan perputaran playlist pada perangkat Android retail
-          </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(16, 185, 129, 0.12)',
+              border: '1px solid rgba(16, 185, 129, 0.25)',
+              color: '#34d399',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+            }}
+          >
+            <span
+              style={{
+                width: '7px',
+                height: '7px',
+                borderRadius: '50%',
+                backgroundColor: '#10b981',
+              }}
+            />
             <span>gRPC Stream Active</span>
           </div>
-          <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/70 text-xs font-mono">
+          <div
+            style={{
+              padding: '6px 12px',
+              borderRadius: '8px',
+              backgroundColor: 'var(--bg-surface-elevated)',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--text-secondary)',
+              fontSize: '0.75rem',
+              fontFamily: 'monospace',
+            }}
+          >
             FPS: 60.0
           </div>
         </div>
       </div>
 
-      {/* Simulator Device Frame */}
-      <div className="card-elevated p-8 flex flex-col items-center justify-center bg-black/60">
-        <div className="w-full max-w-4xl bg-black rounded-xl overflow-hidden shadow-2xl border-4 border-white/10 relative aspect-[16/9] flex flex-col">
-          {/* Main Visual Display (16:9 Screen) */}
-          <div className="relative flex-1 flex">
-            {/* ZONE 1: Video/Media Utama (Left 70%) */}
-            <div 
-              className="w-[70%] h-full flex flex-col items-center justify-center p-8 text-center transition-all duration-700 relative overflow-hidden"
-              style={{ backgroundColor: currentItem.color }}
+      {/* Simulator Device Screen Container */}
+      <div
+        className="card-elevated"
+        style={{
+          padding: '28px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          backgroundColor: '#050505',
+          border: '1px solid #1f1f1f',
+        }}
+      >
+        {/* Physical 16:9 Display Frame */}
+        <div
+          style={{
+            width: '100%',
+            maxWidth: '880px',
+            aspectRatio: '16 / 9',
+            backgroundColor: '#000000',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+            border: '4px solid #18181b',
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative',
+          }}
+        >
+          {/* Main Visual Display (Upper portion) */}
+          <div style={{ flex: 1, display: 'flex', position: 'relative', overflow: 'hidden' }}>
+            {/* ZONE 1: Video / Media Utama (70% Left) */}
+            <div
+              style={{
+                width: '70%',
+                height: '100%',
+                backgroundColor: currentItem.color,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '24px',
+                textAlign: 'center',
+                transition: 'background-color 0.6s ease',
+                position: 'relative',
+              }}
             >
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-              
-              <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-white mb-4 border border-white/20 shadow-xl">
-                {currentItem.type === 'video' ? <Film className="w-8 h-8 text-indigo-300" /> : <ImageIcon className="w-8 h-8 text-emerald-300" />}
+              <div
+                style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '14px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#ffffff',
+                  marginBottom: '14px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  boxShadow: '0 8px 16px rgba(0, 0, 0, 0.3)',
+                }}
+              >
+                {currentItem.type === 'video' ? (
+                  <Film size={28} style={{ color: '#a5b4fc' }} />
+                ) : (
+                  <ImageIcon size={28} style={{ color: '#6ee7b7' }} />
+                )}
               </div>
 
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-white/20 text-white/90 border border-white/20 mb-2">
+              <span
+                style={{
+                  fontSize: '0.6875rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  padding: '3px 8px',
+                  borderRadius: '4px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  color: '#ffffff',
+                  marginBottom: '10px',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                }}
+              >
                 {currentItem.tag}
               </span>
 
-              <h2 className="text-xl md:text-2xl font-black text-white max-w-md relative z-10">
+              <h2
+                style={{
+                  fontSize: '1.4rem',
+                  fontWeight: 800,
+                  color: '#ffffff',
+                  maxWidth: '380px',
+                  lineHeight: 1.3,
+                  margin: 0,
+                }}
+              >
                 {currentItem.title}
               </h2>
 
-              <div className="mt-4 px-3 py-1 rounded-full bg-black/50 backdrop-blur-md text-[11px] font-mono text-white/80 border border-white/10 flex items-center gap-2">
-                <Clock className="w-3 h-3 text-indigo-400" />
-                Slide {slideIndex + 1} of {playlistItems.length} • Auto-rotating ({currentItem.duration}s)
+              <div
+                style={{
+                  marginTop: '14px',
+                  padding: '4px 12px',
+                  borderRadius: '9999px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                  fontSize: '0.75rem',
+                  fontFamily: 'monospace',
+                  color: '#e4e4e7',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <Clock size={12} style={{ color: '#60a5fa' }} />
+                <span>
+                  Slide {slideIndex + 1} dari {playlistItems.length} • Auto-rotating ({currentItem.duration}d)
+                </span>
               </div>
             </div>
 
-            {/* ZONE 2: Side Banner Widget (Right 30%) */}
-            <div className="w-[30%] h-full bg-[#0a0f1d] border-l border-white/10 p-5 flex flex-col justify-between">
+            {/* ZONE 2: Side Promo Banner (30% Right) */}
+            <div
+              style={{
+                width: '30%',
+                height: '100%',
+                backgroundColor: '#090d16',
+                borderLeft: '2px solid rgba(255, 255, 255, 0.1)',
+                padding: '20px 16px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+              }}
+            >
               <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                <span
+                  style={{
+                    fontSize: '0.6875rem',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    color: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    border: '1px solid rgba(245, 158, 11, 0.25)',
+                    display: 'inline-block',
+                  }}
+                >
                   ⭐ SPESIAL HARI INI
                 </span>
-                <h3 className="text-sm font-bold text-white mt-2 leading-tight">
+                <h3
+                  style={{
+                    fontSize: '0.9375rem',
+                    fontWeight: 800,
+                    color: '#ffffff',
+                    marginTop: '8px',
+                    lineHeight: 1.3,
+                  }}
+                >
                   Kupon Belanja Rp 50.000
                 </h3>
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  Scan QR di kasir untuk klaim cashback instan pada struk pembayaran!
+                <p
+                  style={{
+                    fontSize: '0.75rem',
+                    color: '#94a3b8',
+                    marginTop: '6px',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Scan QR di kasir untuk klaim cashback instan pada struk!
                 </p>
               </div>
 
-              <div className="bg-white p-3 rounded-lg flex flex-col items-center justify-center my-auto aspect-square max-w-[130px] mx-auto border border-white/20 shadow-md">
-                <div className="w-full h-full border-2 border-dashed border-slate-400 flex items-center justify-center text-slate-800 text-center text-[10px] font-bold uppercase">
+              {/* QR Box Visual */}
+              <div
+                style={{
+                  backgroundColor: '#ffffff',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100px',
+                  height: '100px',
+                  margin: '8px auto',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                }}
+              >
+                <div
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    border: '2px dashed #64748b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#0f172a',
+                    fontWeight: 800,
+                    fontSize: '0.625rem',
+                    textAlign: 'center',
+                    lineHeight: 1.2,
+                  }}
+                >
                   QR SCAN CASHIER
                 </div>
               </div>
 
-              <div className="text-[10px] text-white/40 text-center">
-                Berlaku di seluruh jaringan OmniSign
+              <div style={{ fontSize: '0.6875rem', color: '#64748b', textAlign: 'center' }}>
+                Berlaku di seluruh gerai OmniSign
               </div>
             </div>
           </div>
 
           {/* ZONE 3: Running Text Ticker (Bottom Bar) */}
-          <div className="h-10 bg-indigo-950/80 border-t border-white/10 flex items-center px-4 overflow-hidden gap-3">
-            <span className="px-2 py-0.5 rounded bg-rose-500 text-[10px] font-black text-white tracking-wider uppercase shrink-0">
+          <div
+            style={{
+              height: '42px',
+              backgroundColor: '#0c0a1f',
+              borderTop: '2px solid rgba(255, 255, 255, 0.12)',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '0 16px',
+              gap: '12px',
+              overflow: 'hidden',
+            }}
+          >
+            <span
+              style={{
+                backgroundColor: '#f43f5e',
+                color: '#ffffff',
+                fontSize: '0.625rem',
+                fontWeight: 800,
+                padding: '3px 8px',
+                borderRadius: '4px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                flexShrink: 0,
+              }}
+            >
               LIVE TICKER
             </span>
-            <div className="text-xs font-medium text-white/90 whitespace-nowrap overflow-hidden text-ellipsis animate-marquee">
-              Selamat datang di OmniSign Digital Network • Nikmati promo Buy 1 Get 1 Free untuk seluruh menu bakery • Jam Operasional: 08:00 - 22:00 WIB • Gunakan aplikasi member untuk poin ekstra
+            <div
+              style={{
+                fontSize: '0.8125rem',
+                fontWeight: 500,
+                color: '#f1f5f9',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              Selamat datang di Toko Retail OmniSign • Nikmati promo Buy 1 Get 1 Free seluruh aneka roti & minuman • Jam Operasional: 08:00 - 22:00 WIB • Gunakan aplikasi member untuk diskon tambahan!
             </div>
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="flex items-center gap-3 mt-6">
+        {/* Player Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '20px' }}>
           <button
             onClick={() => setIsPlaying(!isPlaying)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white transition-all shadow-md"
+            className="btn btn-primary"
+            style={{ padding: '8px 16px', fontSize: '0.8125rem' }}
           >
             {isPlaying ? (
               <>
-                <Pause className="w-3.5 h-3.5" />
+                <Pause size={14} />
                 <span>Jeda Playback</span>
               </>
             ) : (
               <>
-                <Play className="w-3.5 h-3.5" />
+                <Play size={14} />
                 <span>Lanjutkan</span>
               </>
             )}
           </button>
           <button
             onClick={() => setSlideIndex((prev) => (prev + 1) % playlistItems.length)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-white/80 transition-colors"
+            className="btn btn-secondary"
+            style={{ padding: '8px 16px', fontSize: '0.8125rem' }}
           >
-            <RotateCw className="w-3.5 h-3.5" />
+            <RotateCw size={14} />
             <span>Next Slide</span>
           </button>
         </div>
       </div>
 
-      {/* Backend Integration Diagnostics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="card-elevated p-5 space-y-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-            <Layers className="w-4 h-4 text-indigo-400" />
-            Layout Database Aktif (Tonic gRPC)
-          </h3>
-          <p className="text-xs text-white/80">
+      {/* Backend Diagnostics Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+        <div className="card-elevated" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Layers size={16} style={{ color: 'var(--primary-400)' }} />
+            <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Layout Database Aktif (Tonic gRPC)
+            </h3>
+          </div>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
             {layouts.length > 0 ? (
-              <>Terdeteksi <span className="font-semibold text-white">{layouts.length} layout terdaftar</span> di database.</>
+              <>
+                Terdeteksi <strong style={{ color: 'var(--text-primary)' }}>{layouts.length} layout terdaftar</strong> di database PostgreSQL.
+              </>
             ) : (
-              "Belum ada layout custom, simulator menggunakan default 3-zone split."
+              'Belum ada layout custom, simulator menggunakan default 3-zone split layout.'
             )}
           </p>
         </div>
 
-        <div className="card-elevated p-5 space-y-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-            <Radio className="w-4 h-4 text-emerald-400" />
-            Sinkronisasi Playlist Database
-          </h3>
-          <p className="text-xs text-white/80">
+        <div className="card-elevated" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Radio size={16} style={{ color: 'var(--accent-emerald)' }} />
+            <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Sinkronisasi Playlist Database
+            </h3>
+          </div>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
             {playlists.length > 0 ? (
-              <>Terhubung dengan <span className="font-semibold text-white">{playlists.length} playlist</span> aktif dari Postgres.</>
+              <>
+                Terhubung dengan <strong style={{ color: 'var(--text-primary)' }}>{playlists.length} playlist aktif</strong> dari Postgres.
+              </>
             ) : (
-              "Menggunakan loop rotasi default OmniSign Retail Demo."
+              'Menggunakan loop rotasi visual OmniSign Retail Demo.'
             )}
           </p>
         </div>
