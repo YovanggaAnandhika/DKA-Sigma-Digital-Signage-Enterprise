@@ -1,165 +1,328 @@
+'use client';
+
+import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { api, Device, Layout, MediaItem, Playlist } from '../lib/api';
+import { TimelineChart } from '../components/charts/TimelineChart';
+import { InsightCard, InsightItem } from '../components/InsightCard';
+import { Tv, Palette, ListMusic, FolderOpen, RefreshCw, Radio, Layers, CheckCircle2 } from 'lucide-react';
 
 export default function DashboardPage() {
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [layouts, setLayouts] = useState<Layout[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [devRes, layRes, playRes, medRes] = await Promise.all([
+        api.getDevices({ limit: 100 }),
+        api.getLayouts({ limit: 100 }),
+        api.getPlaylists({ limit: 100 }),
+        api.getMedia({ limit: 100 }),
+      ]);
+      setDevices(devRes.data || []);
+      setLayouts(layRes.data || []);
+      setPlaylists(playRes.data || []);
+      setMediaItems(medRes.data || []);
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+    const interval = setInterval(loadData, 10000); // 10s live poll
+    return () => clearInterval(interval);
+  }, [loadData]);
+
+  const totalDevices = devices.length;
+  const onlineDevices = devices.filter((d) => d.is_online).length;
+
+  const insights: InsightItem[] = [
+    {
+      id: 'ins-1',
+      title: 'Konektivitas Display Player Optimal',
+      category: 'Fleet Health',
+      description: `${onlineDevices} dari ${totalDevices} unit display Android player aktif mendengarkan stream gRPC bi-directional secara real-time.`,
+      level: 'success',
+    },
+    {
+      id: 'ins-2',
+      title: 'Rollout Canary Distribusi Aktif',
+      category: 'Canary Tier',
+      description: 'Grup rollout bertahap aktif pada alokasi layout promosi multi-cabang tanpa interupsi layar.',
+      level: 'info',
+    },
+  ];
+
+  // Hourly playback & heartbeat simulation data matching Image 1
+  const timelineData = [
+    { label: '01:00', value: Math.max(1, onlineDevices) },
+    { label: '03:00', value: Math.max(1, onlineDevices) },
+    { label: '05:00', value: Math.max(1, onlineDevices - 1) },
+    { label: '07:00', value: Math.max(2, onlineDevices) },
+    { label: '09:00', value: Math.max(3, onlineDevices) },
+    { label: '11:00', value: Math.max(3, onlineDevices) },
+    { label: '13:00', value: Math.max(2, onlineDevices) },
+    { label: '15:00', value: Math.max(4, onlineDevices) },
+    { label: '17:00', value: Math.max(5, onlineDevices + 1) },
+    { label: '19:00', value: Math.max(3, onlineDevices) },
+    { label: '21:00', value: Math.max(2, onlineDevices) },
+    { label: '23:00', value: Math.max(1, onlineDevices) },
+  ];
+
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* Top Banner & Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.02em' }}>
-            Store Displays Overview
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+            Ikhtisar Operasi Layar Retail
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
-            Live status of centralized retail promotional screens across all store branches
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+            Pemantauan status display player, pustaka playlist, dan audit aktivitas gRPC secara real-time.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <Link href="/displays" className="btn btn-primary">
-            <span>+ Pair New Display</span>
-          </Link>
-          <Link href="/layouts" className="btn btn-secondary">
-            <span>🎨 Layout Studio</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            onClick={loadData}
+            className="btn btn-secondary"
+            title="Segarkan data langsung dari backend gRPC"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <span>Segarkan Data</span>
+          </button>
+          <Link href="/displays/create" className="btn btn-primary">
+            <span>+ Daftarkan Display</span>
           </Link>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-        <div className="glass-panel" style={{ padding: '24px' }}>
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase' }}>
-            Active Displays
+      {/* Smart Diagnostics Banner */}
+      <InsightCard insights={insights} />
+
+      {/* KPI Stats Grid matching RADIUS cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+        {/* Active Displays */}
+        <div className="card-elevated" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Layar Player Aktif</span>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--accent-emerald)',
+              }}
+            >
+              <Radio size={16} className="animate-pulse" />
+            </div>
           </div>
-          <div style={{ fontSize: '2.2rem', fontWeight: 800, marginTop: '8px', color: 'var(--text-primary)' }}>
-            48 <span style={{ fontSize: '0.9rem', color: 'var(--accent-emerald)', fontWeight: 600 }}>/ 52 Online</span>
+          <div style={{ fontSize: '1.875rem', fontWeight: 800, marginTop: '10px', color: 'var(--text-primary)' }}>
+            {onlineDevices} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>/ {totalDevices} Unit</span>
           </div>
-          <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
-            <span className="badge badge-online">92% Connected</span>
-            <span className="badge badge-offline">4 Offline</span>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+            <span style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>Terkoneksi Bi-Directional</span> via Stream gRPC
           </div>
         </div>
 
-        <div className="glass-panel" style={{ padding: '24px' }}>
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase' }}>
-            Promotional Layouts
+        {/* Layouts */}
+        <div className="card-elevated" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Template Layout</span>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(37, 99, 235, 0.12)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--primary-400)',
+              }}
+            >
+              <Palette size={16} />
+            </div>
           </div>
-          <div style={{ fontSize: '2.2rem', fontWeight: 800, marginTop: '8px', color: 'var(--text-primary)' }}>
-            14
+          <div style={{ fontSize: '1.875rem', fontWeight: 800, marginTop: '10px', color: 'var(--text-primary)' }}>
+            {layouts.length}
           </div>
-          <div style={{ marginTop: '12px' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              10 Landscape (1920x1080), 4 Portrait (1080x1920)
-            </span>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+            Canvas Multi-Zona siap dialokasikan ke layar
           </div>
         </div>
 
-        <div className="glass-panel" style={{ padding: '24px' }}>
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase' }}>
-            Media & Playlists
+        {/* Playlists */}
+        <div className="card-elevated" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Daftar Putar (Playlist)</span>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--accent-amber)',
+              }}
+            >
+              <ListMusic size={16} />
+            </div>
           </div>
-          <div style={{ fontSize: '2.2rem', fontWeight: 800, marginTop: '8px', color: 'var(--text-primary)' }}>
-            186 <span style={{ fontSize: '0.9rem', color: 'var(--accent-secondary)' }}>Assets</span>
+          <div style={{ fontSize: '1.875rem', fontWeight: 800, marginTop: '10px', color: 'var(--text-primary)' }}>
+            {playlists.length}
           </div>
-          <div style={{ marginTop: '12px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            14.2 GB cached locally on Android players
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+            Rotasi konten looping per zona layar
           </div>
         </div>
 
-        <div className="glass-panel" style={{ padding: '24px' }}>
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase' }}>
-            Canary Gradual Rollout
+        {/* Media Assets */}
+        <div className="card-elevated" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Pustaka Media</span>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(6, 182, 212, 0.12)',
+                border: '1px solid rgba(6, 182, 212, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--accent-cyan)',
+              }}
+            >
+              <FolderOpen size={16} />
+            </div>
           </div>
-          <div style={{ fontSize: '2.2rem', fontWeight: 800, marginTop: '8px', color: 'var(--accent-amber)' }}>
-            25%
+          <div style={{ fontSize: '1.875rem', fontWeight: 800, marginTop: '10px', color: 'var(--text-primary)' }}>
+            {mediaItems.length} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>Aset</span>
           </div>
-          <div style={{ marginTop: '12px' }}>
-            <span className="badge badge-canary">Weekend Promo Campaign</span>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+            Diverifikasi dengan checksum SHA-256 riil
           </div>
         </div>
       </div>
 
-      {/* Fleet Quick Table */}
-      <div className="glass-panel" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Featured Retail Screens</h2>
-          <Link href="/displays" style={{ color: 'var(--accent-primary)', fontSize: '0.875rem', fontWeight: 600 }}>
-            View All 52 Displays →
-          </Link>
+      {/* Timeline Chart matching Image 1 */}
+      <TimelineChart
+        title="Tren Aktivitas Pemutaran & Heartbeat Player (24 Jam Terakhir)"
+        description="Pantauan sinyal telemetri dan perputaran media player berdasarkan waktu"
+        data={timelineData}
+        primaryColor="#2563eb"
+        primaryLegend="Layar Aktif Memutar"
+      />
+
+      {/* Audit Log Table matching Image 1 */}
+      <div className="card-elevated" style={{ overflow: 'hidden' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Audit Log Aktivitas Display Signage (Terbaru)
+            </h3>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Catatan detail komunikasi telemetri dan status pairing dari player ke backend gRPC
+            </p>
+          </div>
+          <button onClick={loadData} className="btn btn-outline" style={{ padding: '6px 10px', fontSize: '0.75rem' }}>
+            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+          </button>
         </div>
 
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Display Name / Location</th>
-              <th>Status</th>
-              <th>Resolution</th>
-              <th>Current Layout</th>
-              <th>Active Zone Content</th>
-              <th>Canary Tier</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Store 01 - Cashier Screen A</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>ID: dev-9942 • MAC: 48:B0:2D:11:92:0A</div>
-              </td>
-              <td>
-                <span className="badge badge-online">
-                  <span className="badge-dot"></span> Online (gRPC)
-                </span>
-              </td>
-              <td>1920 × 1080 (Landscape)</td>
-              <td>Main Cashier Promo V3</td>
-              <td>Video Promo (15s) + Side Banner</td>
-              <td><span className="badge badge-canary">Canary 25%</span></td>
-              <td>
-                <Link href="/simulator" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
-                  Live Preview
-                </Link>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Store 01 - Entrance Totem</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>ID: dev-9943 • MAC: 48:B0:2D:11:92:0B</div>
-              </td>
-              <td>
-                <span className="badge badge-online">
-                  <span className="badge-dot"></span> Online (gRPC)
-                </span>
-              </td>
-              <td>1080 × 1920 (Portrait)</td>
-              <td>Vertical Fashion Lookbook</td>
-              <td>Looping Slideshow (5 Slides)</td>
-              <td><span className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8' }}>Stable</span></td>
-              <td>
-                <Link href="/simulator" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
-                  Live Preview
-                </Link>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Store 02 - Aisle 3 Screen</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>ID: dev-8811 • MAC: 7C:2F:80:4A:E1:99</div>
-              </td>
-              <td>
-                <span className="badge badge-offline">
-                  <span className="badge-dot"></span> Offline
-                </span>
-              </td>
-              <td>1920 × 1080 (Landscape)</td>
-              <td>Snacks & Beverage Specials</td>
-              <td>Cached (Offline Playing)</td>
-              <td><span className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8' }}>Stable</span></td>
-              <td>
-                <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
-                  Ping Device
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Waktu</th>
+                <th>Nama Perangkat / Player</th>
+                <th>Kode Pairing</th>
+                <th>Status Telemetri</th>
+                <th>Resolusi & Arah</th>
+                <th>Alamat IP</th>
+                <th style={{ textAlign: 'right' }}>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {devices.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                    Belum ada perangkat display terdaftar. Silakan klik &quot;+ Daftarkan Display&quot;.
+                  </td>
+                </tr>
+              ) : (
+                devices.map((d) => (
+                  <tr key={d.id}>
+                    <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                      {d.last_heartbeat_at ? new Date(d.last_heartbeat_at).toLocaleTimeString('id-ID') : 'Baru saja'}
+                    </td>
+                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <Link href={`/displays/${d.id}`} style={{ textDecoration: 'underline' }}>
+                        {d.name}
+                      </Link>
+                    </td>
+                    <td style={{ fontFamily: 'monospace' }}>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          backgroundColor: 'var(--bg-surface-elevated)',
+                          border: '1px solid var(--border-subtle)',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                        }}
+                      >
+                        {d.pairing_code}
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                          fontSize: '0.6875rem',
+                          fontWeight: 700,
+                          backgroundColor: d.is_online ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
+                          color: d.is_online ? 'var(--accent-emerald)' : 'var(--accent-rose)',
+                          border: d.is_online ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
+                        }}
+                      >
+                        {d.is_online ? 'ONLINE' : 'OFFLINE'}
+                      </span>
+                    </td>
+                    <td>
+                      {d.resolution} ({d.orientation})
+                    </td>
+                    <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                      {d.ip_address || '127.0.0.1'}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <Link href={`/displays/${d.id}`} className="btn btn-outline" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>
+                        Detail →
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

@@ -1,302 +1,203 @@
 'use client';
 
-import { useState } from 'react';
-
-interface DisplayItem {
-  id: string;
-  name: string;
-  pairing_code: string;
-  is_paired: boolean;
-  is_online: boolean;
-  resolution: string;
-  orientation: 'landscape' | 'portrait';
-  layout_name: string;
-  storage: string;
-  last_ping: string;
-}
+import React, { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
+import { api, Device } from '../../lib/api';
+import { Pagination } from '../../components/ui/Pagination';
+import { Tv, Plus, Search, RefreshCw, Edit, Trash2, Eye } from 'lucide-react';
 
 export default function DisplaysPage() {
-  const [showPairModal, setShowPairModal] = useState(false);
-  const [pairingCode, setPairingCode] = useState('');
-  const [deviceName, setDeviceName] = useState('');
-  const [orientation, setOrientation] = useState<'landscape' | 'portrait'>('landscape');
-  const [resolution, setResolution] = useState('1920x1080');
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const [displays, setDisplays] = useState<DisplayItem[]>([
-    {
-      id: 'd1',
-      name: 'Cashier Display 01 (Grand Indonesia)',
-      pairing_code: 'XR8-992',
-      is_paired: true,
-      is_online: true,
-      resolution: '1920 × 1080',
-      orientation: 'landscape',
-      layout_name: 'Summer Promo Split-Zone V2',
-      storage: '18.4 GB / 32 GB',
-      last_ping: 'Just now (gRPC)',
-    },
-    {
-      id: 'd2',
-      name: 'Entrance Fashion Totem (Pondok Indah Mall)',
-      pairing_code: 'KJ3-41A',
-      is_paired: true,
-      is_online: true,
-      resolution: '1080 × 1920',
-      orientation: 'portrait',
-      layout_name: 'Vertical Lookbook Slideshow',
-      storage: '12.1 GB / 64 GB',
-      last_ping: '12s ago (gRPC)',
-    },
-    {
-      id: 'd3',
-      name: 'Beverage Showcase Screen (Kelapa Gading)',
-      pairing_code: 'BN7-09P',
-      is_paired: true,
-      is_online: false,
-      resolution: '1920 × 1080',
-      orientation: 'landscape',
-      layout_name: 'Beverage Specials Fullscreen',
-      storage: '8.5 GB / 32 GB',
-      last_ping: '2 hours ago (Offline Cache Active)',
-    },
-  ]);
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await api.getDevices({ search, page, limit });
+      setDevices(res.data);
+      setTotal(res.total);
+    } catch (err) {
+      console.error('Failed to load devices:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [search, page, limit]);
 
-  const handlePairSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pairingCode || !deviceName) return;
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-    const newDisplay: DisplayItem = {
-      id: `dev-${Date.now()}`,
-      name: deviceName,
-      pairing_code: pairingCode.toUpperCase(),
-      is_paired: true,
-      is_online: true,
-      resolution: resolution === '1920x1080' ? '1920 × 1080' : '1080 × 1920',
-      orientation: orientation,
-      layout_name: 'Default Welcome Layout',
-      storage: '4.2 GB / 32 GB',
-      last_ping: 'Just now',
-    };
-
-    setDisplays([newDisplay, ...displays]);
-    setShowPairModal(false);
-    setPairingCode('');
-    setDeviceName('');
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Hapus display player "${name}"?`)) return;
+    try {
+      await api.deleteDevice(id);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Gagal menghapus perangkat');
+    }
   };
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
-        <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.02em' }}>
-            Display Fleet & Device Pairing
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
-            Register Android promotional displays via 6-digit pairing code and configure hardware orientations
-          </p>
-        </div>
-        <button className="btn btn-primary" onClick={() => setShowPairModal(true)}>
-          <span>📺 Pair New Display</span>
-        </button>
-      </div>
-
-      {/* Fleet Table */}
-      <div className="glass-panel" style={{ padding: '24px' }}>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Display Name</th>
-              <th>Pairing Code</th>
-              <th>Status</th>
-              <th>Resolution & Orientation</th>
-              <th>Active Layout</th>
-              <th>Storage Cache</th>
-              <th>Last Ping</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {displays.map((display) => (
-              <tr key={display.id}>
-                <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {display.name}
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>ID: {display.id}</div>
-                </td>
-                <td>
-                  <code style={{ background: 'rgba(255,255,255,0.08)', padding: '3px 8px', borderRadius: '4px', color: 'var(--accent-secondary)' }}>
-                    {display.pairing_code}
-                  </code>
-                </td>
-                <td>
-                  {display.is_online ? (
-                    <span className="badge badge-online">
-                      <span className="badge-dot"></span> Online
-                    </span>
-                  ) : (
-                    <span className="badge badge-offline">
-                      <span className="badge-dot"></span> Offline
-                    </span>
-                  )}
-                </td>
-                <td>
-                  <div>{display.resolution}</div>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
-                    {display.orientation}
-                  </span>
-                </td>
-                <td style={{ color: 'var(--text-primary)' }}>{display.layout_name}</td>
-                <td>{display.storage}</td>
-                <td style={{ fontSize: '0.8rem' }}>{display.last_ping}</td>
-                <td>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>
-                      Reboot
-                    </button>
-                    <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.75rem' }}>
-                      Screenshot
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pairing Modal */}
-      {showPairModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.75)',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 100,
-        }}>
-          <div className="glass-panel" style={{ width: '480px', padding: '32px', background: '#0f172a' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '8px' }}>
-              Pair New Android Display
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '24px' }}>
-              Masukkan 6-karakter kode pairing yang tampil di layar Android toko retail.
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div
+            style={{
+              padding: '12px',
+              borderRadius: '16px',
+              backgroundColor: 'rgba(37, 99, 235, 0.12)',
+              color: 'var(--primary-400)',
+              border: '1px solid rgba(59, 130, 246, 0.25)',
+            }}
+          >
+            <Tv size={24} />
+          </div>
+          <div>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+              Layar Retail (Player Fleet)
+            </h1>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Pusat registrasi dan pairing perangkat Android display player secara terpusat via gRPC.
             </p>
-
-            <form onSubmit={handlePairSubmit}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                  PAIRING CODE
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. XR8-992"
-                  value={pairingCode}
-                  onChange={(e) => setPairingCode(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: 'var(--radius-md)',
-                    background: 'var(--bg-primary)',
-                    border: '1px solid var(--border-subtle)',
-                    color: 'var(--text-primary)',
-                    fontSize: '1.1rem',
-                    letterSpacing: '0.1em',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                  }}
-                  required
-                />
-              </div>
-
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                  DISPLAY NAME / STORE LOCATION
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Toko Cabang Sudirman - Layar Kasir 1"
-                  value={deviceName}
-                  onChange={(e) => setDeviceName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: 'var(--radius-md)',
-                    background: 'var(--bg-primary)',
-                    border: '1px solid var(--border-subtle)',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.9rem',
-                  }}
-                  required
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                    ORIENTATION
-                  </label>
-                  <select
-                    value={orientation}
-                    onChange={(e) => setOrientation(e.target.value as any)}
-                    style={{
-                      width: '100%',
-                      padding: '10px 14px',
-                      borderRadius: 'var(--radius-md)',
-                      background: 'var(--bg-primary)',
-                      border: '1px solid var(--border-subtle)',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.875rem',
-                    }}
-                  >
-                    <option value="landscape">Landscape (Horizontal)</option>
-                    <option value="portrait">Portrait (Vertikal)</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                    RESOLUSI LAYAR
-                  </label>
-                  <select
-                    value={resolution}
-                    onChange={(e) => setResolution(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px 14px',
-                      borderRadius: 'var(--radius-md)',
-                      background: 'var(--bg-primary)',
-                      border: '1px solid var(--border-subtle)',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.875rem',
-                    }}
-                  >
-                    <option value="1920x1080">Full HD (1920 × 1080)</option>
-                    <option value="1080x1920">Vertical (1080 × 1920)</option>
-                    <option value="3840x2160">4K Ultra HD (3840 × 2160)</option>
-                    <option value="1280x720">HD Ready (1280 × 720)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowPairModal(false)}
-                >
-                  Batal
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Klaim & Pasangkan Display
-                </button>
-              </div>
-            </form>
           </div>
         </div>
-      )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button onClick={loadData} className="btn btn-secondary" title="Segarkan data">
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          </button>
+          <Link href="/displays/create" className="btn btn-primary">
+            <Plus size={16} />
+            <span>Tambah Layar Baru</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* Filter & Search Bar */}
+      <div className="card-elevated" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Cari berdasarkan nama perangkat atau kode pairing..."
+            className="form-input"
+            style={{ paddingLeft: '36px' }}
+          />
+        </div>
+      </div>
+
+      {/* Main Table */}
+      <div className="card-elevated" style={{ overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Nama Perangkat</th>
+                <th>Kode Pairing</th>
+                <th>Status</th>
+                <th>Resolusi & Orientasi</th>
+                <th>Alamat IP</th>
+                <th>Memori / Penyimpanan</th>
+                <th style={{ textAlign: 'right' }}>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {devices.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                    {loading ? 'Memuat daftar layar dari backend gRPC...' : 'Tidak ada perangkat ditemukan.'}
+                  </td>
+                </tr>
+              ) : (
+                devices.map((d) => (
+                  <tr key={d.id}>
+                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <Link href={`/displays/${d.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                        {d.name}
+                      </Link>
+                    </td>
+                    <td style={{ fontFamily: 'monospace' }}>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          backgroundColor: 'var(--bg-surface-elevated)',
+                          border: '1px solid var(--border-subtle)',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                        }}
+                      >
+                        {d.pairing_code}
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                          fontSize: '0.6875rem',
+                          fontWeight: 700,
+                          backgroundColor: d.is_online ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
+                          color: d.is_online ? 'var(--accent-emerald)' : 'var(--accent-rose)',
+                          border: d.is_online ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
+                        }}
+                      >
+                        {d.is_online ? 'ONLINE' : 'OFFLINE'}
+                      </span>
+                    </td>
+                    <td>
+                      {d.resolution} ({d.orientation})
+                    </td>
+                    <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{d.ip_address || '127.0.0.1'}</td>
+                    <td style={{ fontSize: '0.75rem' }}>
+                      {d.memory_used_percent > 0 ? `${d.memory_used_percent}% RAM` : '-'}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <Link href={`/displays/${d.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Lihat Detail">
+                          <Eye size={14} />
+                        </Link>
+                        <Link href={`/displays/${d.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit">
+                          <Edit size={14} />
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(d.id, d.name)}
+                          className="btn btn-danger"
+                          style={{ padding: '5px 8px' }}
+                          title="Hapus Perangkat"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <Pagination
+          page={page}
+          limit={limit}
+          total={total}
+          onPageChange={(newPage) => setPage(newPage)}
+          onLimitChange={(newLimit) => {
+            setLimit(newLimit);
+            setPage(1);
+          }}
+        />
+      </div>
     </div>
   );
 }
