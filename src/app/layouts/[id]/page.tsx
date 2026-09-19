@@ -37,8 +37,8 @@ export default function ViewLayoutPage() {
     );
   }
 
-  const scale = 540 / layout.width;
-  const previewHeight = layout.height * scale;
+  const scale = 540 / layout.canvas_width;
+  const previewHeight = layout.canvas_height * scale;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -52,7 +52,7 @@ export default function ViewLayoutPage() {
               {layout.name}
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Resolusi: {layout.width} × {layout.height} px ({layout.orientation}) &bull; {layout.zones?.length || 0} Zona Kotak
+              Resolusi: {layout.canvas_width} × {layout.canvas_height} px ({layout.orientation}) &bull; {layout.zones?.length || 0} Zona Kotak
             </p>
           </div>
         </div>

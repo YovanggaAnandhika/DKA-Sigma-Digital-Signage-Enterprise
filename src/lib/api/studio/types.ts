@@ -1,9 +1,12 @@
 export interface Layout {
   id: string;
   name: string;
-  width: number;
-  height: number;
+  description?: string;
+  canvas_width: number;
+  canvas_height: number;
   orientation: string;
+  background_color?: string;
+  background_image_url?: string;
   zones: Zone[];
   created_at?: string;
   updated_at?: string;
@@ -18,14 +21,15 @@ export interface Zone {
   width: number;
   height: number;
   z_index: number;
-  playlist_id?: string;
+  assigned_playlist_id?: string;
   playlist_name?: string;
+  background_color?: string;
 }
 
 export interface PlaylistItem {
   id: string;
   playlist_id: string;
-  media_id: string;
+  media_item_id: string;
   media_name?: string;
   media_type?: string;
   duration_seconds: number;
@@ -39,6 +43,7 @@ export interface Playlist {
   description: string;
   is_shuffle: boolean;
   items: PlaylistItem[];
+  total_duration_seconds?: number;
   created_at?: string;
   updated_at?: string;
 }

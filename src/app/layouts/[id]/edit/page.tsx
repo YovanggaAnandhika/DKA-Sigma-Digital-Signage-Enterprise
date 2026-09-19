@@ -58,8 +58,8 @@ export default function EditLayoutCanvasPage() {
       name: `Kotak Zona ${zones.length + 1}`,
       x: 100,
       y: 100,
-      width: Math.round(layout.width * 0.4),
-      height: Math.round(layout.height * 0.4),
+      width: Math.round(layout.canvas_width * 0.4),
+      height: Math.round(layout.canvas_height * 0.4),
       z_index: zones.length + 1,
     };
     setZones([...zones, newZone]);
@@ -91,8 +91,8 @@ export default function EditLayoutCanvasPage() {
   }
 
   const selectedZone = zones.find((z) => z.id === selectedZoneId);
-  const scale = 540 / layout.width;
-  const previewHeight = layout.height * scale;
+  const scale = 540 / layout.canvas_width;
+  const previewHeight = layout.canvas_height * scale;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -137,7 +137,7 @@ export default function EditLayoutCanvasPage() {
                 border: '1px solid rgba(16, 185, 129, 0.3)',
               }}
             >
-              {layout.width} × {layout.height} px ({layout.orientation})
+              {layout.canvas_width} × {layout.canvas_height} px ({layout.orientation})
             </span>
           </div>
 

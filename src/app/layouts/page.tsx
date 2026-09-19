@@ -126,7 +126,7 @@ export default function LayoutsPage() {
                       </Link>
                     </td>
                     <td style={{ fontFamily: 'monospace' }}>
-                      {l.width} × {l.height} px
+                      {l.canvas_width} × {l.canvas_height} px
                     </td>
                     <td style={{ textTransform: 'capitalize' }}>
                       <span

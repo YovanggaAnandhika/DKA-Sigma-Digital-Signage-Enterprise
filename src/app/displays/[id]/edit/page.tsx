@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api, Device } from '../../../../lib/api';
+import { api } from '../../../../lib/api';
+import type { Device } from '../../../../lib/api';
 import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
 
 export default function EditDisplayPage() {
@@ -26,8 +27,8 @@ export default function EditDisplayPage() {
         setDevice(data);
         setFormData({
           name: data.name,
-          resolution: data.resolution,
-          orientation: data.orientation,
+          resolution: data.resolution || '1920x1080',
+          orientation: data.orientation || 'landscape',
         });
       } catch (err: any) {
         alert(err.message || 'Gagal memuat display');
@@ -43,7 +44,13 @@ export default function EditDisplayPage() {
     e.preventDefault();
     try {
       setSaving(true);
-      await api.updateDevice(params.id, formData);
+      const [sw, sh] = formData.resolution.split('x').map(Number);
+      await api.updateDevice(params.id, {
+        name: formData.name,
+        screen_width: sw || 1920,
+        screen_height: sh || 1080,
+        orientation: formData.orientation,
+      });
       router.push(`/displays/${params.id}`);
     } catch (err: any) {
       alert(err.message || 'Gagal memperbarui konfigurasi display');

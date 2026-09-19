@@ -105,36 +105,88 @@ export async function getDevice(id: string): Promise<Device> {
   return dev as Device;
 }
 
-export async function createDevice(data: { name: string; resolution: string; orientation: string; canary_group_id?: string }): Promise<Device> {
+export async function pairDevice(data: { pairing_code: string; device_name: string; default_layout_id?: string; canary_group_id?: string }): Promise<Device> {
   const writer = new ProtoWriter();
-  writer.writeString(1, data.name);
-  writer.writeString(2, data.resolution || '1920x1080');
-  writer.writeString(3, data.orientation || 'landscape');
-  if (data.canary_group_id) writer.writeString(4, data.canary_group_id);
+  // PairDeviceRequest: pairing_code=1, device_name=2, store_location=3, default_layout_id=4, canary_group_id=5
+  writer.writeString(1, data.pairing_code);
+  writer.writeString(2, data.device_name);
+  if (data.default_layout_id) writer.writeString(4, data.default_layout_id);
+  if (data.canary_group_id) writer.writeString(5, data.canary_group_id);
 
-  const resBytes = await invokeGrpcMethod('signage.hardware.v1.device.DeviceService', 'RegisterDevice', writer);
+  const resBytes = await invokeGrpcMethod('signage.hardware.v1.device.DeviceService', 'PairDevice', writer);
+  // PairDeviceResponse: success=1, device=2, device_token=3
   const reader = new ProtoReader(resBytes);
-  let deviceId = '';
+  let device: Device | null = null;
   while (reader.hasMore()) {
     const tag = reader.readTag();
     if (!tag) break;
-    if (tag.fieldNumber === 1) deviceId = reader.readString();
-    else reader.skip(tag.wireType);
+    if (tag.fieldNumber === 2 && tag.wireType === 2) {
+      // parse nested Device directly
+      const dBytes = reader.readBytes();
+      const dReader = new ProtoReader(dBytes);
+      const dev: Partial<Device> = { is_paired: true, is_online: false };
+      let orientationEnum = 1;
+      let screenW = 1920;
+      let screenH = 1080;
+      while (dReader.hasMore()) {
+        const dTag = dReader.readTag();
+        if (!dTag) break;
+        if (dTag.fieldNumber === 1) dev.id = dReader.readString();
+        else if (dTag.fieldNumber === 2) dev.name = dReader.readString();
+        else if (dTag.fieldNumber === 3) dev.pairing_code = dReader.readString();
+        else if (dTag.fieldNumber === 4) dev.is_paired = dReader.readBool();
+        else if (dTag.fieldNumber === 6) screenW = dReader.readInt32();
+        else if (dTag.fieldNumber === 7) screenH = dReader.readInt32();
+        else if (dTag.fieldNumber === 8) orientationEnum = dReader.readVarint();
+        else if (dTag.fieldNumber === 9) dev.ip_address = dReader.readString();
+        else if (dTag.fieldNumber === 18) dev.is_online = dReader.readBool();
+        else if (dTag.fieldNumber === 20) dev.created_at = dReader.readString();
+        else dReader.skip(dTag.wireType);
+      }
+      dev.resolution = `${screenW}x${screenH}`;
+      dev.orientation = orientationEnum === 2 ? 'portrait' : 'landscape';
+      if (dev.id) device = dev as Device;
+    } else {
+      reader.skip(tag.wireType);
+    }
   }
-  return getDevice(deviceId);
+  if (!device) throw new Error('PairDevice gagal: tidak ada perangkat yang dikembalikan');
+  return device;
 }
 
-export async function updateDevice(id: string, data: { name?: string; resolution?: string; orientation?: string; current_layout_id?: string; canary_group_id?: string }): Promise<Device> {
+export async function updateDevice(id: string, data: { name?: string; screen_width?: number; screen_height?: number; orientation?: string; current_layout_id?: string; canary_group_id?: string }): Promise<Device> {
   const writer = new ProtoWriter();
+  // UpdateDeviceRequest: id=1, name=2, screen_width=3, screen_height=4, orientation=5(enum), current_layout_id=6, canary_group_id=7
   writer.writeString(1, id);
   if (data.name) writer.writeString(2, data.name);
-  if (data.resolution) writer.writeString(3, data.resolution);
-  if (data.orientation) writer.writeString(4, data.orientation);
-  if (data.current_layout_id) writer.writeString(5, data.current_layout_id);
-  if (data.canary_group_id) writer.writeString(6, data.canary_group_id);
+  if (data.screen_width) writer.writeInt32(3, data.screen_width);
+  if (data.screen_height) writer.writeInt32(4, data.screen_height);
+  if (data.orientation) writer.writeInt32(5, data.orientation === 'portrait' ? 2 : 1);
+  if (data.current_layout_id) writer.writeString(6, data.current_layout_id);
+  if (data.canary_group_id) writer.writeString(7, data.canary_group_id);
 
-  await invokeGrpcMethod('signage.hardware.v1.device.DeviceService', 'UpdateDevice', writer);
-  return getDevice(id);
+  const resBytes = await invokeGrpcMethod('signage.hardware.v1.device.DeviceService', 'UpdateDevice', writer);
+  const reader = new ProtoReader(resBytes);
+  // UpdateDevice returns Device directly
+  const dev: Partial<Device> = { is_paired: true, is_online: false };
+  let orientationEnum = 1;
+  let screenW = 1920;
+  let screenH = 1080;
+  while (reader.hasMore()) {
+    const tag = reader.readTag();
+    if (!tag) break;
+    if (tag.fieldNumber === 1) dev.id = reader.readString();
+    else if (tag.fieldNumber === 2) dev.name = reader.readString();
+    else if (tag.fieldNumber === 6) screenW = reader.readInt32();
+    else if (tag.fieldNumber === 7) screenH = reader.readInt32();
+    else if (tag.fieldNumber === 8) orientationEnum = reader.readVarint();
+    else if (tag.fieldNumber === 18) dev.is_online = reader.readBool();
+    else reader.skip(tag.wireType);
+  }
+  dev.resolution = `${screenW}x${screenH}`;
+  dev.orientation = orientationEnum === 2 ? 'portrait' : 'landscape';
+  if (!dev.id) return getDevice(id);
+  return dev as Device;
 }
 
 export async function deleteDevice(id: string): Promise<boolean> {

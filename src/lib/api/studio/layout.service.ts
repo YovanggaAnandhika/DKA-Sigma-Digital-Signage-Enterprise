@@ -108,7 +108,7 @@ export async function createLayout(data: { name: string; description?: string; c
   if (data.description) writer.writeString(2, data.description);
   writer.writeInt32(3, data.canvas_width);
   writer.writeInt32(4, data.canvas_height);
-  writer.writeVarint(5, data.orientation === 'portrait' ? 2 : 1); // DeviceOrientation enum
+  writer.writeInt32(5, data.orientation === 'portrait' ? 2 : 1); // DeviceOrientation enum
   if (data.background_color) writer.writeString(6, data.background_color);
 
   const resBytes = await invokeGrpcMethod('signage.studio.v1.layout.LayoutService', 'CreateLayout', writer);
@@ -126,7 +126,7 @@ export async function updateLayout(id: string, data: { name?: string; descriptio
   if (data.description !== undefined) writer.writeString(3, data.description);
   if (data.canvas_width) writer.writeInt32(4, data.canvas_width);
   if (data.canvas_height) writer.writeInt32(5, data.canvas_height);
-  if (data.orientation) writer.writeVarint(6, data.orientation === 'portrait' ? 2 : 1);
+  if (data.orientation) writer.writeInt32(6, data.orientation === 'portrait' ? 2 : 1);
   if (data.background_color) writer.writeString(7, data.background_color);
 
   const resBytes = await invokeGrpcMethod('signage.studio.v1.layout.LayoutService', 'UpdateLayout', writer);

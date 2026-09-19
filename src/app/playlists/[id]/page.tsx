@@ -94,7 +94,7 @@ export default function ViewPlaylistPage() {
                   <tr key={item.id}>
                     <td style={{ fontWeight: 700, color: 'var(--text-muted)' }}>#{idx + 1}</td>
                     <td style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {item.media_name || item.media_id}
+                      {item.media_name || item.media_item_id}
                     </td>
                     <td>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--accent-amber)', fontWeight: 600 }}>

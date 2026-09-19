@@ -39,23 +39,35 @@ export const api = {
   // Hardware
   getDevices: hardwareModule.getDevices,
   getDevice: hardwareModule.getDevice,
-  createDevice: hardwareModule.createDevice,
+  pairDevice: hardwareModule.pairDevice,
   updateDevice: hardwareModule.updateDevice,
   deleteDevice: hardwareModule.deleteDevice,
 
-  // Studio
+  // Studio — Layouts
   getLayouts: studioModule.getLayouts,
   getLayout: studioModule.getLayout,
   createLayout: studioModule.createLayout,
   updateLayout: studioModule.updateLayout,
   deleteLayout: studioModule.deleteLayout,
 
+  // Studio — Zones
+  createZone: studioModule.createZone,
+  updateZone: studioModule.updateZone,
+  deleteZone: studioModule.deleteZone,
+  assignPlaylistToZone: studioModule.assignPlaylistToZone,
+
+  // Studio — Playlists
   getPlaylists: studioModule.getPlaylists,
   getPlaylist: studioModule.getPlaylist,
   createPlaylist: studioModule.createPlaylist,
   updatePlaylist: studioModule.updatePlaylist,
   deletePlaylist: studioModule.deletePlaylist,
+  addPlaylistItem: studioModule.addPlaylistItem,
+  removePlaylistItem: studioModule.removePlaylistItem,
+  updatePlaylistItem: studioModule.updatePlaylistItem,
+  reorderPlaylistItems: studioModule.reorderPlaylistItems,
 
+  // Studio — Media
   getMedia: studioModule.getMedia,
   getMediaItem: studioModule.getMediaItem,
   createMedia: studioModule.createMedia,
