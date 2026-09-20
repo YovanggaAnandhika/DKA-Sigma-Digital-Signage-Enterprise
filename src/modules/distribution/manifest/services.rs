@@ -55,7 +55,7 @@ impl ManifestService {
         let mut enriched_zones = Vec::new();
         let mut required_assets_map: HashMap<Uuid, ManifestAssetDto> = HashMap::new();
 
-        for mut dto_zone in zones {
+        for dto_zone in zones {
             let mut mapped_blocks = Vec::new();
             for block in dto_zone.blocks {
                 if let Ok(pl) = PlaylistService::get_playlist_by_id(pool, block.playlist_id).await {
