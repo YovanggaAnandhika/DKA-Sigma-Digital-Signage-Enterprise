@@ -1,5 +1,5 @@
 use super::model::{
-    CreateLayoutDto, CreateZoneDto, LayoutEntity, UpdateLayoutDto, UpdateZoneDto, ZoneEntity,
+    CreateLayoutDto, CreateZoneDto, LayoutEntity, UpdateLayoutDto, UpdateZoneDto, ZoneEntity, ZonePlaylistEntity, ZoneWithBlocksDto,
 };
 use crate::db::DbPool;
 use uuid::Uuid;
@@ -98,7 +98,7 @@ impl LayoutRepository {
     pub async fn get_zones_by_layout_id(
         pool: &DbPool,
         layout_id: Uuid,
-    ) -> Result<Vec<ZoneEntity>, sqlx::Error> {
+    ) -> Result<Vec<ZoneWithBlocksDto>, sqlx::Error> {
         let zones = sqlx::query_as::<_, ZoneEntity>(
             "SELECT * FROM zones WHERE layout_id = $1 ORDER BY z_index ASC",
         )
@@ -106,17 +106,28 @@ impl LayoutRepository {
         .fetch_all(pool)
         .await?;
 
-        Ok(zones)
+        let mut result = Vec::new();
+        for zone in zones {
+            let blocks = sqlx::query_as::<_, ZonePlaylistEntity>(
+                "SELECT * FROM zone_playlists WHERE zone_id = $1 ORDER BY order_index ASC",
+            )
+            .bind(zone.id)
+            .fetch_all(pool)
+            .await?;
+
+            result.push(ZoneWithBlocksDto { zone, blocks });
+        }
+
+        Ok(result)
     }
 
     pub async fn create_zone(pool: &DbPool, dto: CreateZoneDto) -> Result<ZoneEntity, sqlx::Error> {
         let zone = sqlx::query_as::<_, ZoneEntity>(
             r#"
             INSERT INTO zones (
-                layout_id, name, x, y, width, height, z_index,
-                assigned_playlist_id, background_color
+                layout_id, name, x, y, width, height, z_index, background_color
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
             "#,
         )
@@ -127,7 +138,6 @@ impl LayoutRepository {
         .bind(dto.width)
         .bind(dto.height)
         .bind(dto.z_index.unwrap_or(0))
-        .bind(dto.assigned_playlist_id)
         .bind(dto.background_color.unwrap_or_else(|| "transparent".to_string()))
         .fetch_one(pool)
         .await?;
@@ -161,8 +171,7 @@ impl LayoutRepository {
                 width = COALESCE($5, width),
                 height = COALESCE($6, height),
                 z_index = COALESCE($7, z_index),
-                assigned_playlist_id = CASE WHEN $8 THEN NULL WHEN $9 IS NOT NULL THEN $9 ELSE assigned_playlist_id END,
-                background_color = COALESCE($10, background_color),
+                background_color = COALESCE($8, background_color),
                 updated_at = NOW()
             WHERE id = $1
             RETURNING *
@@ -175,8 +184,6 @@ impl LayoutRepository {
         .bind(dto.width)
         .bind(dto.height)
         .bind(dto.z_index)
-        .bind(dto.clear_playlist)
-        .bind(dto.assigned_playlist_id)
         .bind(dto.background_color)
         .fetch_one(pool)
         .await?;
@@ -186,6 +193,82 @@ impl LayoutRepository {
 
     pub async fn delete_zone(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
         let result = sqlx::query("DELETE FROM zones WHERE id = $1")
+            .bind(id)
+            .execute(pool)
+            .await?;
+
+        Ok(result.rows_affected() > 0)
+    }
+
+    pub async fn add_playlist_block(
+        pool: &DbPool,
+        zone_id: Uuid,
+        playlist_id: Uuid,
+        start_time_seconds: i32,
+        duration_seconds: i32,
+    ) -> Result<ZonePlaylistEntity, sqlx::Error> {
+        // get max order_index
+        let max_order: (Option<i32>,) = sqlx::query_as(
+            "SELECT MAX(order_index) FROM zone_playlists WHERE zone_id = $1"
+        )
+        .bind(zone_id)
+        .fetch_one(pool)
+        .await?;
+
+        let next_order = max_order.0.unwrap_or(0) + 1;
+
+        let block = sqlx::query_as::<_, ZonePlaylistEntity>(
+            r#"
+            INSERT INTO zone_playlists (
+                zone_id, playlist_id, start_time_seconds, duration_seconds, order_index
+            ) VALUES ($1, $2, $3, $4, $5)
+            RETURNING *
+            "#
+        )
+        .bind(zone_id)
+        .bind(playlist_id)
+        .bind(start_time_seconds)
+        .bind(duration_seconds)
+        .bind(next_order)
+        .fetch_one(pool)
+        .await?;
+
+        Ok(block)
+    }
+
+    pub async fn update_playlist_block(
+        pool: &DbPool,
+        id: Uuid,
+        start_time_seconds: Option<i32>,
+        duration_seconds: Option<i32>,
+        transition_type: Option<String>,
+        order_index: Option<i32>,
+    ) -> Result<ZonePlaylistEntity, sqlx::Error> {
+        let block = sqlx::query_as::<_, ZonePlaylistEntity>(
+            r#"
+            UPDATE zone_playlists
+            SET
+                start_time_seconds = COALESCE($2, start_time_seconds),
+                duration_seconds = COALESCE($3, duration_seconds),
+                transition_type = CASE WHEN $4 = 'none' THEN NULL WHEN $4 IS NOT NULL THEN $4 ELSE transition_type END,
+                order_index = COALESCE($5, order_index)
+            WHERE id = $1
+            RETURNING *
+            "#
+        )
+        .bind(id)
+        .bind(start_time_seconds)
+        .bind(duration_seconds)
+        .bind(transition_type)
+        .bind(order_index)
+        .fetch_one(pool)
+        .await?;
+
+        Ok(block)
+    }
+
+    pub async fn remove_playlist_block(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
+        let result = sqlx::query("DELETE FROM zone_playlists WHERE id = $1")
             .bind(id)
             .execute(pool)
             .await?;

@@ -30,9 +30,18 @@ impl ManifestServiceImpl {
                 width: z.width,
                 height: z.height,
                 z_index: z.z_index,
-                assigned_playlist_id: z.playlist.as_ref().map(|p| p.playlist.id.to_string()).unwrap_or_default(),
-                assigned_playlist: None,
                 background_color: z.background_color,
+                blocks: z.blocks.into_iter().map(|b| crate::grpc::proto::studio::v1::layout::ZonePlaylist {
+                    id: b.id.to_string(),
+                    zone_id: z.id.to_string(),
+                    playlist_id: b.playlist.playlist.id.to_string(),
+                    playlist: None, // Simplified for now
+                    start_time_seconds: b.start_time_seconds,
+                    duration_seconds: b.duration_seconds,
+                    transition_type: b.transition_type.unwrap_or_default(),
+                    order_index: b.order_index,
+                    created_at: "".to_string(),
+                }).collect(),
                 created_at: "".to_string(),
                 updated_at: "".to_string(),
             }

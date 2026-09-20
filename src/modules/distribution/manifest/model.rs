@@ -24,7 +24,17 @@ pub struct ZoneWithPlaylistDto {
     pub height: i32,
     pub z_index: i32,
     pub background_color: String,
-    pub playlist: Option<PlaylistWithItemsDto>,
+    pub blocks: Vec<ZonePlaylistBlockDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ZonePlaylistBlockDto {
+    pub id: Uuid,
+    pub start_time_seconds: i32,
+    pub duration_seconds: i32,
+    pub transition_type: Option<String>,
+    pub order_index: i32,
+    pub playlist: PlaylistWithItemsDto,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -10,7 +10,7 @@ use crate::grpc::proto::studio::v1::layout::{
     ListLayoutsRequest, ListLayoutsResponse, UpdateLayoutRequest,
     DeleteLayoutRequest, DeleteLayoutResponse, CreateZoneRequest,
     GetZoneRequest, UpdateZoneRequest, DeleteZoneRequest, DeleteZoneResponse,
-    AssignPlaylistToZoneRequest, AssignPlaylistToZoneResponse,
+    AddPlaylistBlockRequest, UpdatePlaylistBlockRequest, RemovePlaylistBlockRequest, PlaylistBlockResponse, ZonePlaylist
 };
 
 pub struct LayoutServiceImpl {
@@ -28,7 +28,7 @@ impl LayoutServiceImpl {
             _ => crate::grpc::proto::hardware::v1::device::DeviceOrientation::OrientationLandscape as i32,
         };
 
-        let zones = dto.zones.into_iter().map(Self::map_zone_entity).collect();
+        let zones = dto.zones.into_iter().map(Self::map_zone_with_blocks).collect();
 
         Layout {
             id: dto.layout.id.to_string(),
@@ -45,21 +45,30 @@ impl LayoutServiceImpl {
         }
     }
 
-    fn map_zone_entity(zone: ZoneEntity) -> Zone {
+    fn map_zone_with_blocks(dto: crate::modules::studio::layout::model::ZoneWithBlocksDto) -> Zone {
         Zone {
-            id: zone.id.to_string(),
-            layout_id: zone.layout_id.to_string(),
-            name: zone.name,
-            x: zone.x,
-            y: zone.y,
-            width: zone.width,
-            height: zone.height,
-            z_index: zone.z_index,
-            assigned_playlist_id: zone.assigned_playlist_id.map(|id| id.to_string()).unwrap_or_default(),
-            assigned_playlist: None,
-            background_color: zone.background_color,
-            created_at: zone.created_at.to_rfc3339(),
-            updated_at: zone.updated_at.to_rfc3339(),
+            id: dto.zone.id.to_string(),
+            layout_id: dto.zone.layout_id.to_string(),
+            name: dto.zone.name,
+            x: dto.zone.x,
+            y: dto.zone.y,
+            width: dto.zone.width,
+            height: dto.zone.height,
+            z_index: dto.zone.z_index,
+            background_color: dto.zone.background_color,
+            blocks: dto.blocks.into_iter().map(|b| ZonePlaylist {
+                id: b.id.to_string(),
+                zone_id: b.zone_id.to_string(),
+                playlist_id: b.playlist_id.to_string(),
+                playlist: None,
+                start_time_seconds: b.start_time_seconds,
+                duration_seconds: b.duration_seconds,
+                transition_type: b.transition_type.unwrap_or_default(),
+                order_index: b.order_index,
+                created_at: b.created_at.to_rfc3339(),
+            }).collect(),
+            created_at: dto.zone.created_at.to_rfc3339(),
+            updated_at: dto.zone.updated_at.to_rfc3339(),
         }
     }
 }
@@ -90,11 +99,11 @@ impl LayoutServiceTrait for LayoutServiceImpl {
 
         let layout = LayoutService::create_layout(&self.pool, dto)
             .await
-            .map_err(Status::from)?;
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let full_dto = LayoutService::get_layout_by_id(&self.pool, layout.id)
             .await
-            .map_err(Status::from)?;
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Self::map_layout_with_zones(full_dto)))
     }
@@ -110,7 +119,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
 
         let dto = LayoutService::get_layout_by_id(&self.pool, layout_id)
             .await
-            .map_err(Status::from)?;
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Self::map_layout_with_zones(dto)))
     }
@@ -122,13 +131,13 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         let _claims = crate::grpc::middleware::require_permission(&request, "can_view_layouts")?;
         let layouts = LayoutService::list_layouts(&self.pool)
             .await
-            .map_err(Status::from)?;
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let mut items = Vec::new();
         for l in layouts {
             let dto = LayoutService::get_layout_by_id(&self.pool, l.id)
                 .await
-                .map_err(Status::from)?;
+                .map_err(|e| Status::internal(e.to_string()))?;
             items.push(Self::map_layout_with_zones(dto));
         }
 
@@ -165,11 +174,11 @@ impl LayoutServiceTrait for LayoutServiceImpl {
 
         LayoutService::update_layout(&self.pool, layout_id, dto)
             .await
-            .map_err(Status::from)?;
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let full_dto = LayoutService::get_layout_by_id(&self.pool, layout_id)
             .await
-            .map_err(Status::from)?;
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Self::map_layout_with_zones(full_dto)))
     }
@@ -185,7 +194,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
 
         let success = LayoutService::delete_layout(&self.pool, layout_id)
             .await
-            .map_err(Status::from)?;
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(DeleteLayoutResponse { success }))
     }
@@ -199,12 +208,6 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         let layout_id = Uuid::parse_str(&req.layout_id)
             .map_err(|_| Status::invalid_argument("ID Layout tidak valid"))?;
 
-        let assigned_playlist_id = if req.assigned_playlist_id.is_empty() {
-            None
-        } else {
-            Uuid::parse_str(&req.assigned_playlist_id).ok()
-        };
-
         let dto = CreateZoneDto {
             layout_id,
             name: if req.name.is_empty() { None } else { Some(req.name) },
@@ -213,15 +216,19 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             width: req.width,
             height: req.height,
             z_index: Some(req.z_index),
-            assigned_playlist_id,
             background_color: if req.background_color.is_empty() { None } else { Some(req.background_color) },
         };
 
         let zone = LayoutService::create_zone(&self.pool, dto)
             .await
-            .map_err(Status::from)?;
+            .map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(Self::map_zone_entity(zone)))
+        let zone_dto = crate::modules::studio::layout::model::ZoneWithBlocksDto {
+            zone,
+            blocks: vec![],
+        };
+
+        Ok(Response::new(Self::map_zone_with_blocks(zone_dto)))
     }
 
     async fn get_zone(
@@ -235,9 +242,15 @@ impl LayoutServiceTrait for LayoutServiceImpl {
 
         let zone = LayoutService::get_zone_by_id(&self.pool, zone_id)
             .await
-            .map_err(Status::from)?;
+            .map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(Self::map_zone_entity(zone)))
+        let blocks = sqlx::query_as::<_, crate::modules::studio::layout::model::ZonePlaylistEntity>(
+            "SELECT * FROM zone_playlists WHERE zone_id = $1 ORDER BY order_index ASC"
+        ).bind(zone.id).fetch_all(&self.pool).await.unwrap_or_default();
+
+        let zone_dto = crate::modules::studio::layout::model::ZoneWithBlocksDto { zone, blocks };
+
+        Ok(Response::new(Self::map_zone_with_blocks(zone_dto)))
     }
 
     async fn update_zone(
@@ -249,14 +262,6 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         let zone_id = Uuid::parse_str(&req.id)
             .map_err(|_| Status::invalid_argument("ID Zone tidak valid"))?;
 
-        let (assigned_playlist_id, clear_playlist) = if req.assigned_playlist_id.is_empty() || req.assigned_playlist_id == "clear" || req.assigned_playlist_id == "none" {
-            (None, true)
-        } else if let Ok(uid) = Uuid::parse_str(&req.assigned_playlist_id) {
-            (Some(uid), false)
-        } else {
-            (None, true)
-        };
-
         let dto = UpdateZoneDto {
             name: if req.name.is_empty() { None } else { Some(req.name) },
             x: if req.width > 0 { Some(req.x) } else { None },
@@ -264,16 +269,23 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             width: if req.width > 0 { Some(req.width) } else { None },
             height: if req.height > 0 { Some(req.height) } else { None },
             z_index: Some(req.z_index),
-            assigned_playlist_id,
-            clear_playlist,
             background_color: if req.background_color.is_empty() { None } else { Some(req.background_color) },
         };
 
         let zone = LayoutService::update_zone(&self.pool, zone_id, dto)
             .await
-            .map_err(Status::from)?;
+            .map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(Self::map_zone_entity(zone)))
+        // For update and get, we should really fetch blocks.
+        // Let's refetch from layout to get blocks, but for now we'll just return empty blocks.
+        // Wait, better to query the blocks here.
+        let blocks = sqlx::query_as::<_, crate::modules::studio::layout::model::ZonePlaylistEntity>(
+            "SELECT * FROM zone_playlists WHERE zone_id = $1 ORDER BY order_index ASC"
+        ).bind(zone.id).fetch_all(&self.pool).await.unwrap_or_default();
+
+        let zone_dto = crate::modules::studio::layout::model::ZoneWithBlocksDto { zone, blocks };
+
+        Ok(Response::new(Self::map_zone_with_blocks(zone_dto)))
     }
 
     async fn delete_zone(
@@ -287,47 +299,100 @@ impl LayoutServiceTrait for LayoutServiceImpl {
 
         let success = LayoutService::delete_zone(&self.pool, zone_id)
             .await
-            .map_err(Status::from)?;
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(DeleteZoneResponse { success }))
     }
 
-    async fn assign_playlist_to_zone(
+    async fn add_playlist_block(
         &self,
-        request: Request<AssignPlaylistToZoneRequest>,
-    ) -> Result<Response<AssignPlaylistToZoneResponse>, Status> {
+        request: Request<AddPlaylistBlockRequest>,
+    ) -> Result<Response<PlaylistBlockResponse>, Status> {
         let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let zone_id = Uuid::parse_str(&req.zone_id)
             .map_err(|_| Status::invalid_argument("ID Zone tidak valid"))?;
+        let playlist_id = Uuid::parse_str(&req.playlist_id)
+            .map_err(|_| Status::invalid_argument("ID Playlist tidak valid"))?;
 
-        let (assigned_playlist_id, clear_playlist) = if req.playlist_id.is_empty() || req.playlist_id == "clear" || req.playlist_id == "none" {
-            (None, true)
-        } else if let Ok(uid) = Uuid::parse_str(&req.playlist_id) {
-            (Some(uid), false)
-        } else {
-            (None, true)
-        };
+        let block = crate::modules::studio::layout::repositories::LayoutRepository::add_playlist_block(
+            &self.pool,
+            zone_id,
+            playlist_id,
+            req.start_time_seconds,
+            if req.duration_seconds > 0 { req.duration_seconds } else { 10 },
+        )
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
 
-        let dto = UpdateZoneDto {
-            name: None,
-            x: None,
-            y: None,
-            width: None,
-            height: None,
-            z_index: None,
-            assigned_playlist_id,
-            clear_playlist,
-            background_color: None,
-        };
-
-        let zone = LayoutService::update_zone(&self.pool, zone_id, dto)
-            .await
-            .map_err(Status::from)?;
-
-        Ok(Response::new(AssignPlaylistToZoneResponse {
+        Ok(Response::new(PlaylistBlockResponse {
             success: true,
-            zone: Some(Self::map_zone_entity(zone)),
+            block: Some(ZonePlaylist {
+                id: block.id.to_string(),
+                zone_id: block.zone_id.to_string(),
+                playlist_id: block.playlist_id.to_string(),
+                playlist: None,
+                start_time_seconds: block.start_time_seconds,
+                duration_seconds: block.duration_seconds,
+                transition_type: block.transition_type.unwrap_or_default(),
+                order_index: block.order_index,
+                created_at: block.created_at.to_rfc3339(),
+            }),
+        }))
+    }
+
+    async fn update_playlist_block(
+        &self,
+        request: Request<UpdatePlaylistBlockRequest>,
+    ) -> Result<Response<PlaylistBlockResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
+        let req = request.into_inner();
+        let block_id = Uuid::parse_str(&req.block_id)
+            .map_err(|_| Status::invalid_argument("ID Block tidak valid"))?;
+
+        let block = crate::modules::studio::layout::repositories::LayoutRepository::update_playlist_block(
+            &self.pool,
+            block_id,
+            Some(req.start_time_seconds),
+            if req.duration_seconds > 0 { Some(req.duration_seconds) } else { None },
+            if req.transition_type.is_empty() { None } else { Some(req.transition_type) },
+            if req.order_index > 0 { Some(req.order_index) } else { None },
+        )
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(PlaylistBlockResponse {
+            success: true,
+            block: Some(ZonePlaylist {
+                id: block.id.to_string(),
+                zone_id: block.zone_id.to_string(),
+                playlist_id: block.playlist_id.to_string(),
+                playlist: None,
+                start_time_seconds: block.start_time_seconds,
+                duration_seconds: block.duration_seconds,
+                transition_type: block.transition_type.unwrap_or_default(),
+                order_index: block.order_index,
+                created_at: block.created_at.to_rfc3339(),
+            }),
+        }))
+    }
+
+    async fn remove_playlist_block(
+        &self,
+        request: Request<RemovePlaylistBlockRequest>,
+    ) -> Result<Response<PlaylistBlockResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
+        let req = request.into_inner();
+        let block_id = Uuid::parse_str(&req.block_id)
+            .map_err(|_| Status::invalid_argument("ID Block tidak valid"))?;
+
+        let success = crate::modules::studio::layout::repositories::LayoutRepository::remove_playlist_block(&self.pool, block_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(PlaylistBlockResponse {
+            success,
+            block: None,
         }))
     }
 }

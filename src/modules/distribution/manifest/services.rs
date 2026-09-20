@@ -55,10 +55,10 @@ impl ManifestService {
         let mut enriched_zones = Vec::new();
         let mut required_assets_map: HashMap<Uuid, ManifestAssetDto> = HashMap::new();
 
-        for zone in zones {
-            let mut playlist_data = None;
-            if let Some(playlist_id) = zone.assigned_playlist_id {
-                if let Ok(pl) = PlaylistService::get_playlist_by_id(pool, playlist_id).await {
+        for mut dto_zone in zones {
+            let mut mapped_blocks = Vec::new();
+            for block in dto_zone.blocks {
+                if let Ok(pl) = PlaylistService::get_playlist_by_id(pool, block.playlist_id).await {
                     for item in &pl.items {
                         if !required_assets_map.contains_key(&item.media_item_id) {
                             required_assets_map.insert(
@@ -67,7 +67,7 @@ impl ManifestService {
                                     media_id: item.media_item_id,
                                     name: item.media_name.clone(),
                                     url: item.media_url.clone(),
-                                    sha256_hash: "hash_placeholder".to_string(), // In production populated from media_items
+                                    sha256_hash: "hash_placeholder".to_string(),
                                     file_size_bytes: 0,
                                     local_filename: format!("{}_{}", item.media_item_id, item.media_name),
                                     media_type: item.media_type.clone(),
@@ -75,20 +75,27 @@ impl ManifestService {
                             );
                         }
                     }
-                    playlist_data = Some(pl);
+                    mapped_blocks.push(crate::modules::distribution::manifest::model::ZonePlaylistBlockDto {
+                        id: block.id,
+                        start_time_seconds: block.start_time_seconds,
+                        duration_seconds: block.duration_seconds,
+                        transition_type: block.transition_type,
+                        order_index: block.order_index,
+                        playlist: pl,
+                    });
                 }
             }
 
             enriched_zones.push(ZoneWithPlaylistDto {
-                id: zone.id,
-                name: zone.name,
-                x: zone.x,
-                y: zone.y,
-                width: zone.width,
-                height: zone.height,
-                z_index: zone.z_index,
-                background_color: zone.background_color,
-                playlist: playlist_data,
+                id: dto_zone.zone.id,
+                name: dto_zone.zone.name,
+                x: dto_zone.zone.x,
+                y: dto_zone.zone.y,
+                width: dto_zone.zone.width,
+                height: dto_zone.zone.height,
+                z_index: dto_zone.zone.z_index,
+                background_color: dto_zone.zone.background_color,
+                blocks: mapped_blocks,
             });
         }
 

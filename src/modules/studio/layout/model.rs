@@ -27,17 +27,35 @@ pub struct ZoneEntity {
     pub width: i32,
     pub height: i32,
     pub z_index: i32,
-    pub assigned_playlist_id: Option<Uuid>,
     pub background_color: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ZonePlaylistEntity {
+    pub id: Uuid,
+    pub zone_id: Uuid,
+    pub playlist_id: Uuid,
+    pub start_time_seconds: i32,
+    pub duration_seconds: i32,
+    pub transition_type: Option<String>,
+    pub order_index: i32,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ZoneWithBlocksDto {
+    #[serde(flatten)]
+    pub zone: ZoneEntity,
+    pub blocks: Vec<ZonePlaylistEntity>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LayoutWithZonesDto {
     #[serde(flatten)]
     pub layout: LayoutEntity,
-    pub zones: Vec<ZoneEntity>,
+    pub zones: Vec<ZoneWithBlocksDto>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -71,7 +89,6 @@ pub struct CreateZoneDto {
     pub width: i32,
     pub height: i32,
     pub z_index: Option<i32>,
-    pub assigned_playlist_id: Option<Uuid>,
     pub background_color: Option<String>,
 }
 
@@ -83,7 +100,5 @@ pub struct UpdateZoneDto {
     pub width: Option<i32>,
     pub height: Option<i32>,
     pub z_index: Option<i32>,
-    pub assigned_playlist_id: Option<Uuid>,
-    pub clear_playlist: bool,
     pub background_color: Option<String>,
 }
