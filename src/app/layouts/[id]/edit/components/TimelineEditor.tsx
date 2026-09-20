@@ -4,7 +4,7 @@ import React, { useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
 import { Play, Pause, RotateCcw, Film, Image as ImageIcon, Volume2, VolumeX, MicOff, Eye, EyeOff } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
-import { updatePlaylistItem } from '../../../../../lib/api/studio/playlist.service';
+import { setPlaylistItemOverride } from '../../../../../lib/api/studio/layout.service';
 import { PlaylistItem } from '../../../../../lib/api/studio/types';
 
 export default function TimelineEditor() {
@@ -58,11 +58,28 @@ export default function TimelineEditor() {
     window.addEventListener('mouseup', onMouseUp);
   };
 
-  const handleToggleItemMute = async (e: React.MouseEvent, item: PlaylistItem, playlistId: string) => {
+  const handleToggleItemMute = async (e: React.MouseEvent, item: PlaylistItem, zonePlaylistId: string, currentMuted: boolean) => {
     e.stopPropagation();
     try {
-      await updatePlaylistItem(item.id, { is_muted: !item.is_muted });
-      await refreshPlaylistsAndMedia();
+      const override = await setPlaylistItemOverride(zonePlaylistId, item.id, !currentMuted);
+      
+      // Update local state so UI reflects immediately without global refresh
+      setZones(prev => prev.map(z => ({
+        ...z,
+        blocks: z.blocks.map(b => {
+          if (b.id === zonePlaylistId) {
+            const existingOverrideIdx = (b.item_overrides || []).findIndex(o => o.playlist_item_id === item.id);
+            const newOverrides = [...(b.item_overrides || [])];
+            if (existingOverrideIdx >= 0) {
+              newOverrides[existingOverrideIdx] = override;
+            } else {
+              newOverrides.push(override);
+            }
+            return { ...b, item_overrides: newOverrides };
+          }
+          return b;
+        })
+      })));
     } catch (err: any) {
       alert(err.message || 'Gagal mengubah status mute video');
     }
@@ -532,21 +549,21 @@ export default function TimelineEditor() {
                               const itWidthPx = itDur * pxPerSecond;
                               const m = mediaList.find((media) => media.id === it.media_item_id);
                               const isVid = m?.media_type === 2;
+                              const override = block.item_overrides?.find(o => o.playlist_item_id === it.id);
+                              const isMuted = override ? override.is_muted : !!it.is_muted;
 
                               return (
                                 <div
-                                  key={it.id || itemIdx}
+                                  key={it.id}
                                   style={{
-                                    width: `${itWidthPx}px`,
-                                    minWidth: '40px',
-                                    flexShrink: 0,
-                                    borderRight: itemIdx < items.length - 1 ? '1px dashed rgba(255,255,255,0.4)' : 'none',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '4px',
-                                    padding: '0 6px',
-                                    backgroundColor: itemIdx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.12)',
-                                    overflow: 'hidden',
+                                    width: `${itDur * pxPerSecond}px`,
+                                    borderRight: itemIdx < (assignedPl?.items?.length || 0) - 1 ? '1px solid rgba(255,255,255,0.2)' : 'none',
+                                    padding: '0 4px',
+                                    boxSizing: 'border-box',
+                                    backgroundColor: 'transparent',
+                                    flexShrink: 0
                                   }}
                                   title={`${m?.name || `Item ${itemIdx + 1}`} (${itDur}s)`}
                                 >
@@ -561,14 +578,14 @@ export default function TimelineEditor() {
                                   ) : (
                                     <ImageIcon size={12} color="#fff" style={{ flexShrink: 0 }} />
                                   )}
-                                  <span style={{ fontSize: '0.625rem', color: '#fff', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
+                                  <span style={{ fontSize: '0.625rem', color: '#fff', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, marginLeft: '4px' }}>
                                     {m?.name || `Item ${itemIdx + 1}`} ({itDur}s)
                                   </span>
                                   {isVid && (
                                     <button
                                       type="button"
-                                      onClick={(e) => handleToggleItemMute(e, it as PlaylistItem, block.playlist_id)}
-                                      title={it.is_muted ? 'Aktifkan suara video ini' : 'Bisukan suara video ini'}
+                                      onClick={(e) => handleToggleItemMute(e, it as PlaylistItem, block.id, isMuted)}
+                                      title={isMuted ? 'Aktifkan suara video ini' : 'Bisukan suara video ini'}
                                       style={{
                                         background: 'transparent',
                                         border: 'none',
@@ -579,11 +596,11 @@ export default function TimelineEditor() {
                                         justifyContent: 'center',
                                         flexShrink: 0,
                                         borderRadius: '4px',
-                                        backgroundColor: it.is_muted ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
+                                        backgroundColor: isMuted ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
                                         marginLeft: '4px'
                                       }}
                                     >
-                                      {it.is_muted ? <MicOff size={12} color="#fca5a5" /> : <Volume2 size={12} color="#a7f3d0" />}
+                                      {isMuted ? <MicOff size={12} color="#fca5a5" /> : <Volume2 size={12} color="#a7f3d0" />}
                                     </button>
                                   )}
                                 </div>
