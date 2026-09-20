@@ -18,6 +18,8 @@ function decodePlaylistItem(bytes: Uint8Array): PlaylistItem | null {
     else if (iTag.fieldNumber === 5) item.order_index = iReader.readInt32();
     else if (iTag.fieldNumber === 6) item.duration_seconds = iReader.readInt32();
     else if (iTag.fieldNumber === 7) item.transition_type = iReader.readString();
+    else if (iTag.fieldNumber === 8) iReader.readString();
+    else if (iTag.fieldNumber === 9) item.is_muted = iReader.readBool();
     else iReader.skip(iTag.wireType);
   }
   return item.id ? (item as PlaylistItem) : null;
@@ -152,14 +154,14 @@ export async function removePlaylistItem(item_id: string, playlist_id: string): 
   return getPlaylist(playlist_id);
 }
 
-export async function updatePlaylistItem(id: string, data: { duration_seconds?: number; transition_type?: string; position?: number }): Promise<void> {
+export async function updatePlaylistItem(id: string, data: { duration_seconds?: number; transition_type?: string; position?: number; is_muted?: boolean }): Promise<void> {
   const writer = new ProtoWriter();
-  // UpdatePlaylistItemRequest: id=1, duration_seconds=2, transition_type=3, position=4
+  // UpdatePlaylistItemRequest: id=1, duration_seconds=2, transition_type=3, position=4, is_muted=5
   writer.writeString(1, id);
   if (data.duration_seconds !== undefined) writer.writeInt32(2, data.duration_seconds);
   if (data.transition_type) writer.writeString(3, data.transition_type);
   if (data.position !== undefined) writer.writeInt32(4, data.position);
-
+  if (data.is_muted !== undefined) writer.writeBool(5, data.is_muted);
   await invokeGrpcMethod('signage.studio.v1.playlist.PlaylistService', 'UpdatePlaylistItem', writer);
 }
 

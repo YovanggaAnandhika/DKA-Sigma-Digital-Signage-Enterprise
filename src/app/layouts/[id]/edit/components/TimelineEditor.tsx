@@ -2,8 +2,10 @@
 
 import React, { useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
-import { Play, Pause, RotateCcw, Film, Image as ImageIcon, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause, RotateCcw, Film, Image as ImageIcon, Volume2, VolumeX, MicOff } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
+import { updatePlaylistItem } from '../../../../../lib/api/studio/playlist.service';
+import { PlaylistItem } from '../../../../../lib/api/studio/types';
 
 export default function TimelineEditor() {
   const {
@@ -22,7 +24,8 @@ export default function TimelineEditor() {
     pxPerSecond,
     isZoneActive,
     availablePlaylists,
-    mediaList
+    mediaList,
+    refreshPlaylistsAndMedia
   } = useLayoutEditor();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -48,6 +51,16 @@ export default function TimelineEditor() {
     };
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
+  };
+
+  const handleToggleItemMute = async (e: React.MouseEvent, item: PlaylistItem, playlistId: string) => {
+    e.stopPropagation();
+    try {
+      await updatePlaylistItem(item.id, { is_muted: !item.is_muted });
+      await refreshPlaylistsAndMedia();
+    } catch (err: any) {
+      alert(err.message || 'Gagal mengubah status mute video');
+    }
   };
 
   const formatTime = (px: number) => {
@@ -538,9 +551,31 @@ export default function TimelineEditor() {
                                   ) : (
                                     <ImageIcon size={12} color="#fff" style={{ flexShrink: 0 }} />
                                   )}
-                                  <span style={{ fontSize: '0.625rem', color: '#fff', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  <span style={{ fontSize: '0.625rem', color: '#fff', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
                                     {m?.name || `Item ${itemIdx + 1}`} ({itDur}s)
                                   </span>
+                                  {isVid && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleToggleItemMute(e, it as PlaylistItem, z.assigned_playlist_id!)}
+                                      title={it.is_muted ? 'Aktifkan suara video ini' : 'Bisukan suara video ini'}
+                                      style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        padding: '2px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flexShrink: 0,
+                                        borderRadius: '4px',
+                                        backgroundColor: it.is_muted ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
+                                        marginLeft: '4px'
+                                      }}
+                                    >
+                                      {it.is_muted ? <MicOff size={12} color="#fca5a5" /> : <Volume2 size={12} color="#a7f3d0" />}
+                                    </button>
+                                  )}
                                 </div>
                               );
                             })}

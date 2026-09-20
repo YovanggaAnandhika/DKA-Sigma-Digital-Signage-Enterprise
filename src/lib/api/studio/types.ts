@@ -35,6 +35,7 @@ export interface PlaylistItem {
   duration_seconds: number;
   order_index: number;
   transition_type: string;
+  is_muted?: boolean;
 }
 
 export interface Playlist {
