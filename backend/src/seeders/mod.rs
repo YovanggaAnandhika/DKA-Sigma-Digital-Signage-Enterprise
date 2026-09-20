@@ -84,14 +84,14 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Erro
     };
     let salt = SaltString::generate(&mut OsRng);
     let password_hash = Argon2::default()
-        .hash_password(b"DKASigma123!", &salt)
+        .hash_password(b"superadmin", &salt)
         .map_err(|e| format!("Hashing failed: {}", e))?
         .to_string();
 
     sqlx::query(
         r#"
         INSERT INTO users (id, email, password_hash, full_name, is_active)
-        VALUES ($1, 'admin@dkasigma.io', $2, 'Master Signage Admin', TRUE)
+        VALUES ($1, 'superadmin@dkasigma.io', $2, 'Master Signage Admin', TRUE)
         ON CONFLICT (email) DO UPDATE
         SET password_hash = EXCLUDED.password_hash, full_name = EXCLUDED.full_name, is_active = TRUE
         "#

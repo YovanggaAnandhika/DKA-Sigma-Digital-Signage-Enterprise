@@ -7,8 +7,8 @@ import { loginWithGrpc, saveSession } from '../../lib/grpc-client';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('admin@dkasigma.io');
-  const [password, setPassword] = useState('DKASigma123!');
+  const [email, setEmail] = useState('supersuperadmin@dkasigma.io');
+  const [password, setPassword] = useState('superadmin');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -170,7 +170,7 @@ export default function LoginPage() {
               }}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@dkasigma.io"
+              placeholder="supersuperadmin@dkasigma.io"
             />
           </div>
 
