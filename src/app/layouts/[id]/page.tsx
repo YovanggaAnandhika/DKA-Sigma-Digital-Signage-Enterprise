@@ -158,32 +158,117 @@ export default function ViewLayoutPage() {
                   )
                 )}
 
-                {/* Dark tint & frosted label */}
-                <div
-                  style={{
-                    position: 'relative',
-                    zIndex: 1,
-                    backgroundColor: zoneMedia?.public_url ? 'rgba(15, 23, 42, 0.8)' : 'transparent',
-                    backdropFilter: zoneMedia?.public_url ? 'blur(4px)' : 'none',
-                    padding: zoneMedia?.public_url ? '4px 8px' : '0',
-                    borderRadius: '6px',
-                    border: zoneMedia?.public_url ? '1px solid rgba(255,255,255,0.2)' : 'none',
-                    textAlign: 'center',
-                    maxWidth: '90%',
-                  }}
-                >
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ffffff', textAlign: 'center', textShadow: '0 1px 3px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {z.name}
-                  </div>
-                  {z.assigned_playlist_id && (
-                    <div style={{ fontSize: '0.5625rem', color: '#fef08a', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
-                      🎬 {z.playlist_name || assignedPl?.name || 'Playlist'}
+                {/* Non-intrusive metadata rendering */}
+                {zoneMedia?.public_url ? (
+                  <>
+                    {/* Top-left corner tag */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '6px',
+                        left: '6px',
+                        zIndex: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                        backdropFilter: 'blur(4px)',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        border: '1px solid rgba(255, 255, 255, 0.18)',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.5)',
+                        maxWidth: '85%',
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: '0.625rem',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {z.name}
+                      </span>
+                      {z.assigned_playlist_id && (
+                        <span
+                          style={{
+                            fontSize: '0.5625rem',
+                            color: '#fef08a',
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                            borderLeft: '1px solid rgba(255,255,255,0.2)',
+                            paddingLeft: '4px',
+                          }}
+                        >
+                          🎬 {z.playlist_name || assignedPl?.name || 'Playlist'}
+                        </span>
+                      )}
                     </div>
-                  )}
-                  <div style={{ fontSize: '0.625rem', color: zoneMedia?.public_url ? '#93c5fd' : color, marginTop: '2px', fontWeight: 600 }}>
-                    {Number(z.width) || 200} × {Number(z.height) || 200} px
+
+                    {/* Bottom-right dimension tag */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: '6px',
+                        right: '6px',
+                        zIndex: 2,
+                        backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                        backdropFilter: 'blur(4px)',
+                        padding: '2px 5px',
+                        borderRadius: '4px',
+                        fontSize: '0.5625rem',
+                        fontWeight: 600,
+                        color: '#93c5fd',
+                        border: '1px solid rgba(56, 189, 248, 0.35)',
+                      }}
+                    >
+                      {Number(z.width) || 200} × {Number(z.height) || 200} px
+                    </div>
+                  </>
+                ) : (
+                  /* Fallback centered label for empty zones without media */
+                  <div
+                    style={{
+                      position: 'relative',
+                      zIndex: 2,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '6px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        color: '#ffffff',
+                        textAlign: 'center',
+                        textShadow: '0 1px 3px rgba(0,0,0,0.9)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: '100%',
+                      }}
+                    >
+                      {z.name}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '0.625rem',
+                        color: color,
+                        marginTop: '2px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {Number(z.width) || 200} × {Number(z.height) || 200} px
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             );
           })}

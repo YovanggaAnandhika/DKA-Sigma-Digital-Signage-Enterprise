@@ -220,103 +220,143 @@ export default function CanvasWorkspace() {
                   )
                 )}
 
-                {/* Tint/Overlay */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    backgroundColor: activeMedia?.public_url
-                      ? (isSelected ? 'rgba(0,0,0,0.18)' : 'rgba(0,0,0,0.08)')
-                      : (active ? `${color}${isSelected ? '55' : '22'}` : 'rgba(15, 23, 42, 0.4)'),
-                  }}
-                />
-
-                {/* Zone Label & Meta Badge */}
-                <div
-                  style={{
-                    position: 'relative',
-                    zIndex: 2,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: activeMedia?.public_url ? 'rgba(15, 23, 42, 0.82)' : 'transparent',
-                    backdropFilter: activeMedia?.public_url ? 'blur(4px)' : 'none',
-                    padding: activeMedia?.public_url ? '4px 8px' : '0',
-                    borderRadius: '6px',
-                    border: activeMedia?.public_url ? '1px solid rgba(255,255,255,0.2)' : 'none',
-                    maxWidth: '85%',
-                    boxShadow: activeMedia?.public_url ? '0 2px 8px rgba(0,0,0,0.5)' : 'none',
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      color: '#ffffff',
-                      textAlign: 'center',
-                      textShadow: '0 1px 3px rgba(0,0,0,0.9)',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      maxWidth: '100%',
-                    }}
-                  >
-                    {z.name}
-                  </div>
-                  {z.assigned_playlist_id && (
+                {/* Non-intrusive metadata rendering */}
+                {activeMedia?.public_url ? (
+                  <>
+                    {/* Unobtrusive minimal corner tag */}
                     <div
                       style={{
-                        fontSize: '0.5625rem',
-                        fontWeight: 600,
-                        color: '#fef08a',
-                        backgroundColor: 'rgba(0,0,0,0.6)',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        marginTop: '3px',
-                        border: '1px solid rgba(254, 240, 138, 0.3)',
+                        position: 'absolute',
+                        top: '6px',
+                        left: '6px',
+                        zIndex: 2,
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '3px',
-                        maxWidth: '100%',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        gap: '4px',
+                        backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                        backdropFilter: 'blur(4px)',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        border: '1px solid rgba(255, 255, 255, 0.18)',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.5)',
+                        maxWidth: '85%',
                       }}
                     >
-                      🎬 {z.playlist_name || assignedPl?.name || 'Playlist'}
+                      <span
+                        style={{
+                          fontSize: '0.625rem',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {z.name}
+                      </span>
+                      {z.assigned_playlist_id && (
+                        <span
+                          style={{
+                            fontSize: '0.5625rem',
+                            color: '#fef08a',
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                            borderLeft: '1px solid rgba(255,255,255,0.2)',
+                            paddingLeft: '4px',
+                          }}
+                        >
+                          🎬 {z.playlist_name || assignedPl?.name || 'Playlist'}
+                        </span>
+                      )}
                     </div>
-                  )}
-                  {isSelected && (
+
+                    {/* Bottom right dimension tag (only when selected) */}
+                    {isSelected && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          bottom: '6px',
+                          right: '6px',
+                          zIndex: 2,
+                          backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                          backdropFilter: 'blur(4px)',
+                          padding: '2px 5px',
+                          borderRadius: '4px',
+                          fontSize: '0.5625rem',
+                          fontWeight: 600,
+                          color: '#93c5fd',
+                          border: '1px solid rgba(56, 189, 248, 0.35)',
+                        }}
+                      >
+                        {Math.round(z.width)}×{Math.round(z.height)}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* Fallback centered label for empty zones without media */
+                  <>
                     <div
                       style={{
-                        fontSize: '0.625rem',
-                        color: '#93c5fd',
-                        marginTop: '2px',
-                        fontWeight: 600,
-                        textShadow: '0 1px 2px rgba(0,0,0,0.9)',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: active ? `${color}${isSelected ? '55' : '22'}` : 'rgba(15, 23, 42, 0.4)',
                       }}
-                    >
-                      {Math.round(z.width)}×{Math.round(z.height)}
-                    </div>
-                  )}
-                  {!active && !isSelected && (
-                    <span
+                    />
+                    <div
                       style={{
-                        fontSize: '0.5625rem',
-                        color: '#94a3b8',
-                        marginTop: '2px',
-                        fontStyle: 'italic',
-                        textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+                        position: 'relative',
+                        zIndex: 2,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '6px',
+                        textAlign: 'center',
                       }}
                     >
-                      (Mati di timeline)
-                    </span>
-                  )}
-                </div>
+                      <div
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          color: active ? '#ffffff' : '#94a3b8',
+                          textAlign: 'center',
+                          textShadow: '0 1px 3px rgba(0,0,0,0.9)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          maxWidth: '100%',
+                        }}
+                      >
+                        {z.name}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '0.625rem',
+                          color: isSelected ? '#93c5fd' : '#94a3b8',
+                          marginTop: '2px',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {Math.round(z.width)}×{Math.round(z.height)}
+                      </div>
+                      {!active && !isSelected && (
+                        <span
+                          style={{
+                            fontSize: '0.5625rem',
+                            color: '#94a3b8',
+                            marginTop: '2px',
+                            fontStyle: 'italic',
+                          }}
+                        >
+                          (Mati di timeline)
+                        </span>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             </Rnd>
           );
