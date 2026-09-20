@@ -40,7 +40,6 @@ export class ProtoWriter {
   }
 
   writeInt32(fieldNumber: number, value: number): void {
-    if (value === 0) return;
     this.writeTag(fieldNumber, 0);
     this.writeVarint(value);
   }
@@ -52,7 +51,6 @@ export class ProtoWriter {
   }
 
   writeBool(fieldNumber: number, value: boolean): void {
-    if (!value) return;
     this.writeTag(fieldNumber, 0);
     this.writeVarint(value ? 1 : 0);
   }
