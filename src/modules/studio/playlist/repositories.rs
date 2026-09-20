@@ -134,14 +134,20 @@ impl PlaylistRepository {
         let item = sqlx::query_as::<_, PlaylistItemEntity>(
             r#"
             INSERT INTO playlist_items (playlist_id, media_item_id, position, duration_seconds, transition_type)
-            VALUES ($1, $2, $3, $4, $5)
+            VALUES (
+                $1,
+                $2,
+                $3,
+                COALESCE($4, (SELECT duration_seconds FROM media_items WHERE id = $2 AND duration_seconds > 0), 10),
+                $5
+            )
             RETURNING *
             "#,
         )
         .bind(dto.playlist_id)
         .bind(dto.media_item_id)
         .bind(next_pos)
-        .bind(dto.duration_seconds.unwrap_or(10))
+        .bind(dto.duration_seconds)
         .bind(dto.transition_type.unwrap_or_else(|| "fade".to_string()))
         .fetch_one(pool)
         .await?;
