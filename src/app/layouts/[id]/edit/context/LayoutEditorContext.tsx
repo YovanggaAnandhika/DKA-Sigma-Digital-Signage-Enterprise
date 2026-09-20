@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { api, Layout, Zone as ApiZone, Playlist } from '../../../../../lib/api';
+import { api, Layout, Zone as ApiZone, Playlist, MediaItem } from '../../../../../lib/api';
 
 // Extend Zone for UI timeline properties
 export interface Zone extends ApiZone {
@@ -17,6 +17,7 @@ interface LayoutEditorContextType {
   zones: Zone[];
   setZones: React.Dispatch<React.SetStateAction<Zone[]>>;
   availablePlaylists: Playlist[];
+  mediaList: MediaItem[];
   selectedZoneId: string | null;
   setSelectedZoneId: (id: string | null) => void;
   loading: boolean;
@@ -48,6 +49,7 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
   const [layoutName, setLayoutName] = useState('');
   const [zones, setZones] = useState<Zone[]>([]);
   const [availablePlaylists, setAvailablePlaylists] = useState<Playlist[]>([]);
+  const [mediaList, setMediaList] = useState<MediaItem[]>([]);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -56,14 +58,16 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
     const fetchLayout = async () => {
       try {
         setLoading(true);
-        const [data, playlistsRes] = await Promise.all([
+        const [data, playlistsRes, mediaRes] = await Promise.all([
           api.getLayout(params.id),
           api.getPlaylists({ limit: 100 }).catch(() => ({ data: [] })),
+          api.getMedia({ limit: 100 }).catch(() => ({ data: [] })),
         ]);
         setLayout(data);
         setLayoutName(data.name);
         const loadedPlaylists = (playlistsRes as any).data || [];
         setAvailablePlaylists(loadedPlaylists);
+        setMediaList((mediaRes as any).data || []);
         
         const sanitizedZones = (data.zones || []).map((z: any) => ({
           ...z,
@@ -263,6 +267,7 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
     zones,
     setZones,
     availablePlaylists,
+    mediaList,
     selectedZoneId,
     setSelectedZoneId,
     loading,

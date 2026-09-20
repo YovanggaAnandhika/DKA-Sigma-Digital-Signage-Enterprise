@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Layers, Plus } from 'lucide-react';
+import { Layers, Plus, Film, Image as ImageIcon } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 
 export default function LayersPanel() {
-  const { zones, selectedZoneId, setSelectedZoneId, handleAddZone, availablePlaylists } = useLayoutEditor();
+  const { zones, selectedZoneId, setSelectedZoneId, handleAddZone, availablePlaylists, mediaList } = useLayoutEditor();
 
   return (
     <div style={{ width: '280px', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-surface)', borderRight: '1px solid var(--border-subtle)', zIndex: 5 }}>
@@ -27,7 +27,12 @@ export default function LayersPanel() {
         ) : (
           [...zones].sort((a, b) => (b.z_index || 0) - (a.z_index || 0)).map((z) => {
             const isSelected = z.id === selectedZoneId;
-            const playlistName = z.playlist_name || availablePlaylists.find(p => p.id === z.assigned_playlist_id)?.name;
+            const assignedPl = availablePlaylists.find(p => p.id === z.assigned_playlist_id);
+            const playlistName = z.playlist_name || assignedPl?.name;
+            const firstItem = assignedPl?.items?.[0];
+            const layerMedia = firstItem ? mediaList.find(m => m.id === firstItem.media_item_id) : null;
+            const isVideo = layerMedia?.media_type === 2;
+
             return (
               <div
                 key={z.id}
@@ -45,7 +50,35 @@ export default function LayersPanel() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-                  <div style={{ width: '14px', height: '14px', borderRadius: '4px', backgroundColor: isSelected ? 'var(--primary-500)' : '#cbd5e1', flexShrink: 0 }} />
+                  <div
+                    style={{
+                      width: '32px',
+                      height: '24px',
+                      borderRadius: '4px',
+                      overflow: 'hidden',
+                      backgroundColor: '#0f172a',
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: `1px solid ${isSelected ? 'var(--primary-500)' : 'var(--border-subtle)'}`,
+                    }}
+                  >
+                    {layerMedia?.public_url && !isVideo ? (
+                      <img
+                        src={layerMedia.public_url}
+                        alt={layerMedia.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    ) : isVideo ? (
+                      <Film size={12} color="var(--accent-amber)" />
+                    ) : (
+                      <div style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: isSelected ? 'var(--primary-500)' : '#94a3b8' }} />
+                    )}
+                  </div>
                   <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     <span style={{ fontSize: '0.8125rem', fontWeight: isSelected ? 700 : 500, color: isSelected ? 'var(--primary-600)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {z.name}

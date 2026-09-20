@@ -2,11 +2,11 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Trash2, MousePointer2, ListMusic, ExternalLink } from 'lucide-react';
+import { Trash2, MousePointer2, ListMusic, ExternalLink, Film, Image as ImageIcon } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 
 export default function InspectorPanel() {
-  const { layoutName, setLayoutName, zones, selectedZoneId, handleDeleteZone, updateSelectedZone, availablePlaylists } = useLayoutEditor();
+  const { layoutName, setLayoutName, zones, selectedZoneId, handleDeleteZone, updateSelectedZone, availablePlaylists, mediaList } = useLayoutEditor();
   const selectedZone = zones.find((z) => z.id === selectedZoneId);
   const selectedPlaylist = selectedZone?.assigned_playlist_id 
     ? availablePlaylists.find(p => p.id === selectedZone.assigned_playlist_id) 
@@ -178,20 +178,97 @@ export default function InspectorPanel() {
               </select>
 
               {selectedPlaylist ? (
-                <div style={{ marginTop: '10px', padding: '10px 12px', backgroundColor: 'rgba(56, 189, 248, 0.08)', borderRadius: '6px', border: '1px solid rgba(56, 189, 248, 0.25)', fontSize: '0.75rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                    <span>Jumlah Konten:</span>
-                    <strong style={{ color: 'var(--text-primary)' }}>{selectedPlaylist.items?.length || 0} Media</strong>
+                <>
+                  <div style={{ marginTop: '10px', padding: '10px 12px', backgroundColor: 'rgba(56, 189, 248, 0.08)', borderRadius: '6px', border: '1px solid rgba(56, 189, 248, 0.25)', fontSize: '0.75rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                      <span>Jumlah Konten:</span>
+                      <strong style={{ color: 'var(--text-primary)' }}>{selectedPlaylist.items?.length || 0} Media</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                      <span>Durasi Putaran:</span>
+                      <strong style={{ color: 'var(--accent-amber)' }}>{selectedPlaylist.total_duration_seconds || 0} detik</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                      <span>Mode Putar:</span>
+                      <strong>{selectedPlaylist.is_shuffle ? 'Acak (Shuffle)' : 'Berurutan'}</strong>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                    <span>Durasi Putaran:</span>
-                    <strong style={{ color: 'var(--accent-amber)' }}>{selectedPlaylist.total_duration_seconds || 0} detik</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                    <span>Mode Putar:</span>
-                    <strong>{selectedPlaylist.is_shuffle ? 'Acak (Shuffle)' : 'Berurutan'}</strong>
-                  </div>
-                </div>
+
+                  {selectedPlaylist.items && selectedPlaylist.items.length > 0 && (
+                    <div style={{ marginTop: '12px' }}>
+                      <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                        Pratinjau Konten ({selectedPlaylist.items.length})
+                      </label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto' }}>
+                        {selectedPlaylist.items.map((item, idx) => {
+                          const m = mediaList.find((media) => media.id === item.media_item_id);
+                          const isVideo = m?.media_type === 2;
+                          return (
+                            <div
+                              key={item.id || idx}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '6px 8px',
+                                backgroundColor: 'var(--bg-elevated)',
+                                borderRadius: '6px',
+                                border: '1px solid var(--border-subtle)',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '40px',
+                                  height: '32px',
+                                  borderRadius: '4px',
+                                  overflow: 'hidden',
+                                  backgroundColor: '#0f172a',
+                                  flexShrink: 0,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  border: '1px solid var(--border-subtle)',
+                                }}
+                              >
+                                {m?.public_url && !isVideo ? (
+                                  <img
+                                    src={m.public_url}
+                                    alt={m.name}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    onError={(e) => {
+                                      (e.target as HTMLElement).style.display = 'none';
+                                    }}
+                                  />
+                                ) : isVideo ? (
+                                  <Film size={14} color="var(--accent-amber)" />
+                                ) : (
+                                  <ImageIcon size={14} color="var(--primary-500)" />
+                                )}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                                <span
+                                  style={{
+                                    fontSize: '0.75rem',
+                                    fontWeight: 600,
+                                    color: 'var(--text-primary)',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                  }}
+                                >
+                                  {m?.name || item.media_name || `Media ${idx + 1}`}
+                                </span>
+                                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                                  {item.duration_seconds || 10} detik &bull; {isVideo ? 'Video' : 'Gambar'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : (
                 <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '6px' }}>
                   Pilih playlist di atas untuk memutar video atau gambar secara otomatis di zona ini.

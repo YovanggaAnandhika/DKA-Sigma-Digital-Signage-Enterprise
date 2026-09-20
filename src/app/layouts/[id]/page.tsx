@@ -3,21 +3,29 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api, Layout } from '../../../lib/api';
-import { ArrowLeft, Edit, Palette, RefreshCw, Layers } from 'lucide-react';
+import { api, Layout, Playlist, MediaItem } from '../../../lib/api';
+import { ArrowLeft, Edit, Palette, RefreshCw, Layers, Film, Image as ImageIcon } from 'lucide-react';
 
 export default function ViewLayoutPage() {
   const params = useParams() as { id: string };
   const router = useRouter();
   const [layout, setLayout] = useState<Layout | null>(null);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [mediaList, setMediaList] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchLayout = async () => {
       try {
         setLoading(true);
-        const data = await api.getLayout(params.id);
-        setLayout(data);
+        const [layoutData, playlistsRes, mediaRes] = await Promise.all([
+          api.getLayout(params.id),
+          api.getPlaylists({ limit: 100 }).catch(() => ({ data: [] })),
+          api.getMedia({ limit: 100 }).catch(() => ({ data: [] })),
+        ]);
+        setLayout(layoutData);
+        setPlaylists((playlistsRes as any).data || []);
+        setMediaList((mediaRes as any).data || []);
       } catch (err: any) {
         alert(err.message || 'Gagal memuat layout');
         router.push('/layouts');
@@ -86,6 +94,10 @@ export default function ViewLayoutPage() {
           {layout.zones?.map((z, idx) => {
             const zColors = ['#2563eb', '#06b6d4', '#10b981', '#f59e0b', '#ec4899'];
             const color = zColors[idx % zColors.length];
+            const assignedPl = playlists.find((p) => p.id === z.assigned_playlist_id);
+            const firstItem = assignedPl?.items?.[0];
+            const zoneMedia = firstItem ? mediaList.find((m) => m.id === firstItem.media_item_id) : null;
+            const isVideo = zoneMedia?.media_type === 2;
 
             return (
               <div
@@ -104,13 +116,73 @@ export default function ViewLayoutPage() {
                   justifyContent: 'center',
                   padding: '6px',
                   boxSizing: 'border-box',
+                  overflow: 'hidden',
+                  zIndex: z.z_index || 1,
                 }}
               >
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ffffff', textAlign: 'center' }}>
-                  {z.name}
-                </div>
-                <div style={{ fontSize: '0.625rem', color: color, marginTop: '2px', fontWeight: 600 }}>
-                  {Number(z.width) || 200} × {Number(z.height) || 200} px
+                {zoneMedia?.public_url && (
+                  isVideo ? (
+                    <video
+                      src={zoneMedia.public_url}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        zIndex: 0,
+                      }}
+                    />
+                  ) : (
+                    <img
+                      src={zoneMedia.public_url}
+                      alt={zoneMedia.name}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        zIndex: 0,
+                      }}
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  )
+                )}
+
+                {/* Dark tint & frosted label */}
+                <div
+                  style={{
+                    position: 'relative',
+                    zIndex: 1,
+                    backgroundColor: zoneMedia?.public_url ? 'rgba(15, 23, 42, 0.8)' : 'transparent',
+                    backdropFilter: zoneMedia?.public_url ? 'blur(4px)' : 'none',
+                    padding: zoneMedia?.public_url ? '4px 8px' : '0',
+                    borderRadius: '6px',
+                    border: zoneMedia?.public_url ? '1px solid rgba(255,255,255,0.2)' : 'none',
+                    textAlign: 'center',
+                    maxWidth: '90%',
+                  }}
+                >
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ffffff', textAlign: 'center', textShadow: '0 1px 3px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {z.name}
+                  </div>
+                  {z.assigned_playlist_id && (
+                    <div style={{ fontSize: '0.5625rem', color: '#fef08a', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                      🎬 {z.playlist_name || assignedPl?.name || 'Playlist'}
+                    </div>
+                  )}
+                  <div style={{ fontSize: '0.625rem', color: zoneMedia?.public_url ? '#93c5fd' : color, marginTop: '2px', fontWeight: 600 }}>
+                    {Number(z.width) || 200} × {Number(z.height) || 200} px
+                  </div>
                 </div>
               </div>
             );
@@ -155,18 +227,51 @@ export default function ViewLayoutPage() {
                     </td>
                     <td>Layer #{z.z_index}</td>
                     <td>
-                      <span
-                        style={{
-                          padding: '2px 8px',
-                          borderRadius: '6px',
-                          backgroundColor: 'var(--bg-surface-elevated)',
-                          fontSize: '0.75rem',
-                          color: 'var(--primary-400)',
-                          border: '1px solid var(--border-subtle)',
-                        }}
-                      >
-                        {z.playlist_name || 'Rotasi Default'}
-                      </span>
+                      {(() => {
+                        const assignedPl = playlists.find((p) => p.id === z.assigned_playlist_id);
+                        const firstItem = assignedPl?.items?.[0];
+                        const m = firstItem ? mediaList.find((item) => item.id === firstItem.media_item_id) : null;
+                        const isVideo = m?.media_type === 2;
+
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {m?.public_url && (
+                              <div
+                                style={{
+                                  width: '28px',
+                                  height: '22px',
+                                  borderRadius: '4px',
+                                  overflow: 'hidden',
+                                  backgroundColor: '#0f172a',
+                                  flexShrink: 0,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  border: '1px solid var(--border-subtle)',
+                                }}
+                              >
+                                {!isVideo ? (
+                                  <img src={m.public_url} alt={m.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                  <Film size={12} color="var(--accent-amber)" />
+                                )}
+                              </div>
+                            )}
+                            <span
+                              style={{
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                backgroundColor: 'var(--bg-surface-elevated)',
+                                fontSize: '0.75rem',
+                                color: z.assigned_playlist_id ? 'var(--primary-400)' : 'var(--text-muted)',
+                                border: '1px solid var(--border-subtle)',
+                              }}
+                            >
+                              {z.playlist_name || assignedPl?.name || 'Rotasi Default'}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </td>
                   </tr>
                 ))
