@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package signage.studio.v1.layout;
+
+import "studio/v1/layout/layout.common.proto";
+
+service LayoutService {
+  // Layout CRUD
+  rpc CreateLayout(CreateLayoutRequest) returns (Layout);
+  rpc GetLayout(GetLayoutRequest) returns (Layout);
+  rpc ListLayouts(ListLayoutsRequest) returns (ListLayoutsResponse);
+  rpc UpdateLayout(UpdateLayoutRequest) returns (Layout);
+  rpc DeleteLayout(DeleteLayoutRequest) returns (DeleteLayoutResponse);
+
+  // Zone CRUD
+  rpc CreateZone(CreateZoneRequest) returns (Zone);
+  rpc GetZone(GetZoneRequest) returns (Zone);
+  rpc UpdateZone(UpdateZoneRequest) returns (Zone);
+  rpc DeleteZone(DeleteZoneRequest) returns (DeleteZoneResponse);
+  rpc AssignPlaylistToZone(AssignPlaylistToZoneRequest) returns (AssignPlaylistToZoneResponse);
+}

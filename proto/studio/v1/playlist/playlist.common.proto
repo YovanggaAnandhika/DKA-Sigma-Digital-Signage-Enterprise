@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package signage.studio.v1.playlist;
+
+import "common/v1/types.proto";
+import "studio/v1/media/media.common.proto";
+
+message PlaylistItem {
+  string id = 1;
+  string playlist_id = 2;
+  string media_item_id = 3;
+  signage.studio.v1.media.MediaItem media_item = 4;
+  int32 position = 5;
+  int32 duration_seconds = 6;
+  string transition_type = 7; // "fade", "slide_left", "none"
+  string created_at = 8;
+}
+
+message Playlist {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  bool is_shuffle = 4;
+  repeated PlaylistItem items = 5;
+  int32 total_duration_seconds = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message CreatePlaylistRequest {
+  string name = 1;
+  string description = 2;
+  bool is_shuffle = 3;
+}
+
+message GetPlaylistRequest {
+  string id = 1;
+}
+
+message ListPlaylistsRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+}
+
+message ListPlaylistsResponse {
+  repeated Playlist items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdatePlaylistRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  bool is_shuffle = 4;
+}
+
+message DeletePlaylistRequest {
+  string id = 1;
+}
+
+message DeletePlaylistResponse {
+  bool success = 1;
+}
+
+message AddPlaylistItemRequest {
+  string playlist_id = 1;
+  string media_item_id = 2;
+  int32 duration_seconds = 3;
+  string transition_type = 4;
+  int32 position = 5;
+}
+
+message UpdatePlaylistItemRequest {
+  string id = 1;
+  int32 duration_seconds = 2;
+  string transition_type = 3;
+  int32 position = 4;
+}
+
+message RemovePlaylistItemRequest {
+  string id = 1;
+}
+
+message RemovePlaylistItemResponse {
+  bool success = 1;
+}
+
+message ReorderPlaylistItemsRequest {
+  string playlist_id = 1;
+  repeated string item_ids_in_order = 2;
+}
+
+message ReorderPlaylistItemsResponse {
+  bool success = 1;
+  Playlist playlist = 2;
+}

@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package signage.distribution.v1.canary;
+
+import "distribution/v1/canary/canary.common.proto";
+
+service CanaryService {
+  rpc CreateCanaryGroup(CreateCanaryGroupRequest) returns (CanaryGroup);
+  rpc GetCanaryGroup(GetCanaryGroupRequest) returns (CanaryGroup);
+  rpc ListCanaryGroups(ListCanaryGroupsRequest) returns (ListCanaryGroupsResponse);
+  rpc UpdateCanaryGroup(UpdateCanaryGroupRequest) returns (CanaryGroup);
+  rpc DeleteCanaryGroup(DeleteCanaryGroupRequest) returns (DeleteCanaryGroupResponse);
+  rpc EvaluateCanary(EvaluateCanaryRequest) returns (EvaluateCanaryResponse);
+}
