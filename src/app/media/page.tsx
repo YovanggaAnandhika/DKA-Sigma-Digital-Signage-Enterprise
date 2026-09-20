@@ -123,6 +123,7 @@ export default function MediaPage() {
           <table className="data-table">
             <thead>
               <tr>
+                <th style={{ width: '56px' }}>Pratinjau</th>
                 <th>Nama Aset Media</th>
                 <th>Tipe Konten</th>
                 <th>Ukuran File</th>
@@ -135,16 +136,54 @@ export default function MediaPage() {
             <tbody>
               {mediaItems.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                     {loading ? 'Memuat aset media dari backend gRPC...' : 'Belum ada aset media tersimpan.'}
                   </td>
                 </tr>
               ) : (
                 mediaItems.map((m) => (
                   <tr key={m.id}>
+                    <td>
+                      <Link href={`/media/${m.id}`}>
+                        <div
+                          style={{
+                            width: '44px',
+                            height: '44px',
+                            borderRadius: '6px',
+                            overflow: 'hidden',
+                            backgroundColor: '#0f172a',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '1px solid var(--border-subtle)',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {m.media_type === 2 ? (
+                            <Film size={18} color="var(--accent-cyan)" />
+                          ) : m.media_type === 3 ? (
+                            <Globe size={18} color="var(--accent-amber)" />
+                          ) : m.public_url ? (
+                            <img
+                              src={m.public_url}
+                              alt={m.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <ImageIcon size={18} color="var(--accent-emerald)" />
+                          )}
+                        </div>
+                      </Link>
+                    </td>
                     <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                       <Link href={`/media/${m.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        {m.name}
+                        <div>{m.name}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400, fontFamily: 'monospace' }}>
+                          {m.original_filename}
+                        </div>
                       </Link>
                     </td>
                     <td>{getMediaTypeBadge(m.media_type)}</td>
