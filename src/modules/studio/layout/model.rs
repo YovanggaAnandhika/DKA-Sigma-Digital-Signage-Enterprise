@@ -44,11 +44,28 @@ pub struct ZonePlaylistEntity {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ZonePlaylistItemOverrideEntity {
+    pub id: Uuid,
+    pub zone_playlist_id: Uuid,
+    pub playlist_item_id: Uuid,
+    pub is_muted: Option<bool>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ZonePlaylistDto {
+    #[serde(flatten)]
+    pub block: ZonePlaylistEntity,
+    pub item_overrides: Vec<ZonePlaylistItemOverrideEntity>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ZoneWithBlocksDto {
     #[serde(flatten)]
     pub zone: ZoneEntity,
-    pub blocks: Vec<ZonePlaylistEntity>,
+    pub blocks: Vec<ZonePlaylistDto>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -115,7 +115,22 @@ impl LayoutRepository {
             .fetch_all(pool)
             .await?;
 
-            result.push(ZoneWithBlocksDto { zone, blocks });
+            let mut block_dtos = Vec::new();
+            for block in blocks {
+                let overrides = sqlx::query_as::<_, crate::modules::studio::layout::model::ZonePlaylistItemOverrideEntity>(
+                    "SELECT * FROM zone_playlist_item_overrides WHERE zone_playlist_id = $1",
+                )
+                .bind(block.id)
+                .fetch_all(pool)
+                .await?;
+                
+                block_dtos.push(crate::modules::studio::layout::model::ZonePlaylistDto {
+                    block,
+                    item_overrides: overrides,
+                });
+            }
+
+            result.push(ZoneWithBlocksDto { zone, blocks: block_dtos });
         }
 
         Ok(result)
@@ -267,12 +282,36 @@ impl LayoutRepository {
         Ok(block)
     }
 
-    pub async fn remove_playlist_block(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
+    pub async fn remove_playlist_block(pool: &DbPool, block_id: Uuid) -> Result<bool, sqlx::Error> {
         let result = sqlx::query("DELETE FROM zone_playlists WHERE id = $1")
-            .bind(id)
+            .bind(block_id)
             .execute(pool)
             .await?;
 
         Ok(result.rows_affected() > 0)
+    }
+
+    pub async fn set_playlist_item_override(
+        pool: &DbPool,
+        zone_playlist_id: Uuid,
+        playlist_item_id: Uuid,
+        is_muted: bool,
+    ) -> Result<crate::modules::studio::layout::model::ZonePlaylistItemOverrideEntity, sqlx::Error> {
+        let override_ent = sqlx::query_as::<_, crate::modules::studio::layout::model::ZonePlaylistItemOverrideEntity>(
+            r#"
+            INSERT INTO zone_playlist_item_overrides (zone_playlist_id, playlist_item_id, is_muted)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (zone_playlist_id, playlist_item_id)
+            DO UPDATE SET is_muted = $3, updated_at = CURRENT_TIMESTAMP
+            RETURNING *
+            "#,
+        )
+        .bind(zone_playlist_id)
+        .bind(playlist_item_id)
+        .bind(is_muted)
+        .fetch_one(pool)
+        .await?;
+
+        Ok(override_ent)
     }
 }

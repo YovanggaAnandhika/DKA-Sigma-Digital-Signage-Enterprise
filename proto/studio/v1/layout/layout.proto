@@ -20,4 +20,5 @@ service LayoutService {
   rpc AddPlaylistBlock(AddPlaylistBlockRequest) returns (PlaylistBlockResponse);
   rpc UpdatePlaylistBlock(UpdatePlaylistBlockRequest) returns (PlaylistBlockResponse);
   rpc RemovePlaylistBlock(RemovePlaylistBlockRequest) returns (PlaylistBlockResponse);
+  rpc SetPlaylistItemOverride(SetPlaylistItemOverrideRequest) returns (SetPlaylistItemOverrideResponse);
 }
