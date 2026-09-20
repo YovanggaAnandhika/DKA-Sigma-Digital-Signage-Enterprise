@@ -47,6 +47,8 @@ interface LayoutEditorContextType {
   setIsMuted: React.Dispatch<React.SetStateAction<boolean>>;
   toggleMute: () => void;
   isZoneActive: (zone: Zone, currentPos?: number) => boolean;
+  pickerZoneId: string | null;
+  setPickerZoneId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 const LayoutEditorContext = createContext<LayoutEditorContextType | undefined>(undefined);
@@ -61,6 +63,7 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
   const [availablePlaylists, setAvailablePlaylists] = useState<Playlist[]>([]);
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
+  const [pickerZoneId, setPickerZoneId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -428,6 +431,8 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
     setIsMuted,
     toggleMute,
     isZoneActive,
+    pickerZoneId,
+    setPickerZoneId,
   };
 
   return (

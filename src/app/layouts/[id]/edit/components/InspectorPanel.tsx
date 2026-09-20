@@ -6,7 +6,7 @@ import { Trash2, MousePointer2, ListMusic, ExternalLink, Film, Image as ImageIco
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 
 export default function InspectorPanel() {
-  const { layoutName, setLayoutName, zones, selectedZoneId, handleDeleteZone, updateSelectedZone, availablePlaylists, mediaList } = useLayoutEditor();
+  const { layoutName, setLayoutName, zones, selectedZoneId, handleDeleteZone, updateSelectedZone, availablePlaylists, mediaList, setPickerZoneId } = useLayoutEditor();
   const selectedZone = zones.find((z) => z.id === selectedZoneId);
   const selectedPlaylist = selectedZone?.assigned_playlist_id 
     ? availablePlaylists.find(p => p.id === selectedZone.assigned_playlist_id) 
@@ -158,24 +158,31 @@ export default function InspectorPanel() {
                 )}
               </div>
               
-              <select
-                value={selectedZone.assigned_playlist_id || ''}
-                onChange={(e) => {
-                  const plId = e.target.value;
-                  updateSelectedZone('assigned_playlist_id', plId);
-                  const matched = availablePlaylists.find(p => p.id === plId);
-                  updateSelectedZone('playlist_name', matched?.name || '');
-                }}
-                className="form-input"
-                style={{ fontSize: '0.8125rem', padding: '8px 12px', cursor: 'pointer', backgroundColor: '#fff' }}
-              >
-                <option value="">-- Rotasi Default (Tanpa Playlist) --</option>
-                {availablePlaylists.map((pl) => (
-                  <option key={pl.id} value={pl.id}>
-                    🎬 {pl.name} ({pl.items?.length || 0} media • {pl.total_duration_seconds || 0}s)
-                  </option>
-                ))}
-              </select>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', backgroundColor: '#f8fafc', border: '1px solid var(--border-subtle)', borderRadius: '6px' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {selectedZone.playlist_name || (selectedZone.assigned_playlist_id ? 'Playlist Terpasang' : 'Belum ada playlist')}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setPickerZoneId(selectedZone.id)}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '0.6875rem',
+                    fontWeight: 600,
+                    backgroundColor: '#fff',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    color: 'var(--primary-600)',
+                    whiteSpace: 'nowrap'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; }}
+                >
+                  Ganti
+                </button>
+              </div>
 
               {selectedPlaylist ? (
                 <>

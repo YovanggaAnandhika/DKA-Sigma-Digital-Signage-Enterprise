@@ -8,6 +8,7 @@ import LayersPanel from './components/LayersPanel';
 import CanvasWorkspace from './components/CanvasWorkspace';
 import TimelineEditor from './components/TimelineEditor';
 import InspectorPanel from './components/InspectorPanel';
+import PlaylistPickerModal from './components/PlaylistPickerModal';
 
 function EditorContent() {
   const { loading, layout } = useLayoutEditor();
@@ -37,6 +38,8 @@ function EditorContent() {
         
         <InspectorPanel />
       </div>
+
+      <PlaylistPickerModal />
     </div>
   );
 }

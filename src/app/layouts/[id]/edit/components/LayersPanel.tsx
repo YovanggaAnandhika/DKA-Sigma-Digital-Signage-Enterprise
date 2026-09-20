@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Layers, Plus, Film, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Layers, Plus, Film, ChevronLeft, ChevronRight, ListMusic } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 
 export default function LayersPanel() {
-  const { zones, selectedZoneId, setSelectedZoneId, handleAddZone, availablePlaylists, mediaList } = useLayoutEditor();
+  const { zones, selectedZoneId, setSelectedZoneId, handleAddZone, availablePlaylists, mediaList, setPickerZoneId } = useLayoutEditor();
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -141,9 +141,41 @@ export default function LayersPanel() {
                     <span style={{ fontSize: '0.75rem', fontWeight: isSelected ? 700 : 500, color: isSelected ? 'var(--primary-600)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {z.name}
                     </span>
-                    <span style={{ fontSize: '0.625rem', color: z.assigned_playlist_id ? 'var(--accent-amber)' : 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {z.assigned_playlist_id ? `🎬 ${playlistName || 'Playlist'}` : 'Tanpa playlist'}
-                    </span>
+                    <div 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPickerZoneId(z.id);
+                      }}
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '4px',
+                        padding: '2px 4px',
+                        borderRadius: '4px',
+                        backgroundColor: z.assigned_playlist_id ? 'rgba(245, 158, 11, 0.1)' : 'var(--bg-base)',
+                        border: `1px solid ${z.assigned_playlist_id ? 'rgba(245, 158, 11, 0.3)' : 'var(--border-subtle)'}`,
+                        width: 'fit-content',
+                        marginTop: '2px',
+                        cursor: 'pointer'
+                      }}
+                      title="Klik untuk ubah alokasi playlist"
+                      onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(0.95)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; }}
+                    >
+                      {z.assigned_playlist_id ? (
+                        <>
+                          <Film size={10} color="var(--accent-amber)" />
+                          <span style={{ fontSize: '0.625rem', color: 'var(--accent-amber)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100px' }}>
+                            {playlistName || 'Playlist'}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <ListMusic size={10} color="var(--text-muted)" />
+                          <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>Belum dialokasikan</span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
