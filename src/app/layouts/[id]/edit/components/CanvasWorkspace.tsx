@@ -1,9 +1,102 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Rnd } from 'react-rnd';
-import { MousePointer2 } from 'lucide-react';
+import { MousePointer2, Volume2, VolumeX } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
+
+interface SynchronizedVideoProps {
+  src: string;
+  isPlaying: boolean;
+  active: boolean;
+  isMuted: boolean;
+  targetTimeSec: number;
+}
+
+function SynchronizedVideo({
+  src,
+  isPlaying,
+  active,
+  isMuted,
+  targetTimeSec,
+}: SynchronizedVideoProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Sync mute state
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.muted = isMuted;
+    }
+  }, [isMuted]);
+
+  // Sync playback state and position
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const safeTarget =
+      video.duration && !isNaN(video.duration) && video.duration > 0
+        ? targetTimeSec % video.duration
+        : targetTimeSec;
+
+    if (isPlaying && active) {
+      // If drifted more than 0.4s while playing, resync
+      if (Math.abs(video.currentTime - safeTarget) > 0.4) {
+        video.currentTime = safeTarget;
+      }
+      if (video.paused) {
+        video.muted = isMuted;
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            console.warn('Autoplay sound blocked by browser policy:', err);
+          });
+        }
+      }
+    } else {
+      if (!video.paused) {
+        video.pause();
+      }
+      if (Math.abs(video.currentTime - safeTarget) > 0.05) {
+        video.currentTime = safeTarget;
+      }
+    }
+  }, [isPlaying, active, targetTimeSec, isMuted]);
+
+  // When metadata loads or src updates, position properly
+  const handleLoadedMetadata = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    const safeTarget =
+      video.duration && !isNaN(video.duration) && video.duration > 0
+        ? targetTimeSec % video.duration
+        : targetTimeSec;
+    video.currentTime = safeTarget;
+    video.muted = isMuted;
+    if (isPlaying && active && video.paused) {
+      video.play().catch(() => {});
+    }
+  };
+
+  return (
+    <video
+      ref={videoRef}
+      src={src}
+      playsInline
+      loop
+      muted={isMuted}
+      onLoadedMetadata={handleLoadedMetadata}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+      }}
+    />
+  );
+}
 
 export default function CanvasWorkspace() {
   const {
@@ -16,6 +109,7 @@ export default function CanvasWorkspace() {
     previewHeight,
     isPlaying,
     playheadPosition,
+    isMuted,
     isZoneActive,
     availablePlaylists,
     mediaList,
@@ -57,24 +151,29 @@ export default function CanvasWorkspace() {
           const assignedPl = availablePlaylists.find((p) => p.id === z.assigned_playlist_id);
           const items = assignedPl?.items || [];
           let activeMedia: any = null;
+          let itemOffsetSec = 0;
 
           if (items.length > 0) {
             let currentItem = items[0];
-            if (items.length > 1) {
-              const currentSec = Math.max(0, playheadPosition / (pxPerSecond || 20));
-              const totalDur = items.reduce((sum, it) => sum + (it.duration_seconds || 10), 0);
-              if (totalDur > 0) {
-                const loopSec = currentSec % totalDur;
-                let acc = 0;
-                for (const it of items) {
-                  const d = it.duration_seconds || 10;
-                  if (loopSec >= acc && loopSec < acc + d) {
-                    currentItem = it;
-                    break;
-                  }
-                  acc += d;
+            const zoneStartSec = (z.timeline_start || 0) / (pxPerSecond || 20);
+            const currentSec = Math.max(0, (playheadPosition / (pxPerSecond || 20)) - zoneStartSec);
+            const totalDur = items.reduce((sum, it) => sum + (it.duration_seconds || 10), 0);
+
+            if (items.length > 1 && totalDur > 0) {
+              const loopSec = currentSec % totalDur;
+              let acc = 0;
+              for (const it of items) {
+                const d = it.duration_seconds || 10;
+                if (loopSec >= acc && loopSec < acc + d) {
+                  currentItem = it;
+                  itemOffsetSec = loopSec - acc;
+                  break;
                 }
+                acc += d;
               }
+            } else if (items.length === 1) {
+              const d = currentItem.duration_seconds || 10;
+              itemOffsetSec = d > 0 ? currentSec % d : currentSec;
             }
             activeMedia = mediaList.find((m) => m.id === currentItem.media_item_id);
           }
@@ -186,20 +285,12 @@ export default function CanvasWorkspace() {
                 {/* Visual Media Rendering */}
                 {activeMedia?.public_url && (
                   activeMedia.media_type === 2 ? (
-                    <video
+                    <SynchronizedVideo
                       src={activeMedia.public_url}
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                      }}
+                      isPlaying={isPlaying}
+                      active={active}
+                      isMuted={isMuted}
+                      targetTimeSec={itemOffsetSec}
                     />
                   ) : (
                     <img
@@ -266,6 +357,22 @@ export default function CanvasWorkspace() {
                           }}
                         >
                           🎬 {z.playlist_name || assignedPl?.name || 'Playlist'}
+                        </span>
+                      )}
+                      {activeMedia?.media_type === 2 && (
+                        <span
+                          style={{
+                            fontSize: '0.5625rem',
+                            color: isMuted ? '#f87171' : '#4ade80',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                            borderLeft: '1px solid rgba(255,255,255,0.2)',
+                            paddingLeft: '4px',
+                          }}
+                          title={isMuted ? 'Suara dibisukan (Muted)' : 'Suara aktif (Unmuted)'}
+                        >
+                          {isMuted ? <VolumeX size={11} /> : <Volume2 size={11} />}
                         </span>
                       )}
                     </div>

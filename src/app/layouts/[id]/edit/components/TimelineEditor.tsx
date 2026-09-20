@@ -2,7 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
-import { Play, Pause, RotateCcw, Film, Image as ImageIcon } from 'lucide-react';
+import { Play, Pause, RotateCcw, Film, Image as ImageIcon, Volume2, VolumeX } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 
 export default function TimelineEditor() {
@@ -14,6 +14,8 @@ export default function TimelineEditor() {
     isPlaying,
     togglePlay,
     stopPlay,
+    isMuted,
+    toggleMute,
     playheadPosition,
     setPlayheadPosition,
     timelineDuration,
@@ -163,6 +165,48 @@ export default function TimelineEditor() {
               <>
                 <Play size={13} fill="#fff" />
                 <span>Play</span>
+              </>
+            )}
+          </button>
+
+          {/* Audio / Mute Toggle Button */}
+          <button
+            type="button"
+            onClick={toggleMute}
+            title={isMuted ? 'Aktifkan Suara (Unmute)' : 'Bisukan Suara (Mute)'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '5px',
+              height: '28px',
+              padding: '0 10px',
+              borderRadius: '6px',
+              border: isMuted ? '1px solid #fecaca' : '1px solid #bbf7d0',
+              backgroundColor: isMuted ? '#fff1f2' : '#f0fdf4',
+              color: isMuted ? '#e11d48' : '#16a34a',
+              cursor: 'pointer',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.filter = 'brightness(0.96)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.filter = 'none';
+            }}
+          >
+            {isMuted ? (
+              <>
+                <VolumeX size={14} />
+                <span>Muted</span>
+              </>
+            ) : (
+              <>
+                <Volume2 size={14} />
+                <span>Audio On</span>
               </>
             )}
           </button>

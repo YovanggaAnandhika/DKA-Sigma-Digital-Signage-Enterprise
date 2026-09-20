@@ -318,6 +318,11 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [playheadPosition, setPlayheadPosition] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+
+  const toggleMute = () => {
+    setIsMuted((prev) => !prev);
+  };
 
   // Dynamic timeline duration based on maximum zone extent (minimum 30s / 600px)
   const maxZoneEnd = zones.reduce((max, z) => {
@@ -399,6 +404,9 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
     pxPerSecond,
     togglePlay,
     stopPlay,
+    isMuted,
+    setIsMuted,
+    toggleMute,
     isZoneActive,
   };
 
