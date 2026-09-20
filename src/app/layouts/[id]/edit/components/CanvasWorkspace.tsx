@@ -60,8 +60,8 @@ export default function CanvasWorkspace() {
 
           if (items.length > 0) {
             let currentItem = items[0];
-            if (isPlaying && items.length > 1) {
-              const currentSec = playheadPosition / (pxPerSecond || 20);
+            if (items.length > 1) {
+              const currentSec = Math.max(0, playheadPosition / (pxPerSecond || 20));
               const totalDur = items.reduce((sum, it) => sum + (it.duration_seconds || 10), 0);
               if (totalDur > 0) {
                 const loopSec = currentSec % totalDur;

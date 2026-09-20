@@ -59,6 +59,19 @@ export default function EditPlaylistPage() {
     fetchPlaylistAndMedia();
   }, [fetchPlaylistAndMedia]);
 
+  const notifyStudioUpdate = () => {
+    if (typeof window !== 'undefined') {
+      try {
+        const ch = new BroadcastChannel('omnisign_studio_events');
+        ch.postMessage({ type: 'playlist_updated', playlist_id: params.id });
+        ch.close();
+      } catch (e) {}
+      try {
+        localStorage.setItem('omnisign_last_update', Date.now().toString());
+      } catch (e) {}
+    }
+  };
+
   const handleSubmitInfo = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -67,6 +80,7 @@ export default function EditPlaylistPage() {
       alert('Pengaturan playlist berhasil disimpan!');
       const updated = await api.getPlaylist(params.id);
       setPlaylist(updated);
+      notifyStudioUpdate();
     } catch (err: any) {
       alert(err.message || 'Gagal memperbarui info playlist');
     } finally {
@@ -90,6 +104,7 @@ export default function EditPlaylistPage() {
       });
       setPlaylist(updated);
       setShowAddModal(false);
+      notifyStudioUpdate();
     } catch (err: any) {
       alert(err.message || 'Gagal menambahkan item ke playlist');
     } finally {
@@ -102,6 +117,7 @@ export default function EditPlaylistPage() {
     try {
       const updated = await api.removePlaylistItem(itemId, params.id);
       setPlaylist(updated);
+      notifyStudioUpdate();
     } catch (err: any) {
       alert(err.message || 'Gagal menghapus item dari playlist');
     }

@@ -2,7 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
-import { Play, Pause, RotateCcw } from 'lucide-react';
+import { Play, Pause, RotateCcw, Film, Image as ImageIcon } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 
 export default function TimelineEditor() {
@@ -19,7 +19,8 @@ export default function TimelineEditor() {
     timelineDuration,
     pxPerSecond,
     isZoneActive,
-    availablePlaylists
+    availablePlaylists,
+    mediaList
   } = useLayoutEditor();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -382,24 +383,91 @@ export default function TimelineEditor() {
                       alignItems: 'center',
                     }}
                   >
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        backgroundColor: color,
-                        borderRadius: '4px',
-                        opacity: isSelected ? 1 : active ? 0.9 : 0.45,
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '0 8px',
-                        boxShadow: active ? `0 0 0 2px ${color}, 0 2px 4px rgba(0,0,0,0.15)` : 'inset 0 0 0 1px rgba(0,0,0,0.1)',
-                        transition: 'opacity 0.2s, box-shadow 0.2s'
-                      }}
-                    >
-                      <span style={{ fontSize: '0.65rem', color: '#fff', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {z.name} {z.assigned_playlist_id ? `• 🎬 ${z.playlist_name || availablePlaylists.find(p => p.id === z.assigned_playlist_id)?.name || 'Playlist'}` : ''}
-                      </span>
-                    </div>
+                    {(() => {
+                      const assignedPl = availablePlaylists.find((p) => p.id === z.assigned_playlist_id);
+                      const items = assignedPl?.items || [];
+
+                      if (items.length > 0) {
+                        return (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              backgroundColor: color,
+                              borderRadius: '4px',
+                              opacity: isSelected ? 1 : active ? 0.95 : 0.5,
+                              display: 'flex',
+                              alignItems: 'stretch',
+                              overflow: 'hidden',
+                              boxShadow: active ? `0 0 0 2px ${color}, 0 2px 4px rgba(0,0,0,0.15)` : 'inset 0 0 0 1px rgba(0,0,0,0.1)',
+                              transition: 'opacity 0.2s, box-shadow 0.2s'
+                            }}
+                          >
+                            {items.map((it, itemIdx) => {
+                              const itDur = it.duration_seconds || 10;
+                              const itWidthPx = itDur * pxPerSecond;
+                              const m = mediaList.find((media) => media.id === it.media_item_id);
+                              const isVid = m?.media_type === 2;
+
+                              return (
+                                <div
+                                  key={it.id || itemIdx}
+                                  style={{
+                                    width: `${itWidthPx}px`,
+                                    minWidth: '40px',
+                                    flexShrink: 0,
+                                    borderRight: itemIdx < items.length - 1 ? '1px dashed rgba(255,255,255,0.4)' : 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '0 6px',
+                                    backgroundColor: itemIdx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.12)',
+                                    overflow: 'hidden',
+                                  }}
+                                  title={`${m?.name || `Item ${itemIdx + 1}`} (${itDur}s)`}
+                                >
+                                  {m?.public_url && !isVid ? (
+                                    <img
+                                      src={m.public_url}
+                                      alt=""
+                                      style={{ width: '16px', height: '16px', borderRadius: '2px', objectFit: 'cover', flexShrink: 0 }}
+                                    />
+                                  ) : isVid ? (
+                                    <Film size={12} color="#fff" style={{ flexShrink: 0 }} />
+                                  ) : (
+                                    <ImageIcon size={12} color="#fff" style={{ flexShrink: 0 }} />
+                                  )}
+                                  <span style={{ fontSize: '0.625rem', color: '#fff', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {m?.name || `Item ${itemIdx + 1}`} ({itDur}s)
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: color,
+                            borderRadius: '4px',
+                            opacity: isSelected ? 1 : active ? 0.9 : 0.45,
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '0 8px',
+                            boxShadow: active ? `0 0 0 2px ${color}, 0 2px 4px rgba(0,0,0,0.15)` : 'inset 0 0 0 1px rgba(0,0,0,0.1)',
+                            transition: 'opacity 0.2s, box-shadow 0.2s'
+                          }}
+                        >
+                          <span style={{ fontSize: '0.65rem', color: '#fff', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {z.name} {z.assigned_playlist_id ? `• 🎬 ${z.playlist_name || availablePlaylists.find((p) => p.id === z.assigned_playlist_id)?.name || 'Playlist'}` : ''}
+                          </span>
+                        </div>
+                      );
+                    })()}
                   </Rnd>
                 </div>
               );
