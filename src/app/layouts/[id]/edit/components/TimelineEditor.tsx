@@ -27,6 +27,28 @@ export default function TimelineEditor() {
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isDraggingPlayhead, setIsDraggingPlayhead] = useState(false);
+  const [timelineHeight, setTimelineHeight] = useState(220);
+  const [isDraggingResize, setIsDraggingResize] = useState(false);
+
+  // Drag-to-resize timeline height
+  const handleResizeBarMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDraggingResize(true);
+    const startY = e.clientY;
+    const startH = timelineHeight;
+
+    const onMouseMove = (ev: MouseEvent) => {
+      const delta = startY - ev.clientY; // drag up = bigger
+      setTimelineHeight(Math.min(500, Math.max(120, startH + delta)));
+    };
+    const onMouseUp = () => {
+      setIsDraggingResize(false);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
 
   const formatTime = (px: number) => {
     const totalSec = Math.max(0, px / pxPerSecond);
@@ -102,7 +124,25 @@ export default function TimelineEditor() {
   }
 
   return (
-    <div style={{ height: '220px', backgroundColor: 'var(--bg-surface)', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: `${timelineHeight}px`, backgroundColor: 'var(--bg-surface)', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', position: 'relative', flexShrink: 0 }}>
+      {/* Resize handle — drag upward to expand timeline */}
+      <div
+        onMouseDown={handleResizeBarMouseDown}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '5px',
+          cursor: 'row-resize',
+          zIndex: 30,
+          backgroundColor: isDraggingResize ? 'var(--primary-400)' : 'transparent',
+          transition: 'background 0.15s',
+        }}
+        title="Tarik ke atas untuk memperbesar timeline"
+        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(14,165,233,0.3)'; }}
+        onMouseLeave={(e) => { if (!isDraggingResize) e.currentTarget.style.backgroundColor = 'transparent'; }}
+      />
       {/* Top Header Bar */}
       <div style={{ height: '40px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '16px', backgroundColor: '#fafafa' }}>
         <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timeline</span>
