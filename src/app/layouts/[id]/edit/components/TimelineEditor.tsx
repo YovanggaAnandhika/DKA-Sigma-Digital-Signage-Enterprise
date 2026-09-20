@@ -596,29 +596,7 @@ export default function TimelineEditor() {
                           </div>
                         </Rnd>
                         
-                        {/* Transition Button (CapCut style) */}
-                        {bIdx < (z.blocks?.length || 0) - 1 && (
-                          <div
-                            style={{
-                              position: 'absolute',
-                              right: '-12px',
-                              zIndex: 10,
-                              width: '24px',
-                              height: '24px',
-                              backgroundColor: '#fff',
-                              borderRadius: '4px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              cursor: 'pointer',
-                              boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
-                              border: '1px solid #ddd'
-                            }}
-                            title="Tambah Transisi"
-                          >
-                            <span style={{ fontSize: '10px', color: '#000' }}>⧖</span>
-                          </div>
-                        )}
+
                       </div>
                     );
                   })}

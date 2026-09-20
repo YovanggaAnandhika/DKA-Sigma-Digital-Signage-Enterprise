@@ -26,17 +26,28 @@ export default function PlaylistPickerModal() {
   };
 
   const handleSelect = (plId: string) => {
+    const pl = availablePlaylists.find(p => p.id === plId);
+    
+    // Calculate the start time of the new block by summing all previous block durations
+    const currentBlocks = targetZone.blocks || [];
+    let start_time_seconds = 0;
+    for (const b of currentBlocks) {
+      start_time_seconds += (b.duration_seconds || 10);
+    }
+    
+    const duration_seconds = pl?.total_duration_seconds || 10;
+
     const newBlock = {
       id: 'temp-' + Date.now(),
       zone_id: targetZone.id,
       playlist_id: plId,
-      start_time_seconds: 0, // Will be appended to the end of timeline in real implementation
-      duration_seconds: 10, // Default duration
+      start_time_seconds,
+      duration_seconds,
       transition_type: 'none',
-      order_index: (targetZone.blocks?.length || 0)
+      order_index: currentBlocks.length
     };
     // Append block
-    updateSelectedZone('blocks', [...(targetZone.blocks || []), newBlock]);
+    updateSelectedZone('blocks', [...currentBlocks, newBlock]);
     handleClose();
   };
 
