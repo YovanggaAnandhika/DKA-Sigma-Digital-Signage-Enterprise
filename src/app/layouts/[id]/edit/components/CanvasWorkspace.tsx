@@ -214,9 +214,10 @@ export default function CanvasWorkspace() {
           const items = assignedPl?.items || [];
           let activeMedia: any = null;
           let itemOffsetSec = 0;
+          let currentItem: any = null;
 
           if (items.length > 0) {
-            let currentItem = items[0];
+            currentItem = items[0];
             const zoneStartSec = (z.timeline_start || 0) / (pxPerSecond || 20);
             const currentSec = Math.max(0, (playheadPosition / (pxPerSecond || 20)) - zoneStartSec);
             const totalDur = items.reduce((sum, it) => sum + (it.duration_seconds || 10), 0);
@@ -351,7 +352,7 @@ export default function CanvasWorkspace() {
                       src={activeMedia.public_url}
                       isPlaying={isPlaying}
                       active={active}
-                      isMuted={isMuted}
+                      isMuted={isMuted || currentItem?.is_muted}
                       targetTimeSec={itemOffsetSec}
                     />
                   ) : (
