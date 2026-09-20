@@ -147,7 +147,9 @@ export default function MediaPage() {
                   >
                     {/* Thumbnail Area */}
                     <div style={{ height: '140px', backgroundColor: '#0f172a', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {m.media_type === 2 ? (
+                      {m.public_url && m.media_type === 2 ? (
+                        <video src={m.public_url} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : m.media_type === 2 ? (
                         <Film size={32} color="var(--accent-cyan)" />
                       ) : m.media_type === 3 ? (
                         <Globe size={32} color="var(--accent-amber)" />
@@ -213,7 +215,9 @@ export default function MediaPage() {
             </div>
             
             <div style={{ height: '180px', backgroundColor: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {selectedMedia.media_type === 2 ? (
+              {selectedMedia.public_url && selectedMedia.media_type === 2 ? (
+                <video src={selectedMedia.public_url} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              ) : selectedMedia.media_type === 2 ? (
                 <Film size={48} color="var(--accent-cyan)" />
               ) : selectedMedia.media_type === 3 ? (
                 <Globe size={48} color="var(--accent-amber)" />

@@ -382,6 +382,8 @@ export default function EditPlaylistPage() {
                                     (e.target as HTMLElement).style.display = 'none';
                                   }}
                                 />
+                              ) : isVideo && matchedMedia?.public_url ? (
+                                <video src={matchedMedia.public_url} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : isVideo ? (
                                 <Film size={18} color="var(--accent-amber)" />
                               ) : (
@@ -517,6 +519,8 @@ export default function EditPlaylistPage() {
                           <div style={{ width: '100%', aspectRatio: '16/9', backgroundColor: '#0f172a', position: 'relative' }}>
                             {m.public_url && !isVideo ? (
                               <img src={m.public_url} alt={m.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : isVideo && m.public_url ? (
+                              <video src={m.public_url} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : isVideo ? (
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                                 <Film size={32} color="var(--accent-amber)" opacity={0.8} />
@@ -578,6 +582,8 @@ export default function EditPlaylistPage() {
                         <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#0f172a', marginBottom: '16px', position: 'relative' }}>
                           {selMedia.public_url && !isVideo ? (
                             <img src={selMedia.public_url} alt={selMedia.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : isVideo && selMedia.public_url ? (
+                            <video src={selMedia.public_url} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : isVideo ? (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                               <Film size={40} color="var(--accent-amber)" />
