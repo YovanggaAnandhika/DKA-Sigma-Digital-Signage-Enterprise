@@ -136,7 +136,7 @@ export default function CanvasWorkspace() {
   if (!layout) return null;
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 0)', backgroundSize: '20px 20px' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', backgroundColor: 'var(--bg-surface-elevated)', backgroundImage: 'radial-gradient(var(--border-subtle) 1px, transparent 0)', backgroundSize: '20px 20px' }}>
       
       {/* Toolbar row: workspace label + resolution + zoom controls */}
       <div style={{ position: 'absolute', top: 12, left: 16, right: 16, display: 'flex', alignItems: 'center', gap: '8px', zIndex: 20, pointerEvents: 'none' }}>
@@ -157,9 +157,9 @@ export default function CanvasWorkspace() {
             onClick={zoomOut}
             disabled={zoomLevel <= 0.25}
             title="Perkecil Canvas (Zoom Out)"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', border: 'none', borderRadius: '5px', backgroundColor: zoomLevel <= 0.25 ? 'var(--bg-surface)' : 'var(--bg-base)', cursor: zoomLevel <= 0.25 ? 'not-allowed' : 'pointer', color: 'var(--text-secondary)', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', transition: 'all 0.15s' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', border: 'none', borderRadius: '5px', backgroundColor: zoomLevel <= 0.25 ? 'var(--bg-surface)' : 'var(--bg-surface-elevated)', cursor: zoomLevel <= 0.25 ? 'not-allowed' : 'pointer', color: 'var(--text-secondary)', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', transition: 'all 0.15s' }}
             onMouseEnter={(e) => { if (zoomLevel > 0.25) e.currentTarget.style.backgroundColor = 'var(--bg-surface)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = zoomLevel <= 0.25 ? 'var(--bg-surface)' : 'var(--bg-base)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = zoomLevel <= 0.25 ? 'var(--bg-surface)' : 'var(--bg-surface-elevated)'; }}
           >
             <ZoomOut size={13} />
           </button>
@@ -173,9 +173,9 @@ export default function CanvasWorkspace() {
             onClick={zoomIn}
             disabled={zoomLevel >= 4.0}
             title="Perbesar Canvas (Zoom In)"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', border: 'none', borderRadius: '5px', backgroundColor: zoomLevel >= 4.0 ? 'var(--bg-surface)' : 'var(--bg-base)', cursor: zoomLevel >= 4.0 ? 'not-allowed' : 'pointer', color: 'var(--text-secondary)', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', transition: 'all 0.15s' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', border: 'none', borderRadius: '5px', backgroundColor: zoomLevel >= 4.0 ? 'var(--bg-surface)' : 'var(--bg-surface-elevated)', cursor: zoomLevel >= 4.0 ? 'not-allowed' : 'pointer', color: 'var(--text-secondary)', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', transition: 'all 0.15s' }}
             onMouseEnter={(e) => { if (zoomLevel < 4.0) e.currentTarget.style.backgroundColor = 'var(--bg-surface)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = zoomLevel >= 4.0 ? 'var(--bg-surface)' : 'var(--bg-base)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = zoomLevel >= 4.0 ? 'var(--bg-surface)' : 'var(--bg-surface-elevated)'; }}
           >
             <ZoomIn size={13} />
           </button>
@@ -186,9 +186,9 @@ export default function CanvasWorkspace() {
             type="button"
             onClick={zoomFit}
             title="Fit ke Ukuran Default (100%)"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', border: 'none', borderRadius: '5px', backgroundColor: 'var(--bg-base)', cursor: 'pointer', color: 'var(--primary-600)', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', transition: 'all 0.15s' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', border: 'none', borderRadius: '5px', backgroundColor: 'var(--bg-surface-elevated)', cursor: 'pointer', color: 'var(--primary-600)', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', transition: 'all 0.15s' }}
             onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-base)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; }}
           >
             <Maximize2 size={12} />
           </button>
@@ -208,11 +208,11 @@ export default function CanvasWorkspace() {
           style={{
             width: `${canvasDisplayWidth}px`,
             height: `${previewHeight}px`,
-            backgroundColor: 'var(--bg-base)',
+            backgroundColor: 'var(--bg-primary)',
             position: 'relative',
             overflow: 'hidden',
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
-            border: '1px solid #333',
+            border: '1px solid var(--border-subtle)',
             flexShrink: 0,
           }}
           onClick={(e) => {
@@ -272,6 +272,16 @@ export default function CanvasWorkspace() {
               }
             }
           }
+          // Resolve mute state: check item_overrides first (per-block toggle in timeline)
+          let isCurrentItemMuted = false;
+          if (activeBlock) {
+            const overrideItemId = activeBlock.media_item_id ? activeBlock.id : currentItem?.id;
+            const override = (activeBlock.item_overrides || []).find(
+              (o: any) => o.playlist_item_id === overrideItemId
+            );
+            isCurrentItemMuted = override ? !!override.is_muted : !!(currentItem?.is_muted);
+          }
+
 
           return (
             <Rnd
@@ -282,6 +292,7 @@ export default function CanvasWorkspace() {
               onDragStart={() => {
                 if (selectedZoneId !== z.id) setSelectedZoneId(z.id);
               }}
+
               onDrag={(e, d) => {
                 const nextX = Math.round(d.x / scale);
                 const nextY = Math.round(d.y / scale);
@@ -386,7 +397,7 @@ export default function CanvasWorkspace() {
                         src={activeMedia.public_url}
                         isPlaying={isPlaying}
                         active={active}
-                        isMuted={isMuted || currentItem?.is_muted}
+                        isMuted={isMuted || isCurrentItemMuted}
                         targetTimeSec={itemOffsetSec}
                       />
                     ) : (

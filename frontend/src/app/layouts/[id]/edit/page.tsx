@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, CheckCircle, XCircle } from 'lucide-react';
 import { LayoutEditorProvider, useLayoutEditor } from './context/LayoutEditorContext';
 import TopToolbar from './components/TopToolbar';
 import LayersPanel from './components/LayersPanel';
@@ -12,7 +12,7 @@ import PlaylistPickerModal from './components/PlaylistPickerModal';
 import MediaPickerModal from './components/MediaPickerModal';
 
 function EditorContent() {
-  const { loading, layout, togglePlay, isFullscreen } = useLayoutEditor();
+  const { loading, layout, togglePlay, isFullscreen, toast } = useLayoutEditor();
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -21,7 +21,7 @@ function EditorContent() {
         return;
       }
       if (e.code === 'Space') {
-        e.preventDefault(); // Prevent scrolling down
+        e.preventDefault();
         togglePlay();
       }
     };
@@ -45,10 +45,11 @@ function EditorContent() {
         display: 'flex',
         flexDirection: 'column',
         flex: 1,
-        backgroundColor: 'var(--bg-base)',
+        backgroundColor: 'var(--bg-surface-elevated)',
         overflow: 'hidden',
+        position: 'relative',
         ...(isFullscreen ? {
-          position: 'fixed',
+          position: 'fixed' as const,
           top: 0,
           left: 0,
           right: 0,
@@ -60,16 +61,16 @@ function EditorContent() {
       }}
     >
       <TopToolbar />
-      
-      {/* Main Workspace (Docked Layout) */}
+
+      {/* Main Workspace */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <LayersPanel />
-        
+
         {/* Center Column: Canvas */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--bg-base)' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--bg-surface-elevated)' }}>
           <CanvasWorkspace />
         </div>
-        
+
         <InspectorPanel />
       </div>
 
@@ -78,6 +79,32 @@ function EditorContent() {
 
       <PlaylistPickerModal />
       <MediaPickerModal />
+
+      {/* Toast Notification — rendered inside container, safe for fullscreen */}
+      {toast && (
+        <div style={{
+          position: 'absolute',
+          bottom: '80px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 999999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          padding: '12px 20px',
+          borderRadius: '10px',
+          backgroundColor: toast.type === 'success' ? '#10b981' : '#f43f5e',
+          color: '#fff',
+          fontSize: '0.875rem',
+          fontWeight: 600,
+          boxShadow: '0 8px 30px rgba(0,0,0,0.35)',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+        }}>
+          {toast.type === 'success' ? <CheckCircle size={16} /> : <XCircle size={16} />}
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 }

@@ -59,6 +59,8 @@ interface LayoutEditorContextType {
   setIsLayoutMetaExpanded: React.Dispatch<React.SetStateAction<boolean>>;
   isFullscreen: boolean;
   toggleFullscreen: () => void;
+  toast: { message: string; type: 'success' | 'error' } | null;
+  showToast: (message: string, type?: 'success' | 'error') => void;
 }
 
 const LayoutEditorContext = createContext<LayoutEditorContextType | undefined>(undefined);
@@ -81,10 +83,26 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
   const [isTimelineExpanded, setIsTimelineExpanded] = useState(true);
   const [isLayoutMetaExpanded, setIsLayoutMetaExpanded] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+  const preFullscreenZoom = React.useRef<number>(1.0);
+  // Callback ref so handleFsChange can access latest setZoomLevel
+  const setZoomLevelRef = React.useRef<React.Dispatch<React.SetStateAction<number>> | null>(null);
 
   useEffect(() => {
     const handleFsChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const entering = !!document.fullscreenElement;
+      if (entering && setZoomLevelRef.current) {
+        // Set to 125% after fullscreen activates
+        setZoomLevelRef.current(1.25);
+      } else if (!entering && setZoomLevelRef.current) {
+        // Restore previous zoom when exiting (Escape or button)
+        setZoomLevelRef.current(preFullscreenZoom.current);
+      }
+      setIsFullscreen(entering);
     };
     document.addEventListener('fullscreenchange', handleFsChange);
     document.addEventListener('webkitfullscreenchange', handleFsChange);
@@ -97,6 +115,8 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
   const toggleFullscreen = () => {
     const container = document.getElementById('layout-editor-container');
     if (!document.fullscreenElement) {
+      // Save current zoom — zoom to 125% will be applied in handleFsChange after fullscreen activates
+      preFullscreenZoom.current = zoomLevel;
       if (container && container.requestFullscreen) {
         container.requestFullscreen().catch(() => {
           setIsFullscreen(prev => !prev);
@@ -104,16 +124,20 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
       } else if (container && (container as any).webkitRequestFullscreen) {
         (container as any).webkitRequestFullscreen();
       } else {
+        // Fallback (no native fullscreen support)
+        setZoomLevel(1.25);
         setIsFullscreen(prev => !prev);
       }
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen().catch(() => {
+          setZoomLevel(preFullscreenZoom.current);
           setIsFullscreen(false);
         });
       } else if ((document as any).webkitExitFullscreen) {
         (document as any).webkitExitFullscreen();
       } else {
+        setZoomLevel(preFullscreenZoom.current);
         setIsFullscreen(false);
       }
     }
@@ -334,7 +358,18 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
       const data = await api.getLayout(params.id);
       setLayout(data);
       setLayoutName(data.name);
+      // Capture current zones BEFORE overwriting so we can restore local item_overrides (mute state)
+      const prevZones = zones;
       const sanitizedZones = (data.zones || []).map((z: any) => {
+        const prevZone = prevZones.find((pz) => pz.id === z.id);
+        const blocks = (z.blocks || []).map((b: any) => {
+          // Restore local item_overrides (e.g. mute toggles) that aren't persisted to backend yet
+          const prevBlock = prevZone?.blocks?.find((pb) => pb.id === b.id);
+          return {
+            ...b,
+            item_overrides: prevBlock?.item_overrides || b.item_overrides || [],
+          };
+        });
         return {
           ...z,
           x: Number(z.x) || 0,
@@ -342,14 +377,14 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
           width: Number(z.width) || 200,
           height: Number(z.height) || 200,
           z_index: Number(z.z_index) || 1,
-          blocks: z.blocks || [],
+          blocks,
         };
       });
       setZones(sanitizedZones);
 
-      alert('Template layout dan seluruh posisi zona berhasil disimpan!');
+      showToast('Template layout dan seluruh posisi zona berhasil disimpan!');
     } catch (err: any) {
-      alert(err.message || 'Gagal menyimpan layout');
+      showToast(err.message || 'Gagal menyimpan layout', 'error');
     } finally {
       setSaving(false);
     }
@@ -466,10 +501,13 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
 
   const BASE_CANVAS_PX = 900;
   const [zoomLevel, setZoomLevel] = useState(1.0);
+  // Keep ref in sync so the fullscreenchange listener (closed over on mount) can call it
+  setZoomLevelRef.current = setZoomLevel;
 
   const zoomIn  = () => setZoomLevel(prev => Math.min(4.0, parseFloat((prev + 0.25).toFixed(2))));
   const zoomOut = () => setZoomLevel(prev => Math.max(0.25, parseFloat((prev - 0.25).toFixed(2))));
   const zoomFit = () => setZoomLevel(1.0);
+
 
   const scale = layout ? (BASE_CANVAS_PX * zoomLevel) / layout.canvas_width : 1;
   const canvasDisplayWidth = BASE_CANVAS_PX * zoomLevel;
@@ -524,6 +562,8 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
     setIsLayoutMetaExpanded,
     isFullscreen,
     toggleFullscreen,
+    toast,
+    showToast,
   };
 
   return (

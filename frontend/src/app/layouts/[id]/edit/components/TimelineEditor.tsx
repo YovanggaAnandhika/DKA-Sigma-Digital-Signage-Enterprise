@@ -29,7 +29,8 @@ export default function TimelineEditor() {
     hiddenZones,
     toggleZoneVisibility,
     isTimelineExpanded,
-    setIsTimelineExpanded
+    setIsTimelineExpanded,
+    showToast,
   } = useLayoutEditor();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -102,7 +103,7 @@ export default function TimelineEditor() {
         })));
       }
     } catch (err: any) {
-      alert(err.message || 'Gagal mengubah status mute video');
+      showToast(err.message || 'Gagal mengubah status mute video', 'error');
     }
   };
 
