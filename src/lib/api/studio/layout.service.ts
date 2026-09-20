@@ -5,6 +5,23 @@ import { Layout, Zone } from './types';
 // Layout: id=1, name=2, description=3, canvas_width=4, canvas_height=5, orientation=6(enum), background_color=7, background_image_url=8, zones=9, created_at=10, updated_at=11
 // Zone:   id=1, layout_id=2, name=3, x=4, y=5, width=6, height=7, z_index=8, assigned_playlist_id=9, assigned_playlist=10, background_color=11, created_at=12, updated_at=13
 
+function decodeZonePlaylistItemOverride(bytes: Uint8Array): import('./types').ZonePlaylistItemOverride | null {
+  const reader = new ProtoReader(bytes);
+  const override: Partial<import('./types').ZonePlaylistItemOverride> = {
+    is_muted: false,
+  };
+  while (reader.hasMore()) {
+    const tag = reader.readTag();
+    if (!tag) break;
+    if (tag.fieldNumber === 1) override.id = reader.readString();
+    else if (tag.fieldNumber === 2) override.zone_playlist_id = reader.readString();
+    else if (tag.fieldNumber === 3) override.playlist_item_id = reader.readString();
+    else if (tag.fieldNumber === 4) override.is_muted = reader.readBool();
+    else reader.skip(tag.wireType);
+  }
+  return override.id ? (override as import('./types').ZonePlaylistItemOverride) : null;
+}
+
 function decodeZonePlaylist(bytes: Uint8Array): import('./types').ZonePlaylist | null {
   const reader = new ProtoReader(bytes);
   const block: Partial<import('./types').ZonePlaylist> = {
@@ -12,6 +29,7 @@ function decodeZonePlaylist(bytes: Uint8Array): import('./types').ZonePlaylist |
     duration_seconds: 10,
     transition_type: 'none',
     order_index: 0,
+    item_overrides: [],
   };
   while (reader.hasMore()) {
     const tag = reader.readTag();
@@ -24,6 +42,11 @@ function decodeZonePlaylist(bytes: Uint8Array): import('./types').ZonePlaylist |
     else if (tag.fieldNumber === 6) block.duration_seconds = reader.readInt32();
     else if (tag.fieldNumber === 7) block.transition_type = reader.readString();
     else if (tag.fieldNumber === 8) block.order_index = reader.readInt32();
+    else if (tag.fieldNumber === 9) {
+      const overrideBytes = reader.readBytes();
+      const override = decodeZonePlaylistItemOverride(overrideBytes);
+      if (override) block.item_overrides?.push(override);
+    }
     else reader.skip(tag.wireType);
   }
   return block.id ? (block as import('./types').ZonePlaylist) : null;
@@ -290,4 +313,29 @@ export async function removePlaylistBlock(block_id: string): Promise<boolean> {
     else reader.skip(tag.wireType);
   }
   return success;
+}
+
+export async function setPlaylistItemOverride(zone_playlist_id: string, playlist_item_id: string, is_muted: boolean): Promise<import('./types').ZonePlaylistItemOverride> {
+  const writer = new ProtoWriter();
+  writer.writeString(1, zone_playlist_id);
+  writer.writeString(2, playlist_item_id);
+  writer.writeBool(3, is_muted);
+
+  const resBytes = await invokeGrpcMethod('signage.studio.v1.layout.LayoutService', 'SetPlaylistItemOverride', writer);
+  const reader = new ProtoReader(resBytes);
+  let override: import('./types').ZonePlaylistItemOverride | null = null;
+  
+  while (reader.hasMore()) {
+    const tag = reader.readTag();
+    if (!tag) break;
+    if (tag.fieldNumber === 2) {
+      const bytes = reader.readBytes();
+      override = decodeZonePlaylistItemOverride(bytes);
+    } else {
+      reader.skip(tag.wireType);
+    }
+  }
+  
+  if (!override) throw new Error('Failed to set playlist item override');
+  return override;
 }
