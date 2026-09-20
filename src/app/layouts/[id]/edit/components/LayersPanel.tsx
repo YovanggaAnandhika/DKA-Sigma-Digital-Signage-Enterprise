@@ -1,14 +1,18 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Layers, Plus, Film, ChevronLeft, ChevronRight, ListMusic } from 'lucide-react';
+import Link from 'next/link';
+import { Layers, Plus, Film, ChevronLeft, ChevronRight, ListMusic, Trash2, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 
 export default function LayersPanel() {
-  const { zones, selectedZoneId, setSelectedZoneId, handleAddZone, availablePlaylists, mediaList, setPickerZoneId } = useLayoutEditor();
+  const { zones, selectedZoneId, setSelectedZoneId, handleAddZone, availablePlaylists, mediaList, setPickerZoneId, updateSelectedZone } = useLayoutEditor();
   const [collapsed, setCollapsed] = useState(false);
   const [panelWidth, setPanelWidth] = useState(240);
   const [isDraggingResize, setIsDraggingResize] = useState(false);
+  const [isPlaylistExpanded, setIsPlaylistExpanded] = useState(true);
+
+  const selectedZone = zones.find((z) => z.id === selectedZoneId);
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -204,6 +208,86 @@ export default function LayersPanel() {
                 </div>
               );
             })
+          )}
+        </div>
+      )}
+
+      {/* Playlist Allocation panel (bottom) */}
+      {!collapsed && selectedZone && (
+        <div style={{ display: 'flex', flexDirection: 'column', borderTop: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface)' }}>
+          <div 
+            onClick={() => setIsPlaylistExpanded(!isPlaylistExpanded)}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', cursor: 'pointer', backgroundColor: 'var(--bg-surface-elevated)' }}
+          >
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-600)', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+              <ListMusic size={14} /> ALOKASI PLAYLIST
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {(selectedZone.blocks && selectedZone.blocks.length > 0) && (
+                <Link
+                  href={`/playlists/${selectedZone.blocks[0].playlist_id}`}
+                  target="_blank"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ fontSize: '0.6875rem', color: 'var(--primary-500)', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}
+                >
+                  Buka <ExternalLink size={10} />
+                </Link>
+              )}
+              {isPlaylistExpanded ? <ChevronDown size={14} color="var(--text-secondary)" /> : <ChevronUp size={14} color="var(--text-secondary)" />}
+            </div>
+          </div>
+          
+          {isPlaylistExpanded && (
+            <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+              {(selectedZone.blocks || []).length > 0 ? (
+                (selectedZone.blocks || []).map((block, index) => {
+                  const pl = availablePlaylists.find(p => p.id === block.playlist_id);
+                  return (
+                    <div key={block.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', backgroundColor: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: '6px' }}>
+                      <div style={{ width: '24px', height: '24px', borderRadius: '4px', backgroundColor: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                        {index + 1}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {pl?.name || 'Loading playlist...'}
+                        </span>
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                          <span style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)' }}>{pl?.items?.length || 0} Media</span>
+                          <span style={{ fontSize: '0.6875rem', color: 'var(--accent-amber)' }}>{pl?.total_duration_seconds || 0}s</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (window.confirm('Hapus blok playlist ini dari zona?')) {
+                            const newBlocks = (selectedZone.blocks || []).filter(b => b.id !== block.id);
+                            updateSelectedZone('blocks', newBlocks);
+                          }
+                        }}
+                        style={{ padding: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '4px' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.color = '#ef4444'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                        title="Hapus Blok"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)', fontSize: '0.75rem', backgroundColor: 'var(--bg-base)', borderRadius: '6px', border: '1px dashed var(--border-subtle)' }}>
+                  Belum ada playlist yang ditambahkan.
+                </div>
+              )}
+              
+              <button
+                onClick={() => setPickerZoneId(selectedZone.id)}
+                style={{ width: '100%', padding: '8px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'var(--bg-surface-elevated)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '4px' }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-50)'; e.currentTarget.style.borderColor = 'var(--primary-300)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
+              >
+                + Tambah Blok Playlist
+              </button>
+            </div>
           )}
         </div>
       )}

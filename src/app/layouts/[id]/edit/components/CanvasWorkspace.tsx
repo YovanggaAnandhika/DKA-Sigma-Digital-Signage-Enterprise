@@ -196,7 +196,14 @@ export default function CanvasWorkspace() {
       </div>
 
       {/* Scrollable canvas area */}
-      <div style={{ flex: 1, overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '52px', paddingBottom: '16px', paddingLeft: '16px', paddingRight: '16px' }}>
+      <div 
+        style={{ flex: 1, overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '52px', paddingBottom: '16px', paddingLeft: '16px', paddingRight: '16px' }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setSelectedZoneId(null);
+          }
+        }}
+      >
         <div
           style={{
             width: `${canvasDisplayWidth}px`,
@@ -207,6 +214,11 @@ export default function CanvasWorkspace() {
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
             border: '1px solid #333',
             flexShrink: 0,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedZoneId(null);
+            }
           }}
         >
         {zones.map((z, idx) => {
