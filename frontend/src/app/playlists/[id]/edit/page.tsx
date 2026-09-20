@@ -458,148 +458,208 @@ export default function EditPlaylistPage() {
             className="card-elevated"
             style={{
               width: '100%',
-              maxWidth: '540px',
-              padding: '24px',
+              maxWidth: '1200px',
               backgroundColor: 'var(--bg-surface)',
               borderRadius: '12px',
               boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: '90vh',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Sparkles size={18} color="var(--primary-500)" /> Tambah Media ke Playlist
+            <div style={{ padding: '24px 24px 16px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Sparkles size={20} color="var(--primary-500)" /> Pilih & Tambah Media ke Playlist
               </h3>
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: 'var(--text-muted)' }}
+                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-muted)' }}
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleAddItem} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                  Pilih Aset Media dari Pustaka <span style={{ color: 'var(--accent-rose)' }}>*</span>
-                </label>
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+              {/* Left Side: Media Gallery Grid */}
+              <div style={{ flex: 1, padding: '24px', overflowY: 'auto', backgroundColor: 'var(--bg-base)' }}>
                 {mediaList.length === 0 ? (
-                  <div style={{ padding: '12px', backgroundColor: '#fef3c7', borderRadius: '6px', color: '#92400e', fontSize: '0.8125rem' }}>
+                  <div style={{ padding: '20px', backgroundColor: '#fef3c7', borderRadius: '8px', color: '#92400e', fontSize: '0.9375rem', textAlign: 'center' }}>
                     Belum ada media diunggah di Pustaka Media. Silakan unggah foto/video di menu <strong>Pustaka Media</strong> terlebih dahulu.
                   </div>
                 ) : (
-                  <select
-                    className="form-input"
-                    value={newItem.media_item_id}
-                    onChange={(e) => {
-                      const selId = e.target.value;
-                      const selMedia = mediaList.find(m => m.id === selId);
-                      setNewItem({
-                        ...newItem,
-                        media_item_id: selId,
-                        duration_seconds: selMedia?.duration_seconds && selMedia.duration_seconds > 0 ? selMedia.duration_seconds : 10,
-                      });
-                    }}
-                    required
-                  >
-                    {mediaList.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.media_type === 2 ? '🎬 [Video]' : '🖼️ [Gambar]'} {m.name} ({m.duration_seconds > 0 ? `${m.duration_seconds}s` : 'Statis'})
-                      </option>
-                    ))}
-                  </select>
-                )}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '16px' }}>
+                    {mediaList.map((m) => {
+                      const isSelected = m.id === newItem.media_item_id;
+                      const isVideo = m.media_type === 2;
+                      return (
+                        <div
+                          key={m.id}
+                          onClick={() => {
+                            setNewItem({
+                              ...newItem,
+                              media_item_id: m.id,
+                              duration_seconds: m.duration_seconds > 0 ? m.duration_seconds : 10,
+                            });
+                          }}
+                          style={{
+                            borderRadius: '10px',
+                            border: `2px solid ${isSelected ? 'var(--primary-500)' : 'transparent'}`,
+                            backgroundColor: 'var(--bg-surface-elevated)',
+                            cursor: 'pointer',
+                            overflow: 'hidden',
+                            position: 'relative',
+                            boxShadow: isSelected ? '0 0 0 2px rgba(56, 189, 248, 0.4), 0 10px 15px -3px rgba(0,0,0,0.3)' : '0 4px 6px -1px rgba(0,0,0,0.2)',
+                            transition: 'all 0.2s ease',
+                            transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+                          }}
+                        >
+                          <div style={{ width: '100%', aspectRatio: '16/9', backgroundColor: '#0f172a', position: 'relative' }}>
+                            {m.public_url && !isVideo ? (
+                              <img src={m.public_url} alt={m.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : isVideo ? (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                                <Film size={32} color="var(--accent-amber)" opacity={0.8} />
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                                <ImageIcon size={32} color="var(--primary-500)" opacity={0.8} />
+                              </div>
+                            )}
+                            
+                            {/* Media Type Badge */}
+                            <div style={{ position: 'absolute', top: '8px', left: '8px', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(15,23,42,0.8)', color: '#fff', fontSize: '0.625rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', backdropFilter: 'blur(4px)' }}>
+                              {isVideo ? <Film size={10} color="#fcd34d" /> : <ImageIcon size={10} color="#93c5fd" />}
+                              {isVideo ? 'Video' : 'Image'}
+                            </div>
 
-                {(() => {
-                  const selMedia = mediaList.find((m) => m.id === newItem.media_item_id);
-                  if (!selMedia) return null;
-                  return (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '10px', padding: '10px 12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-                      <div style={{ width: '48px', height: '48px', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#0f172a', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {selMedia.public_url && selMedia.media_type !== 2 ? (
-                          <img src={selMedia.public_url} alt={selMedia.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : selMedia.media_type === 2 ? (
-                          <Film size={20} color="var(--accent-amber)" />
-                        ) : (
-                          <ImageIcon size={20} color="var(--primary-500)" />
-                        )}
+                            {/* Duration Badge */}
+                            {m.duration_seconds > 0 && (
+                              <div style={{ position: 'absolute', bottom: '8px', right: '8px', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(15,23,42,0.8)', color: '#fff', fontSize: '0.625rem', fontWeight: 600, backdropFilter: 'blur(4px)' }}>
+                                {m.duration_seconds}s
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div style={{ padding: '12px' }}>
+                            <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', marginBottom: '4px' }}>
+                              {m.name}
+                            </div>
+                            <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                              {m.width} × {m.height} px
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Right Side: Selected Media Details & Form */}
+              <div style={{ width: '340px', padding: '24px', borderLeft: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface-elevated)', display: 'flex', flexDirection: 'column' }}>
+                <form onSubmit={handleAddItem} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <h4 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>Media Terpilih</h4>
+                  
+                  {(() => {
+                    const selMedia = mediaList.find((m) => m.id === newItem.media_item_id);
+                    if (!selMedia) return (
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>
+                        <ImageIcon size={40} style={{ opacity: 0.2, marginBottom: '12px' }} />
+                        <p style={{ fontSize: '0.8125rem' }}>Silakan pilih media dari galeri di samping</p>
                       </div>
-                      <div style={{ overflow: 'hidden' }}>
-                        <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                    );
+
+                    const isVideo = selMedia.media_type === 2;
+
+                    return (
+                      <div style={{ flex: 1 }}>
+                        {/* Selected Preview */}
+                        <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#0f172a', marginBottom: '16px', position: 'relative' }}>
+                          {selMedia.public_url && !isVideo ? (
+                            <img src={selMedia.public_url} alt={selMedia.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : isVideo ? (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                              <Film size={40} color="var(--accent-amber)" />
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                              <ImageIcon size={40} color="var(--primary-500)" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px', wordBreak: 'break-word' }}>
                           {selMedia.name}
                         </div>
-                        <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '24px' }}>
                           {selMedia.width} × {selMedia.height} px • {selMedia.mime_type}
                         </div>
+
+                        {/* Form Inputs */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                              Durasi Tayang (Detik) <span style={{ color: 'var(--accent-rose)' }}>*</span>
+                            </label>
+                            <input
+                              type="number"
+                              min={1}
+                              max={3600}
+                              required
+                              value={newItem.duration_seconds}
+                              onChange={(e) => setNewItem({ ...newItem, duration_seconds: Number(e.target.value) })}
+                              className="form-input"
+                            />
+                            {isVideo && selMedia.duration_seconds > 0 && (
+                              <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                ✅ Durasi video asli: <strong>{selMedia.duration_seconds} detik</strong>
+                              </p>
+                            )}
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                              Efek Transisi
+                            </label>
+                            <select
+                              className="form-input"
+                              value={newItem.transition_type}
+                              onChange={(e) => setNewItem({ ...newItem, transition_type: e.target.value })}
+                            >
+                              <option value="fade">Fade Smooth</option>
+                              <option value="slide_left">Slide Left</option>
+                              <option value="slide_right">Slide Right</option>
+                              <option value="none">Cut (Tanpa Transisi)</option>
+                            </select>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })()}
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                    Durasi Tayang (Detik) <span style={{ color: 'var(--accent-rose)' }}>*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={3600}
-                    required
-                    value={newItem.duration_seconds}
-                    onChange={(e) => setNewItem({ ...newItem, duration_seconds: Number(e.target.value) })}
-                    className="form-input"
-                  />
-                  {(() => {
-                    const selMedia = mediaList.find(m => m.id === newItem.media_item_id);
-                    if (!selMedia) return null;
-                    if (selMedia.media_type === 2 && selMedia.duration_seconds > 0) {
-                      return (
-                        <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                          ✅ Durasi video asli: <strong>{selMedia.duration_seconds} detik</strong> (sudah otomatis diisi)
-                        </p>
-                      );
-                    }
-                    return null;
+                    );
                   })()}
-                </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                    Efek Transisi
-                  </label>
-                  <select
-                    className="form-input"
-                    value={newItem.transition_type}
-                    onChange={(e) => setNewItem({ ...newItem, transition_type: e.target.value })}
-                  >
-                    <option value="fade">Fade Smooth</option>
-                    <option value="slide_left">Slide Left</option>
-                    <option value="slide_right">Slide Right</option>
-                    <option value="none">Cut (Tanpa Transisi)</option>
-                  </select>
-                </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddModal(false)}
+                      className="btn btn-secondary"
+                      style={{ flex: 1 }}
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={addingItem || mediaList.length === 0 || !newItem.media_item_id}
+                      className="btn btn-primary"
+                      style={{ flex: 2, display: 'flex', justifyContent: 'center' }}
+                    >
+                      <Plus size={16} />
+                      <span>{addingItem ? 'Proses...' : 'Tambahkan'}</span>
+                    </button>
+                  </div>
+                </form>
               </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="btn btn-secondary"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={addingItem || mediaList.length === 0}
-                  className="btn btn-primary"
-                >
-                  <Plus size={14} />
-                  <span>{addingItem ? 'Menambahkan...' : 'Tambahkan ke Urutan'}</span>
-                </button>
-              </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
