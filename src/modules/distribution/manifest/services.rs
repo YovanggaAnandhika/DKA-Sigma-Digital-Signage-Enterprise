@@ -58,7 +58,7 @@ impl ManifestService {
         for dto_zone in zones {
             let mut mapped_blocks = Vec::new();
             for block in dto_zone.blocks {
-                if let Ok(pl) = PlaylistService::get_playlist_by_id(pool, block.playlist_id).await {
+                if let Ok(pl) = PlaylistService::get_playlist_by_id(pool, block.block.playlist_id).await {
                     for item in &pl.items {
                         if !required_assets_map.contains_key(&item.media_item_id) {
                             required_assets_map.insert(
@@ -76,11 +76,11 @@ impl ManifestService {
                         }
                     }
                     mapped_blocks.push(crate::modules::distribution::manifest::model::ZonePlaylistBlockDto {
-                        id: block.id,
-                        start_time_seconds: block.start_time_seconds,
-                        duration_seconds: block.duration_seconds,
-                        transition_type: block.transition_type,
-                        order_index: block.order_index,
+                        id: block.block.id,
+                        start_time_seconds: block.block.start_time_seconds,
+                        duration_seconds: block.block.duration_seconds,
+                        transition_type: block.block.transition_type,
+                        order_index: block.block.order_index,
                         playlist: pl,
                     });
                 }

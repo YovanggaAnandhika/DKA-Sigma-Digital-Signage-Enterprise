@@ -41,6 +41,7 @@ impl ManifestServiceImpl {
                     transition_type: b.transition_type.unwrap_or_default(),
                     order_index: b.order_index,
                     created_at: "".to_string(),
+                    item_overrides: vec![],
                 }).collect(),
                 created_at: "".to_string(),
                 updated_at: "".to_string(),

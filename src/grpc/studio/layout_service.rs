@@ -1,5 +1,8 @@
+use sqlx::PgPool;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
+use tracing::error;
+use crate::modules::studio::layout::repositories::LayoutRepository;
 use crate::db::DbPool;
 use crate::grpc::proto::hardware::v1::device::DeviceOrientation;
 use crate::modules::studio::layout::model::{CreateLayoutDto, CreateZoneDto, LayoutWithZonesDto, UpdateLayoutDto, UpdateZoneDto, ZoneEntity};
@@ -57,15 +60,21 @@ impl LayoutServiceImpl {
             z_index: dto.zone.z_index,
             background_color: dto.zone.background_color,
             blocks: dto.blocks.into_iter().map(|b| ZonePlaylist {
-                id: b.id.to_string(),
-                zone_id: b.zone_id.to_string(),
-                playlist_id: b.playlist_id.to_string(),
+                id: b.block.id.to_string(),
+                zone_id: b.block.zone_id.to_string(),
+                playlist_id: b.block.playlist_id.to_string(),
                 playlist: None,
-                start_time_seconds: b.start_time_seconds,
-                duration_seconds: b.duration_seconds,
-                transition_type: b.transition_type.unwrap_or_default(),
-                order_index: b.order_index,
-                created_at: b.created_at.to_rfc3339(),
+                start_time_seconds: b.block.start_time_seconds,
+                duration_seconds: b.block.duration_seconds,
+                transition_type: b.block.transition_type.unwrap_or_default(),
+                order_index: b.block.order_index,
+                created_at: b.block.created_at.to_rfc3339(),
+                item_overrides: b.item_overrides.into_iter().map(|o| crate::grpc::proto::studio::v1::layout::ZonePlaylistItemOverride {
+                    id: o.id.to_string(),
+                    zone_playlist_id: o.zone_playlist_id.to_string(),
+                    playlist_item_id: o.playlist_item_id.to_string(),
+                    is_muted: o.is_muted.unwrap_or(false),
+                }).collect(),
             }).collect(),
             created_at: dto.zone.created_at.to_rfc3339(),
             updated_at: dto.zone.updated_at.to_rfc3339(),
@@ -244,11 +253,21 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
+        let mut block_dtos = Vec::new();
         let blocks = sqlx::query_as::<_, crate::modules::studio::layout::model::ZonePlaylistEntity>(
             "SELECT * FROM zone_playlists WHERE zone_id = $1 ORDER BY order_index ASC"
         ).bind(zone.id).fetch_all(&self.pool).await.unwrap_or_default();
+        for block in blocks {
+            let overrides = sqlx::query_as::<_, crate::modules::studio::layout::model::ZonePlaylistItemOverrideEntity>(
+                "SELECT * FROM zone_playlist_item_overrides WHERE zone_playlist_id = $1"
+            ).bind(block.id).fetch_all(&self.pool).await.unwrap_or_default();
+            block_dtos.push(crate::modules::studio::layout::model::ZonePlaylistDto {
+                block,
+                item_overrides: overrides,
+            });
+        }
 
-        let zone_dto = crate::modules::studio::layout::model::ZoneWithBlocksDto { zone, blocks };
+        let zone_dto = crate::modules::studio::layout::model::ZoneWithBlocksDto { zone, blocks: block_dtos };
 
         Ok(Response::new(Self::map_zone_with_blocks(zone_dto)))
     }
@@ -279,11 +298,21 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         // For update and get, we should really fetch blocks.
         // Let's refetch from layout to get blocks, but for now we'll just return empty blocks.
         // Wait, better to query the blocks here.
+        let mut block_dtos = Vec::new();
         let blocks = sqlx::query_as::<_, crate::modules::studio::layout::model::ZonePlaylistEntity>(
             "SELECT * FROM zone_playlists WHERE zone_id = $1 ORDER BY order_index ASC"
         ).bind(zone.id).fetch_all(&self.pool).await.unwrap_or_default();
+        for block in blocks {
+            let overrides = sqlx::query_as::<_, crate::modules::studio::layout::model::ZonePlaylistItemOverrideEntity>(
+                "SELECT * FROM zone_playlist_item_overrides WHERE zone_playlist_id = $1"
+            ).bind(block.id).fetch_all(&self.pool).await.unwrap_or_default();
+            block_dtos.push(crate::modules::studio::layout::model::ZonePlaylistDto {
+                block,
+                item_overrides: overrides,
+            });
+        }
 
-        let zone_dto = crate::modules::studio::layout::model::ZoneWithBlocksDto { zone, blocks };
+        let zone_dto = crate::modules::studio::layout::model::ZoneWithBlocksDto { zone, blocks: block_dtos };
 
         Ok(Response::new(Self::map_zone_with_blocks(zone_dto)))
     }
@@ -337,6 +366,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
                 transition_type: block.transition_type.unwrap_or_default(),
                 order_index: block.order_index,
                 created_at: block.created_at.to_rfc3339(),
+                item_overrides: vec![],
             }),
         }))
     }
@@ -373,6 +403,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
                 transition_type: block.transition_type.unwrap_or_default(),
                 order_index: block.order_index,
                 created_at: block.created_at.to_rfc3339(),
+                item_overrides: vec![],
             }),
         }))
     }
@@ -393,6 +424,34 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         Ok(Response::new(PlaylistBlockResponse {
             success,
             block: None,
+        }))
+    }
+
+    async fn set_playlist_item_override(
+        &self,
+        request: Request<crate::grpc::proto::studio::v1::layout::SetPlaylistItemOverrideRequest>,
+    ) -> Result<Response<crate::grpc::proto::studio::v1::layout::SetPlaylistItemOverrideResponse>, Status> {
+        let req = request.into_inner();
+        let zp_id = Uuid::parse_str(&req.zone_playlist_id)
+            .map_err(|_| Status::invalid_argument("Invalid zone_playlist_id UUID"))?;
+        let pi_id = Uuid::parse_str(&req.playlist_item_id)
+            .map_err(|_| Status::invalid_argument("Invalid playlist_item_id UUID"))?;
+
+        let override_ent = LayoutRepository::set_playlist_item_override(&self.pool, zp_id, pi_id, req.is_muted)
+            .await
+            .map_err(|e| {
+                error!("Failed to set playlist item override: {:?}", e);
+                Status::internal("Internal database error")
+            })?;
+
+        Ok(Response::new(crate::grpc::proto::studio::v1::layout::SetPlaylistItemOverrideResponse {
+            success: true,
+            r#override: Some(crate::grpc::proto::studio::v1::layout::ZonePlaylistItemOverride {
+                id: override_ent.id.to_string(),
+                zone_playlist_id: override_ent.zone_playlist_id.to_string(),
+                playlist_item_id: override_ent.playlist_item_id.to_string(),
+                is_muted: override_ent.is_muted.unwrap_or(false),
+            }),
         }))
     }
 }
