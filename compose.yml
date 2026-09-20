@@ -1,0 +1,136 @@
+services:
+  # Next.js Standalone Frontend UI (Bun)
+  frontend:
+    image: yovanggaanandhika/node:latest
+    container_name: dka_signage_frontend
+    restart: always
+    environment:
+      TZ: Asia/Makassar
+      NODE_ENV: development
+      PORT: 80
+      NEXT_PUBLIC_GRPC_WEB_URL: "http://localhost:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - target: 80
+        published: "80"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: ./frontend
+        target: /app
+    working_dir: /app
+    command: bun run dev
+    depends_on:
+      - backend
+      - envoy
+    networks:
+      - dka_signage_network
+
+  # Envoy gRPC-Web Proxy (Translates browser HTTP/gRPC-Web calls to backend:50051)
+  envoy:
+    image: envoyproxy/envoy:v1.30-latest
+    container_name: dka_signage_envoy
+    restart: always
+    networks:
+      - dka_signage_network
+    ports:
+      - target: 8080
+        published: "8080"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: ./envoy/envoy.yaml
+        target: /etc/envoy/envoy.yaml
+    depends_on:
+      - backend
+
+  # Rust Backend Server (Tonic gRPC)
+  backend:
+    image: yovanggaanandhika/rust:latest
+    container_name: dka_signage_backend
+    restart: always
+    networks:
+      - dka_signage_network
+    ports:
+      - target: 50051
+        published: "50051"
+        protocol: tcp
+    environment:
+      TZ: Asia/Makassar
+      DATABASE_URL: postgres://dka_signage:bZ9qL4vX7kM2pT8w@db:5432/dka_signage
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USERNAME: dka_signage
+      DB_PASSWORD: bZ9qL4vX7kM2pT8w
+      DB_DATABASE: dka_signage
+      GRPC_PORT: 50051
+      HOST: 0.0.0.0
+      JWT_SECRET: super_secret_jwt_key_signage_123456789
+      RUST_LOG: info,signage_backend=debug
+      DKA_HEALTHY_CHECK_HTTP: "false"
+      DKA_HEALTHY_CHECK_GRPC: "false"
+    volumes:
+      - type: bind
+        source: ./backend
+        target: /home/app
+    depends_on:
+      - db
+
+  # PostgreSQL Database (Signage DB)
+  db:
+    image: yovanggaanandhika/postgresql:17.1
+    container_name: dka_signage_db
+    restart: always
+    environment:
+      TZ: Asia/Makassar
+      DKA_ROOT_PASSWORD: bZ9qL4vX7kM2pT8w
+      DKA_DB_NAME: dka_signage
+      DKA_DB_USERNAME: dka_signage
+      DKA_DB_PASSWORD: bZ9qL4vX7kM2pT8w
+      DKA_DB_MAX_CONNECTION: 200
+      # ============================================================
+      # Cron & Backup Settings
+      # ============================================================
+      DKA_CRON_ENABLE: true
+      DKA_CRON_PRIODIC: "0 3 * * *"       # Jadwal cron backup (default: 03:00 setiap hari)
+      # ============================================================
+      # Auto Maintenance / Optimizer
+      # ============================================================
+      DKA_MAINTENANCE_ENABLE: true
+      DKA_MAINTENANCE_CRON: "0 4 * * *"    # Jadwal maintenance (default: 04:00 setiap hari)
+      DKA_MAINTENANCE_VACUUM_ENABLE: "true"
+      DKA_MAINTENANCE_ANALYZE_ENABLE: "true"
+      DKA_MAINTENANCE_REINDEX_ENABLE: "false"
+      DKA_MAINTENANCE_REINDEX_MODE: smart   # smart | always
+      DKA_MAINTENANCE_REINDEX_DEAD_RATIO_THRESHOLD: "0.20"
+      DKA_MAINTENANCE_REINDEX_MIN_DEAD_TUPLES: "100000"
+      DKA_MAINTENANCE_REINDEX_INDEX_SCAN_THRESHOLD: "50"
+      DKA_MAINTENANCE_REINDEX_INDEX_SIZE_THRESHOLD: "104857600"
+      DKA_MAINTENANCE_LOG: /var/log/postgresql/maintenance.log
+    ports:
+      - target: 5432
+        published: "54321"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: postgres_data
+        target: /var/lib/postgresql/data
+      - type: volume
+        source: postgres_backup
+        target: /backup
+    networks:
+      - dka_signage_network
+
+volumes:
+  postgres_data:
+  postgres_backup:
+
+networks:
+  dka_signage_network:
+    name: dka_signage_network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.31.0.0/16
+          gateway: 172.31.0.1
