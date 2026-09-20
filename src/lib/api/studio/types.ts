@@ -28,8 +28,10 @@ export interface Zone {
 export interface ZonePlaylist {
   id: string;
   zone_id: string;
-  playlist_id: string;
+  playlist_id: string;   // empty string if this is a media block
+  media_item_id: string; // empty string if this is a playlist block
   playlist?: Playlist;
+  media_item?: MediaItem;
   start_time_seconds: number;
   duration_seconds: number;
   transition_type: string;

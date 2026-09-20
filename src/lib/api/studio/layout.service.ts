@@ -25,6 +25,8 @@ function decodeZonePlaylistItemOverride(bytes: Uint8Array): import('./types').Zo
 function decodeZonePlaylist(bytes: Uint8Array): import('./types').ZonePlaylist | null {
   const reader = new ProtoReader(bytes);
   const block: Partial<import('./types').ZonePlaylist> = {
+    playlist_id: '',
+    media_item_id: '',
     start_time_seconds: 0,
     duration_seconds: 10,
     transition_type: 'none',
@@ -47,6 +49,8 @@ function decodeZonePlaylist(bytes: Uint8Array): import('./types').ZonePlaylist |
       const override = decodeZonePlaylistItemOverride(overrideBytes);
       if (override) block.item_overrides?.push(override);
     }
+    else if (tag.fieldNumber === 11) block.media_item_id = reader.readString();
+    else if (tag.fieldNumber === 12 && tag.wireType === 2) reader.skip(tag.wireType); // skip media_item object for now
     else reader.skip(tag.wireType);
   }
   return block.id ? (block as import('./types').ZonePlaylist) : null;
@@ -313,6 +317,31 @@ export async function removePlaylistBlock(block_id: string): Promise<boolean> {
     else reader.skip(tag.wireType);
   }
   return success;
+}
+
+export async function addMediaBlock(zone_id: string, media_item_id: string, start_time_seconds: number, duration_seconds: number): Promise<import('./types').ZonePlaylist> {
+  const writer = new ProtoWriter();
+  // AddMediaBlockRequest: zone_id=1, media_item_id=2, start_time_seconds=3, duration_seconds=4
+  writer.writeString(1, zone_id);
+  writer.writeString(2, media_item_id);
+  writer.writeInt32(3, start_time_seconds);
+  writer.writeInt32(4, duration_seconds);
+
+  const resBytes = await invokeGrpcMethod('signage.studio.v1.layout.LayoutService', 'AddMediaBlock', writer);
+  // PlaylistBlockResponse: success=1, block=2
+  const reader = new ProtoReader(resBytes);
+  let block: import('./types').ZonePlaylist | null = null;
+  while (reader.hasMore()) {
+    const tag = reader.readTag();
+    if (!tag) break;
+    if (tag.fieldNumber === 2 && tag.wireType === 2) {
+      block = decodeZonePlaylist(reader.readBytes());
+    } else {
+      reader.skip(tag.wireType);
+    }
+  }
+  if (!block) throw new Error('AddMediaBlock gagal');
+  return block;
 }
 
 export async function setPlaylistItemOverride(zone_playlist_id: string, playlist_item_id: string, is_muted: boolean): Promise<import('./types').ZonePlaylistItemOverride> {

@@ -9,6 +9,7 @@ import CanvasWorkspace from './components/CanvasWorkspace';
 import TimelineEditor from './components/TimelineEditor';
 import InspectorPanel from './components/InspectorPanel';
 import PlaylistPickerModal from './components/PlaylistPickerModal';
+import MediaPickerModal from './components/MediaPickerModal';
 
 function EditorContent() {
   const { loading, layout, togglePlay } = useLayoutEditor();
@@ -57,6 +58,7 @@ function EditorContent() {
       <TimelineEditor />
 
       <PlaylistPickerModal />
+      <MediaPickerModal />
     </div>
   );
 }

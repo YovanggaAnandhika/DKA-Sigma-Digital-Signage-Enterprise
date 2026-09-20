@@ -524,8 +524,20 @@ export default function TimelineEditor() {
               return (
                 <div key={z.id} style={{ height: '36px', borderBottom: '1px solid var(--border-subtle)', position: 'relative', display: 'flex', alignItems: 'center' }}>
                   {(z.blocks || []).map((block, bIdx) => {
+                    const isMediaBlock = !!block.media_item_id;
                     const assignedPl = availablePlaylists.find((p) => p.id === block.playlist_id);
-                    const items = assignedPl?.items || [];
+                    
+                    let itemsToRender: any[] = [];
+                    if (isMediaBlock) {
+                      itemsToRender = [{
+                        id: block.id,
+                        media_item_id: block.media_item_id,
+                        duration_seconds: block.duration_seconds,
+                        is_muted: false
+                      }];
+                    } else {
+                      itemsToRender = assignedPl?.items || [];
+                    }
                     const blockActive = active && isZoneActive(z, playheadPosition); // Simplified
 
                     return (
@@ -565,7 +577,7 @@ export default function TimelineEditor() {
                               transition: 'opacity 0.2s, box-shadow 0.2s'
                             }}
                           >
-                            {items.length > 0 ? items.map((it, itemIdx) => {
+                            {itemsToRender.length > 0 ? itemsToRender.map((it, itemIdx) => {
                               const itDur = it.duration_seconds || 10;
                               const itWidthPx = itDur * pxPerSecond;
                               const m = mediaList.find((media) => media.id === it.media_item_id);
@@ -579,8 +591,8 @@ export default function TimelineEditor() {
                                   style={{
                                     display: 'flex',
                                     alignItems: 'center',
-                                    width: `${itDur * pxPerSecond}px`,
-                                    borderRight: itemIdx < (assignedPl?.items?.length || 0) - 1 ? '1px solid rgba(255,255,255,0.2)' : 'none',
+                                    width: `${itWidthPx}px`,
+                                    borderRight: itemIdx < itemsToRender.length - 1 ? '1px solid rgba(255,255,255,0.2)' : 'none',
                                     padding: '0 4px',
                                     boxSizing: 'border-box',
                                     backgroundColor: 'transparent',
@@ -628,7 +640,7 @@ export default function TimelineEditor() {
                               );
                             }) : (
                               <span style={{ fontSize: '0.65rem', color: '#fff', fontWeight: 600, padding: '0 8px' }}>
-                                🎬 {assignedPl?.name || 'Playlist'}
+                                🎬 {isMediaBlock ? 'Media' : (assignedPl?.name || 'Playlist')}
                               </span>
                             )}
                           </div>

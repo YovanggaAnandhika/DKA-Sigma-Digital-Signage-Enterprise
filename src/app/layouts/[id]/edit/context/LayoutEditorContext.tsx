@@ -49,6 +49,8 @@ interface LayoutEditorContextType {
   isZoneActive: (zone: Zone, currentPos?: number) => boolean;
   pickerZoneId: string | null;
   setPickerZoneId: React.Dispatch<React.SetStateAction<string | null>>;
+  mediaPickerZoneId: string | null;
+  setMediaPickerZoneId: React.Dispatch<React.SetStateAction<string | null>>;
   hiddenZones: string[];
   toggleZoneVisibility: (zoneId: string) => void;
   isTimelineExpanded: boolean;
@@ -70,6 +72,7 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [pickerZoneId, setPickerZoneId] = useState<string | null>(null);
+  const [mediaPickerZoneId, setMediaPickerZoneId] = useState<string | null>(null);
   const [hiddenZones, setHiddenZones] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -272,7 +275,11 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
         // 3.5. Save blocks for this zone
         for (const b of (z.blocks || [])) {
           if (b.id.startsWith('temp-')) {
-            await api.addPlaylistBlock(realZoneId, b.playlist_id, b.start_time_seconds, b.duration_seconds);
+            if (b.media_item_id) {
+              await api.addMediaBlock(realZoneId, b.media_item_id, b.start_time_seconds, b.duration_seconds);
+            } else {
+              await api.addPlaylistBlock(realZoneId, b.playlist_id, b.start_time_seconds, b.duration_seconds);
+            }
           } else {
             await api.updatePlaylistBlock(b.id, { 
               start_time_seconds: b.start_time_seconds, 
@@ -467,6 +474,8 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
     isZoneActive,
     pickerZoneId,
     setPickerZoneId,
+    mediaPickerZoneId,
+    setMediaPickerZoneId,
     hiddenZones,
     toggleZoneVisibility,
     isTimelineExpanded,

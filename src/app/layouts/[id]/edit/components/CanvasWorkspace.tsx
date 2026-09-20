@@ -238,31 +238,38 @@ export default function CanvasWorkspace() {
           let currentItem: any = null;
 
           if (activeBlock) {
-            const assignedPl = availablePlaylists.find((p) => p.id === activeBlock.playlist_id);
-            const items = assignedPl?.items || [];
-
-            if (items.length > 0) {
-              currentItem = items[0];
+            if (activeBlock.media_item_id) {
+              activeMedia = mediaList.find((m) => m.id === activeBlock.media_item_id);
               const blockLocalSec = currentSec - activeBlock.start_time_seconds;
-              const totalDur = items.reduce((sum, it) => sum + (it.duration_seconds || 10), 0);
+              const d = activeMedia?.duration_seconds || 10;
+              itemOffsetSec = d > 0 ? blockLocalSec % d : blockLocalSec;
+            } else {
+              const assignedPl = availablePlaylists.find((p) => p.id === activeBlock.playlist_id);
+              const items = assignedPl?.items || [];
 
-              if (items.length > 1 && totalDur > 0) {
-                const loopSec = blockLocalSec % totalDur;
-                let acc = 0;
-                for (const it of items) {
-                  const d = it.duration_seconds || 10;
-                  if (loopSec >= acc && loopSec < acc + d) {
-                    currentItem = it;
-                    itemOffsetSec = loopSec - acc;
-                    break;
+              if (items.length > 0) {
+                currentItem = items[0];
+                const blockLocalSec = currentSec - activeBlock.start_time_seconds;
+                const totalDur = items.reduce((sum, it) => sum + (it.duration_seconds || 10), 0);
+
+                if (items.length > 1 && totalDur > 0) {
+                  const loopSec = blockLocalSec % totalDur;
+                  let acc = 0;
+                  for (const it of items) {
+                    const d = it.duration_seconds || 10;
+                    if (loopSec >= acc && loopSec < acc + d) {
+                      currentItem = it;
+                      itemOffsetSec = loopSec - acc;
+                      break;
+                    }
+                    acc += d;
                   }
-                  acc += d;
+                } else if (items.length === 1) {
+                  const d = currentItem.duration_seconds || 10;
+                  itemOffsetSec = d > 0 ? blockLocalSec % d : blockLocalSec;
                 }
-              } else if (items.length === 1) {
-                const d = currentItem.duration_seconds || 10;
-                itemOffsetSec = d > 0 ? blockLocalSec % d : blockLocalSec;
+                activeMedia = mediaList.find((m) => m.id === currentItem.media_item_id);
               }
-              activeMedia = mediaList.find((m) => m.id === currentItem.media_item_id);
             }
           }
 
@@ -447,7 +454,7 @@ export default function CanvasWorkspace() {
                             paddingLeft: '4px',
                           }}
                         >
-                          🎬 {availablePlaylists.find(p => p.id === z.blocks[0].playlist_id)?.name || 'Playlist'}
+                          🎬 {z.blocks[0].media_item_id ? 'Media' : (availablePlaylists.find(p => p.id === z.blocks[0].playlist_id)?.name || 'Playlist')}
                         </span>
                       )}
                       {activeMedia?.media_type === 2 && (

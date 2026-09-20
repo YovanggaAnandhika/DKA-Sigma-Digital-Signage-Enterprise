@@ -6,7 +6,7 @@ import { Layers, Plus, Film, ChevronLeft, ChevronRight, ListMusic, Trash2, Exter
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 
 export default function LayersPanel() {
-  const { zones, selectedZoneId, setSelectedZoneId, handleAddZone, availablePlaylists, mediaList, setPickerZoneId, updateSelectedZone } = useLayoutEditor();
+  const { zones, selectedZoneId, setSelectedZoneId, handleAddZone, availablePlaylists, mediaList, setPickerZoneId, setMediaPickerZoneId, updateSelectedZone } = useLayoutEditor();
   const [collapsed, setCollapsed] = useState(false);
   const [panelWidth, setPanelWidth] = useState(240);
   const [isDraggingResize, setIsDraggingResize] = useState(false);
@@ -241,19 +241,37 @@ export default function LayersPanel() {
             <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
               {(selectedZone.blocks || []).length > 0 ? (
                 (selectedZone.blocks || []).map((block, index) => {
-                  const pl = availablePlaylists.find(p => p.id === block.playlist_id);
+                  const isMediaBlock = !!block.media_item_id;
+                  let name = 'Loading...';
+                  let detail1 = '';
+                  let detail2 = '';
+                  let icon = <ListMusic size={14} />;
+
+                  if (isMediaBlock) {
+                    const m = mediaList.find(m => m.id === block.media_item_id);
+                    name = m?.name || 'Media';
+                    detail1 = m?.media_type === 2 ? 'Video' : 'Image';
+                    detail2 = `${block.duration_seconds}s`;
+                    icon = <Film size={14} />;
+                  } else {
+                    const pl = availablePlaylists.find(p => p.id === block.playlist_id);
+                    name = pl?.name || 'Playlist';
+                    detail1 = `${pl?.items?.length || 0} Media`;
+                    detail2 = `${pl?.total_duration_seconds || 0}s`;
+                  }
+
                   return (
                     <div key={block.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', backgroundColor: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: '6px' }}>
                       <div style={{ width: '24px', height: '24px', borderRadius: '4px', backgroundColor: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                         {index + 1}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {pl?.name || 'Loading playlist...'}
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {icon} {name}
                         </span>
                         <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                          <span style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)' }}>{pl?.items?.length || 0} Media</span>
-                          <span style={{ fontSize: '0.6875rem', color: 'var(--accent-amber)' }}>{pl?.total_duration_seconds || 0}s</span>
+                          <span style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)' }}>{detail1}</span>
+                          <span style={{ fontSize: '0.6875rem', color: 'var(--accent-amber)' }}>{detail2}</span>
                         </div>
                       </div>
                       <button
@@ -279,14 +297,26 @@ export default function LayersPanel() {
                 </div>
               )}
               
-              <button
-                onClick={() => setPickerZoneId(selectedZone.id)}
-                style={{ width: '100%', padding: '8px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'var(--bg-surface-elevated)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '4px' }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-50)'; e.currentTarget.style.borderColor = 'var(--primary-300)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
-              >
-                + Tambah Blok Playlist
-              </button>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                <button
+                  onClick={() => setPickerZoneId(selectedZone.id)}
+                  style={{ flex: 1, padding: '8px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'var(--bg-surface-elevated)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-50)'; e.currentTarget.style.borderColor = 'var(--primary-300)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
+                  title="Tambah Playlist"
+                >
+                  <ListMusic size={14} /> Playlist
+                </button>
+                <button
+                  onClick={() => setMediaPickerZoneId(selectedZone.id)}
+                  style={{ flex: 1, padding: '8px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'var(--bg-surface-elevated)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-50)'; e.currentTarget.style.borderColor = 'var(--primary-300)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
+                  title="Tambah Media Langsung"
+                >
+                  <Film size={14} /> Media
+                </button>
+              </div>
             </div>
           )}
         </div>

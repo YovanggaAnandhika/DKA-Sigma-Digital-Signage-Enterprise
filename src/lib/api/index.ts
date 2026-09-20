@@ -55,6 +55,7 @@ export const api = {
   updateZone: studioModule.updateZone,
   deleteZone: studioModule.deleteZone,
   addPlaylistBlock: studioModule.addPlaylistBlock,
+  addMediaBlock: studioModule.addMediaBlock,
   updatePlaylistBlock: studioModule.updatePlaylistBlock,
   removePlaylistBlock: studioModule.removePlaylistBlock,
 
