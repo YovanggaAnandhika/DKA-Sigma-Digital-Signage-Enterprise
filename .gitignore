@@ -1,32 +1,22 @@
-# ─── Graphify ────────────────────────────────────────────────────────────────
-graphify-out/
+# ─── General ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+*.log
+logs/
 
-# ─── Rust / Cargo ─────────────────────────────────────────────────────────────
-target/
-**/*.rs.bk
-Cargo.lock          # hapus baris ini jika ini adalah binary crate (bukan library)
+# ─── Editors ─────────────────────────────────────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
 
-# ─── Node / Bun / Next.js ─────────────────────────────────────────────────────
-node_modules/
-.next/
-out/
-/graphify-out
-/.next/
-dist/
-.env
-.env.local
-.env.*.local
-.env.production
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-bun.lockb         # jika pakai bun.lock (text) tetap di-commit; hapus baris ini
-
-# ─── Docker ───────────────────────────────────────────────────────────────────
-*.env.docker
-.docker/
-
-# ─── Database / Secrets ───────────────────────────────────────────────────────
+# ─── Secrets & Certs ─────────────────────────────────────────────────────────
 *.pem
 *.key
 *.crt
@@ -35,16 +25,40 @@ bun.lockb         # jika pakai bun.lock (text) tetap di-commit; hapus baris ini
 *.der
 secrets/
 .secrets
+.env
+.env.*.local
+.env.production
+.env.local
 
-# ─── OS & Editor ──────────────────────────────────────────────────────────────
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# ─── Docker ──────────────────────────────────────────────────────────────────
+*.env.docker
+.docker/
 
-# ─── Logs ─────────────────────────────────────────────────────────────────────
-*.log
-logs/
+# ─── Graphify ────────────────────────────────────────────────────────────────
+graphify-out/
+
+# ─── Rust / Backend ──────────────────────────────────────────────────────────
+target/
+**/*.rs.bk
+backend/uploads/
+# Cargo.lock is NOT ignored since backend is a binary crate and lockfiles should be committed.
+
+# ─── Node / Frontend ─────────────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+build/
+dist/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+frontend/public/uploads/
+
+# ─── Package Managers ────────────────────────────────────────────────────────
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+/.pnp
+.pnp.js
+bun.lockb
+# Note: bun.lock (text) is tracked.
