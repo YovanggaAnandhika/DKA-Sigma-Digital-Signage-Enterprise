@@ -564,6 +564,28 @@ export default function TimelineEditor() {
                                   <span style={{ fontSize: '0.625rem', color: '#fff', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
                                     {m?.name || `Item ${itemIdx + 1}`} ({itDur}s)
                                   </span>
+                                  {isVid && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleToggleItemMute(e, it as PlaylistItem, block.playlist_id)}
+                                      title={it.is_muted ? 'Aktifkan suara video ini' : 'Bisukan suara video ini'}
+                                      style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        padding: '2px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flexShrink: 0,
+                                        borderRadius: '4px',
+                                        backgroundColor: it.is_muted ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
+                                        marginLeft: '4px'
+                                      }}
+                                    >
+                                      {it.is_muted ? <MicOff size={12} color="#fca5a5" /> : <Volume2 size={12} color="#a7f3d0" />}
+                                    </button>
+                                  )}
                                 </div>
                               );
                             }) : (

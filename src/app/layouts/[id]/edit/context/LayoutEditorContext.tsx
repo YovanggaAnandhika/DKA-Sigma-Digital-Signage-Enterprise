@@ -191,6 +191,19 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const [deletedZoneIds, setDeletedZoneIds] = useState<string[]>([]);
+  const [deletedBlockIds, setDeletedBlockIds] = useState<string[]>([]);
+
+  const handleDeleteBlock = (blockId: string) => {
+    if (!blockId.startsWith('temp-')) {
+      setDeletedBlockIds((prev) => [...prev, blockId]);
+    }
+    setZones((prev) =>
+      prev.map((z) => ({
+        ...z,
+        blocks: (z.blocks || []).filter((b) => b.id !== blockId),
+      }))
+    );
+  };
 
   const handleSave = async () => {
     try {
@@ -198,7 +211,7 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
       // 1. Update layout name & info
       await api.updateLayout(params.id, { name: layoutName });
 
-      // 2. Delete removed zones from backend
+      // 2. Delete removed zones and blocks from backend
       for (const zoneId of deletedZoneIds) {
         try {
           await api.deleteZone(zoneId);
@@ -208,6 +221,16 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
       }
       setDeletedZoneIds([]);
 
+      for (const blockId of deletedBlockIds) {
+        try {
+          // Import layout.service directly if needed or use api namespace
+          await api.removePlaylistBlock(blockId);
+        } catch (e) {
+          console.error('Failed to delete block:', blockId, e);
+        }
+      }
+      setDeletedBlockIds([]);
+
       // 3. Save or update each zone
       for (const z of zones) {
         const x = Math.round(Number(z.x) || 0);
@@ -216,8 +239,9 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
         const height = Math.round(Number(z.height) || 200);
         const z_index = Math.round(Number(z.z_index) || 1);
 
+        let realZoneId = z.id;
         if (z.id.startsWith('z-')) {
-          await api.createZone({
+          const newZ = await api.createZone({
             layout_id: params.id,
             name: z.name,
             x,
@@ -226,6 +250,7 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
             height,
             z_index,
           });
+          realZoneId = newZ.id;
         } else {
           await api.updateZone(z.id, {
             name: z.name,
@@ -236,6 +261,19 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
             z_index,
             background_color: z.background_color,
           });
+        }
+
+        // 3.5. Save blocks for this zone
+        for (const b of (z.blocks || [])) {
+          if (b.id.startsWith('temp-')) {
+            await api.addPlaylistBlock(realZoneId, b.playlist_id, b.start_time_seconds, b.duration_seconds);
+          } else {
+            await api.updatePlaylistBlock(b.id, { 
+              start_time_seconds: b.start_time_seconds, 
+              duration_seconds: b.duration_seconds,
+              transition_type: b.transition_type
+            });
+          }
         }
       }
 
@@ -294,6 +332,17 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
 
   const updateSelectedZone = (field: keyof Zone, value: any) => {
     if (!selectedZoneId) return;
+
+    if (field === 'blocks') {
+      const currentBlocks = zones.find(z => z.id === selectedZoneId)?.blocks || [];
+      const newBlocks = (value || []) as any[];
+      const newBlockIds = newBlocks.map(b => b.id);
+      const removedBlocks = currentBlocks.filter(b => !newBlockIds.includes(b.id) && !b.id.startsWith('temp-'));
+      if (removedBlocks.length > 0) {
+        setDeletedBlockIds(prev => [...prev, ...removedBlocks.map(b => b.id)]);
+      }
+    }
+
     setZones((prev) =>
       prev.map((z) => {
         if (z.id !== selectedZoneId) return z;
