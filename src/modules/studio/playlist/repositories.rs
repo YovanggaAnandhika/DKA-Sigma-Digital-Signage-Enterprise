@@ -103,7 +103,9 @@ impl PlaylistRepository {
                 m.media_type,
                 pi.position,
                 pi.duration_seconds,
-                pi.transition_type
+                pi.duration_seconds,
+                pi.transition_type,
+                pi.is_muted
             FROM playlist_items pi
             JOIN media_items m ON m.id = pi.media_item_id
             WHERE pi.playlist_id = $1
@@ -133,13 +135,14 @@ impl PlaylistRepository {
 
         let item = sqlx::query_as::<_, PlaylistItemEntity>(
             r#"
-            INSERT INTO playlist_items (playlist_id, media_item_id, position, duration_seconds, transition_type)
+            INSERT INTO playlist_items (playlist_id, media_item_id, position, duration_seconds, transition_type, is_muted)
             VALUES (
                 $1,
                 $2,
                 $3,
                 COALESCE($4, (SELECT duration_seconds FROM media_items WHERE id = $2 AND duration_seconds > 0), 10),
-                $5
+                $5,
+                COALESCE($6, false)
             )
             RETURNING *
             "#,
@@ -148,7 +151,8 @@ impl PlaylistRepository {
         .bind(dto.media_item_id)
         .bind(next_pos)
         .bind(dto.duration_seconds)
-        .bind(dto.transition_type.unwrap_or_else(|| "fade".to_string()))
+        .bind(dto.transition_type.unwrap_or_else(|| "none".to_string()))
+        .bind(dto.is_muted)
         .fetch_one(pool)
         .await?;
 
@@ -161,6 +165,7 @@ impl PlaylistRepository {
         duration_seconds: Option<i32>,
         transition_type: Option<String>,
         position: Option<i32>,
+        is_muted: Option<bool>,
     ) -> Result<PlaylistItemEntity, sqlx::Error> {
         let item = sqlx::query_as::<_, PlaylistItemEntity>(
             r#"
@@ -168,7 +173,8 @@ impl PlaylistRepository {
             SET 
                 duration_seconds = COALESCE($2, duration_seconds),
                 transition_type = COALESCE($3, transition_type),
-                position = COALESCE($4, position)
+                position = COALESCE($4, position),
+                is_muted = COALESCE($5, is_muted)
             WHERE id = $1
             RETURNING *
             "#,
@@ -177,6 +183,7 @@ impl PlaylistRepository {
         .bind(duration_seconds)
         .bind(transition_type)
         .bind(position)
+        .bind(is_muted)
         .fetch_one(pool)
         .await?;
 

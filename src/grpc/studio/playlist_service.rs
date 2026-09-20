@@ -31,6 +31,7 @@ impl PlaylistServiceImpl {
                 position: i.position,
                 duration_seconds: i.duration_seconds,
                 transition_type: i.transition_type,
+                is_muted: i.is_muted,
                 created_at: "".to_string(),
             }
         }).collect();
@@ -56,6 +57,7 @@ impl PlaylistServiceImpl {
             position: item.position,
             duration_seconds: item.duration_seconds,
             transition_type: item.transition_type,
+            is_muted: item.is_muted,
             created_at: item.created_at.to_rfc3339(),
         }
     }
@@ -186,6 +188,7 @@ impl PlaylistServiceTrait for PlaylistServiceImpl {
             duration_seconds: if req.duration_seconds > 0 { Some(req.duration_seconds) } else { None },
             transition_type: if req.transition_type.is_empty() { None } else { Some(req.transition_type) },
             position: if req.position >= 0 { Some(req.position) } else { None },
+            is_muted: None,
         };
 
         let item = PlaylistService::add_item(&self.pool, dto)
@@ -210,6 +213,7 @@ impl PlaylistServiceTrait for PlaylistServiceImpl {
             if req.duration_seconds > 0 { Some(req.duration_seconds) } else { None },
             if req.transition_type.is_empty() { None } else { Some(req.transition_type) },
             if req.position >= 0 { Some(req.position) } else { None },
+            req.is_muted,
         )
         .await
         .map_err(Status::from)?;

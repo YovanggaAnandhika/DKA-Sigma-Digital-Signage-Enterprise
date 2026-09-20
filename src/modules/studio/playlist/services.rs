@@ -69,8 +69,9 @@ impl PlaylistService {
         duration_seconds: Option<i32>,
         transition_type: Option<String>,
         position: Option<i32>,
+        is_muted: Option<bool>,
     ) -> Result<PlaylistItemEntity, AppError> {
-        let item = PlaylistRepository::update_item(pool, id, duration_seconds, transition_type, position).await?;
+        let item = PlaylistRepository::update_item(pool, id, duration_seconds, transition_type, position, is_muted).await?;
         Ok(item)
     }
 

@@ -14,6 +14,7 @@ message PlaylistItem {
   int32 duration_seconds = 6;
   string transition_type = 7; // "fade", "slide_left", "none"
   string created_at = 8;
+  bool is_muted = 9;
 }
 
 message Playlist {
@@ -75,6 +76,7 @@ message UpdatePlaylistItemRequest {
   int32 duration_seconds = 2;
   string transition_type = 3;
   int32 position = 4;
+  optional bool is_muted = 5;
 }
 
 message RemovePlaylistItemRequest {

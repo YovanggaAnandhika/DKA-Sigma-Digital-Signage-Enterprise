@@ -21,6 +21,7 @@ pub struct PlaylistItemEntity {
     pub position: i32,
     pub duration_seconds: i32,
     pub transition_type: String,
+    pub is_muted: bool,
     pub created_at: DateTime<Utc>,
 }
 
@@ -43,6 +44,7 @@ pub struct PlaylistItemWithMediaDto {
     pub position: i32,
     pub duration_seconds: i32,
     pub transition_type: String,
+    pub is_muted: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -66,4 +68,5 @@ pub struct AddPlaylistItemDto {
     pub duration_seconds: Option<i32>,
     pub transition_type: Option<String>,
     pub position: Option<i32>,
+    pub is_muted: Option<bool>,
 }
