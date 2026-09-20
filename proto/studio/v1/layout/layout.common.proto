@@ -6,6 +6,13 @@ import "common/v1/types.proto";
 import "hardware/v1/device/device.common.proto";
 import "studio/v1/playlist/playlist.common.proto";
 
+message ZonePlaylistItemOverride {
+  string id = 1;
+  string zone_playlist_id = 2;
+  string playlist_item_id = 3;
+  bool is_muted = 4;
+}
+
 message Zone {
   string id = 1;
   string layout_id = 2;
@@ -30,7 +37,8 @@ message ZonePlaylist {
   int32 duration_seconds = 6;
   string transition_type = 7;
   int32 order_index = 8;
-  string created_at = 9;
+  repeated ZonePlaylistItemOverride item_overrides = 9;
+  string created_at = 10;
 }
 
 message Layout {
@@ -148,4 +156,15 @@ message RemovePlaylistBlockRequest {
 message PlaylistBlockResponse {
   bool success = 1;
   ZonePlaylist block = 2;
+}
+
+message SetPlaylistItemOverrideRequest {
+  string zone_playlist_id = 1;
+  string playlist_item_id = 2;
+  bool is_muted = 3;
+}
+
+message SetPlaylistItemOverrideResponse {
+  bool success = 1;
+  ZonePlaylistItemOverride override = 2;
 }
