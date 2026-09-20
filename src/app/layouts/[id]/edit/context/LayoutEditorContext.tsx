@@ -29,6 +29,12 @@ interface LayoutEditorContextType {
   refreshPlaylistsAndMedia: () => Promise<void>;
   scale: number;
   previewHeight: number;
+  canvasDisplayWidth: number;
+  zoomLevel: number;
+  setZoomLevel: React.Dispatch<React.SetStateAction<number>>;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  zoomFit: () => void;
   isPlaying: boolean;
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
   playheadPosition: number;
@@ -374,7 +380,15 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
     return currentPos >= start && currentPos <= start + width;
   };
 
-  const scale = layout ? 540 / layout.canvas_width : 1;
+  const BASE_CANVAS_PX = 720;
+  const [zoomLevel, setZoomLevel] = useState(1.0);
+
+  const zoomIn  = () => setZoomLevel(prev => Math.min(4.0, parseFloat((prev + 0.25).toFixed(2))));
+  const zoomOut = () => setZoomLevel(prev => Math.max(0.25, parseFloat((prev - 0.25).toFixed(2))));
+  const zoomFit = () => setZoomLevel(1.0);
+
+  const scale = layout ? (BASE_CANVAS_PX * zoomLevel) / layout.canvas_width : 1;
+  const canvasDisplayWidth = BASE_CANVAS_PX * zoomLevel;
   const previewHeight = layout ? layout.canvas_height * scale : 1;
 
   const contextValue: LayoutEditorContextType = {
@@ -396,6 +410,12 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
     refreshPlaylistsAndMedia,
     scale,
     previewHeight,
+    canvasDisplayWidth,
+    zoomLevel,
+    setZoomLevel,
+    zoomIn,
+    zoomOut,
+    zoomFit,
     isPlaying,
     setIsPlaying,
     playheadPosition,
