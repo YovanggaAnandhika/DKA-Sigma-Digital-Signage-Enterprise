@@ -13,6 +13,7 @@ export default function MediaPage() {
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -117,123 +118,159 @@ export default function MediaPage() {
         </div>
       </div>
 
-      {/* Main Table */}
-      <div className="card-elevated" style={{ overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th style={{ width: '56px' }}>Pratinjau</th>
-                <th>Nama Aset Media</th>
-                <th>Tipe Konten</th>
-                <th>Ukuran File</th>
-                <th>Dimensi (W × H)</th>
-                <th>Durasi</th>
-                <th>Checksum SHA-256</th>
-                <th style={{ textAlign: 'right' }}>Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mediaItems.length === 0 ? (
-                <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    {loading ? 'Memuat aset media dari backend gRPC...' : 'Belum ada aset media tersimpan.'}
-                  </td>
-                </tr>
-              ) : (
-                mediaItems.map((m) => (
-                  <tr key={m.id}>
-                    <td>
-                      <Link href={`/media/${m.id}`}>
-                        <div
-                          style={{
-                            width: '44px',
-                            height: '44px',
-                            borderRadius: '6px',
-                            overflow: 'hidden',
-                            backgroundColor: '#0f172a',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            border: '1px solid var(--border-subtle)',
-                            flexShrink: 0,
-                          }}
-                        >
-                          {m.media_type === 2 ? (
-                            <Film size={18} color="var(--accent-cyan)" />
-                          ) : m.media_type === 3 ? (
-                            <Globe size={18} color="var(--accent-amber)" />
-                          ) : m.public_url ? (
-                            <img
-                              src={m.public_url}
-                              alt={m.name}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                              onError={(e) => {
-                                (e.target as HTMLElement).style.display = 'none';
-                              }}
-                            />
-                          ) : (
-                            <ImageIcon size={18} color="var(--accent-emerald)" />
-                          )}
-                        </div>
-                      </Link>
-                    </td>
-                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                      <Link href={`/media/${m.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        <div>{m.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400, fontFamily: 'monospace' }}>
-                          {m.original_filename}
-                        </div>
-                      </Link>
-                    </td>
-                    <td>{getMediaTypeBadge(m.media_type)}</td>
-                    <td style={{ fontSize: '0.75rem' }}>
-                      {(m.file_size_bytes / (1024 * 1024)).toFixed(1)} MB
-                    </td>
-                    <td style={{ fontFamily: 'monospace' }}>
-                      {m.width} × {m.height} px
-                    </td>
-                    <td style={{ fontSize: '0.75rem' }}>
-                      {m.duration_seconds > 0 ? `${m.duration_seconds}s` : 'Statis'}
-                    </td>
-                    <td style={{ fontFamily: 'monospace', fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                      {m.sha256_hash ? m.sha256_hash.substring(0, 16) + '...' : '-'}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <Link href={`/media/${m.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Detail Aset">
-                          <Eye size={14} />
-                        </Link>
-                        <Link href={`/media/${m.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit Metadata">
-                          <Edit size={14} />
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(m.id, m.name)}
-                          className="btn btn-danger"
-                          style={{ padding: '5px 8px' }}
-                          title="Hapus Media"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+      {/* Main Content Area: Grid Gallery + Sidebar */}
+      <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+        
+        {/* Gallery Grid */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
+            {mediaItems.length === 0 ? (
+              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px', color: 'var(--text-muted)', backgroundColor: 'var(--bg-surface)', borderRadius: '12px', border: '1px dashed var(--border-subtle)' }}>
+                {loading ? 'Memuat aset media dari backend gRPC...' : 'Belum ada aset media tersimpan.'}
+              </div>
+            ) : (
+              mediaItems.map((m) => {
+                const isSelected = selectedMedia?.id === m.id;
+                return (
+                  <div
+                    key={m.id}
+                    onClick={() => setSelectedMedia(m)}
+                    className="card-elevated"
+                    style={{
+                      cursor: 'pointer',
+                      overflow: 'hidden',
+                      transition: 'all 0.2s ease',
+                      border: isSelected ? '2px solid var(--primary-500)' : '2px solid transparent',
+                      transform: isSelected ? 'translateY(-2px)' : 'none',
+                      boxShadow: isSelected ? '0 10px 15px -3px rgba(14, 165, 233, 0.2)' : undefined,
+                    }}
+                  >
+                    {/* Thumbnail Area */}
+                    <div style={{ height: '140px', backgroundColor: '#0f172a', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {m.media_type === 2 ? (
+                        <Film size={32} color="var(--accent-cyan)" />
+                      ) : m.media_type === 3 ? (
+                        <Globe size={32} color="var(--accent-amber)" />
+                      ) : m.public_url ? (
+                        <img
+                          src={m.public_url}
+                          alt={m.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                        />
+                      ) : (
+                        <ImageIcon size={32} color="var(--accent-emerald)" />
+                      )}
+                      
+                      {/* Badge Tipe */}
+                      <div style={{ position: 'absolute', top: '8px', left: '8px', backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', padding: '4px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', color: '#fff', fontSize: '0.6875rem', fontWeight: 600 }}>
+                        {m.media_type === 2 ? <Film size={12} color="#22d3ee" /> : m.media_type === 3 ? <Globe size={12} color="#fbbf24" /> : <ImageIcon size={12} color="#34d399" />}
+                        {m.media_type === 2 ? 'Video' : m.media_type === 3 ? 'Web' : 'Gambar'}
                       </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                      
+                      {/* Badge Durasi (Video Only) */}
+                      {m.media_type === 2 && m.duration_seconds > 0 && (
+                        <div style={{ position: 'absolute', bottom: '8px', right: '8px', backgroundColor: 'rgba(0,0,0,0.7)', padding: '2px 6px', borderRadius: '4px', color: '#fff', fontSize: '0.6875rem', fontFamily: 'monospace' }}>
+                          {m.duration_seconds}s
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Info Area */}
+                    <div style={{ padding: '12px' }}>
+                      <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {m.name}
+                      </h3>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>{(m.file_size_bytes / (1024 * 1024)).toFixed(1)} MB</span>
+                        <span>{m.width}×{m.height}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+          
+          <Pagination
+            page={page}
+            limit={limit}
+            total={total}
+            onPageChange={(newPage) => setPage(newPage)}
+            onLimitChange={(newLimit) => {
+              setLimit(newLimit);
+              setPage(1);
+            }}
+          />
         </div>
 
-        <Pagination
-          page={page}
-          limit={limit}
-          total={total}
-          onPageChange={(newPage) => setPage(newPage)}
-          onLimitChange={(newLimit) => {
-            setLimit(newLimit);
-            setPage(1);
-          }}
-        />
+        {/* Right Sidebar (Details Panel) */}
+        {selectedMedia && (
+          <div className="card-elevated" style={{ width: '320px', flexShrink: 0, position: 'sticky', top: '24px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-surface-elevated)' }}>
+              <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Detail File</h3>
+              <button onClick={() => setSelectedMedia(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }} title="Tutup Panel">✕</button>
+            </div>
+            
+            <div style={{ height: '180px', backgroundColor: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {selectedMedia.media_type === 2 ? (
+                <Film size={48} color="var(--accent-cyan)" />
+              ) : selectedMedia.media_type === 3 ? (
+                <Globe size={48} color="var(--accent-amber)" />
+              ) : selectedMedia.public_url ? (
+                <img src={selectedMedia.public_url} alt={selectedMedia.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              ) : (
+                <ImageIcon size={48} color="var(--accent-emerald)" />
+              )}
+            </div>
+            
+            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px 0', wordBreak: 'break-word' }}>{selectedMedia.name}</h4>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace', wordBreak: 'break-all' }}>{selectedMedia.original_filename}</div>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', fontSize: '0.8125rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Tipe Konten</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{getMediaTypeBadge(selectedMedia.media_type)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Ukuran File</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{(selectedMedia.file_size_bytes / (1024 * 1024)).toFixed(1)} MB</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Dimensi</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'monospace' }}>{selectedMedia.width} × {selectedMedia.height} px</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Durasi</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{selectedMedia.duration_seconds > 0 ? `${selectedMedia.duration_seconds} detik` : 'Statis'}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Checksum SHA-256</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'monospace', wordBreak: 'break-all', fontSize: '0.6875rem' }}>
+                    {selectedMedia.sha256_hash || '-'}
+                  </span>
+                </div>
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                <Link href={`/media/${selectedMedia.id}`} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+                  <Eye size={16} /> Pratinjau Penuh
+                </Link>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <Link href={`/media/${selectedMedia.id}/edit`} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>
+                    <Edit size={16} /> Edit
+                  </Link>
+                  <button onClick={() => { handleDelete(selectedMedia.id, selectedMedia.name); setSelectedMedia(null); }} className="btn btn-danger" style={{ flex: 1, justifyContent: 'center' }}>
+                    <Trash2 size={16} /> Hapus
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

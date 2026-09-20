@@ -202,7 +202,7 @@ export default function CreateMediaPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '800px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <Link href="/media" className="btn btn-outline" style={{ padding: '8px' }}>
@@ -233,7 +233,7 @@ export default function CreateMediaPage() {
             fontSize: '0.8125rem',
             fontWeight: 600,
             cursor: 'pointer',
-            backgroundColor: mode === 'upload' ? '#fff' : 'transparent',
+            backgroundColor: mode === 'upload' ? 'var(--bg-base)' : 'transparent',
             color: mode === 'upload' ? 'var(--primary-600)' : 'var(--text-secondary)',
             boxShadow: mode === 'upload' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
             transition: 'all 0.15s ease'
@@ -255,7 +255,7 @@ export default function CreateMediaPage() {
             fontSize: '0.8125rem',
             fontWeight: 600,
             cursor: 'pointer',
-            backgroundColor: mode === 'url' ? '#fff' : 'transparent',
+            backgroundColor: mode === 'url' ? 'var(--bg-base)' : 'transparent',
             color: mode === 'url' ? 'var(--primary-600)' : 'var(--text-secondary)',
             boxShadow: mode === 'url' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
             transition: 'all 0.15s ease'
@@ -290,7 +290,7 @@ export default function CreateMediaPage() {
                 onClick={() => fileInputRef.current?.click()}
                 style={{
                   border: `2px dashed ${dragActive ? 'var(--primary-500)' : 'var(--border-subtle)'}`,
-                  backgroundColor: dragActive ? 'rgba(56, 189, 248, 0.05)' : '#fafafa',
+                  backgroundColor: dragActive ? 'rgba(56, 189, 248, 0.05)' : 'var(--bg-surface-elevated)',
                   borderRadius: '12px',
                   padding: '48px 24px',
                   textAlign: 'center',
@@ -326,8 +326,8 @@ export default function CreateMediaPage() {
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                  <span style={{ fontSize: '0.6875rem', padding: '3px 8px', borderRadius: '4px', backgroundColor: '#f1f5f9', color: 'var(--text-secondary)' }}>JPG, PNG, WebP</span>
-                  <span style={{ fontSize: '0.6875rem', padding: '3px 8px', borderRadius: '4px', backgroundColor: '#f1f5f9', color: 'var(--text-secondary)' }}>MP4, WebM Video</span>
+                  <span style={{ fontSize: '0.6875rem', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'var(--bg-base)', color: 'var(--text-secondary)' }}>JPG, PNG, WebP</span>
+                  <span style={{ fontSize: '0.6875rem', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'var(--bg-base)', color: 'var(--text-secondary)' }}>MP4, WebM Video</span>
                 </div>
               </div>
             ) : (
@@ -347,7 +347,7 @@ export default function CreateMediaPage() {
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', gap: '20px', backgroundColor: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '20px', backgroundColor: 'var(--bg-base)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)', alignItems: 'center' }}>
                   {/* Media Preview Box */}
                   <div
                     style={{
@@ -494,7 +494,7 @@ export default function CreateMediaPage() {
                 <span>Mengunggah berkas via gRPC chunks ke backend...</span>
                 <span>{uploadProgress}%</span>
               </div>
-              <div style={{ width: '100%', height: '6px', backgroundColor: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+              <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--bg-surface)', borderRadius: '3px', overflow: 'hidden' }}>
                 <div
                   style={{
                     width: `${uploadProgress}%`,
