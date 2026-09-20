@@ -5,6 +5,30 @@ import { Layout, Zone } from './types';
 // Layout: id=1, name=2, description=3, canvas_width=4, canvas_height=5, orientation=6(enum), background_color=7, background_image_url=8, zones=9, created_at=10, updated_at=11
 // Zone:   id=1, layout_id=2, name=3, x=4, y=5, width=6, height=7, z_index=8, assigned_playlist_id=9, assigned_playlist=10, background_color=11, created_at=12, updated_at=13
 
+function decodeZonePlaylist(bytes: Uint8Array): import('./types').ZonePlaylist | null {
+  const reader = new ProtoReader(bytes);
+  const block: Partial<import('./types').ZonePlaylist> = {
+    start_time_seconds: 0,
+    duration_seconds: 10,
+    transition_type: 'none',
+    order_index: 0,
+  };
+  while (reader.hasMore()) {
+    const tag = reader.readTag();
+    if (!tag) break;
+    if (tag.fieldNumber === 1) block.id = reader.readString();
+    else if (tag.fieldNumber === 2) block.zone_id = reader.readString();
+    else if (tag.fieldNumber === 3) block.playlist_id = reader.readString();
+    else if (tag.fieldNumber === 4 && tag.wireType === 2) reader.skip(tag.wireType); // skip playlist object for now
+    else if (tag.fieldNumber === 5) block.start_time_seconds = reader.readInt32();
+    else if (tag.fieldNumber === 6) block.duration_seconds = reader.readInt32();
+    else if (tag.fieldNumber === 7) block.transition_type = reader.readString();
+    else if (tag.fieldNumber === 8) block.order_index = reader.readInt32();
+    else reader.skip(tag.wireType);
+  }
+  return block.id ? (block as import('./types').ZonePlaylist) : null;
+}
+
 function decodeZone(bytes: Uint8Array): Zone | null {
   const zReader = new ProtoReader(bytes);
   const z: Partial<Zone> = {
@@ -13,6 +37,7 @@ function decodeZone(bytes: Uint8Array): Zone | null {
     width: 200,
     height: 200,
     z_index: 1,
+    blocks: [],
   };
   while (zReader.hasMore()) {
     const zTag = zReader.readTag();
@@ -25,7 +50,11 @@ function decodeZone(bytes: Uint8Array): Zone | null {
     else if (zTag.fieldNumber === 6) z.width = zReader.readInt32();
     else if (zTag.fieldNumber === 7) z.height = zReader.readInt32();
     else if (zTag.fieldNumber === 8) z.z_index = zReader.readInt32();
-    else if (zTag.fieldNumber === 9) z.assigned_playlist_id = zReader.readString();
+    else if (zTag.fieldNumber === 9 && zTag.wireType === 2) {
+      const blockBytes = zReader.readBytes();
+      const block = decodeZonePlaylist(blockBytes);
+      if (block) z.blocks?.push(block);
+    }
     else if (zTag.fieldNumber === 11) z.background_color = zReader.readString();
     else zReader.skip(zTag.wireType);
   }
@@ -196,25 +225,69 @@ export async function deleteZone(id: string): Promise<boolean> {
   return true;
 }
 
-export async function assignPlaylistToZone(zone_id: string, playlist_id: string): Promise<Zone> {
+export async function addPlaylistBlock(zone_id: string, playlist_id: string, start_time_seconds: number, duration_seconds: number): Promise<import('./types').ZonePlaylist> {
   const writer = new ProtoWriter();
-  // AssignPlaylistToZoneRequest: zone_id=1, playlist_id=2
+  // AddPlaylistBlockRequest: zone_id=1, playlist_id=2, start_time_seconds=3, duration_seconds=4
   writer.writeString(1, zone_id);
   writer.writeString(2, playlist_id);
+  writer.writeInt32(3, start_time_seconds);
+  writer.writeInt32(4, duration_seconds);
 
-  const resBytes = await invokeGrpcMethod('signage.studio.v1.layout.LayoutService', 'AssignPlaylistToZone', writer);
-  // AssignPlaylistToZoneResponse: success=1, zone=2
+  const resBytes = await invokeGrpcMethod('signage.studio.v1.layout.LayoutService', 'AddPlaylistBlock', writer);
+  // PlaylistBlockResponse: success=1, block=2
   const reader = new ProtoReader(resBytes);
-  let zone: Zone | null = null;
+  let block: import('./types').ZonePlaylist | null = null;
   while (reader.hasMore()) {
     const tag = reader.readTag();
     if (!tag) break;
     if (tag.fieldNumber === 2 && tag.wireType === 2) {
-      zone = decodeZone(reader.readBytes());
+      block = decodeZonePlaylist(reader.readBytes());
     } else {
       reader.skip(tag.wireType);
     }
   }
-  if (!zone) throw new Error('AssignPlaylistToZone gagal');
-  return zone;
+  if (!block) throw new Error('AddPlaylistBlock gagal');
+  return block;
+}
+
+export async function updatePlaylistBlock(block_id: string, data: { start_time_seconds?: number, duration_seconds?: number, transition_type?: string, order_index?: number }): Promise<import('./types').ZonePlaylist> {
+  const writer = new ProtoWriter();
+  // UpdatePlaylistBlockRequest: block_id=1, start_time_seconds=2, duration_seconds=3, transition_type=4, order_index=5
+  writer.writeString(1, block_id);
+  if (data.start_time_seconds !== undefined) writer.writeInt32(2, data.start_time_seconds);
+  if (data.duration_seconds !== undefined) writer.writeInt32(3, data.duration_seconds);
+  if (data.transition_type !== undefined) writer.writeString(4, data.transition_type);
+  if (data.order_index !== undefined) writer.writeInt32(5, data.order_index);
+
+  const resBytes = await invokeGrpcMethod('signage.studio.v1.layout.LayoutService', 'UpdatePlaylistBlock', writer);
+  const reader = new ProtoReader(resBytes);
+  let block: import('./types').ZonePlaylist | null = null;
+  while (reader.hasMore()) {
+    const tag = reader.readTag();
+    if (!tag) break;
+    if (tag.fieldNumber === 2 && tag.wireType === 2) {
+      block = decodeZonePlaylist(reader.readBytes());
+    } else {
+      reader.skip(tag.wireType);
+    }
+  }
+  if (!block) throw new Error('UpdatePlaylistBlock gagal');
+  return block;
+}
+
+export async function removePlaylistBlock(block_id: string): Promise<boolean> {
+  const writer = new ProtoWriter();
+  // RemovePlaylistBlockRequest: block_id=1
+  writer.writeString(1, block_id);
+
+  const resBytes = await invokeGrpcMethod('signage.studio.v1.layout.LayoutService', 'RemovePlaylistBlock', writer);
+  const reader = new ProtoReader(resBytes);
+  let success = false;
+  while (reader.hasMore()) {
+    const tag = reader.readTag();
+    if (!tag) break;
+    if (tag.fieldNumber === 1) success = reader.readBool();
+    else reader.skip(tag.wireType);
+  }
+  return success;
 }

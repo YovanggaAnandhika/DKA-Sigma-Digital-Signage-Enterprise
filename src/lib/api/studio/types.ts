@@ -21,9 +21,19 @@ export interface Zone {
   width: number;
   height: number;
   z_index: number;
-  assigned_playlist_id?: string;
-  playlist_name?: string;
+  blocks: ZonePlaylist[];
   background_color?: string;
+}
+
+export interface ZonePlaylist {
+  id: string;
+  zone_id: string;
+  playlist_id: string;
+  playlist?: Playlist;
+  start_time_seconds: number;
+  duration_seconds: number;
+  transition_type: string;
+  order_index: number;
 }
 
 export interface PlaylistItem {

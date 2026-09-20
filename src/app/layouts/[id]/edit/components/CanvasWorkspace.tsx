@@ -212,36 +212,43 @@ export default function CanvasWorkspace() {
           const isSelected = z.id === selectedZoneId;
           const active = isZoneActive(z, playheadPosition);
 
-          // Find assigned playlist and resolve active media item
-          const assignedPl = availablePlaylists.find((p) => p.id === z.assigned_playlist_id);
-          const items = assignedPl?.items || [];
+          // Find active block
+          const currentSec = playheadPosition / (pxPerSecond || 20);
+          const activeBlock = (z.blocks || []).find(b => 
+            currentSec >= b.start_time_seconds && currentSec < b.start_time_seconds + b.duration_seconds
+          );
+
           let activeMedia: any = null;
           let itemOffsetSec = 0;
           let currentItem: any = null;
 
-          if (items.length > 0) {
-            currentItem = items[0];
-            const zoneStartSec = (z.timeline_start || 0) / (pxPerSecond || 20);
-            const currentSec = Math.max(0, (playheadPosition / (pxPerSecond || 20)) - zoneStartSec);
-            const totalDur = items.reduce((sum, it) => sum + (it.duration_seconds || 10), 0);
+          if (activeBlock) {
+            const assignedPl = availablePlaylists.find((p) => p.id === activeBlock.playlist_id);
+            const items = assignedPl?.items || [];
 
-            if (items.length > 1 && totalDur > 0) {
-              const loopSec = currentSec % totalDur;
-              let acc = 0;
-              for (const it of items) {
-                const d = it.duration_seconds || 10;
-                if (loopSec >= acc && loopSec < acc + d) {
-                  currentItem = it;
-                  itemOffsetSec = loopSec - acc;
-                  break;
+            if (items.length > 0) {
+              currentItem = items[0];
+              const blockLocalSec = currentSec - activeBlock.start_time_seconds;
+              const totalDur = items.reduce((sum, it) => sum + (it.duration_seconds || 10), 0);
+
+              if (items.length > 1 && totalDur > 0) {
+                const loopSec = blockLocalSec % totalDur;
+                let acc = 0;
+                for (const it of items) {
+                  const d = it.duration_seconds || 10;
+                  if (loopSec >= acc && loopSec < acc + d) {
+                    currentItem = it;
+                    itemOffsetSec = loopSec - acc;
+                    break;
+                  }
+                  acc += d;
                 }
-                acc += d;
+              } else if (items.length === 1) {
+                const d = currentItem.duration_seconds || 10;
+                itemOffsetSec = d > 0 ? blockLocalSec % d : blockLocalSec;
               }
-            } else if (items.length === 1) {
-              const d = currentItem.duration_seconds || 10;
-              itemOffsetSec = d > 0 ? currentSec % d : currentSec;
+              activeMedia = mediaList.find((m) => m.id === currentItem.media_item_id);
             }
-            activeMedia = mediaList.find((m) => m.id === currentItem.media_item_id);
           }
 
           return (
