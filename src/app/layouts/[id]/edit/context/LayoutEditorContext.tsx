@@ -37,6 +37,9 @@ interface LayoutEditorContextType {
   pxPerSecond: number;
   togglePlay: () => void;
   stopPlay: () => void;
+  isMuted: boolean;
+  setIsMuted: React.Dispatch<React.SetStateAction<boolean>>;
+  toggleMute: () => void;
   isZoneActive: (zone: Zone, currentPos?: number) => boolean;
 }
 
