@@ -29,6 +29,8 @@ function SynchronizedVideo({
     }
   }, [isMuted]);
 
+  const prevTargetTime = useRef(targetTimeSec);
+
   // Sync playback state and position
   useEffect(() => {
     const video = videoRef.current;
@@ -39,9 +41,13 @@ function SynchronizedVideo({
         ? targetTimeSec % video.duration
         : targetTimeSec;
 
+    // Detect if user is scrubbing/clicking the timeline (jump > 0.2s)
+    const isUserSeek = Math.abs(targetTimeSec - prevTargetTime.current) > 0.2;
+    prevTargetTime.current = targetTimeSec;
+
     if (isPlaying && active) {
-      // Optimize: Allow larger drift (1.5s) when actively playing to prevent constant seeking/stuttering
-      if (Math.abs(video.currentTime - safeTarget) > 1.5) {
+      // Force seek if user manually scrubbed, otherwise allow 1.5s natural drift tolerance
+      if (isUserSeek || Math.abs(video.currentTime - safeTarget) > 1.5) {
         video.currentTime = safeTarget;
       }
       if (video.paused) {
