@@ -109,8 +109,10 @@ export default function LayersPanel() {
           ) : (
             [...zones].sort((a, b) => (b.z_index || 0) - (a.z_index || 0)).map((z) => {
               const isSelected = z.id === selectedZoneId;
-              const assignedPl = availablePlaylists.find(p => p.id === z.assigned_playlist_id);
-              const playlistName = z.playlist_name || assignedPl?.name;
+              const hasBlocks = z.blocks && z.blocks.length > 0;
+              const firstBlock = hasBlocks ? z.blocks[0] : null;
+              const assignedPl = firstBlock ? availablePlaylists.find(p => p.id === firstBlock.playlist_id) : null;
+              const playlistName = hasBlocks ? `${z.blocks.length} Blok Playlist` : null;
               const firstItem = assignedPl?.items?.[0];
               const layerMedia = firstItem ? mediaList.find(m => m.id === firstItem.media_item_id) : null;
               const isVideo = layerMedia?.media_type === 2;
@@ -174,8 +176,8 @@ export default function LayersPanel() {
                         gap: '4px',
                         padding: '2px 4px',
                         borderRadius: '4px',
-                        backgroundColor: z.assigned_playlist_id ? 'rgba(245, 158, 11, 0.1)' : 'var(--bg-base)',
-                        border: `1px solid ${z.assigned_playlist_id ? 'rgba(245, 158, 11, 0.3)' : 'var(--border-subtle)'}`,
+                        backgroundColor: hasBlocks ? 'rgba(245, 158, 11, 0.1)' : 'var(--bg-base)',
+                        border: `1px solid ${hasBlocks ? 'rgba(245, 158, 11, 0.3)' : 'var(--border-subtle)'}`,
                         width: 'fit-content',
                         marginTop: '2px',
                         cursor: 'pointer'
@@ -184,7 +186,7 @@ export default function LayersPanel() {
                       onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(0.95)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; }}
                     >
-                      {z.assigned_playlist_id ? (
+                      {hasBlocks ? (
                         <>
                           <Film size={10} color="var(--accent-amber)" />
                           <span style={{ fontSize: '0.625rem', color: 'var(--accent-amber)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100px' }}>

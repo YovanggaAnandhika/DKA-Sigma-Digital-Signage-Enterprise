@@ -8,8 +8,9 @@ import { useLayoutEditor } from '../context/LayoutEditorContext';
 export default function InspectorPanel() {
   const { layoutName, setLayoutName, zones, selectedZoneId, handleDeleteZone, updateSelectedZone, availablePlaylists, mediaList, setPickerZoneId } = useLayoutEditor();
   const selectedZone = zones.find((z) => z.id === selectedZoneId);
-  const selectedPlaylist = selectedZone?.assigned_playlist_id 
-    ? availablePlaylists.find(p => p.id === selectedZone.assigned_playlist_id) 
+  const firstBlock = selectedZone?.blocks?.[0];
+  const selectedPlaylist = firstBlock 
+    ? availablePlaylists.find(p => p.id === firstBlock.playlist_id) 
     : null;
 
   return (
@@ -147,9 +148,9 @@ export default function InspectorPanel() {
                 <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-600)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <ListMusic size={14} /> ALOKASI DAFTAR PUTAR
                 </label>
-                {selectedZone.assigned_playlist_id && (
+                {(selectedZone.blocks && selectedZone.blocks.length > 0) && (
                   <Link
-                    href={`/playlists/${selectedZone.assigned_playlist_id}`}
+                    href={`/playlists/${selectedZone.blocks[0].playlist_id}`}
                     target="_blank"
                     style={{ fontSize: '0.6875rem', color: 'var(--primary-500)', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}
                   >
@@ -161,7 +162,7 @@ export default function InspectorPanel() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', backgroundColor: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: '6px' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {selectedZone.playlist_name || (selectedZone.assigned_playlist_id ? 'Playlist Terpasang' : 'Belum ada playlist')}
+                    {(selectedZone.blocks && selectedZone.blocks.length > 0) ? `${selectedZone.blocks.length} Blok Playlist` : 'Belum ada playlist'}
                   </span>
                 </div>
                 <button

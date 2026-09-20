@@ -26,9 +26,21 @@ export default function PlaylistPickerModal() {
   };
 
   const handleSelect = (plId: string) => {
-    updateSelectedZone('assigned_playlist_id', plId);
-    const matched = availablePlaylists.find(p => p.id === plId);
-    updateSelectedZone('playlist_name', matched?.name || '');
+    if (!plId) {
+      updateSelectedZone('blocks', []);
+    } else {
+      const newBlock = {
+        id: 'temp-' + Date.now(),
+        zone_id: targetZone.id,
+        playlist_id: plId,
+        start_time_seconds: 0, // Will be appended to the end of timeline in real implementation
+        duration_seconds: 10, // Default duration
+        transition_type: 'none',
+        order_index: (targetZone.blocks?.length || 0)
+      };
+      // Append block
+      updateSelectedZone('blocks', [...(targetZone.blocks || []), newBlock]);
+    }
     handleClose();
   };
 
@@ -100,8 +112,8 @@ export default function PlaylistPickerModal() {
               <div 
                 onClick={() => handleSelect('')}
                 style={{
-                  border: `2px solid ${!targetZone.assigned_playlist_id ? 'var(--primary-500)' : 'var(--border-subtle)'}`,
-                  backgroundColor: !targetZone.assigned_playlist_id ? 'var(--primary-50)' : '#fff',
+                  border: `2px solid ${!(targetZone.blocks && targetZone.blocks.length > 0) ? 'var(--primary-500)' : 'var(--border-subtle)'}`,
+                  backgroundColor: !(targetZone.blocks && targetZone.blocks.length > 0) ? 'var(--primary-50)' : '#fff',
                   borderRadius: '8px',
                   padding: '12px',
                   cursor: 'pointer',
@@ -116,15 +128,15 @@ export default function PlaylistPickerModal() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <h4 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>Tanpa Playlist</h4>
-                  <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Zona statis / kosong</p>
+                  <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Hapus semua playlist dari zona ini</p>
                 </div>
-                {!targetZone.assigned_playlist_id && <Check size={16} color="var(--primary-500)" />}
+                {!(targetZone.blocks && targetZone.blocks.length > 0) && <Check size={16} color="var(--primary-500)" />}
               </div>
             )}
 
             {/* Playlist Cards */}
             {filteredPlaylists.map(pl => {
-              const isSelected = targetZone.assigned_playlist_id === pl.id;
+              const isSelected = targetZone.blocks?.some(b => b.playlist_id === pl.id) || false;
               const firstItem = pl.items?.[0];
               const firstMedia = firstItem ? mediaList.find(m => m.id === firstItem.media_item_id) : null;
               const isVideo = firstMedia?.media_type === 2;

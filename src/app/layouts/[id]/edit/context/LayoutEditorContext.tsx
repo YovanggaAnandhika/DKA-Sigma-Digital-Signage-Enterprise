@@ -90,16 +90,8 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
         // Automatically sync zone durations if assigned playlist duration grew or changed
         setZones((prev) =>
           prev.map((z) => {
-            if (!z.assigned_playlist_id) return z;
-            const pl = loadedPlaylists.find((p: any) => p.id === z.assigned_playlist_id);
-            if (!pl) return z;
-            const plDur = pl.total_duration_seconds || (pl.items?.reduce((acc: number, it: any) => acc + (it.duration_seconds || 10), 0)) || 15;
-            const targetWidth = Math.max(200, plDur * pxPerSecond);
-            return {
-              ...z,
-              playlist_name: pl.name,
-              timeline_width: Math.max(z.timeline_width || 200, targetWidth),
-            };
+            if (!z.blocks || z.blocks.length === 0) return z;
+            return z;
           })
         );
       }
@@ -127,10 +119,6 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
         setMediaList((mediaRes as any).data || []);
         
         const sanitizedZones = (data.zones || []).map((z: any) => {
-          const matchedPl = loadedPlaylists.find((p: any) => p.id === z.assigned_playlist_id);
-          const plDur = matchedPl?.total_duration_seconds || (matchedPl?.items?.reduce((acc: number, it: any) => acc + (it.duration_seconds || 10), 0)) || 15;
-          const calculatedWidth = Math.max(200, plDur * pxPerSecond);
-
           return {
             ...z,
             x: Number(z.x) || 0,
@@ -138,10 +126,7 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
             width: Number(z.width) || 200,
             height: Number(z.height) || 200,
             z_index: Number(z.z_index) || 1,
-            assigned_playlist_id: z.assigned_playlist_id || '',
-            playlist_name: z.playlist_name || matchedPl?.name || '',
-            timeline_start: 0,
-            timeline_width: calculatedWidth,
+            blocks: z.blocks || [],
           };
         });
         
@@ -230,7 +215,6 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
         const width = Math.round(Number(z.width) || 200);
         const height = Math.round(Number(z.height) || 200);
         const z_index = Math.round(Number(z.z_index) || 1);
-        const assigned_playlist_id = z.assigned_playlist_id && z.assigned_playlist_id.trim() !== '' ? z.assigned_playlist_id : '';
 
         if (z.id.startsWith('z-')) {
           await api.createZone({
@@ -241,7 +225,6 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
             width,
             height,
             z_index,
-            assigned_playlist_id: assigned_playlist_id || undefined,
           });
         } else {
           await api.updateZone(z.id, {
@@ -251,7 +234,7 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
             width,
             height,
             z_index,
-            assigned_playlist_id,
+            background_color: z.background_color,
           });
         }
       }
@@ -261,10 +244,6 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
       setLayout(data);
       setLayoutName(data.name);
       const sanitizedZones = (data.zones || []).map((z: any) => {
-        const matchedPl = availablePlaylists.find((p: any) => p.id === z.assigned_playlist_id);
-        const plDur = matchedPl?.total_duration_seconds || (matchedPl?.items?.reduce((acc: number, it: any) => acc + (it.duration_seconds || 10), 0)) || 15;
-        const calculatedWidth = Math.max(200, plDur * pxPerSecond);
-
         return {
           ...z,
           x: Number(z.x) || 0,
@@ -272,10 +251,7 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
           width: Number(z.width) || 200,
           height: Number(z.height) || 200,
           z_index: Number(z.z_index) || 1,
-          assigned_playlist_id: z.assigned_playlist_id || '',
-          playlist_name: z.playlist_name || matchedPl?.name || '',
-          timeline_start: 0,
-          timeline_width: calculatedWidth,
+          blocks: z.blocks || [],
         };
       });
       setZones(sanitizedZones);
@@ -299,8 +275,7 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
       width: Math.round(layout.canvas_width * 0.4),
       height: Math.round(layout.canvas_height * 0.4),
       z_index: zones.length + 1,
-      timeline_start: 0,
-      timeline_width: 300,
+      blocks: [],
     };
     setZones([...zones, newZone]);
     setSelectedZoneId(newZone.id);
@@ -323,12 +298,6 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
       prev.map((z) => {
         if (z.id !== selectedZoneId) return z;
         const updated = { ...z, [field]: value };
-        if (field === 'assigned_playlist_id') {
-          const matched = availablePlaylists.find((p) => p.id === value);
-          const plDur = matched?.total_duration_seconds || (matched?.items?.reduce((acc: number, it: any) => acc + (it.duration_seconds || 10), 0)) || 15;
-          updated.playlist_name = matched?.name || '';
-          updated.timeline_width = Math.max(200, plDur * pxPerSecond);
-        }
         return updated;
       })
     );
@@ -387,9 +356,10 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
   };
 
   const isZoneActive = (zone: Zone, currentPos = playheadPosition) => {
-    const start = zone.timeline_start || 0;
-    const width = zone.timeline_width || 300;
-    return currentPos >= start && currentPos <= start + width;
+    const currentSec = currentPos / pxPerSecond;
+    return (zone.blocks || []).some(b => 
+      currentSec >= b.start_time_seconds && currentSec < b.start_time_seconds + b.duration_seconds
+    );
   };
 
   const BASE_CANVAS_PX = 720;

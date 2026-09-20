@@ -94,7 +94,9 @@ export default function ViewLayoutPage() {
           {layout.zones?.map((z, idx) => {
             const zColors = ['#2563eb', '#06b6d4', '#10b981', '#f59e0b', '#ec4899'];
             const color = zColors[idx % zColors.length];
-            const assignedPl = playlists.find((p) => p.id === z.assigned_playlist_id);
+            const hasBlocks = z.blocks && z.blocks.length > 0;
+            const firstBlock = hasBlocks ? z.blocks[0] : null;
+            const assignedPl = firstBlock ? playlists.find((p) => p.id === firstBlock.playlist_id) : null;
             const firstItem = assignedPl?.items?.[0];
             const zoneMedia = firstItem ? mediaList.find((m) => m.id === firstItem.media_item_id) : null;
             const isVideo = zoneMedia?.media_type === 2;
@@ -192,7 +194,7 @@ export default function ViewLayoutPage() {
                       >
                         {z.name}
                       </span>
-                      {z.assigned_playlist_id && (
+                      {hasBlocks && (
                         <span
                           style={{
                             fontSize: '0.5625rem',
@@ -203,7 +205,7 @@ export default function ViewLayoutPage() {
                             paddingLeft: '4px',
                           }}
                         >
-                          🎬 {z.playlist_name || assignedPl?.name || 'Playlist'}
+                          🎬 {assignedPl?.name || 'Playlist'}
                         </span>
                       )}
                     </div>
@@ -313,7 +315,9 @@ export default function ViewLayoutPage() {
                     <td>Layer #{z.z_index}</td>
                     <td>
                       {(() => {
-                        const assignedPl = playlists.find((p) => p.id === z.assigned_playlist_id);
+                        const hasBlocks = z.blocks && z.blocks.length > 0;
+                        const firstBlock = hasBlocks ? z.blocks[0] : null;
+                        const assignedPl = firstBlock ? playlists.find((p) => p.id === firstBlock.playlist_id) : null;
                         const firstItem = assignedPl?.items?.[0];
                         const m = firstItem ? mediaList.find((item) => item.id === firstItem.media_item_id) : null;
                         const isVideo = m?.media_type === 2;
@@ -348,11 +352,11 @@ export default function ViewLayoutPage() {
                                 borderRadius: '6px',
                                 backgroundColor: 'var(--bg-surface-elevated)',
                                 fontSize: '0.75rem',
-                                color: z.assigned_playlist_id ? 'var(--primary-400)' : 'var(--text-muted)',
+                                color: hasBlocks ? 'var(--primary-400)' : 'var(--text-muted)',
                                 border: '1px solid var(--border-subtle)',
                               }}
                             >
-                              {z.playlist_name || assignedPl?.name || 'Rotasi Default'}
+                              {assignedPl?.name || 'Rotasi Default'}
                             </span>
                           </div>
                         );

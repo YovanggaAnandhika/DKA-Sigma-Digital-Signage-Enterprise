@@ -485,59 +485,49 @@ export default function TimelineEditor() {
               
               return (
                 <div key={z.id} style={{ height: '36px', borderBottom: '1px solid var(--border-subtle)', position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <Rnd
-                    bounds="parent"
-                    dragAxis="x"
-                    enableResizing={{ right: true, left: true, top: false, bottom: false, topRight: false, topLeft: false, bottomRight: false, bottomLeft: false }}
-                    size={{ width: z.timeline_width || 300, height: 24 }}
-                    position={{ x: z.timeline_start || 0, y: 0 }}
-                    onDragStart={() => {
-                      if (selectedZoneId !== z.id) setSelectedZoneId(z.id);
-                    }}
-                    onDrag={(e, d) => {
-                      setZones(prev => prev.map(zone => 
-                        zone.id === z.id ? { ...zone, timeline_start: d.x } : zone
-                      ));
-                    }}
-                    onResizeStart={() => {
-                      if (selectedZoneId !== z.id) setSelectedZoneId(z.id);
-                    }}
-                    onResize={(e, direction, ref, delta, position) => {
-                      setZones(prev => prev.map(zone => 
-                        zone.id === z.id ? { 
-                          ...zone, 
-                          timeline_width: ref.offsetWidth,
-                          timeline_start: position.x
-                        } : zone
-                      ));
-                    }}
-                    style={{
-                      position: 'absolute',
-                      display: 'flex',
-                      alignItems: 'center',
-                    }}
-                  >
-                    {(() => {
-                      const assignedPl = availablePlaylists.find((p) => p.id === z.assigned_playlist_id);
-                      const items = assignedPl?.items || [];
+                  {(z.blocks || []).map((block, bIdx) => {
+                    const assignedPl = availablePlaylists.find((p) => p.id === block.playlist_id);
+                    const items = assignedPl?.items || [];
+                    const blockActive = active && isZoneActive(z, playheadPosition); // Simplified
 
-                      if (items.length > 0) {
-                        return (
+                    return (
+                      <div key={block.id} style={{ position: 'absolute', left: `${block.start_time_seconds * pxPerSecond}px`, width: `${block.duration_seconds * pxPerSecond}px`, height: '24px', display: 'flex', alignItems: 'center' }}>
+                        <Rnd
+                          bounds="parent"
+                          dragAxis="x"
+                          enableResizing={{ right: true, left: true, top: false, bottom: false, topRight: false, topLeft: false, bottomRight: false, bottomLeft: false }}
+                          size={{ width: block.duration_seconds * pxPerSecond, height: 24 }}
+                          position={{ x: 0, y: 0 }}
+                          onDragStart={() => {
+                            if (selectedZoneId !== z.id) setSelectedZoneId(z.id);
+                          }}
+                          onDrag={(e, d) => {
+                            // Update block start_time_seconds
+                          }}
+                          onResize={(e, direction, ref, delta, position) => {
+                            // Update block duration_seconds
+                          }}
+                          style={{
+                            position: 'relative',
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                        >
                           <div
                             style={{
                               width: '100%',
                               height: '100%',
                               backgroundColor: color,
                               borderRadius: '4px',
-                              opacity: isSelected ? 1 : active ? 0.95 : 0.5,
+                              opacity: isSelected ? 1 : blockActive ? 0.95 : 0.5,
                               display: 'flex',
                               alignItems: 'stretch',
                               overflow: 'hidden',
-                              boxShadow: active ? `0 0 0 2px ${color}, 0 2px 4px rgba(0,0,0,0.15)` : 'inset 0 0 0 1px rgba(0,0,0,0.1)',
+                              boxShadow: blockActive ? `0 0 0 2px ${color}, 0 2px 4px rgba(0,0,0,0.15)` : 'inset 0 0 0 1px rgba(0,0,0,0.1)',
                               transition: 'opacity 0.2s, box-shadow 0.2s'
                             }}
                           >
-                            {items.map((it, itemIdx) => {
+                            {items.length > 0 ? items.map((it, itemIdx) => {
                               const itDur = it.duration_seconds || 10;
                               const itWidthPx = itDur * pxPerSecond;
                               const m = mediaList.find((media) => media.id === it.media_item_id);
@@ -574,57 +564,42 @@ export default function TimelineEditor() {
                                   <span style={{ fontSize: '0.625rem', color: '#fff', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
                                     {m?.name || `Item ${itemIdx + 1}`} ({itDur}s)
                                   </span>
-                                  {isVid && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => handleToggleItemMute(e, it as PlaylistItem, z.assigned_playlist_id!)}
-                                      title={it.is_muted ? 'Aktifkan suara video ini' : 'Bisukan suara video ini'}
-                                      style={{
-                                        background: 'transparent',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        padding: '2px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        flexShrink: 0,
-                                        borderRadius: '4px',
-                                        backgroundColor: it.is_muted ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
-                                        marginLeft: '4px'
-                                      }}
-                                    >
-                                      {it.is_muted ? <MicOff size={12} color="#fca5a5" /> : <Volume2 size={12} color="#a7f3d0" />}
-                                    </button>
-                                  )}
                                 </div>
                               );
-                            })}
+                            }) : (
+                              <span style={{ fontSize: '0.65rem', color: '#fff', fontWeight: 600, padding: '0 8px' }}>
+                                🎬 {assignedPl?.name || 'Playlist'}
+                              </span>
+                            )}
                           </div>
-                        );
-                      }
-
-                      return (
-                        <div
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            backgroundColor: color,
-                            borderRadius: '4px',
-                            opacity: isSelected ? 1 : active ? 0.9 : 0.45,
-                            display: 'flex',
-                            alignItems: 'center',
-                            padding: '0 8px',
-                            boxShadow: active ? `0 0 0 2px ${color}, 0 2px 4px rgba(0,0,0,0.15)` : 'inset 0 0 0 1px rgba(0,0,0,0.1)',
-                            transition: 'opacity 0.2s, box-shadow 0.2s'
-                          }}
-                        >
-                          <span style={{ fontSize: '0.65rem', color: '#fff', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {z.name} {z.assigned_playlist_id ? `• 🎬 ${z.playlist_name || availablePlaylists.find((p) => p.id === z.assigned_playlist_id)?.name || 'Playlist'}` : ''}
-                          </span>
-                        </div>
-                      );
-                    })()}
-                  </Rnd>
+                        </Rnd>
+                        
+                        {/* Transition Button (CapCut style) */}
+                        {bIdx < (z.blocks?.length || 0) - 1 && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              right: '-12px',
+                              zIndex: 10,
+                              width: '24px',
+                              height: '24px',
+                              backgroundColor: '#fff',
+                              borderRadius: '4px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
+                              border: '1px solid #ddd'
+                            }}
+                            title="Tambah Transisi"
+                          >
+                            <span style={{ fontSize: '10px', color: '#000' }}>⧖</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}

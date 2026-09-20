@@ -421,7 +421,7 @@ export default function CanvasWorkspace() {
                       >
                         {z.name}
                       </span>
-                      {z.assigned_playlist_id && (
+                      {(z.blocks && z.blocks.length > 0) && (
                         <span
                           style={{
                             fontSize: '0.5625rem',
@@ -432,7 +432,7 @@ export default function CanvasWorkspace() {
                             paddingLeft: '4px',
                           }}
                         >
-                          🎬 {z.playlist_name || assignedPl?.name || 'Playlist'}
+                          🎬 {availablePlaylists.find(p => p.id === z.blocks[0].playlist_id)?.name || 'Playlist'}
                         </span>
                       )}
                       {activeMedia?.media_type === 2 && (
