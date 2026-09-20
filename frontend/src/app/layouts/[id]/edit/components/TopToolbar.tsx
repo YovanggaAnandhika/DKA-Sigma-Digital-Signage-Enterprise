@@ -2,18 +2,18 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Maximize, Minimize } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 import { useParams } from 'next/navigation';
 
 export default function TopToolbar() {
-  const { saving, handleSave } = useLayoutEditor();
+  const { saving, handleSave, isFullscreen, toggleFullscreen } = useLayoutEditor();
   const params = useParams() as { id: string };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', backgroundColor: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', zIndex: 10 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', backgroundColor: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', zIndex: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <Link href={`/layouts/${params.id}`} className="btn btn-outline" style={{ padding: '8px' }}>
+        <Link href={`/layouts/${params.id}`} className="btn btn-outline" style={{ padding: '8px' }} title="Kembali ke Detail Layout">
           <ArrowLeft size={16} />
         </Link>
         <div>
@@ -26,10 +26,32 @@ export default function TopToolbar() {
         </div>
       </div>
 
-      <button onClick={handleSave} disabled={saving} className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '0.875rem' }}>
-        <Save size={16} />
-        <span>{saving ? 'Menyimpan...' : 'Simpan Layout'}</span>
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          className="btn btn-outline"
+          style={{
+            padding: '8px 14px',
+            fontSize: '0.8125rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            borderColor: isFullscreen ? 'var(--primary-500)' : 'var(--border-subtle)',
+            backgroundColor: isFullscreen ? 'rgba(56, 189, 248, 0.1)' : 'var(--bg-base)',
+            color: isFullscreen ? 'var(--primary-400)' : 'var(--text-secondary)'
+          }}
+          title={isFullscreen ? 'Keluar Mode Fullscreen (Esc)' : 'Mode Layar Penuh Fokus Editor'}
+        >
+          {isFullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
+          <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+        </button>
+
+        <button onClick={handleSave} disabled={saving} className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '0.875rem' }}>
+          <Save size={16} />
+          <span>{saving ? 'Menyimpan...' : 'Simpan Layout'}</span>
+        </button>
+      </div>
     </div>
   );
 }

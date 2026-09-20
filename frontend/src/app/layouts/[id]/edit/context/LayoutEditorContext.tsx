@@ -57,6 +57,8 @@ interface LayoutEditorContextType {
   setIsTimelineExpanded: React.Dispatch<React.SetStateAction<boolean>>;
   isLayoutMetaExpanded: boolean;
   setIsLayoutMetaExpanded: React.Dispatch<React.SetStateAction<boolean>>;
+  isFullscreen: boolean;
+  toggleFullscreen: () => void;
 }
 
 const LayoutEditorContext = createContext<LayoutEditorContextType | undefined>(undefined);
@@ -78,6 +80,44 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
   const [saving, setSaving] = useState(false);
   const [isTimelineExpanded, setIsTimelineExpanded] = useState(true);
   const [isLayoutMetaExpanded, setIsLayoutMetaExpanded] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    document.addEventListener('webkitfullscreenchange', handleFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      document.removeEventListener('webkitfullscreenchange', handleFsChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    const container = document.getElementById('layout-editor-container');
+    if (!document.fullscreenElement) {
+      if (container && container.requestFullscreen) {
+        container.requestFullscreen().catch(() => {
+          setIsFullscreen(prev => !prev);
+        });
+      } else if (container && (container as any).webkitRequestFullscreen) {
+        (container as any).webkitRequestFullscreen();
+      } else {
+        setIsFullscreen(prev => !prev);
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {
+          setIsFullscreen(false);
+        });
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      } else {
+        setIsFullscreen(false);
+      }
+    }
+  };
 
   const toggleZoneVisibility = (zoneId: string) => {
     setHiddenZones(prev => 
@@ -482,6 +522,8 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
     setIsTimelineExpanded,
     isLayoutMetaExpanded,
     setIsLayoutMetaExpanded,
+    isFullscreen,
+    toggleFullscreen,
   };
 
   return (

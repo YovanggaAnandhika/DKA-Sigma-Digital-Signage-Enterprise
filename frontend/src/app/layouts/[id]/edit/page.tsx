@@ -12,7 +12,7 @@ import PlaylistPickerModal from './components/PlaylistPickerModal';
 import MediaPickerModal from './components/MediaPickerModal';
 
 function EditorContent() {
-  const { loading, layout, togglePlay } = useLayoutEditor();
+  const { loading, layout, togglePlay, isFullscreen } = useLayoutEditor();
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -39,7 +39,26 @@ function EditorContent() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, backgroundColor: 'var(--bg-base)', overflow: 'hidden' }}>
+    <div
+      id="layout-editor-container"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        backgroundColor: 'var(--bg-base)',
+        overflow: 'hidden',
+        ...(isFullscreen ? {
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100vh',
+          zIndex: 99999,
+        } : {})
+      }}
+    >
       <TopToolbar />
       
       {/* Main Workspace (Docked Layout) */}
