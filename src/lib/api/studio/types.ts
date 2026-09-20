@@ -34,6 +34,14 @@ export interface ZonePlaylist {
   duration_seconds: number;
   transition_type: string;
   order_index: number;
+  item_overrides?: ZonePlaylistItemOverride[];
+}
+
+export interface ZonePlaylistItemOverride {
+  id: string;
+  zone_playlist_id: string;
+  playlist_item_id: string;
+  is_muted: boolean;
 }
 
 export interface PlaylistItem {
