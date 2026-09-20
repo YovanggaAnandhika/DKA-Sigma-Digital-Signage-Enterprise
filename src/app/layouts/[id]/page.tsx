@@ -92,10 +92,10 @@ export default function ViewLayoutPage() {
                 key={z.id}
                 style={{
                   position: 'absolute',
-                  left: `${z.x * scale}px`,
-                  top: `${z.y * scale}px`,
-                  width: `${z.width * scale}px`,
-                  height: `${z.height * scale}px`,
+                  left: `${(Number(z.x) || 0) * scale}px`,
+                  top: `${(Number(z.y) || 0) * scale}px`,
+                  width: `${(Number(z.width) || 200) * scale}px`,
+                  height: `${(Number(z.height) || 200) * scale}px`,
                   backgroundColor: `${color}22`,
                   border: `2px solid ${color}`,
                   display: 'flex',
@@ -110,7 +110,7 @@ export default function ViewLayoutPage() {
                   {z.name}
                 </div>
                 <div style={{ fontSize: '0.625rem', color: color, marginTop: '2px', fontWeight: 600 }}>
-                  {z.width} × {z.height} px
+                  {Number(z.width) || 200} × {Number(z.height) || 200} px
                 </div>
               </div>
             );
@@ -148,10 +148,10 @@ export default function ViewLayoutPage() {
                   <tr key={z.id}>
                     <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{z.name}</td>
                     <td style={{ fontFamily: 'monospace' }}>
-                      ({z.x}, {z.y}) px
+                      ({Number(z.x) || 0}, {Number(z.y) || 0}) px
                     </td>
                     <td style={{ fontFamily: 'monospace' }}>
-                      {z.width} × {z.height} px
+                      {Number(z.width) || 200} × {Number(z.height) || 200} px
                     </td>
                     <td>Layer #{z.z_index}</td>
                     <td>

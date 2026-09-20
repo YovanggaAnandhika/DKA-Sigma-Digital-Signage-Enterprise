@@ -7,7 +7,13 @@ import { Layout, Zone } from './types';
 
 function decodeZone(bytes: Uint8Array): Zone | null {
   const zReader = new ProtoReader(bytes);
-  const z: Partial<Zone> = {};
+  const z: Partial<Zone> = {
+    x: 0,
+    y: 0,
+    width: 200,
+    height: 200,
+    z_index: 1,
+  };
   while (zReader.hasMore()) {
     const zTag = zReader.readTag();
     if (!zTag) break;
