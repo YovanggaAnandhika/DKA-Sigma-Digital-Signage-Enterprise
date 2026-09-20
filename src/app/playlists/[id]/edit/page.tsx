@@ -16,6 +16,9 @@ export default function EditPlaylistPage() {
   const [addingItem, setAddingItem] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
+  const [draggedItemIdx, setDraggedItemIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
   // Form playlist data
   const [formData, setFormData] = useState({
     name: '',
@@ -130,6 +133,48 @@ export default function EditPlaylistPage() {
     }
   };
 
+  const handleDragStart = (e: React.DragEvent, idx: number) => {
+    setDraggedItemIdx(idx);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (idx !== dragOverIdx) setDragOverIdx(idx);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIdx(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (draggedItemIdx === null || draggedItemIdx === idx) {
+      setDragOverIdx(null);
+      setDraggedItemIdx(null);
+      return;
+    }
+
+    const newItems = [...(playlist!.items || [])];
+    const [dragged] = newItems.splice(draggedItemIdx, 1);
+    newItems.splice(idx, 0, dragged);
+    
+    // Optimistic UI update
+    setPlaylist({ ...playlist!, items: newItems });
+    setDragOverIdx(null);
+    setDraggedItemIdx(null);
+
+    try {
+      const idsInOrder = newItems.map(item => item.id!);
+      await api.reorderPlaylistItems(params.id, idsInOrder);
+      notifyStudioUpdate();
+    } catch (err: any) {
+      alert('Gagal mengubah urutan: ' + err.message);
+      fetchPlaylistAndMedia(); // rollback
+    }
+  };
+
   if (loading || !playlist) {
     return (
       <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -172,61 +217,65 @@ export default function EditPlaylistPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 400px) 1fr', gap: '24px', alignItems: 'start' }}>
-        {/* Left Column: Playlist Settings */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        {/* Top Column: Playlist Settings */}
         <div className="card-elevated" style={{ padding: '20px' }}>
           <h2 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>
             Pengaturan Dasar
           </h2>
-          <form onSubmit={handleSubmitInfo} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                Nama Daftar Putar <span style={{ color: 'var(--accent-rose)' }}>*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="form-input"
-              />
+          <form onSubmit={handleSubmitInfo} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'start' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Nama Daftar Putar <span style={{ color: 'var(--accent-rose)' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="form-input"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Deskripsi Singkat
+                </label>
+                <textarea
+                  rows={3}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="form-textarea"
+                />
+              </div>
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                Deskripsi Singkat
-              </label>
-              <textarea
-                rows={3}
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="form-textarea"
-              />
-            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'var(--bg-surface-elevated)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                <input
+                  type="checkbox"
+                  id="is_shuffle"
+                  checked={formData.is_shuffle}
+                  onChange={(e) => setFormData({ ...formData, is_shuffle: e.target.checked })}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                />
+                <label htmlFor="is_shuffle" style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }}>
+                  Putar secara acak (Shuffle mode)
+                </label>
+              </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'var(--bg-surface-elevated)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-              <input
-                type="checkbox"
-                id="is_shuffle"
-                checked={formData.is_shuffle}
-                onChange={(e) => setFormData({ ...formData, is_shuffle: e.target.checked })}
-                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-              />
-              <label htmlFor="is_shuffle" style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }}>
-                Putar secara acak (Shuffle mode)
-              </label>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
-              <button type="submit" disabled={saving} className="btn btn-secondary" style={{ width: '100%' }}>
-                <Save size={14} />
-                <span>{saving ? 'Menyimpan...' : 'Simpan Nama & Mode'}</span>
-              </button>
+              <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '8px' }}>
+                <button type="submit" disabled={saving} className="btn btn-secondary" style={{ width: 'auto' }}>
+                  <Save size={14} />
+                  <span>{saving ? 'Menyimpan...' : 'Simpan Nama & Mode'}</span>
+                </button>
+              </div>
             </div>
           </form>
 
           {/* Stats Summary */}
-          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
               <span style={{ color: 'var(--text-muted)' }}>Total Item Media:</span>
               <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{playlist.items?.length || 0} media</span>
@@ -238,7 +287,7 @@ export default function EditPlaylistPage() {
           </div>
         </div>
 
-        {/* Right Column: Playlist Items List */}
+        {/* Bottom Column: Playlist Items List */}
         <div className="card-elevated" style={{ overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
@@ -293,7 +342,20 @@ export default function EditPlaylistPage() {
                     const isVideo = matchedMedia?.media_type === 2;
 
                     return (
-                      <tr key={item.id}>
+                      <tr 
+                        key={item.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, idx)}
+                        onDragOver={(e) => handleDragOver(e, idx)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, idx)}
+                        style={{
+                          cursor: 'grab',
+                          opacity: draggedItemIdx === idx ? 0.4 : 1,
+                          backgroundColor: dragOverIdx === idx ? 'rgba(56, 189, 248, 0.1)' : undefined,
+                          transition: 'background-color 0.1s'
+                        }}
+                      >
                         <td style={{ fontWeight: 700, color: 'var(--text-muted)' }}>#{idx + 1}</td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
