@@ -2,21 +2,24 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Zap, ArrowRight, AlertCircle, Monitor } from 'lucide-react';
+import { Zap, ArrowRight, ShieldAlert, Monitor, CheckCircle2 } from 'lucide-react';
 import { loginWithGrpc, saveSession } from '../../lib/grpc-client';
 
-const slides = [
+const SLIDES = [
   {
-    headline: 'Kelola Konten Layar Digital Tanpa Batas.',
-    sub: 'Atur playlist, zona, dan jadwal tampilan dari satu dashboard terpusat yang dirancang untuk skala enterprise.',
+    title: 'Kelola Konten Layar Digital Tanpa Batas.',
+    description: 'Atur playlist, zona, dan jadwal tampilan dari satu dashboard terpusat yang dirancang untuk skala enterprise.',
+    icon: <Zap size={24} color="#34d399" />,
   },
   {
-    headline: 'Real-Time Sync ke Semua Perangkat.',
-    sub: 'Perubahan konten tersebar ke seluruh display dalam hitungan detik via gRPC streaming.',
+    title: 'Real-Time Sync ke Semua Perangkat.',
+    description: 'Perubahan konten tersebar ke seluruh display dalam hitungan detik via gRPC streaming yang andal.',
+    icon: <Monitor size={24} color="#60a5fa" />,
   },
   {
-    headline: 'Multi-Zona. Multi-Layout. Satu Platform.',
-    sub: 'Buat tata letak layar kompleks dengan zona bertumpuk, transisi, dan jadwal per-zona.',
+    title: 'Multi-Zona. Multi-Layout. Satu Platform.',
+    description: 'Buat tata letak layar kompleks dengan zona bertumpuk, transisi, dan jadwal per-zona yang fleksibel.',
+    icon: <CheckCircle2 size={24} color="#c084fc" />,
   },
 ];
 
@@ -26,12 +29,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [slideIndex, setSlideIndex] = useState(0);
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
     const t = setInterval(() => {
-      setSlideIndex((i) => (i + 1) % slides.length);
-    }, 4500);
+      setActiveSlide((prev) => (prev + 1) % SLIDES.length);
+    }, 5000);
     return () => clearInterval(t);
   }, []);
 
@@ -42,297 +46,327 @@ export default function LoginPage() {
     try {
       const session = await loginWithGrpc(email, password);
       saveSession(session);
-      router.push('/');
-      router.refresh();
+      setIsExiting(true);
+      setTimeout(() => {
+        router.push('/');
+        router.refresh();
+      }, 500);
     } catch (err: any) {
       setErrorMsg(err.message || 'Login gagal. Periksa kembali kredensial Anda.');
-    } finally {
       setLoading(false);
     }
   };
 
-  const slide = slides[slideIndex];
-
   return (
     <div
       style={{
+        display: 'flex',
         minHeight: '100vh',
         width: '100vw',
-        display: 'flex',
         overflow: 'hidden',
-        fontFamily: "'Inter', 'Outfit', sans-serif",
+        fontFamily: "'Inter', 'Outfit', system-ui, sans-serif",
+        backgroundColor: '#fff',
       }}
     >
-      {/* ── LEFT PANEL ── */}
+      {/* ══ LEFT PANEL (65%) ══ */}
       <div
         style={{
-          flex: 1,
-          backgroundColor: '#f0f2f5',
+          flex: '0 0 65%',
+          width: '65%',
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
-          padding: '36px 48px',
+          backgroundColor: '#f8fafc',
           overflow: 'hidden',
-          // Grid background
+          // Grid
           backgroundImage:
-            'linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px)',
-          backgroundSize: '32px 32px',
+            'linear-gradient(to right, #80808014 1px, transparent 1px), linear-gradient(to bottom, #80808014 1px, transparent 1px)',
+          backgroundSize: '24px 24px',
         }}
       >
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              backgroundColor: '#1d4ed8',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(29,78,216,0.35)',
-            }}
-          >
-            <Monitor size={20} color="#fff" />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.9375rem', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>
-              DKASigma
-            </div>
-            <div style={{ fontSize: '0.6875rem', color: '#64748b', letterSpacing: '0.04em', marginTop: '2px' }}>
-              Enterprise Edition
-            </div>
-          </div>
-        </div>
+        {/* Gradient blobs */}
+        <div style={{ position: 'absolute', top: '-20%', left: '-10%', width: '70%', height: '70%', borderRadius: '50%', background: 'rgba(29,78,216,0.08)', filter: 'blur(120px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: '40%', right: '-20%', width: '60%', height: '60%', borderRadius: '50%', background: 'rgba(5,150,105,0.08)', filter: 'blur(120px)', pointerEvents: 'none' }} />
 
-        {/* Spacer */}
-        <div style={{ flex: 1 }} />
-
-        {/* Hero Content */}
-        <div style={{ maxWidth: '420px' }}>
-          <div
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              backgroundColor: 'rgba(29,78,216,0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '20px',
-            }}
-          >
-            <Zap size={18} color="#1d4ed8" fill="#1d4ed8" />
-          </div>
-
-          <h1
-            key={slideIndex}
-            style={{
-              fontSize: '1.875rem',
-              fontWeight: 800,
-              color: '#0f172a',
-              lineHeight: 1.25,
-              marginBottom: '12px',
-              animation: 'fadeSlide 0.5s ease',
-            }}
-          >
-            {slide.headline}
-          </h1>
-          <p
-            key={slideIndex + '-sub'}
-            style={{
-              fontSize: '0.9375rem',
-              color: '#475569',
-              lineHeight: 1.65,
-              animation: 'fadeSlide 0.5s ease',
-            }}
-          >
-            {slide.sub}
-          </p>
-        </div>
-
-        {/* Spacer */}
-        <div style={{ flex: 1 }} />
-
-        {/* Slide dots */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {slides.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setSlideIndex(i)}
-              style={{
-                width: i === slideIndex ? '24px' : '8px',
-                height: '8px',
-                borderRadius: '99px',
-                backgroundColor: i === slideIndex ? '#1d4ed8' : '#cbd5e1',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 0,
-                transition: 'all 0.3s ease',
-              }}
-            />
-          ))}
-        </div>
-
-        <style>{`
-          @keyframes fadeSlide {
-            from { opacity: 0; transform: translateY(8px); }
-            to   { opacity: 1; transform: translateY(0); }
-          }
-        `}</style>
-      </div>
-
-      {/* ── RIGHT PANEL ── */}
-      <div
-        style={{
-          width: '420px',
-          flexShrink: 0,
-          backgroundColor: '#ffffff',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          padding: '56px 48px',
-          boxShadow: '-8px 0 32px rgba(0,0,0,0.07)',
-        }}
-      >
-        <div style={{ marginBottom: '32px' }}>
-          <h2
-            style={{
-              fontSize: '1.625rem',
-              fontWeight: 800,
-              color: '#0f172a',
-              marginBottom: '6px',
-            }}
-          >
-            Selamat Datang
-          </h2>
-          <p style={{ fontSize: '0.875rem', color: '#64748b', lineHeight: 1.5 }}>
-            Silakan masuk menggunakan kredensial admin Anda untuk mengakses dashboard manajemen.
-          </p>
-        </div>
-
-        {/* Error */}
-        {errorMsg && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '10px',
-              padding: '12px 14px',
-              borderRadius: '8px',
-              backgroundColor: '#fef2f2',
-              border: '1px solid #fecaca',
-              color: '#b91c1c',
-              fontSize: '0.8125rem',
-              marginBottom: '20px',
-            }}
-          >
-            <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '1px' }} />
-            <span>{errorMsg}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          {/* Email */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151' }}>
-              Username
-            </label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Masukkan username"
-              style={{
-                padding: '11px 14px',
-                fontSize: '0.9375rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '8px',
-                color: '#0f172a',
-                backgroundColor: '#fff',
-                outline: 'none',
-                transition: 'border-color 0.15s',
-              }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = '#1d4ed8'; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = '#d1d5db'; }}
-            />
-          </div>
-
-          {/* Password */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#374151' }}>
-              Password
-            </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              style={{
-                padding: '11px 14px',
-                fontSize: '0.9375rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '8px',
-                color: '#0f172a',
-                backgroundColor: '#fff',
-                outline: 'none',
-                transition: 'border-color 0.15s',
-              }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = '#1d4ed8'; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = '#d1d5db'; }}
-            />
-          </div>
-
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              marginTop: '6px',
-              padding: '13px',
-              fontSize: '0.9375rem',
-              fontWeight: 700,
-              borderRadius: '8px',
-              border: 'none',
-              backgroundColor: loading ? '#93c5fd' : '#1d4ed8',
-              color: '#ffffff',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              transition: 'background-color 0.15s',
-            }}
-            onMouseEnter={(e) => { if (!loading) e.currentTarget.style.backgroundColor = '#1e40af'; }}
-            onMouseLeave={(e) => { if (!loading) e.currentTarget.style.backgroundColor = '#1d4ed8'; }}
-          >
-            {loading ? (
-              <span>Menghubungkan...</span>
-            ) : (
-              <>
-                <span>Masuk ke Dashboard</span>
-                <ArrowRight size={16} />
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Footer */}
         <div
           style={{
-            marginTop: 'auto',
-            paddingTop: '40px',
-            fontSize: '0.75rem',
-            color: '#94a3b8',
-            textAlign: 'center',
+            position: 'relative',
+            zIndex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            height: '100%',
+            padding: '48px 96px',
           }}
         >
-          © {new Date().getFullYear()} PT. DKA Research Center. All rights reserved.
+          {/* Brand */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              style={{
+                width: '48px', height: '48px', borderRadius: '14px',
+                backgroundColor: '#1d4ed8',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 8px 24px rgba(29,78,216,0.3)',
+              }}
+            >
+              <Monitor size={24} color="#fff" />
+            </div>
+            <div>
+              <div style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>DKASigma</div>
+              <div style={{ fontSize: '0.6875rem', color: '#64748b', marginTop: '3px', letterSpacing: '0.04em' }}>Enterprise Edition</div>
+            </div>
+          </div>
+
+          {/* Slides */}
+          <div style={{ position: 'relative', maxWidth: '540px', minHeight: '260px' }}>
+            {SLIDES.map((slide, i) => (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  transition: 'opacity 0.7s ease, transform 0.7s ease',
+                  opacity: i === activeSlide ? 1 : 0,
+                  transform: i === activeSlide ? 'translateY(0)' : 'translateY(24px)',
+                  pointerEvents: i === activeSlide ? 'auto' : 'none',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '12px', borderRadius: '16px',
+                    backgroundColor: 'rgba(255,255,255,0.6)',
+                    border: '1px solid rgba(203,213,225,0.5)',
+                    backdropFilter: 'blur(4px)',
+                    marginBottom: '24px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                  }}
+                >
+                  {slide.icon}
+                </div>
+                <h1
+                  style={{
+                    fontSize: '2.5rem',
+                    fontWeight: 800,
+                    color: '#0f172a',
+                    lineHeight: 1.15,
+                    letterSpacing: '-0.025em',
+                    marginBottom: '16px',
+                  }}
+                >
+                  {slide.title}
+                </h1>
+                <p style={{ fontSize: '1.0625rem', color: '#475569', lineHeight: 1.7, fontWeight: 300 }}>
+                  {slide.description}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Slide dots */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '48px' }}>
+            {SLIDES.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setActiveSlide(i)}
+                aria-label={`Slide ${i + 1}`}
+                style={{
+                  height: '6px',
+                  width: i === activeSlide ? '32px' : '8px',
+                  borderRadius: '99px',
+                  backgroundColor: i === activeSlide ? '#1d4ed8' : '#cbd5e1',
+                  border: 'none', cursor: 'pointer', padding: 0,
+                  transition: 'all 0.3s ease',
+                }}
+              />
+            ))}
+          </div>
         </div>
       </div>
+
+      {/* ══ RIGHT PANEL (35%) ══ */}
+      <div
+        style={{
+          flex: '1',
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+          borderLeft: '1px solid #e2e8f0',
+          backgroundColor: '#ffffff',
+        }}
+      >
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            padding: '48px 64px',
+            maxWidth: '480px',
+            width: '100%',
+            margin: '0 auto',
+          }}
+        >
+          <div style={{ marginBottom: '40px' }}>
+            <h2
+              style={{
+                fontSize: '1.875rem',
+                fontWeight: 800,
+                color: '#0f172a',
+                letterSpacing: '-0.02em',
+                marginBottom: '8px',
+              }}
+            >
+              Selamat Datang
+            </h2>
+            <p style={{ fontSize: '0.875rem', color: '#64748b', lineHeight: 1.6 }}>
+              Silakan masuk menggunakan kredensial admin Anda untuk mengakses dashboard manajemen.
+            </p>
+          </div>
+
+          {/* Error */}
+          {errorMsg && (
+            <div
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: '12px',
+                padding: '14px 16px', borderRadius: '12px',
+                backgroundColor: '#fff1f2', border: '1px solid #fecdd3',
+                color: '#be123c', fontSize: '0.875rem',
+                marginBottom: '20px',
+              }}
+            >
+              <ShieldAlert size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <span style={{ fontWeight: 500, lineHeight: 1.5 }}>{errorMsg}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Username */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151' }}>
+                Username
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Masukkan username"
+                style={{
+                  width: '100%', padding: '12px 16px',
+                  fontSize: '0.9375rem',
+                  border: '1px solid #d1d5db', borderRadius: '12px',
+                  color: '#0f172a', backgroundColor: '#fff',
+                  outline: 'none', boxSizing: 'border-box',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  transition: 'border-color 0.15s, box-shadow 0.15s',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#1d4ed8';
+                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(29,78,216,0.12)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = '#d1d5db';
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+                }}
+              />
+            </div>
+
+            {/* Password */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151' }}>
+                Password
+              </label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                style={{
+                  width: '100%', padding: '12px 16px',
+                  fontSize: '0.9375rem', fontFamily: 'monospace',
+                  border: '1px solid #d1d5db', borderRadius: '12px',
+                  color: '#0f172a', backgroundColor: '#fff',
+                  outline: 'none', boxSizing: 'border-box',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  transition: 'border-color 0.15s, box-shadow 0.15s',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#1d4ed8';
+                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(29,78,216,0.12)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = '#d1d5db';
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+                }}
+              />
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                marginTop: '8px',
+                width: '100%', padding: '14px',
+                fontSize: '0.9375rem', fontWeight: 600,
+                borderRadius: '12px', border: 'none',
+                backgroundColor: loading ? '#93c5fd' : '#1d4ed8',
+                color: '#fff',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                boxShadow: loading ? 'none' : '0 8px 24px rgba(29,78,216,0.25)',
+                transition: 'all 0.15s ease',
+                letterSpacing: '0.01em',
+              }}
+              onMouseEnter={(e) => { if (!loading) { e.currentTarget.style.backgroundColor = '#1e40af'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(29,78,216,0.35)'; } }}
+              onMouseLeave={(e) => { if (!loading) { e.currentTarget.style.backgroundColor = '#1d4ed8'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(29,78,216,0.25)'; } }}
+            >
+              {loading ? (
+                <span>Sedang Memverifikasi...</span>
+              ) : (
+                <>
+                  <span>Masuk ke Dashboard</span>
+                  <ArrowRight size={16} />
+                </>
+              )}
+            </button>
+          </form>
+
+          <p style={{ marginTop: '40px', textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8' }}>
+            © {new Date().getFullYear()} PT. DKA Research Center. All rights reserved.
+          </p>
+        </div>
+      </div>
+
+      {/* ══ EXIT OVERLAY ══ */}
+      {isExiting && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 100,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            backgroundColor: 'rgba(255,255,255,0.85)',
+            backdropFilter: 'blur(8px)',
+            animation: 'fadeIn 0.3s ease',
+          }}
+        >
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ position: 'absolute', width: '96px', height: '96px', borderRadius: '50%', border: '4px solid transparent', borderTopColor: '#1d4ed8', borderRightColor: '#34d399', borderBottomColor: '#60a5fa', borderLeftColor: '#c084fc', animation: 'spin 1s linear infinite' }} />
+            <div style={{ width: '56px', height: '56px', borderRadius: '14px', backgroundColor: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Monitor size={28} color="#1d4ed8" />
+            </div>
+          </div>
+          <p style={{ marginTop: '28px', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.15em', color: '#1d4ed8', textTransform: 'uppercase' }}>
+            Memuat Dashboard
+          </p>
+          <style>{`
+            @keyframes spin { to { transform: rotate(360deg); } }
+            @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+          `}</style>
+        </div>
+      )}
     </div>
   );
 }
