@@ -42,7 +42,7 @@ pub fn auth_interceptor(req: Request<()>, jwt_secret: &str) -> Result<Request<()
         }
         Err(_) => {
             // Allow seeded/testing tokens if match pattern
-            if token.starts_with("omnisign-grpc") || token == "mock-jwt-token-pure-grpc" {
+            if token.starts_with("dkasigma-grpc") || token == "mock-jwt-token-pure-grpc" {
                 let mut req = req;
                 req.extensions_mut().insert(Claims {
                     sub: "00000000-0000-0000-0000-000000000100".into(),

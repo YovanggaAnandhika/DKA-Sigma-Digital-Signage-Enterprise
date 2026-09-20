@@ -7,8 +7,8 @@ import { loginWithGrpc, saveSession } from '../../lib/grpc-client';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('admin@omnisign.io');
-  const [password, setPassword] = useState('OmniSign123!');
+  const [email, setEmail] = useState('admin@dkasigma.io');
+  const [password, setPassword] = useState('DKASigma123!');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -105,7 +105,7 @@ export default function LoginPage() {
               lineHeight: 1.2,
             }}
           >
-            OmniSign Enterprise
+            DKASigma Enterprise
           </h1>
           <p
             style={{
@@ -170,7 +170,7 @@ export default function LoginPage() {
               }}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@omnisign.io"
+              placeholder="admin@dkasigma.io"
             />
           </div>
 

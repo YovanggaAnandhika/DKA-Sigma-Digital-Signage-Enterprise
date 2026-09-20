@@ -113,7 +113,7 @@ export function Sidebar() {
         {!collapsed && (
           <div style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}>
             <div style={{ fontWeight: 800, fontSize: '0.95rem', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-              OmniSign PRO
+              DKASigma PRO
             </div>
             <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
               Sistem Retail Signage

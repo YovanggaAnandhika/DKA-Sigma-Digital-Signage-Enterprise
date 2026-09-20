@@ -22,7 +22,7 @@ export function Footer() {
       }}
     >
       <div style={{ fontWeight: 500 }}>
-        &copy; 2026 OmniSign Digital Signage Platform. All rights reserved.
+        &copy; 2026 DKASigma Digital Signage Platform. All rights reserved.
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <span

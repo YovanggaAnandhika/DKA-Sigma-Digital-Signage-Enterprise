@@ -168,14 +168,14 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
     };
 
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'omnisign_last_update') {
+      if (e.key === 'dkasigma_last_update') {
         refreshPlaylistsAndMedia();
       }
     };
 
     let channel: BroadcastChannel | null = null;
     try {
-      channel = new BroadcastChannel('omnisign_studio_events');
+      channel = new BroadcastChannel('dkasigma_studio_events');
       channel.onmessage = (e) => {
         if (e.data?.type === 'playlist_updated' || e.data?.type === 'media_updated') {
           refreshPlaylistsAndMedia();

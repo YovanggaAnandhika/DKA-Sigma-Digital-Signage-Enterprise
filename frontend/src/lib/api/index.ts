@@ -1,5 +1,5 @@
 /**
- * OmniSign Enterprise API Client Barrel
+ * DKASigma Enterprise API Client Barrel
  * Modular Architecture matching project standard domain hierarchy:
  *  - Core: low-level wire protocol dispatcher (Protobuf & gRPC-Web)
  *  - IAM: User, Role, Permission services
@@ -85,11 +85,11 @@ export const api = {
 export function getStoredSession() {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem('omnisign_session');
+    const raw = localStorage.getItem('dkasigma_session');
     if (!raw) return null;
     const session = JSON.parse(raw);
     if (Date.now() > (session.expiresAt || 0)) {
-      localStorage.removeItem('omnisign_session');
+      localStorage.removeItem('dkasigma_session');
       return null;
     }
     return session;
@@ -100,12 +100,12 @@ export function getStoredSession() {
 
 export function saveSession(session: any): void {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('omnisign_session', JSON.stringify(session));
+    localStorage.setItem('dkasigma_session', JSON.stringify(session));
   }
 }
 
 export function clearSession(): void {
   if (typeof window !== 'undefined') {
-    localStorage.removeItem('omnisign_session');
+    localStorage.removeItem('dkasigma_session');
   }
 }

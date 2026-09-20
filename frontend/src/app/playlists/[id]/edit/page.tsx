@@ -72,12 +72,12 @@ export default function EditPlaylistPage() {
   const notifyStudioUpdate = () => {
     if (typeof window !== 'undefined') {
       try {
-        const ch = new BroadcastChannel('omnisign_studio_events');
+        const ch = new BroadcastChannel('dkasigma_studio_events');
         ch.postMessage({ type: 'playlist_updated', playlist_id: params.id });
         ch.close();
       } catch (e) {}
       try {
-        localStorage.setItem('omnisign_last_update', Date.now().toString());
+        localStorage.setItem('dkasigma_last_update', Date.now().toString());
       } catch (e) {}
     }
   };

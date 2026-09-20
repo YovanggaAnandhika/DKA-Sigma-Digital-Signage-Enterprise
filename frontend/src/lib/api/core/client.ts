@@ -1,5 +1,5 @@
 /**
- * OmniSign gRPC-Web Core Wire Protocol Implementation
+ * DKASigma gRPC-Web Core Wire Protocol Implementation
  * Encodes & decodes binary Protobuf wire format and manages Envoy gRPC-Web HTTP requests.
  */
 
@@ -178,7 +178,7 @@ export async function invokeGrpcMethod(
 
   if (typeof window !== 'undefined') {
     try {
-      const raw = localStorage.getItem('omnisign_session');
+      const raw = localStorage.getItem('dkasigma_session');
       if (raw) {
         const session = JSON.parse(raw);
         if (session && session.token && Date.now() <= (session.expiresAt || 0)) {

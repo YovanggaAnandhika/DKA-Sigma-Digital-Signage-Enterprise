@@ -1,6 +1,6 @@
 # Android Player Protocol & Integration Guide (gRPC)
 
-Dokumen ini adalah panduan teknis bagi developer aplikasi Android Display untuk terintegrasi dengan **OmniSign Backend (Rust)** melalui protocol **gRPC**.
+Dokumen ini adalah panduan teknis bagi developer aplikasi Android Display untuk terintegrasi dengan **DKASigma Backend (Rust)** melalui protocol **gRPC**.
 
 ---
 

@@ -19,7 +19,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem('omnisign_theme') as Theme | null;
+    const saved = localStorage.getItem('dkasigma_theme') as Theme | null;
     if (saved === 'light' || saved === 'dark') {
       setTheme(saved);
       document.documentElement.setAttribute('data-theme', saved);
@@ -32,7 +32,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const toggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
-    localStorage.setItem('omnisign_theme', nextTheme);
+    localStorage.setItem('dkasigma_theme', nextTheme);
     document.documentElement.setAttribute('data-theme', nextTheme);
   };
 

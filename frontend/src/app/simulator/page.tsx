@@ -332,7 +332,7 @@ export default function SimulatorPage() {
               </div>
 
               <div style={{ fontSize: '0.6875rem', color: '#64748b', textAlign: 'center' }}>
-                Berlaku di seluruh gerai OmniSign
+                Berlaku di seluruh gerai DKASigma
               </div>
             </div>
           </div>
@@ -375,7 +375,7 @@ export default function SimulatorPage() {
                 textOverflow: 'ellipsis',
               }}
             >
-              Selamat datang di Toko Retail OmniSign • Nikmati promo Buy 1 Get 1 Free seluruh aneka roti & minuman • Jam Operasional: 08:00 - 22:00 WIB • Gunakan aplikasi member untuk diskon tambahan!
+              Selamat datang di Toko Retail DKASigma • Nikmati promo Buy 1 Get 1 Free seluruh aneka roti & minuman • Jam Operasional: 08:00 - 22:00 WIB • Gunakan aplikasi member untuk diskon tambahan!
             </div>
           </div>
         </div>
@@ -443,7 +443,7 @@ export default function SimulatorPage() {
                 Terhubung dengan <strong style={{ color: 'var(--text-primary)' }}>{playlists.length} playlist aktif</strong> dari Postgres.
               </>
             ) : (
-              'Menggunakan loop rotasi visual OmniSign Retail Demo.'
+              'Menggunakan loop rotasi visual DKASigma Retail Demo.'
             )}
           </p>
         </div>

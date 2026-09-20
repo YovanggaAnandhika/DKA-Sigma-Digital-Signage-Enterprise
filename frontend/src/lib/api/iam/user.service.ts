@@ -60,7 +60,7 @@ export async function login(email: string, password: string): Promise<UserSessio
   };
 
   if (typeof window !== 'undefined') {
-    localStorage.setItem('omnisign_session', JSON.stringify(session));
+    localStorage.setItem('dkasigma_session', JSON.stringify(session));
   }
 
   return session;
