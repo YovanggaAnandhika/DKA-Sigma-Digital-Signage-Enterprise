@@ -26,6 +26,7 @@ function SynchronizedVideo({
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.muted = isMuted;
+      videoRef.current.volume = isMuted ? 0 : 1;
     }
   }, [isMuted]);
 
@@ -52,6 +53,7 @@ function SynchronizedVideo({
       }
       if (video.paused) {
         video.muted = isMuted;
+        video.volume = isMuted ? 0 : 1;
         const playPromise = video.play();
         if (playPromise !== undefined) {
           playPromise.catch((err) => {
@@ -81,6 +83,7 @@ function SynchronizedVideo({
         : targetTimeSec;
     video.currentTime = safeTarget;
     video.muted = isMuted;
+    video.volume = isMuted ? 0 : 1;
     if (isPlaying && active && video.paused) {
       video.play().catch(() => {});
     }
