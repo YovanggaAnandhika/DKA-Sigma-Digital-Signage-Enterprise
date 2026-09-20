@@ -144,7 +144,7 @@ export default function TimelineEditor() {
         onMouseLeave={(e) => { if (!isDraggingResize) e.currentTarget.style.backgroundColor = 'transparent'; }}
       />
       {/* Top Header Bar */}
-      <div style={{ height: '40px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '16px', backgroundColor: '#fafafa' }}>
+      <div style={{ height: '40px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '16px', backgroundColor: 'var(--bg-surface-elevated)' }}>
         <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timeline</span>
         
         {/* Playback Controls */}
@@ -162,13 +162,13 @@ export default function TimelineEditor() {
               height: '28px',
               borderRadius: '6px',
               border: '1px solid var(--border-subtle)',
-              backgroundColor: '#fff',
+              backgroundColor: 'var(--bg-base)',
               color: 'var(--text-secondary)',
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-base)'; }}
           >
             <RotateCcw size={13} />
           </button>
@@ -223,7 +223,7 @@ export default function TimelineEditor() {
               padding: '0 10px',
               borderRadius: '6px',
               border: isMuted ? '1px solid #fecaca' : '1px solid #bbf7d0',
-              backgroundColor: isMuted ? '#fff1f2' : '#f0fdf4',
+              backgroundColor: isMuted ? 'rgba(225, 29, 72, 0.1)' : 'rgba(22, 163, 74, 0.1)',
               color: isMuted ? '#e11d48' : '#16a34a',
               cursor: 'pointer',
               fontSize: '0.75rem',
@@ -260,7 +260,7 @@ export default function TimelineEditor() {
               fontSize: '0.75rem',
               fontWeight: 700,
               color: 'var(--text-secondary)',
-              backgroundColor: '#f1f5f9',
+              backgroundColor: 'var(--bg-base)',
               padding: '4px 10px',
               borderRadius: '6px',
               border: '1px solid var(--border-subtle)',
@@ -277,8 +277,8 @@ export default function TimelineEditor() {
       {/* Timeline Workspace */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* Left Track Headers */}
-        <div style={{ width: '220px', borderRight: '1px solid var(--border-subtle)', overflowY: 'auto', backgroundColor: '#f8fafc', flexShrink: 0 }}>
-          <div style={{ height: '24px', borderBottom: '1px solid var(--border-subtle)', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', padding: '0 12px' }}>
+        <div style={{ width: '220px', borderRight: '1px solid var(--border-subtle)', overflowY: 'auto', backgroundColor: 'var(--bg-surface)', flexShrink: 0 }}>
+          <div style={{ height: '24px', borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface-elevated)', display: 'flex', alignItems: 'center', padding: '0 12px' }}>
             <span style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Layers / Tracks</span>
           </div>
           {zones.map(z => {

@@ -128,7 +128,7 @@ export default function CanvasWorkspace() {
       
       {/* Toolbar row: workspace label + resolution + zoom controls */}
       <div style={{ position: 'absolute', top: 12, left: 16, right: 16, display: 'flex', alignItems: 'center', gap: '8px', zIndex: 20, pointerEvents: 'none' }}>
-        <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(255,255,255,0.88)', padding: '5px 10px', borderRadius: '6px', backdropFilter: 'blur(4px)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', pointerEvents: 'auto' }}>
+        <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-surface-elevated)', padding: '5px 10px', borderRadius: '6px', backdropFilter: 'blur(4px)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', pointerEvents: 'auto' }}>
           <MousePointer2 size={14} /> Workspace
         </span>
         <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '4px 10px', borderRadius: '6px', backgroundColor: '#10b981', color: '#fff', boxShadow: '0 1px 3px rgba(16,185,129,0.3)', pointerEvents: 'auto' }}>
@@ -139,15 +139,15 @@ export default function CanvasWorkspace() {
         <div style={{ flex: 1 }} />
 
         {/* Zoom controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: '8px', padding: '4px 6px', boxShadow: '0 1px 4px rgba(0,0,0,0.12)', backdropFilter: 'blur(4px)', pointerEvents: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--bg-surface-elevated)', borderRadius: '8px', padding: '4px 6px', boxShadow: '0 1px 4px rgba(0,0,0,0.12)', backdropFilter: 'blur(4px)', pointerEvents: 'auto' }}>
           <button
             type="button"
             onClick={zoomOut}
             disabled={zoomLevel <= 0.25}
             title="Perkecil Canvas (Zoom Out)"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', border: 'none', borderRadius: '5px', backgroundColor: zoomLevel <= 0.25 ? '#f1f5f9' : '#fff', cursor: zoomLevel <= 0.25 ? 'not-allowed' : 'pointer', color: 'var(--text-secondary)', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', transition: 'all 0.15s' }}
-            onMouseEnter={(e) => { if (zoomLevel > 0.25) e.currentTarget.style.backgroundColor = '#f1f5f9'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = zoomLevel <= 0.25 ? '#f1f5f9' : '#fff'; }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', border: 'none', borderRadius: '5px', backgroundColor: zoomLevel <= 0.25 ? 'var(--bg-surface)' : 'var(--bg-base)', cursor: zoomLevel <= 0.25 ? 'not-allowed' : 'pointer', color: 'var(--text-secondary)', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', transition: 'all 0.15s' }}
+            onMouseEnter={(e) => { if (zoomLevel > 0.25) e.currentTarget.style.backgroundColor = 'var(--bg-surface)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = zoomLevel <= 0.25 ? 'var(--bg-surface)' : 'var(--bg-base)'; }}
           >
             <ZoomOut size={13} />
           </button>
@@ -161,22 +161,22 @@ export default function CanvasWorkspace() {
             onClick={zoomIn}
             disabled={zoomLevel >= 4.0}
             title="Perbesar Canvas (Zoom In)"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', border: 'none', borderRadius: '5px', backgroundColor: zoomLevel >= 4.0 ? '#f1f5f9' : '#fff', cursor: zoomLevel >= 4.0 ? 'not-allowed' : 'pointer', color: 'var(--text-secondary)', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', transition: 'all 0.15s' }}
-            onMouseEnter={(e) => { if (zoomLevel < 4.0) e.currentTarget.style.backgroundColor = '#f1f5f9'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = zoomLevel >= 4.0 ? '#f1f5f9' : '#fff'; }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', border: 'none', borderRadius: '5px', backgroundColor: zoomLevel >= 4.0 ? 'var(--bg-surface)' : 'var(--bg-base)', cursor: zoomLevel >= 4.0 ? 'not-allowed' : 'pointer', color: 'var(--text-secondary)', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', transition: 'all 0.15s' }}
+            onMouseEnter={(e) => { if (zoomLevel < 4.0) e.currentTarget.style.backgroundColor = 'var(--bg-surface)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = zoomLevel >= 4.0 ? 'var(--bg-surface)' : 'var(--bg-base)'; }}
           >
             <ZoomIn size={13} />
           </button>
 
-          <div style={{ width: '1px', height: '16px', backgroundColor: '#e2e8f0', margin: '0 2px' }} />
+          <div style={{ width: '1px', height: '16px', backgroundColor: 'var(--border-subtle)', margin: '0 2px' }} />
 
           <button
             type="button"
             onClick={zoomFit}
             title="Fit ke Ukuran Default (100%)"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', border: 'none', borderRadius: '5px', backgroundColor: '#fff', cursor: 'pointer', color: 'var(--primary-600)', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', transition: 'all 0.15s' }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#eff6ff'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', border: 'none', borderRadius: '5px', backgroundColor: 'var(--bg-base)', cursor: 'pointer', color: 'var(--primary-600)', boxShadow: '0 1px 2px rgba(0,0,0,0.06)', transition: 'all 0.15s' }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-base)'; }}
           >
             <Maximize2 size={12} />
           </button>

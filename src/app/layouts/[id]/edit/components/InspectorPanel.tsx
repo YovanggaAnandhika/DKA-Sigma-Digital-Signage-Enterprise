@@ -158,7 +158,7 @@ export default function InspectorPanel() {
                 )}
               </div>
               
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', backgroundColor: '#f8fafc', border: '1px solid var(--border-subtle)', borderRadius: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', backgroundColor: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: '6px' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {selectedZone.playlist_name || (selectedZone.assigned_playlist_id ? 'Playlist Terpasang' : 'Belum ada playlist')}
@@ -170,15 +170,15 @@ export default function InspectorPanel() {
                     padding: '4px 8px',
                     fontSize: '0.6875rem',
                     fontWeight: 600,
-                    backgroundColor: '#fff',
+                    backgroundColor: 'var(--bg-surface-elevated)',
                     border: '1px solid var(--border-subtle)',
                     borderRadius: '4px',
                     cursor: 'pointer',
                     color: 'var(--primary-600)',
                     whiteSpace: 'nowrap'
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; }}
                 >
                   Ganti
                 </button>
@@ -218,7 +218,7 @@ export default function InspectorPanel() {
                                 alignItems: 'center',
                                 gap: '8px',
                                 padding: '6px 8px',
-                                backgroundColor: 'var(--bg-elevated)',
+                                backgroundColor: 'var(--bg-surface-elevated)',
                                 borderRadius: '6px',
                                 border: '1px solid var(--border-subtle)',
                               }}

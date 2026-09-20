@@ -31,7 +31,7 @@ function EditorContent() {
         <LayersPanel />
         
         {/* Center Column: Canvas */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#e2e8f0' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--bg-base)' }}>
           <CanvasWorkspace />
         </div>
         
