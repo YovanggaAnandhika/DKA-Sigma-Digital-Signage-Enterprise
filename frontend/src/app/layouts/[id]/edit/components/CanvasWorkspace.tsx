@@ -208,7 +208,7 @@ export default function CanvasWorkspace() {
           style={{
             width: `${canvasDisplayWidth}px`,
             height: `${previewHeight}px`,
-            backgroundColor: '#0a0a0f',
+            backgroundColor: 'var(--bg-base)',
             position: 'relative',
             overflow: 'hidden',
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
