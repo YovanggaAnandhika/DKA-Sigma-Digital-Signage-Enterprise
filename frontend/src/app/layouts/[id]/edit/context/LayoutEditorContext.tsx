@@ -61,6 +61,8 @@ interface LayoutEditorContextType {
   toggleFullscreen: () => void;
   toast: { message: string; type: 'success' | 'error' } | null;
   showToast: (message: string, type?: 'success' | 'error') => void;
+  bufferedRanges: { start: number; end: number }[];
+  reportBuffer: (ranges: { start: number; end: number }[]) => void;
 }
 
 const LayoutEditorContext = createContext<LayoutEditorContextType | undefined>(undefined);
@@ -84,6 +86,12 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
   const [isLayoutMetaExpanded, setIsLayoutMetaExpanded] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [bufferedRanges, setBufferedRanges] = useState<{ start: number; end: number }[]>([]);
+  
+  const reportBuffer = (ranges: { start: number; end: number }[]) => {
+    setBufferedRanges(ranges);
+  };
+
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3500);
@@ -448,11 +456,16 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
     setIsMuted((prev) => !prev);
   };
 
+  const maxContentEnd = zones.reduce((max, z) => {
+    const zoneMax = (z.blocks || []).reduce((bMax, b) => {
+      const bEnd = (b.start_time_seconds + b.duration_seconds) * pxPerSecond;
+      return Math.max(bMax, bEnd);
+    }, 0);
+    return Math.max(max, zoneMax);
+  }, 0);
+
   // Dynamic timeline duration based on maximum zone extent (minimum 30s / 600px)
-  const maxZoneEnd = zones.reduce((max, z) => {
-    const end = (z.timeline_start || 0) + (z.timeline_width || 300);
-    return Math.max(max, end);
-  }, 600);
+  const maxZoneEnd = Math.max(600, maxContentEnd);
   const timelineDuration = Math.max(600, Math.ceil((maxZoneEnd + 100) / 100) * 100);
 
   useEffect(() => {
@@ -467,8 +480,13 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
 
       setPlayheadPosition((prev) => {
         const next = prev + deltaSec * pxPerSecond;
-        if (next >= timelineDuration) {
+        // Loop back to start when we hit the actual end of all blocks (maxContentEnd),
+        // or timelineDuration if there are no blocks.
+        const loopPoint = Math.max(0, maxContentEnd);
+        if (loopPoint > 0 && next >= loopPoint) {
           return 0; // loop back to start
+        } else if (loopPoint === 0 && next >= timelineDuration) {
+          return 0;
         }
         return next;
       });
@@ -564,6 +582,8 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
     toggleFullscreen,
     toast,
     showToast,
+    bufferedRanges,
+    reportBuffer,
   };
 
   return (

@@ -31,6 +31,7 @@ export default function TimelineEditor() {
     isTimelineExpanded,
     setIsTimelineExpanded,
     showToast,
+    bufferedRanges,
   } = useLayoutEditor();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -459,22 +460,24 @@ export default function TimelineEditor() {
             ))}
           </div>
 
-          {/* Simulated Yellow Seek Buffer Line */}
-          <div
-            style={{
-              position: 'absolute',
-              left: 0,
-              top: '20px',
-              height: '4px',
-              width: `${playheadPosition + (5 * pxPerSecond)}px`, // Fake 5s buffer ahead of playhead
-              backgroundColor: 'var(--accent-amber)',
-              opacity: 0.4,
-              borderRadius: '2px',
-              zIndex: 15,
-              pointerEvents: 'none',
-              transition: 'width 0.2s'
-            }}
-          />
+          {/* Real Yellow Seek Buffer Lines */}
+          {bufferedRanges && bufferedRanges.map((range, idx) => (
+            <div
+              key={`buffer-${idx}`}
+              style={{
+                position: 'absolute',
+                left: `${range.start * pxPerSecond}px`,
+                top: '20px',
+                height: '4px',
+                width: `${(range.end - range.start) * pxPerSecond}px`,
+                backgroundColor: 'var(--accent-amber)',
+                opacity: 0.6,
+                borderRadius: '2px',
+                zIndex: 15,
+                pointerEvents: 'none',
+              }}
+            />
+          ))}
 
           {/* Draggable Playhead Cursor & Line */}
           <div

@@ -11,6 +11,8 @@ interface SynchronizedVideoProps {
   active: boolean;
   isMuted: boolean;
   targetTimeSec: number;
+  onBufferUpdate?: (ranges: { start: number; end: number }[]) => void;
+  timelineStartSec?: number;
 }
 
 function SynchronizedVideo({
@@ -19,6 +21,8 @@ function SynchronizedVideo({
   active,
   isMuted,
   targetTimeSec,
+  onBufferUpdate,
+  timelineStartSec = 0,
 }: SynchronizedVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -89,6 +93,23 @@ function SynchronizedVideo({
     }
   };
 
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !onBufferUpdate) return;
+    const updateBuffer = () => {
+      const ranges = [];
+      for (let i = 0; i < video.buffered.length; i++) {
+        ranges.push({
+          start: video.buffered.start(i) + timelineStartSec,
+          end: video.buffered.end(i) + timelineStartSec,
+        });
+      }
+      onBufferUpdate(ranges);
+    };
+    video.addEventListener('progress', updateBuffer);
+    return () => video.removeEventListener('progress', updateBuffer);
+  }, [timelineStartSec, onBufferUpdate]);
+
   return (
     <video
       ref={videoRef}
@@ -130,7 +151,8 @@ export default function CanvasWorkspace() {
     availablePlaylists,
     mediaList,
     pxPerSecond,
-    hiddenZones
+    hiddenZones,
+    reportBuffer
   } = useLayoutEditor();
 
   if (!layout) return null;
@@ -236,11 +258,13 @@ export default function CanvasWorkspace() {
           let activeMedia: any = null;
           let itemOffsetSec = 0;
           let currentItem: any = null;
+          let absoluteStartSec = 0;
 
           if (activeBlock) {
             if (activeBlock.media_item_id) {
               activeMedia = mediaList.find((m) => m.id === activeBlock.media_item_id);
               const blockLocalSec = currentSec - activeBlock.start_time_seconds;
+              absoluteStartSec = activeBlock.start_time_seconds;
               const d = activeMedia?.duration_seconds || 10;
               itemOffsetSec = d > 0 ? blockLocalSec % d : blockLocalSec;
             } else {
@@ -252,7 +276,7 @@ export default function CanvasWorkspace() {
                 const blockLocalSec = currentSec - activeBlock.start_time_seconds;
                 const totalDur = items.reduce((sum, it) => sum + (it.duration_seconds || 10), 0);
 
-                if (items.length > 1 && totalDur > 0) {
+                  if (items.length > 1 && totalDur > 0) {
                   const loopSec = blockLocalSec % totalDur;
                   let acc = 0;
                   for (const it of items) {
@@ -260,6 +284,7 @@ export default function CanvasWorkspace() {
                     if (loopSec >= acc && loopSec < acc + d) {
                       currentItem = it;
                       itemOffsetSec = loopSec - acc;
+                      absoluteStartSec = activeBlock.start_time_seconds + Math.floor(blockLocalSec / totalDur) * totalDur + acc;
                       break;
                     }
                     acc += d;
@@ -267,6 +292,7 @@ export default function CanvasWorkspace() {
                 } else if (items.length === 1) {
                   const d = currentItem.duration_seconds || 10;
                   itemOffsetSec = d > 0 ? blockLocalSec % d : blockLocalSec;
+                  absoluteStartSec = activeBlock.start_time_seconds + Math.floor(blockLocalSec / d) * d;
                 }
                 activeMedia = mediaList.find((m) => m.id === currentItem.media_item_id);
               }
@@ -399,6 +425,8 @@ export default function CanvasWorkspace() {
                         active={active}
                         isMuted={isMuted || isCurrentItemMuted}
                         targetTimeSec={itemOffsetSec}
+                        onBufferUpdate={reportBuffer}
+                        timelineStartSec={absoluteStartSec}
                       />
                     ) : (
                       <img
