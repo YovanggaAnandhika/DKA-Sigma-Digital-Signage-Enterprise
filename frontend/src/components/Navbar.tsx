@@ -158,7 +158,7 @@ export function Navbar() {
                 {session?.fullName || 'Superadmin'}
               </div>
               <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                {session?.email || 'supersuperadmin@dkasigma.io'}
+                {session?.email || ''}
               </div>
             </div>
             <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />
