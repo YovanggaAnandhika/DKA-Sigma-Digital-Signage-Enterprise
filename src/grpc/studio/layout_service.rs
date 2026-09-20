@@ -249,10 +249,12 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         let zone_id = Uuid::parse_str(&req.id)
             .map_err(|_| Status::invalid_argument("ID Zone tidak valid"))?;
 
-        let assigned_playlist_id = if req.assigned_playlist_id.is_empty() {
-            None
+        let (assigned_playlist_id, clear_playlist) = if req.assigned_playlist_id.is_empty() || req.assigned_playlist_id == "clear" || req.assigned_playlist_id == "none" {
+            (None, true)
+        } else if let Ok(uid) = Uuid::parse_str(&req.assigned_playlist_id) {
+            (Some(uid), false)
         } else {
-            Uuid::parse_str(&req.assigned_playlist_id).ok()
+            (None, true)
         };
 
         let dto = UpdateZoneDto {
@@ -263,6 +265,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             height: if req.height > 0 { Some(req.height) } else { None },
             z_index: Some(req.z_index),
             assigned_playlist_id,
+            clear_playlist,
             background_color: if req.background_color.is_empty() { None } else { Some(req.background_color) },
         };
 
@@ -298,10 +301,12 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         let zone_id = Uuid::parse_str(&req.zone_id)
             .map_err(|_| Status::invalid_argument("ID Zone tidak valid"))?;
 
-        let assigned_playlist_id = if req.playlist_id.is_empty() {
-            None
+        let (assigned_playlist_id, clear_playlist) = if req.playlist_id.is_empty() || req.playlist_id == "clear" || req.playlist_id == "none" {
+            (None, true)
+        } else if let Ok(uid) = Uuid::parse_str(&req.playlist_id) {
+            (Some(uid), false)
         } else {
-            Uuid::parse_str(&req.playlist_id).ok()
+            (None, true)
         };
 
         let dto = UpdateZoneDto {
@@ -312,6 +317,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             height: None,
             z_index: None,
             assigned_playlist_id,
+            clear_playlist,
             background_color: None,
         };
 

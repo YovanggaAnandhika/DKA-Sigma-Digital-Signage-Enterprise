@@ -161,8 +161,8 @@ impl LayoutRepository {
                 width = COALESCE($5, width),
                 height = COALESCE($6, height),
                 z_index = COALESCE($7, z_index),
-                assigned_playlist_id = COALESCE($8, assigned_playlist_id),
-                background_color = COALESCE($9, background_color),
+                assigned_playlist_id = CASE WHEN $8 THEN NULL WHEN $9 IS NOT NULL THEN $9 ELSE assigned_playlist_id END,
+                background_color = COALESCE($10, background_color),
                 updated_at = NOW()
             WHERE id = $1
             RETURNING *
@@ -175,6 +175,7 @@ impl LayoutRepository {
         .bind(dto.width)
         .bind(dto.height)
         .bind(dto.z_index)
+        .bind(dto.clear_playlist)
         .bind(dto.assigned_playlist_id)
         .bind(dto.background_color)
         .fetch_one(pool)

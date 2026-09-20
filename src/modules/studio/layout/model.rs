@@ -84,5 +84,6 @@ pub struct UpdateZoneDto {
     pub height: Option<i32>,
     pub z_index: Option<i32>,
     pub assigned_playlist_id: Option<Uuid>,
+    pub clear_playlist: bool,
     pub background_color: Option<String>,
 }
