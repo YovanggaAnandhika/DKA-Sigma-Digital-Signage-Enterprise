@@ -26,21 +26,17 @@ export default function PlaylistPickerModal() {
   };
 
   const handleSelect = (plId: string) => {
-    if (!plId) {
-      updateSelectedZone('blocks', []);
-    } else {
-      const newBlock = {
-        id: 'temp-' + Date.now(),
-        zone_id: targetZone.id,
-        playlist_id: plId,
-        start_time_seconds: 0, // Will be appended to the end of timeline in real implementation
-        duration_seconds: 10, // Default duration
-        transition_type: 'none',
-        order_index: (targetZone.blocks?.length || 0)
-      };
-      // Append block
-      updateSelectedZone('blocks', [...(targetZone.blocks || []), newBlock]);
-    }
+    const newBlock = {
+      id: 'temp-' + Date.now(),
+      zone_id: targetZone.id,
+      playlist_id: plId,
+      start_time_seconds: 0, // Will be appended to the end of timeline in real implementation
+      duration_seconds: 10, // Default duration
+      transition_type: 'none',
+      order_index: (targetZone.blocks?.length || 0)
+    };
+    // Append block
+    updateSelectedZone('blocks', [...(targetZone.blocks || []), newBlock]);
     handleClose();
   };
 
@@ -107,32 +103,7 @@ export default function PlaylistPickerModal() {
         <div style={{ padding: '20px', overflowY: 'auto', flex: 1, backgroundColor: 'var(--bg-base)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             
-            {/* Opsi Tanpa Playlist */}
-            {searchQuery === '' && (
-              <div 
-                onClick={() => handleSelect('')}
-                style={{
-                  border: `2px solid ${!(targetZone.blocks && targetZone.blocks.length > 0) ? 'var(--primary-500)' : 'var(--border-subtle)'}`,
-                  backgroundColor: !(targetZone.blocks && targetZone.blocks.length > 0) ? 'var(--primary-50)' : '#fff',
-                  borderRadius: '8px',
-                  padding: '12px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  transition: 'all 0.15s'
-                }}
-              >
-                <div style={{ width: '48px', height: '48px', borderRadius: '6px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
-                  <X size={20} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <h4 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>Tanpa Playlist</h4>
-                  <p style={{ margin: 0, fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Hapus semua playlist dari zona ini</p>
-                </div>
-                {!(targetZone.blocks && targetZone.blocks.length > 0) && <Check size={16} color="var(--primary-500)" />}
-              </div>
-            )}
+
 
             {/* Playlist Cards */}
             {filteredPlaylists.map(pl => {

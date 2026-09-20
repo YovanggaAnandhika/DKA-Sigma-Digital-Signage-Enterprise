@@ -159,129 +159,78 @@ export default function InspectorPanel() {
                 )}
               </div>
               
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', backgroundColor: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: '6px' }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {(selectedZone.blocks && selectedZone.blocks.length > 0) ? `${selectedZone.blocks.length} Blok Playlist` : 'Belum ada playlist'}
-                  </span>
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                {(selectedZone.blocks || []).length > 0 ? (
+                  (selectedZone.blocks || []).map((block, index) => {
+                    const pl = availablePlaylists.find(p => p.id === block.playlist_id);
+                    return (
+                      <div key={block.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', backgroundColor: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: '6px' }}>
+                        <div style={{ width: '24px', height: '24px', borderRadius: '4px', backgroundColor: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                          {index + 1}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {pl?.name || 'Loading playlist...'}
+                          </span>
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                            <span style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)' }}>{pl?.items?.length || 0} Media</span>
+                            <span style={{ fontSize: '0.6875rem', color: 'var(--accent-amber)' }}>{pl?.total_duration_seconds || 0}s</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (window.confirm('Hapus blok playlist ini dari zona?')) {
+                              const newBlocks = (selectedZone.blocks || []).filter(b => b.id !== block.id);
+                              updateSelectedZone('blocks', newBlocks);
+                            }
+                          }}
+                          style={{
+                            padding: '6px',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--text-muted)',
+                            borderRadius: '4px',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.color = '#ef4444'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                          title="Hapus Blok"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', fontSize: '0.75rem', backgroundColor: 'var(--bg-base)', borderRadius: '6px', border: '1px dashed var(--border-subtle)' }}>
+                    Belum ada playlist yang ditambahkan.
+                  </div>
+                )}
+                
                 <button
                   onClick={() => setPickerZoneId(selectedZone.id)}
                   style={{
-                    padding: '4px 8px',
-                    fontSize: '0.6875rem',
+                    width: '100%',
+                    padding: '8px',
+                    fontSize: '0.75rem',
                     fontWeight: 600,
                     backgroundColor: 'var(--bg-surface-elevated)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: '4px',
+                    border: '1px dashed var(--border-subtle)',
+                    borderRadius: '6px',
                     cursor: 'pointer',
                     color: 'var(--primary-600)',
-                    whiteSpace: 'nowrap'
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    marginTop: '4px'
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-50)'; e.currentTarget.style.borderColor = 'var(--primary-300)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
                 >
-                  Ganti
+                  + Tambah Blok Playlist
                 </button>
               </div>
-
-              {selectedPlaylist ? (
-                <>
-                  <div style={{ marginTop: '10px', padding: '10px 12px', backgroundColor: 'rgba(56, 189, 248, 0.08)', borderRadius: '6px', border: '1px solid rgba(56, 189, 248, 0.25)', fontSize: '0.75rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                      <span>Jumlah Konten:</span>
-                      <strong style={{ color: 'var(--text-primary)' }}>{selectedPlaylist.items?.length || 0} Media</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                      <span>Durasi Putaran:</span>
-                      <strong style={{ color: 'var(--accent-amber)' }}>{selectedPlaylist.total_duration_seconds || 0} detik</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                      <span>Mode Putar:</span>
-                      <strong>{selectedPlaylist.is_shuffle ? 'Acak (Shuffle)' : 'Berurutan'}</strong>
-                    </div>
-                  </div>
-
-                  {selectedPlaylist.items && selectedPlaylist.items.length > 0 && (
-                    <div style={{ marginTop: '12px' }}>
-                      <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
-                        Pratinjau Konten ({selectedPlaylist.items.length})
-                      </label>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto' }}>
-                        {selectedPlaylist.items.map((item, idx) => {
-                          const m = mediaList.find((media) => media.id === item.media_item_id);
-                          const isVideo = m?.media_type === 2;
-                          return (
-                            <div
-                              key={item.id || idx}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '6px 8px',
-                                backgroundColor: 'var(--bg-surface-elevated)',
-                                borderRadius: '6px',
-                                border: '1px solid var(--border-subtle)',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: '40px',
-                                  height: '32px',
-                                  borderRadius: '4px',
-                                  overflow: 'hidden',
-                                  backgroundColor: '#0f172a',
-                                  flexShrink: 0,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  border: '1px solid var(--border-subtle)',
-                                }}
-                              >
-                                {m?.public_url && !isVideo ? (
-                                  <img
-                                    src={m.public_url}
-                                    alt={m.name}
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                    onError={(e) => {
-                                      (e.target as HTMLElement).style.display = 'none';
-                                    }}
-                                  />
-                                ) : isVideo ? (
-                                  <Film size={14} color="var(--accent-amber)" />
-                                ) : (
-                                  <ImageIcon size={14} color="var(--primary-500)" />
-                                )}
-                              </div>
-                              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                                <span
-                                  style={{
-                                    fontSize: '0.75rem',
-                                    fontWeight: 600,
-                                    color: 'var(--text-primary)',
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                  }}
-                                >
-                                  {m?.name || item.media_name || `Media ${idx + 1}`}
-                                </span>
-                                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                                  {item.duration_seconds || 10} detik &bull; {isVideo ? 'Video' : 'Gambar'}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                  Pilih playlist di atas untuk memutar video atau gambar secara otomatis di zona ini.
-                </p>
-              )}
             </div>
           </div>
         </div>
