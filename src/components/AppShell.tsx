@@ -13,9 +13,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<UserSession | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
   const router = useRouter();
   const isLoginPage = pathname === '/login';
+  const isEditorPage = pathname.includes('/layouts/') && pathname.includes('/edit');
 
   useEffect(() => {
     const currentSession = getStoredSession();
@@ -57,8 +58,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <Sidebar />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: '100vh' }}>
           <Navbar />
-          <main style={{ flex: 1, padding: '24px', overflowY: 'auto', backgroundColor: 'var(--bg-primary)' }}>
-            <div style={{ maxWidth: '1440px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <main style={{ flex: 1, padding: isEditorPage ? 0 : '24px', overflowY: isEditorPage ? 'hidden' : 'auto', backgroundColor: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ maxWidth: isEditorPage ? 'none' : '1440px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: isEditorPage ? 0 : '24px', flex: 1 }}>
               {children}
             </div>
           </main>

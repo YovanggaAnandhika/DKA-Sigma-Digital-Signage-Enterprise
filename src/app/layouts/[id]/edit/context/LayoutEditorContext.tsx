@@ -51,6 +51,10 @@ interface LayoutEditorContextType {
   setPickerZoneId: React.Dispatch<React.SetStateAction<string | null>>;
   hiddenZones: string[];
   toggleZoneVisibility: (zoneId: string) => void;
+  isTimelineExpanded: boolean;
+  setIsTimelineExpanded: React.Dispatch<React.SetStateAction<boolean>>;
+  isLayoutMetaExpanded: boolean;
+  setIsLayoutMetaExpanded: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const LayoutEditorContext = createContext<LayoutEditorContextType | undefined>(undefined);
@@ -69,6 +73,8 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
   const [hiddenZones, setHiddenZones] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isTimelineExpanded, setIsTimelineExpanded] = useState(true);
+  const [isLayoutMetaExpanded, setIsLayoutMetaExpanded] = useState(true);
 
   const toggleZoneVisibility = (zoneId: string) => {
     setHiddenZones(prev => 
@@ -463,6 +469,10 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
     setPickerZoneId,
     hiddenZones,
     toggleZoneVisibility,
+    isTimelineExpanded,
+    setIsTimelineExpanded,
+    isLayoutMetaExpanded,
+    setIsLayoutMetaExpanded,
   };
 
   return (

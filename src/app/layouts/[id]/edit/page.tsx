@@ -38,7 +38,7 @@ function EditorContent() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)', margin: '-24px', backgroundColor: 'var(--bg-base)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, backgroundColor: 'var(--bg-base)', overflow: 'hidden' }}>
       <TopToolbar />
       
       {/* Main Workspace (Docked Layout) */}

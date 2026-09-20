@@ -2,7 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
-import { Play, Pause, RotateCcw, Film, Image as ImageIcon, Volume2, VolumeX, MicOff, Eye, EyeOff } from 'lucide-react';
+import { Play, Pause, RotateCcw, Film, Image as ImageIcon, Volume2, VolumeX, MicOff, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 import { setPlaylistItemOverride } from '../../../../../lib/api/studio/layout.service';
 import { PlaylistItem } from '../../../../../lib/api/studio/types';
@@ -27,7 +27,9 @@ export default function TimelineEditor() {
     mediaList,
     refreshPlaylistsAndMedia,
     hiddenZones,
-    toggleZoneVisibility
+    toggleZoneVisibility,
+    isTimelineExpanded,
+    setIsTimelineExpanded
   } = useLayoutEditor();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -165,27 +167,45 @@ export default function TimelineEditor() {
   }
 
   return (
-    <div style={{ height: `${timelineHeight}px`, backgroundColor: 'var(--bg-surface)', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', position: 'relative', flexShrink: 0, userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none' }}>
+    <div style={{ height: isTimelineExpanded ? `${timelineHeight}px` : '40px', backgroundColor: 'var(--bg-surface)', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', position: 'relative', flexShrink: 0, userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none' }}>
       {/* Resize handle — drag upward to expand timeline */}
-      <div
-        onMouseDown={handleResizeBarMouseDown}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '5px',
-          cursor: 'row-resize',
-          zIndex: 30,
-          backgroundColor: isDraggingResize ? 'var(--primary-400)' : 'transparent',
-          transition: 'background 0.15s',
-        }}
-        title="Tarik ke atas untuk memperbesar timeline"
-        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(14,165,233,0.3)'; }}
-        onMouseLeave={(e) => { if (!isDraggingResize) e.currentTarget.style.backgroundColor = 'transparent'; }}
-      />
+      {isTimelineExpanded && (
+        <div
+          onMouseDown={handleResizeBarMouseDown}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '5px',
+            cursor: 'row-resize',
+            zIndex: 30,
+            backgroundColor: isDraggingResize ? 'var(--primary-400)' : 'transparent',
+            transition: 'background 0.15s',
+          }}
+          title="Tarik ke atas untuk memperbesar timeline"
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(14,165,233,0.3)'; }}
+          onMouseLeave={(e) => { if (!isDraggingResize) e.currentTarget.style.backgroundColor = 'transparent'; }}
+        />
+      )}
       {/* Top Header Bar */}
       <div style={{ height: '40px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '16px', backgroundColor: 'var(--bg-surface-elevated)' }}>
+        
+        <button
+          onClick={() => setIsTimelineExpanded(!isTimelineExpanded)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px',
+            color: 'var(--text-secondary)'
+          }}
+        >
+          {isTimelineExpanded ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+        </button>
         <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timeline</span>
         
         {/* Playback Controls */}
@@ -316,8 +336,9 @@ export default function TimelineEditor() {
       </div>
       
       {/* Timeline Workspace */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* Left Track Headers */}
+      {isTimelineExpanded && (
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          {/* Left Track Headers */}
         <div style={{ width: '220px', borderRight: '1px solid var(--border-subtle)', overflowY: 'auto', backgroundColor: 'var(--bg-surface)', flexShrink: 0 }}>
           <div style={{ height: '24px', borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface-elevated)', display: 'flex', alignItems: 'center', padding: '0 12px' }}>
             <span style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Layers / Tracks</span>
@@ -621,8 +642,9 @@ export default function TimelineEditor() {
               );
             })}
           </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

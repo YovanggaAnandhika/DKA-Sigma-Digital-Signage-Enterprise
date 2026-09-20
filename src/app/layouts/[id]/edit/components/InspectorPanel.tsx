@@ -2,11 +2,11 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Trash2, MousePointer2, ListMusic, ExternalLink, Film, Image as ImageIcon } from 'lucide-react';
+import { Trash2, MousePointer2, ListMusic, ExternalLink, Film, Image as ImageIcon, ChevronDown, ChevronUp } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 
 export default function InspectorPanel() {
-  const { layoutName, setLayoutName, zones, selectedZoneId, handleDeleteZone, updateSelectedZone, availablePlaylists, mediaList, setPickerZoneId } = useLayoutEditor();
+  const { layoutName, setLayoutName, zones, selectedZoneId, handleDeleteZone, updateSelectedZone, availablePlaylists, mediaList, setPickerZoneId, isLayoutMetaExpanded, setIsLayoutMetaExpanded } = useLayoutEditor();
   const selectedZone = zones.find((z) => z.id === selectedZoneId);
   const firstBlock = selectedZone?.blocks?.[0];
   const selectedPlaylist = firstBlock 
@@ -16,22 +16,31 @@ export default function InspectorPanel() {
   return (
     <div style={{ width: '300px', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-surface)', borderLeft: '1px solid var(--border-subtle)', overflowY: 'auto', zIndex: 5 }}>
       {/* Layout Meta */}
-      <div style={{ padding: '20px', borderBottom: '1px solid var(--border-subtle)' }}>
-        <h3 style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          Resolusi Layar
-        </h3>
-        <div>
-          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-            NAMA LAYOUT
-          </label>
-          <input
-            type="text"
-            value={layoutName}
-            onChange={(e) => setLayoutName(e.target.value)}
-            className="form-input"
-            style={{ fontSize: '0.8125rem', padding: '8px 12px' }}
-          />
+      <div style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+        <div 
+          onClick={() => setIsLayoutMetaExpanded(!isLayoutMetaExpanded)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', cursor: 'pointer', backgroundColor: isLayoutMetaExpanded ? 'transparent' : 'var(--bg-surface-elevated)' }}
+        >
+          <h3 style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-secondary)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Resolusi Layar
+          </h3>
+          {isLayoutMetaExpanded ? <ChevronUp size={14} color="var(--text-secondary)" /> : <ChevronDown size={14} color="var(--text-secondary)" />}
         </div>
+        
+        {isLayoutMetaExpanded && (
+          <div style={{ padding: '0 20px 20px 20px' }}>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+              NAMA LAYOUT
+            </label>
+            <input
+              type="text"
+              value={layoutName}
+              onChange={(e) => setLayoutName(e.target.value)}
+              className="form-input"
+              style={{ fontSize: '0.8125rem', padding: '8px 12px' }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Zone Inspector */}
