@@ -424,7 +424,7 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const BASE_CANVAS_PX = 720;
+  const BASE_CANVAS_PX = 900;
   const [zoomLevel, setZoomLevel] = useState(1.0);
 
   const zoomIn  = () => setZoomLevel(prev => Math.min(4.0, parseFloat((prev + 0.25).toFixed(2))));

@@ -60,28 +60,47 @@ export default function TimelineEditor() {
     window.addEventListener('mouseup', onMouseUp);
   };
 
-  const handleToggleItemMute = async (e: React.MouseEvent, item: PlaylistItem, zonePlaylistId: string, currentMuted: boolean) => {
+  const handleToggleItemMute = async (e: React.MouseEvent, item: PlaylistItem, zonePlaylistId: string, currentMuted: boolean, isMediaBlock: boolean = false) => {
     e.stopPropagation();
     try {
-      const override = await setPlaylistItemOverride(zonePlaylistId, item.id, !currentMuted);
-      
-      // Update local state so UI reflects immediately without global refresh
-      setZones(prev => prev.map(z => ({
-        ...z,
-        blocks: z.blocks.map(b => {
-          if (b.id === zonePlaylistId) {
-            const existingOverrideIdx = (b.item_overrides || []).findIndex(o => o.playlist_item_id === item.id);
-            const newOverrides = [...(b.item_overrides || [])];
-            if (existingOverrideIdx >= 0) {
-              newOverrides[existingOverrideIdx] = override;
-            } else {
-              newOverrides.push(override);
+      if (isMediaBlock) {
+        // Direct media block: update zone block mute state locally
+        setZones(prev => prev.map(z => ({
+          ...z,
+          blocks: z.blocks.map(b => {
+            if (b.id === zonePlaylistId) {
+              const newOverrides = [{
+                id: `override-${b.id}`,
+                zone_playlist_id: b.id,
+                playlist_item_id: b.id,
+                is_muted: !currentMuted,
+              }];
+              return { ...b, item_overrides: newOverrides };
             }
-            return { ...b, item_overrides: newOverrides };
-          }
-          return b;
-        })
-      })));
+            return b;
+          })
+        })));
+      } else {
+        const override = await setPlaylistItemOverride(zonePlaylistId, item.id, !currentMuted);
+        
+        // Update local state so UI reflects immediately without global refresh
+        setZones(prev => prev.map(z => ({
+          ...z,
+          blocks: z.blocks.map(b => {
+            if (b.id === zonePlaylistId) {
+              const existingOverrideIdx = (b.item_overrides || []).findIndex(o => o.playlist_item_id === item.id);
+              const newOverrides = [...(b.item_overrides || [])];
+              if (existingOverrideIdx >= 0) {
+                newOverrides[existingOverrideIdx] = override;
+              } else {
+                newOverrides.push(override);
+              }
+              return { ...b, item_overrides: newOverrides };
+            }
+            return b;
+          })
+        })));
+      }
     } catch (err: any) {
       alert(err.message || 'Gagal mengubah status mute video');
     }
@@ -541,113 +560,133 @@ export default function TimelineEditor() {
                     const blockActive = active && isZoneActive(z, playheadPosition); // Simplified
 
                     return (
-                      <div key={block.id} style={{ position: 'absolute', left: `${block.start_time_seconds * pxPerSecond}px`, width: `${block.duration_seconds * pxPerSecond}px`, height: '24px', display: 'flex', alignItems: 'center' }}>
-                        <Rnd
-                          bounds="parent"
-                          dragAxis="x"
-                          enableResizing={{ right: true, left: true, top: false, bottom: false, topRight: false, topLeft: false, bottomRight: false, bottomLeft: false }}
-                          size={{ width: block.duration_seconds * pxPerSecond, height: 24 }}
-                          position={{ x: 0, y: 0 }}
-                          onDragStart={() => {
-                            if (selectedZoneId !== z.id) setSelectedZoneId(z.id);
-                          }}
-                          onDrag={(e, d) => {
-                            // Update block start_time_seconds
-                          }}
-                          onResize={(e, direction, ref, delta, position) => {
-                            // Update block duration_seconds
-                          }}
+                      <Rnd
+                        key={block.id}
+                        bounds="parent"
+                        dragAxis="x"
+                        enableResizing={{ right: true, left: true, top: false, bottom: false, topRight: false, topLeft: false, bottomRight: false, bottomLeft: false }}
+                        size={{ width: Math.max(20, block.duration_seconds * pxPerSecond), height: 24 }}
+                        position={{ x: block.start_time_seconds * pxPerSecond, y: 6 }}
+                        onDragStart={() => {
+                          if (selectedZoneId !== z.id) setSelectedZoneId(z.id);
+                        }}
+                        onDragStop={(e, d) => {
+                          const newStartSec = Math.max(0, Math.round(d.x / pxPerSecond));
+                          setZones(prev => prev.map(zone => {
+                            if (zone.id !== z.id) return zone;
+                            return {
+                              ...zone,
+                              blocks: (zone.blocks || []).map(b => b.id === block.id ? { ...b, start_time_seconds: newStartSec } : b)
+                            };
+                          }));
+                        }}
+                        onResizeStop={(e, direction, ref, delta, position) => {
+                          const newWidthPx = parseFloat(ref.style.width);
+                          const newDurSec = Math.max(1, Math.round(newWidthPx / pxPerSecond));
+                          const newStartSec = Math.max(0, Math.round(position.x / pxPerSecond));
+                          setZones(prev => prev.map(zone => {
+                            if (zone.id !== z.id) return zone;
+                            return {
+                              ...zone,
+                              blocks: (zone.blocks || []).map(b => b.id === block.id ? {
+                                ...b,
+                                duration_seconds: newDurSec,
+                                start_time_seconds: newStartSec
+                              } : b)
+                            };
+                          }));
+                        }}
+                        style={{
+                          position: 'absolute',
+                          display: 'flex',
+                          alignItems: 'center',
+                          zIndex: isSelected ? 5 : 2,
+                        }}
+                      >
+                        <div
                           style={{
-                            position: 'relative',
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: color,
+                            borderRadius: '4px',
+                            opacity: isSelected ? 1 : blockActive ? 0.95 : 0.6,
                             display: 'flex',
-                            alignItems: 'center',
+                            alignItems: 'stretch',
+                            overflow: 'hidden',
+                            cursor: 'grab',
+                            boxShadow: blockActive ? `0 0 0 2px ${color}, 0 2px 4px rgba(0,0,0,0.25)` : 'inset 0 0 0 1px rgba(0,0,0,0.1)',
+                            transition: 'opacity 0.2s, box-shadow 0.2s'
                           }}
                         >
-                          <div
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              backgroundColor: color,
-                              borderRadius: '4px',
-                              opacity: isSelected ? 1 : blockActive ? 0.95 : 0.5,
-                              display: 'flex',
-                              alignItems: 'stretch',
-                              overflow: 'hidden',
-                              boxShadow: blockActive ? `0 0 0 2px ${color}, 0 2px 4px rgba(0,0,0,0.15)` : 'inset 0 0 0 1px rgba(0,0,0,0.1)',
-                              transition: 'opacity 0.2s, box-shadow 0.2s'
-                            }}
-                          >
-                            {itemsToRender.length > 0 ? itemsToRender.map((it, itemIdx) => {
-                              const itDur = it.duration_seconds || 10;
-                              const itWidthPx = itDur * pxPerSecond;
-                              const m = mediaList.find((media) => media.id === it.media_item_id);
-                              const isVid = m?.media_type === 2;
-                              const override = block.item_overrides?.find(o => o.playlist_item_id === it.id);
-                              const isMuted = override ? override.is_muted : !!it.is_muted;
+                          {itemsToRender.length > 0 ? itemsToRender.map((it, itemIdx) => {
+                            const itDur = it.duration_seconds || 10;
+                            const itWidthPx = isMediaBlock ? '100%' : `${itDur * pxPerSecond}px`;
+                            const m = mediaList.find((media) => media.id === it.media_item_id);
+                            const isVid = m?.media_type === 2;
+                            const override = block.item_overrides?.find(o => o.playlist_item_id === (isMediaBlock ? block.id : it.id));
+                            const isBlockMuted = override ? override.is_muted : !!it.is_muted;
 
-                              return (
-                                <div
-                                  key={it.id}
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    width: `${itWidthPx}px`,
-                                    borderRight: itemIdx < itemsToRender.length - 1 ? '1px solid rgba(255,255,255,0.2)' : 'none',
-                                    padding: '0 4px',
-                                    boxSizing: 'border-box',
-                                    backgroundColor: 'transparent',
-                                    flexShrink: 0
-                                  }}
-                                  title={`${m?.name || `Item ${itemIdx + 1}`} (${itDur}s)`}
-                                >
-                                  {m?.public_url && !isVid ? (
-                                    <img
-                                      src={m.public_url}
-                                      alt=""
-                                      style={{ width: '16px', height: '16px', borderRadius: '2px', objectFit: 'cover', flexShrink: 0 }}
-                                    />
-                                  ) : isVid ? (
-                                    <Film size={12} color="#fff" style={{ flexShrink: 0 }} />
-                                  ) : (
-                                    <ImageIcon size={12} color="#fff" style={{ flexShrink: 0 }} />
-                                  )}
-                                  <span style={{ fontSize: '0.625rem', color: '#fff', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, marginLeft: '4px' }}>
-                                    {m?.name || `Item ${itemIdx + 1}`} ({itDur}s)
-                                  </span>
-                                  {isVid && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => handleToggleItemMute(e, it as PlaylistItem, block.id, isMuted)}
-                                      title={isMuted ? 'Aktifkan suara video ini' : 'Bisukan suara video ini'}
-                                      style={{
-                                        background: 'transparent',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        padding: '2px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        flexShrink: 0,
-                                        borderRadius: '4px',
-                                        backgroundColor: isMuted ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
-                                        marginLeft: '4px'
-                                      }}
-                                    >
-                                      {isMuted ? <MicOff size={12} color="#fca5a5" /> : <Volume2 size={12} color="#a7f3d0" />}
-                                    </button>
-                                  )}
-                                </div>
-                              );
-                            }) : (
-                              <span style={{ fontSize: '0.65rem', color: '#fff', fontWeight: 600, padding: '0 8px' }}>
-                                🎬 {isMediaBlock ? 'Media' : (assignedPl?.name || 'Playlist')}
-                              </span>
-                            )}
-                          </div>
-                        </Rnd>
-                        
-
-                      </div>
+                            return (
+                              <div
+                                key={it.id}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  width: isMediaBlock ? '100%' : itWidthPx,
+                                  borderRight: !isMediaBlock && itemIdx < itemsToRender.length - 1 ? '1px solid rgba(255,255,255,0.2)' : 'none',
+                                  padding: '0 6px',
+                                  boxSizing: 'border-box',
+                                  backgroundColor: 'transparent',
+                                  flexShrink: 0,
+                                  overflow: 'hidden'
+                                }}
+                                title={`${m?.name || `Item ${itemIdx + 1}`} (${itDur}s)`}
+                              >
+                                {m?.public_url && !isVid ? (
+                                  <img
+                                    src={m.public_url}
+                                    alt=""
+                                    style={{ width: '16px', height: '16px', borderRadius: '2px', objectFit: 'cover', flexShrink: 0 }}
+                                  />
+                                ) : isVid ? (
+                                  <Film size={12} color="#fff" style={{ flexShrink: 0 }} />
+                                ) : (
+                                  <ImageIcon size={12} color="#fff" style={{ flexShrink: 0 }} />
+                                )}
+                                <span style={{ fontSize: '0.625rem', color: '#fff', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, marginLeft: '4px' }}>
+                                  {m?.name || `Item ${itemIdx + 1}`} ({itDur}s)
+                                </span>
+                                {isVid && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleToggleItemMute(e, it as PlaylistItem, block.id, isBlockMuted, isMediaBlock)}
+                                    title={isBlockMuted ? 'Aktifkan suara video ini' : 'Bisukan suara video ini'}
+                                    style={{
+                                      background: 'transparent',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      padding: '2px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      flexShrink: 0,
+                                      borderRadius: '4px',
+                                      backgroundColor: isBlockMuted ? 'rgba(239, 68, 68, 0.3)' : 'transparent',
+                                      marginLeft: '4px'
+                                    }}
+                                  >
+                                    {isBlockMuted ? <MicOff size={12} color="#fca5a5" /> : <Volume2 size={12} color="#a7f3d0" />}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          }) : (
+                            <span style={{ fontSize: '0.65rem', color: '#fff', fontWeight: 600, padding: '0 8px' }}>
+                              🎬 {isMediaBlock ? 'Media' : (assignedPl?.name || 'Playlist')}
+                            </span>
+                          )}
+                        </div>
+                      </Rnd>
                     );
                   })}
                 </div>
