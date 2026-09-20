@@ -49,6 +49,8 @@ interface LayoutEditorContextType {
   isZoneActive: (zone: Zone, currentPos?: number) => boolean;
   pickerZoneId: string | null;
   setPickerZoneId: React.Dispatch<React.SetStateAction<string | null>>;
+  hiddenZones: string[];
+  toggleZoneVisibility: (zoneId: string) => void;
 }
 
 const LayoutEditorContext = createContext<LayoutEditorContextType | undefined>(undefined);
@@ -64,8 +66,15 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [pickerZoneId, setPickerZoneId] = useState<string | null>(null);
+  const [hiddenZones, setHiddenZones] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const toggleZoneVisibility = (zoneId: string) => {
+    setHiddenZones(prev => 
+      prev.includes(zoneId) ? prev.filter(id => id !== zoneId) : [...prev, zoneId]
+    );
+  };
 
   const pxPerSecond = 20;
 
@@ -433,6 +442,8 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
     isZoneActive,
     pickerZoneId,
     setPickerZoneId,
+    hiddenZones,
+    toggleZoneVisibility,
   };
 
   return (

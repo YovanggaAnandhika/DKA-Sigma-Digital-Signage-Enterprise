@@ -2,7 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
-import { Play, Pause, RotateCcw, Film, Image as ImageIcon, Volume2, VolumeX, MicOff } from 'lucide-react';
+import { Play, Pause, RotateCcw, Film, Image as ImageIcon, Volume2, VolumeX, MicOff, Eye, EyeOff } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 import { updatePlaylistItem } from '../../../../../lib/api/studio/playlist.service';
 import { PlaylistItem } from '../../../../../lib/api/studio/types';
@@ -25,7 +25,9 @@ export default function TimelineEditor() {
     isZoneActive,
     availablePlaylists,
     mediaList,
-    refreshPlaylistsAndMedia
+    refreshPlaylistsAndMedia,
+    hiddenZones,
+    toggleZoneVisibility
   } = useLayoutEditor();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -325,17 +327,26 @@ export default function TimelineEditor() {
                   transition: 'background-color 0.15s'
                 }}
               >
-                <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{z.name}</span>
-                  {z.assigned_playlist_id && (
-                    <span style={{ fontSize: '0.625rem', color: 'var(--accent-amber)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      🎬 {z.playlist_name || availablePlaylists.find(p => p.id === z.assigned_playlist_id)?.name || 'Playlist'}
-                    </span>
-                  )}
                 </div>
-                {active && (
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981', flexShrink: 0 }} title="Sedang Aktif" />
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {active && (
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981', flexShrink: 0 }} title="Sedang Aktif" />
+                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); toggleZoneVisibility(z.id); }}
+                    style={{ 
+                      background: 'none', border: 'none', cursor: 'pointer', display: 'flex', 
+                      color: hiddenZones.includes(z.id) ? 'var(--text-muted)' : 'var(--text-secondary)',
+                      padding: '2px'
+                    }}
+                    title={hiddenZones.includes(z.id) ? "Tampilkan Layer" : "Sembunyikan Layer"}
+                  >
+                    {hiddenZones.includes(z.id) ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
               </div>
             );
           })}

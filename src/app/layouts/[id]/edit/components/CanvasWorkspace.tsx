@@ -126,7 +126,8 @@ export default function CanvasWorkspace() {
     isZoneActive,
     availablePlaylists,
     mediaList,
-    pxPerSecond
+    pxPerSecond,
+    hiddenZones
   } = useLayoutEditor();
 
   if (!layout) return null;
@@ -318,7 +319,8 @@ export default function CanvasWorkspace() {
               style={{
                 border: `2px ${active ? 'solid' : 'dashed'} ${active ? (isSelected ? '#38bdf8' : color) : 'rgba(255,255,255,0.2)'}`,
                 boxShadow: isSelected ? '0 0 0 1px rgba(56, 189, 248, 0.5), 0 4px 12px rgba(0,0,0,0.4)' : 'none',
-                opacity: isSelected ? 1 : active ? 1 : 0.35,
+                opacity: hiddenZones.includes(z.id) ? 0 : (isSelected ? 1 : active ? 1 : 0.35),
+                pointerEvents: hiddenZones.includes(z.id) ? 'none' : 'auto',
                 zIndex: isSelected ? 999 : z.z_index || 1,
                 userSelect: 'none',
               }}
