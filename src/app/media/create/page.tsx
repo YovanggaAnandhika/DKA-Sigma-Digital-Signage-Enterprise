@@ -17,6 +17,7 @@ export default function CreateMediaPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [fileSha256, setFileSha256] = useState<string>('');
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -138,6 +139,8 @@ export default function CreateMediaPage() {
 
     try {
       setLoading(true);
+      setUploadProgress(0);
+
       const fallbackHash = Array.from(new TextEncoder().encode(formData.name + Date.now()))
         .map((b) => b.toString(16).padStart(2, '0'))
         .join('')
@@ -146,42 +149,37 @@ export default function CreateMediaPage() {
 
       let savedPublicUrl = formData.public_url;
       let savedFilename = formData.original_filename || `${formData.name.toLowerCase().replace(/\s+/g, '_')}.${formData.media_type === 2 ? 'mp4' : 'jpg'}`;
+      let finalSha256 = fileSha256 || fallbackHash;
+      let finalFileSize = formData.file_size_bytes || selectedFile?.size || 0;
+      let finalFilePath = `/storage/media/${savedFilename}`;
 
-      // Upload file to server storage if a file was selected
+      // Upload file directly to backend Rust via gRPC in binary chunks
       if (mode === 'upload' && selectedFile) {
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', selectedFile);
-
-        const uploadRes = await fetch('/api/upload', {
-          method: 'POST',
-          body: uploadFormData,
+        const uploadResult = await api.uploadFileViaGrpc(selectedFile, (percent) => {
+          setUploadProgress(percent);
         });
 
-        if (!uploadRes.ok) {
-          const errData = await uploadRes.json().catch(() => ({}));
-          throw new Error(errData.error || 'Gagal mengunggah berkas fisik ke server');
-        }
-
-        const uploadResult = await uploadRes.json();
-        savedPublicUrl = uploadResult.url; // e.g. /uploads/1789878...jpg
-        savedFilename = uploadResult.filename;
+        savedPublicUrl = uploadResult.public_url; // /api/assets/{filename}
+        finalSha256 = uploadResult.sha256_hash;
+        finalFileSize = uploadResult.file_size_bytes;
+        finalFilePath = uploadResult.file_path;
       }
 
       const res = await api.createMedia({
         name: formData.name,
         original_filename: savedFilename,
-        file_path: `/uploads/${savedFilename}`,
+        file_path: finalFilePath,
         public_url: savedPublicUrl,
-        file_size_bytes: formData.file_size_bytes || selectedFile?.size || 1500000,
+        file_size_bytes: finalFileSize,
         mime_type: formData.mime_type,
-        sha256_hash: fileSha256 || fallbackHash,
+        sha256_hash: finalSha256,
         media_type: Number(formData.media_type),
         width: Number(formData.width),
         height: Number(formData.height),
         duration_seconds: Number(formData.duration_seconds),
       });
 
-      alert('Media berhasil diunggah dan disimpan ke pustaka!');
+      alert('Media berhasil diunggah via gRPC chunks dan disimpan ke backend!');
       if (res && res.id) {
         router.push(`/media/${res.id}`);
       } else {
@@ -191,6 +189,7 @@ export default function CreateMediaPage() {
       alert(err.message || 'Gagal menyimpan media');
     } finally {
       setLoading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -489,6 +488,25 @@ export default function CreateMediaPage() {
             </div>
           </div>
 
+          {uploadProgress !== null && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary-600)' }}>
+                <span>Mengunggah berkas via gRPC chunks ke backend...</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div style={{ width: '100%', height: '6px', backgroundColor: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                <div
+                  style={{
+                    width: `${uploadProgress}%`,
+                    height: '100%',
+                    backgroundColor: 'var(--primary-600)',
+                    transition: 'width 0.15s ease',
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
             <Link href="/media" className="btn btn-secondary">
               Batal
@@ -497,10 +515,16 @@ export default function CreateMediaPage() {
               type="submit"
               disabled={loading || (mode === 'upload' && !selectedFile && !formData.name)}
               className="btn btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '160px', justifyContent: 'center' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '180px', justifyContent: 'center' }}
             >
               <Save size={16} />
-              <span>{loading ? 'Menyimpan Media...' : 'Simpan Media ke Pustaka'}</span>
+              <span>
+                {uploadProgress !== null
+                  ? `Mengunggah (${uploadProgress}%)...`
+                  : loading
+                  ? 'Menyimpan Media...'
+                  : 'Simpan Media ke Pustaka'}
+              </span>
             </button>
           </div>
         </div>

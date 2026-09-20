@@ -73,6 +73,9 @@ export const api = {
   createMedia: studioModule.createMedia,
   updateMedia: studioModule.updateMedia,
   deleteMedia: studioModule.deleteMedia,
+  uploadMediaChunk: studioModule.uploadMediaChunk,
+  uploadFileViaGrpc: studioModule.uploadFileViaGrpc,
+  getMediaFile: studioModule.getMediaFile,
 };
 
 // Storage & Session Helpers
