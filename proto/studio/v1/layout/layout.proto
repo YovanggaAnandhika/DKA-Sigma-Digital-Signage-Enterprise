@@ -17,5 +17,7 @@ service LayoutService {
   rpc GetZone(GetZoneRequest) returns (Zone);
   rpc UpdateZone(UpdateZoneRequest) returns (Zone);
   rpc DeleteZone(DeleteZoneRequest) returns (DeleteZoneResponse);
-  rpc AssignPlaylistToZone(AssignPlaylistToZoneRequest) returns (AssignPlaylistToZoneResponse);
+  rpc AddPlaylistBlock(AddPlaylistBlockRequest) returns (PlaylistBlockResponse);
+  rpc UpdatePlaylistBlock(UpdatePlaylistBlockRequest) returns (PlaylistBlockResponse);
+  rpc RemovePlaylistBlock(RemovePlaylistBlockRequest) returns (PlaylistBlockResponse);
 }

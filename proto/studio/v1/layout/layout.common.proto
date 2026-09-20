@@ -15,11 +15,22 @@ message Zone {
   int32 width = 6;
   int32 height = 7;
   int32 z_index = 8;
-  string assigned_playlist_id = 9;
-  signage.studio.v1.playlist.Playlist assigned_playlist = 10;
+  repeated ZonePlaylist blocks = 9;
   string background_color = 11;
   string created_at = 12;
   string updated_at = 13;
+}
+
+message ZonePlaylist {
+  string id = 1;
+  string zone_id = 2;
+  string playlist_id = 3;
+  signage.studio.v1.playlist.Playlist playlist = 4;
+  int32 start_time_seconds = 5;
+  int32 duration_seconds = 6;
+  string transition_type = 7;
+  int32 order_index = 8;
+  string created_at = 9;
 }
 
 message Layout {
@@ -89,7 +100,6 @@ message CreateZoneRequest {
   int32 width = 5;
   int32 height = 6;
   int32 z_index = 7;
-  string assigned_playlist_id = 8;
   string background_color = 9;
 }
 
@@ -105,7 +115,6 @@ message UpdateZoneRequest {
   int32 width = 5;
   int32 height = 6;
   int32 z_index = 7;
-  string assigned_playlist_id = 8;
   string background_color = 9;
 }
 
@@ -117,12 +126,26 @@ message DeleteZoneResponse {
   bool success = 1;
 }
 
-message AssignPlaylistToZoneRequest {
+message AddPlaylistBlockRequest {
   string zone_id = 1;
   string playlist_id = 2;
+  int32 start_time_seconds = 3;
+  int32 duration_seconds = 4;
 }
 
-message AssignPlaylistToZoneResponse {
+message UpdatePlaylistBlockRequest {
+  string block_id = 1;
+  int32 start_time_seconds = 2;
+  int32 duration_seconds = 3;
+  string transition_type = 4;
+  int32 order_index = 5;
+}
+
+message RemovePlaylistBlockRequest {
+  string block_id = 1;
+}
+
+message PlaylistBlockResponse {
   bool success = 1;
-  Zone zone = 2;
+  ZonePlaylist block = 2;
 }
