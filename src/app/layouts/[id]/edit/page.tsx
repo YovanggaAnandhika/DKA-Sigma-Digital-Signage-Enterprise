@@ -11,7 +11,22 @@ import InspectorPanel from './components/InspectorPanel';
 import PlaylistPickerModal from './components/PlaylistPickerModal';
 
 function EditorContent() {
-  const { loading, layout } = useLayoutEditor();
+  const { loading, layout, togglePlay } = useLayoutEditor();
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      if (e.code === 'Space') {
+        e.preventDefault(); // Prevent scrolling down
+        togglePlay();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [togglePlay]);
 
   if (loading || !layout) {
     return (
