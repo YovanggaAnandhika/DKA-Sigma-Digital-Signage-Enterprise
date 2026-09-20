@@ -7,19 +7,41 @@ import { useLayoutEditor } from '../context/LayoutEditorContext';
 export default function LayersPanel() {
   const { zones, selectedZoneId, setSelectedZoneId, handleAddZone, availablePlaylists, mediaList, setPickerZoneId } = useLayoutEditor();
   const [collapsed, setCollapsed] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(240);
+  const [isDraggingResize, setIsDraggingResize] = useState(false);
+
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDraggingResize(true);
+    const startX = e.clientX;
+    const startW = panelWidth;
+
+    const onMouseMove = (ev: MouseEvent) => {
+      const delta = ev.clientX - startX;
+      setPanelWidth(Math.min(500, Math.max(160, startW + delta)));
+    };
+    const onMouseUp = () => {
+      setIsDraggingResize(false);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
 
   return (
     <div
       style={{
-        width: collapsed ? '36px' : '240px',
+        width: collapsed ? '36px' : `${panelWidth}px`,
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: 'var(--bg-surface)',
         borderRight: '1px solid var(--border-subtle)',
         zIndex: 5,
-        transition: 'width 0.2s ease',
+        transition: isDraggingResize ? 'none' : 'width 0.2s ease',
         overflow: 'hidden',
         flexShrink: 0,
+        position: 'relative',
       }}
     >
       {/* Header */}
@@ -233,6 +255,27 @@ export default function LayersPanel() {
             <Plus size={10} />
           </button>
         </div>
+      )}
+
+      {/* Resize Handle */}
+      {!collapsed && (
+        <div
+          onMouseDown={handleResizeMouseDown}
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: '5px',
+            cursor: 'col-resize',
+            zIndex: 10,
+            backgroundColor: isDraggingResize ? 'var(--primary-400)' : 'transparent',
+            transition: 'background 0.15s',
+          }}
+          title="Tarik untuk mengubah lebar panel"
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(14,165,233,0.3)'; }}
+          onMouseLeave={(e) => { if (!isDraggingResize) e.currentTarget.style.backgroundColor = 'transparent'; }}
+        />
       )}
     </div>
   );

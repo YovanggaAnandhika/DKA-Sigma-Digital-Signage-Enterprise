@@ -30,14 +30,16 @@ function EditorContent() {
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <LayersPanel />
         
-        {/* Center Column: Canvas + Timeline */}
+        {/* Center Column: Canvas */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#e2e8f0' }}>
           <CanvasWorkspace />
-          <TimelineEditor />
         </div>
         
         <InspectorPanel />
       </div>
+
+      {/* Timeline spans full width at the bottom */}
+      <TimelineEditor />
 
       <PlaylistPickerModal />
     </div>
