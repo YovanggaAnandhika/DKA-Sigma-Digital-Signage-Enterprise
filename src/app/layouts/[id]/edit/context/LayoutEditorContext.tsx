@@ -209,7 +209,7 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
         const width = Math.round(Number(z.width) || 200);
         const height = Math.round(Number(z.height) || 200);
         const z_index = Math.round(Number(z.z_index) || 1);
-        const assigned_playlist_id = z.assigned_playlist_id && z.assigned_playlist_id.trim() !== '' ? z.assigned_playlist_id : undefined;
+        const assigned_playlist_id = z.assigned_playlist_id && z.assigned_playlist_id.trim() !== '' ? z.assigned_playlist_id : '';
 
         if (z.id.startsWith('z-')) {
           await api.createZone({
@@ -220,7 +220,7 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
             width,
             height,
             z_index,
-            assigned_playlist_id,
+            assigned_playlist_id: assigned_playlist_id || undefined,
           });
         } else {
           await api.updateZone(z.id, {
@@ -239,18 +239,24 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
       const data = await api.getLayout(params.id);
       setLayout(data);
       setLayoutName(data.name);
-      const sanitizedZones = (data.zones || []).map((z: any) => ({
-        ...z,
-        x: Number(z.x) || 0,
-        y: Number(z.y) || 0,
-        width: Number(z.width) || 200,
-        height: Number(z.height) || 200,
-        z_index: Number(z.z_index) || 1,
-        assigned_playlist_id: z.assigned_playlist_id || '',
-        playlist_name: z.playlist_name || availablePlaylists.find((p: any) => p.id === z.assigned_playlist_id)?.name || '',
-        timeline_start: 0,
-        timeline_width: 300,
-      }));
+      const sanitizedZones = (data.zones || []).map((z: any) => {
+        const matchedPl = availablePlaylists.find((p: any) => p.id === z.assigned_playlist_id);
+        const plDur = matchedPl?.total_duration_seconds || (matchedPl?.items?.reduce((acc: number, it: any) => acc + (it.duration_seconds || 10), 0)) || 15;
+        const calculatedWidth = Math.max(200, plDur * pxPerSecond);
+
+        return {
+          ...z,
+          x: Number(z.x) || 0,
+          y: Number(z.y) || 0,
+          width: Number(z.width) || 200,
+          height: Number(z.height) || 200,
+          z_index: Number(z.z_index) || 1,
+          assigned_playlist_id: z.assigned_playlist_id || '',
+          playlist_name: z.playlist_name || matchedPl?.name || '',
+          timeline_start: 0,
+          timeline_width: calculatedWidth,
+        };
+      });
       setZones(sanitizedZones);
 
       alert('Template layout dan seluruh posisi zona berhasil disimpan!');
