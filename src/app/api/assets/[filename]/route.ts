@@ -13,7 +13,7 @@ export async function GET(
       return new NextResponse('Berkas media tidak ditemukan di backend', { status: 404 });
     }
 
-    return new Response(result.file_data, {
+    return new Response(Buffer.from(result.file_data), {
       headers: {
         'Content-Type': result.mime_type || 'application/octet-stream',
         'Content-Length': result.file_data.length.toString(),

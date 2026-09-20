@@ -3,7 +3,14 @@
  * Encodes & decodes binary Protobuf wire format and manages Envoy gRPC-Web HTTP requests.
  */
 
-export const ENVOY_URL = process.env.NEXT_PUBLIC_GRPC_WEB_URL || 'http://localhost:8080';
+export const getEnvoyUrl = () => {
+  if (typeof window === 'undefined') {
+    return process.env.INTERNAL_GRPC_WEB_URL || 'http://envoy:8080';
+  }
+  return process.env.NEXT_PUBLIC_GRPC_WEB_URL || 'http://localhost:8080';
+};
+
+export const ENVOY_URL = getEnvoyUrl();
 
 export class ProtoWriter {
   private buffer: number[] = [];
@@ -194,7 +201,7 @@ export async function invokeGrpcMethod(
     headers['authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${ENVOY_URL}/${service}/${method}`, {
+  const response = await fetch(`${getEnvoyUrl()}/${service}/${method}`, {
     method: 'POST',
     headers,
     body: frame as unknown as BodyInit,
