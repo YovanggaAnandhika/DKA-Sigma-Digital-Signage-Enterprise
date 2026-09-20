@@ -37,15 +37,18 @@ export default function TimelineEditor() {
   const handleResizeBarMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsDraggingResize(true);
+    document.body.style.userSelect = 'none';
     const startY = e.clientY;
     const startH = timelineHeight;
 
     const onMouseMove = (ev: MouseEvent) => {
+      window.getSelection()?.removeAllRanges();
       const delta = startY - ev.clientY; // drag up = bigger
       setTimelineHeight(Math.min(500, Math.max(120, startH + delta)));
     };
     const onMouseUp = () => {
       setIsDraggingResize(false);
+      document.body.style.userSelect = '';
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
     };
@@ -75,6 +78,7 @@ export default function TimelineEditor() {
     const container = scrollContainerRef.current;
     if (!container) return;
 
+    document.body.style.userSelect = 'none';
     const rect = container.getBoundingClientRect();
     const pos = Math.max(
       0,
@@ -83,6 +87,7 @@ export default function TimelineEditor() {
     setPlayheadPosition(pos);
 
     const onPointerMove = (ev: PointerEvent) => {
+      window.getSelection()?.removeAllRanges();
       const newPos = Math.max(
         0,
         Math.min(timelineDuration, ev.clientX - rect.left + container.scrollLeft)
@@ -91,6 +96,7 @@ export default function TimelineEditor() {
     };
 
     const onPointerUp = () => {
+      document.body.style.userSelect = '';
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
     };
@@ -103,10 +109,12 @@ export default function TimelineEditor() {
     e.stopPropagation();
     e.preventDefault();
     setIsDraggingPlayhead(true);
+    document.body.style.userSelect = 'none';
     const container = scrollContainerRef.current;
     if (!container) return;
 
     const onPointerMove = (ev: PointerEvent) => {
+      window.getSelection()?.removeAllRanges();
       const currentContainerRect = container.getBoundingClientRect();
       const newPos = Math.max(
         0,
@@ -117,6 +125,7 @@ export default function TimelineEditor() {
 
     const onPointerUp = () => {
       setIsDraggingPlayhead(false);
+      document.body.style.userSelect = '';
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
     };
@@ -137,7 +146,7 @@ export default function TimelineEditor() {
   }
 
   return (
-    <div style={{ height: `${timelineHeight}px`, backgroundColor: 'var(--bg-surface)', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', position: 'relative', flexShrink: 0 }}>
+    <div style={{ height: `${timelineHeight}px`, backgroundColor: 'var(--bg-surface)', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', position: 'relative', flexShrink: 0, userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none' }}>
       {/* Resize handle — drag upward to expand timeline */}
       <div
         onMouseDown={handleResizeBarMouseDown}
