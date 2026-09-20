@@ -45,7 +45,14 @@ export default function EditPlaylistPage() {
         is_shuffle: plData.is_shuffle,
       });
       if (mediaRes.data && mediaRes.data.length > 0) {
-        setNewItem((prev) => ({ ...prev, media_item_id: mediaRes.data[0].id }));
+        const firstMedia = mediaRes.data[0];
+        setNewItem((prev) => ({
+          ...prev,
+          media_item_id: firstMedia.id,
+          duration_seconds: firstMedia.duration_seconds && firstMedia.duration_seconds > 0
+            ? firstMedia.duration_seconds
+            : 10,
+        }));
       }
     } catch (err: any) {
       alert(err.message || 'Gagal memuat playlist');
@@ -482,6 +489,18 @@ export default function EditPlaylistPage() {
                     onChange={(e) => setNewItem({ ...newItem, duration_seconds: Number(e.target.value) })}
                     className="form-input"
                   />
+                  {(() => {
+                    const selMedia = mediaList.find(m => m.id === newItem.media_item_id);
+                    if (!selMedia) return null;
+                    if (selMedia.media_type === 2 && selMedia.duration_seconds > 0) {
+                      return (
+                        <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                          ✅ Durasi video asli: <strong>{selMedia.duration_seconds} detik</strong> (sudah otomatis diisi)
+                        </p>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
 
                 <div>
