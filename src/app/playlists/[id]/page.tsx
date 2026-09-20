@@ -3,21 +3,26 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api, Playlist } from '../../../lib/api';
-import { ArrowLeft, Edit, ListMusic, RefreshCw, Clock, Film } from 'lucide-react';
+import { api, Playlist, MediaItem } from '../../../lib/api';
+import { ArrowLeft, Edit, ListMusic, RefreshCw, Clock, Film, Image as ImageIcon } from 'lucide-react';
 
 export default function ViewPlaylistPage() {
   const params = useParams() as { id: string };
   const router = useRouter();
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
+  const [mediaList, setMediaList] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPlaylist = async () => {
+    const fetchPlaylistAndMedia = async () => {
       try {
         setLoading(true);
-        const data = await api.getPlaylist(params.id);
-        setPlaylist(data);
+        const [pData, mData] = await Promise.all([
+          api.getPlaylist(params.id),
+          api.getMedia({ limit: 100 }).catch(() => ({ data: [] })),
+        ]);
+        setPlaylist(pData);
+        setMediaList(mData.data || []);
       } catch (err: any) {
         alert(err.message || 'Gagal memuat playlist');
         router.push('/playlists');
@@ -25,7 +30,7 @@ export default function ViewPlaylistPage() {
         setLoading(false);
       }
     };
-    fetchPlaylist();
+    fetchPlaylistAndMedia();
   }, [params.id, router]);
 
   if (loading || !playlist) {
@@ -75,8 +80,8 @@ export default function ViewPlaylistPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th style={{ width: '60px' }}>No</th>
-                <th>ID Media Terhubung</th>
+                <th style={{ width: '50px' }}>No</th>
+                <th>Konten Media</th>
                 <th>Durasi Tayang</th>
                 <th>Transisi Layar</th>
                 <th>Posisi Urutan</th>
@@ -90,23 +95,66 @@ export default function ViewPlaylistPage() {
                   </td>
                 </tr>
               ) : (
-                playlist.items.map((item, idx) => (
-                  <tr key={item.id}>
-                    <td style={{ fontWeight: 700, color: 'var(--text-muted)' }}>#{idx + 1}</td>
-                    <td style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {item.media_name || item.media_item_id}
-                    </td>
-                    <td>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--accent-amber)', fontWeight: 600 }}>
-                        <Clock size={12} /> {item.duration_seconds} detik
-                      </span>
-                    </td>
-                    <td style={{ textTransform: 'uppercase', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {item.transition_type || 'Fade'}
-                    </td>
-                    <td>Index ke-{item.order_index}</td>
-                  </tr>
-                ))
+                playlist.items.map((item, idx) => {
+                  const matchedMedia = mediaList.find((m) => m.id === item.media_item_id);
+                  const isVideo = matchedMedia?.media_type === 2;
+
+                  return (
+                    <tr key={item.id}>
+                      <td style={{ fontWeight: 700, color: 'var(--text-muted)' }}>#{idx + 1}</td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div
+                            style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '6px',
+                              overflow: 'hidden',
+                              backgroundColor: '#0f172a',
+                              border: '1px solid var(--border-subtle)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {matchedMedia?.public_url && !isVideo ? (
+                              <img
+                                src={matchedMedia.public_url}
+                                alt={matchedMedia.name}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = 'none';
+                                }}
+                              />
+                            ) : isVideo ? (
+                              <Film size={18} color="var(--accent-amber)" />
+                            ) : (
+                              <ImageIcon size={18} color="var(--primary-500)" />
+                            )}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                              {matchedMedia?.name || item.media_name || `Media ${item.media_item_id.substring(0, 8)}...`}
+                            </div>
+                            <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                              ID: {item.media_item_id.substring(0, 16)}...
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--accent-amber)', fontWeight: 600 }}>
+                          <Clock size={12} /> {item.duration_seconds} detik
+                        </span>
+                      </td>
+                      <td style={{ textTransform: 'uppercase', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        {item.transition_type || 'Fade'}
+                      </td>
+                      <td>Index ke-{item.order_index}</td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

@@ -273,21 +273,35 @@ export default function EditPlaylistPage() {
                       <tr key={item.id}>
                         <td style={{ fontWeight: 700, color: 'var(--text-muted)' }}>#{idx + 1}</td>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div
                               style={{
-                                width: '36px',
-                                height: '36px',
+                                width: '44px',
+                                height: '44px',
                                 borderRadius: '6px',
-                                backgroundColor: isVideo ? 'rgba(245, 158, 11, 0.15)' : 'rgba(56, 189, 248, 0.15)',
-                                color: isVideo ? 'var(--accent-amber)' : 'var(--primary-500)',
+                                overflow: 'hidden',
+                                backgroundColor: '#0f172a',
+                                border: '1px solid var(--border-subtle)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 flexShrink: 0,
                               }}
                             >
-                              {isVideo ? <Film size={18} /> : <ImageIcon size={18} />}
+                              {matchedMedia?.public_url && !isVideo ? (
+                                <img
+                                  src={matchedMedia.public_url}
+                                  alt={matchedMedia.name}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  onError={(e) => {
+                                    (e.target as HTMLElement).style.display = 'none';
+                                  }}
+                                />
+                              ) : isVideo ? (
+                                <Film size={18} color="var(--accent-amber)" />
+                              ) : (
+                                <ImageIcon size={18} color="var(--primary-500)" />
+                              )}
                             </div>
                             <div>
                               <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
@@ -410,6 +424,32 @@ export default function EditPlaylistPage() {
                     ))}
                   </select>
                 )}
+
+                {(() => {
+                  const selMedia = mediaList.find((m) => m.id === newItem.media_item_id);
+                  if (!selMedia) return null;
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '10px', padding: '10px 12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ width: '48px', height: '48px', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#0f172a', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {selMedia.public_url && selMedia.media_type !== 2 ? (
+                          <img src={selMedia.public_url} alt={selMedia.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : selMedia.media_type === 2 ? (
+                          <Film size={20} color="var(--accent-amber)" />
+                        ) : (
+                          <ImageIcon size={20} color="var(--primary-500)" />
+                        )}
+                      </div>
+                      <div style={{ overflow: 'hidden' }}>
+                        <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                          {selMedia.name}
+                        </div>
+                        <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                          {selMedia.width} × {selMedia.height} px • {selMedia.mime_type}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
