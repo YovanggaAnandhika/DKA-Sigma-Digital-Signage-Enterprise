@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package signage.distribution.v1.stream;
+
+enum ServerCommandType {
+  COMMAND_UNSPECIFIED = 0;
+  COMMAND_RELOAD_MANIFEST = 1;
+  COMMAND_CAPTURE_SCREENSHOT = 2;
+  COMMAND_REBOOT_PLAYER = 3;
+  COMMAND_EMERGENCY_BROADCAST = 4;
+  COMMAND_CLEAR_CACHE = 5;
+}
+
+message StreamServerMessage {
+  string message_id = 1;
+  int64 timestamp = 2;
+  ServerCommandType command_type = 3;
+  string payload_json = 4; // Extra parameters e.g. alert text, target URL
+}
+
+message StreamClientMessage {
+  string device_id = 1;
+  string device_token = 2;
+  int64 timestamp = 3;
+  oneof payload {
+    HeartbeatPing ping = 4;
+    CommandAck command_ack = 5;
+    ScreenshotUpload screenshot = 6;
+  }
+}
+
+message HeartbeatPing {
+  int32 memory_percent = 1;
+  int64 storage_free_bytes = 2;
+  string current_playing_media_id = 3;
+}
+
+message CommandAck {
+  string message_id = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message ScreenshotUpload {
+  string request_id = 1;
+  bytes image_data = 2;
+  string mime_type = 3;
+}
+
+message PushCommandRequest {
+  string device_id = 1;
+  ServerCommandType command_type = 2;
+  string payload_json = 3;
+}
+
+message PushCommandResponse {
+  bool queued = 1;
+  string command_id = 2;
+}

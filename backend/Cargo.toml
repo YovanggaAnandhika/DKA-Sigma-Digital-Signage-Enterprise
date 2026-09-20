@@ -1,0 +1,40 @@
+[package]
+name = "signage-backend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Async Runtime
+tokio = { version = "1.38", features = ["full"] }
+tokio-stream = "0.1"
+async-stream = "0.3"
+
+# gRPC & Protobuf
+tonic = { version = "0.11", features = ["transport"] }
+prost = "0.12"
+prost-types = "0.12"
+
+# Database & Migrations
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "migrate"] }
+
+# Serialization & Formatting
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+
+# Security & Utilities
+jsonwebtoken = "9.3"
+argon2 = "0.5"
+uuid = { version = "1.8", features = ["serde", "v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+sha2 = "0.10"
+rand = "0.8"
+dotenvy = "0.15"
+
+# Logging & Telemetry
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+async-trait = "0.1"
+
+[build-dependencies]
+tonic-build = "0.11"

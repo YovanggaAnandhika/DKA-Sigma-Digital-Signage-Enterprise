@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package signage.hardware.v1.device;
+
+import "hardware/v1/device/device.common.proto";
+
+service DeviceService {
+  // Retail Display Operations
+  rpc RegisterDevice(RegisterDeviceRequest) returns (RegisterDeviceResponse);
+  rpc PairDevice(PairDeviceRequest) returns (PairDeviceResponse);
+  rpc SendHeartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+
+  // Backoffice Device CRUD
+  rpc GetDevice(GetDeviceRequest) returns (Device);
+  rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse);
+  rpc UpdateDevice(UpdateDeviceRequest) returns (Device);
+  rpc DeleteDevice(DeleteDeviceRequest) returns (DeleteDeviceResponse);
+}

@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package signage.iam.v1.permission;
+
+import "common/v1/types.proto";
+
+message Permission {
+  string id = 1;
+  string code = 2; // e.g. "can_edit_layouts", "can_manage_settings"
+  string name = 3;
+  string description = 4;
+  string module = 5; // e.g. "studio", "iam", "hardware"
+  string created_at = 6;
+  string updated_at = 7;
+}
+
+message CreatePermissionRequest {
+  string code = 1;
+  string name = 2;
+  string description = 3;
+  string module = 4;
+}
+
+message GetPermissionRequest {
+  string id = 1;
+}
+
+message GetPermissionByCodeRequest {
+  string code = 1;
+}
+
+message ListPermissionsRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string module = 2;
+  string search = 3;
+}
+
+message ListPermissionsResponse {
+  repeated Permission items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdatePermissionRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string module = 4;
+}
+
+message DeletePermissionRequest {
+  string id = 1;
+}
+
+message DeletePermissionResponse {
+  bool success = 1;
+}
+
+message CheckUserPermissionRequest {
+  string user_id = 1;
+  string permission_code = 2; // e.g. "can_manage_devices"
+}
+
+message CheckUserPermissionResponse {
+  bool allowed = 1;
+  string reason = 2;
+}

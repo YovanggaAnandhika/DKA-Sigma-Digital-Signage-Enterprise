@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package signage.iam.v1.role;
+
+import "iam/v1/role/role.common.proto";
+
+service RoleService {
+  rpc CreateRole(CreateRoleRequest) returns (Role);
+  rpc GetRole(GetRoleRequest) returns (Role);
+  rpc GetRoleBySlug(GetRoleBySlugRequest) returns (Role);
+  rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);
+  rpc UpdateRole(UpdateRoleRequest) returns (Role);
+  rpc DeleteRole(DeleteRoleRequest) returns (DeleteRoleResponse);
+  rpc AssignPermissionsToRole(AssignPermissionsToRoleRequest) returns (AssignPermissionsToRoleResponse);
+}
