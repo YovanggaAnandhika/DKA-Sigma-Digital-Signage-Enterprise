@@ -35,7 +35,9 @@ impl ManifestServiceImpl {
                     id: b.id.to_string(),
                     zone_id: z.id.to_string(),
                     playlist_id: b.playlist.playlist.id.to_string(),
+                    media_item_id: String::new(),
                     playlist: None, // Simplified for now
+                    media_item: None,
                     start_time_seconds: b.start_time_seconds,
                     duration_seconds: b.duration_seconds,
                     transition_type: b.transition_type.unwrap_or_default(),

@@ -18,6 +18,7 @@ service LayoutService {
   rpc UpdateZone(UpdateZoneRequest) returns (Zone);
   rpc DeleteZone(DeleteZoneRequest) returns (DeleteZoneResponse);
   rpc AddPlaylistBlock(AddPlaylistBlockRequest) returns (PlaylistBlockResponse);
+  rpc AddMediaBlock(AddMediaBlockRequest) returns (PlaylistBlockResponse);
   rpc UpdatePlaylistBlock(UpdatePlaylistBlockRequest) returns (PlaylistBlockResponse);
   rpc RemovePlaylistBlock(RemovePlaylistBlockRequest) returns (PlaylistBlockResponse);
   rpc SetPlaylistItemOverride(SetPlaylistItemOverrideRequest) returns (SetPlaylistItemOverrideResponse);

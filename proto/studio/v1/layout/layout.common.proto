@@ -5,6 +5,7 @@ package signage.studio.v1.layout;
 import "common/v1/types.proto";
 import "hardware/v1/device/device.common.proto";
 import "studio/v1/playlist/playlist.common.proto";
+import "studio/v1/media/media.common.proto";
 
 message ZonePlaylistItemOverride {
   string id = 1;
@@ -39,6 +40,8 @@ message ZonePlaylist {
   int32 order_index = 8;
   repeated ZonePlaylistItemOverride item_overrides = 9;
   string created_at = 10;
+  string media_item_id = 11;
+  signage.studio.v1.media.MediaItem media_item = 12;
 }
 
 message Layout {
@@ -137,6 +140,13 @@ message DeleteZoneResponse {
 message AddPlaylistBlockRequest {
   string zone_id = 1;
   string playlist_id = 2;
+  int32 start_time_seconds = 3;
+  int32 duration_seconds = 4;
+}
+
+message AddMediaBlockRequest {
+  string zone_id = 1;
+  string media_item_id = 2;
   int32 start_time_seconds = 3;
   int32 duration_seconds = 4;
 }

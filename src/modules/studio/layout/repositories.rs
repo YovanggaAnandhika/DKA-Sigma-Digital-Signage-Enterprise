@@ -1,5 +1,5 @@
 use super::model::{
-    CreateLayoutDto, CreateZoneDto, LayoutEntity, UpdateLayoutDto, UpdateZoneDto, ZoneEntity, ZonePlaylistEntity, ZoneWithBlocksDto,
+    CreateLayoutDto, CreateZoneDto, LayoutEntity, UpdateLayoutDto, UpdateZoneDto, ZoneBlockEntity, ZoneBlockDto, ZoneEntity, ZoneWithBlocksDto,
 };
 use crate::db::DbPool;
 use uuid::Uuid;
@@ -108,8 +108,8 @@ impl LayoutRepository {
 
         let mut result = Vec::new();
         for zone in zones {
-            let blocks = sqlx::query_as::<_, ZonePlaylistEntity>(
-                "SELECT * FROM zone_playlists WHERE zone_id = $1 ORDER BY order_index ASC",
+            let blocks = sqlx::query_as::<_, ZoneBlockEntity>(
+                "SELECT * FROM zone_blocks WHERE zone_id = $1 ORDER BY order_index ASC",
             )
             .bind(zone.id)
             .fetch_all(pool)
@@ -118,13 +118,13 @@ impl LayoutRepository {
             let mut block_dtos = Vec::new();
             for block in blocks {
                 let overrides = sqlx::query_as::<_, crate::modules::studio::layout::model::ZonePlaylistItemOverrideEntity>(
-                    "SELECT * FROM zone_playlist_item_overrides WHERE zone_playlist_id = $1",
+                    "SELECT * FROM zone_playlist_item_overrides WHERE zone_block_id = $1",
                 )
                 .bind(block.id)
                 .fetch_all(pool)
                 .await?;
                 
-                block_dtos.push(crate::modules::studio::layout::model::ZonePlaylistDto {
+                block_dtos.push(ZoneBlockDto {
                     block,
                     item_overrides: overrides,
                 });
@@ -221,10 +221,10 @@ impl LayoutRepository {
         playlist_id: Uuid,
         start_time_seconds: i32,
         duration_seconds: i32,
-    ) -> Result<ZonePlaylistEntity, sqlx::Error> {
+    ) -> Result<ZoneBlockEntity, sqlx::Error> {
         // get max order_index
         let max_order: (Option<i32>,) = sqlx::query_as(
-            "SELECT MAX(order_index) FROM zone_playlists WHERE zone_id = $1"
+            "SELECT MAX(order_index) FROM zone_blocks WHERE zone_id = $1"
         )
         .bind(zone_id)
         .fetch_one(pool)
@@ -232,9 +232,9 @@ impl LayoutRepository {
 
         let next_order = max_order.0.unwrap_or(0) + 1;
 
-        let block = sqlx::query_as::<_, ZonePlaylistEntity>(
+        let block = sqlx::query_as::<_, ZoneBlockEntity>(
             r#"
-            INSERT INTO zone_playlists (
+            INSERT INTO zone_blocks (
                 zone_id, playlist_id, start_time_seconds, duration_seconds, order_index
             ) VALUES ($1, $2, $3, $4, $5)
             RETURNING *
@@ -251,6 +251,41 @@ impl LayoutRepository {
         Ok(block)
     }
 
+    pub async fn add_media_block(
+        pool: &DbPool,
+        zone_id: Uuid,
+        media_item_id: Uuid,
+        start_time_seconds: i32,
+        duration_seconds: i32,
+    ) -> Result<ZoneBlockEntity, sqlx::Error> {
+        let max_order: (Option<i32>,) = sqlx::query_as(
+            "SELECT MAX(order_index) FROM zone_blocks WHERE zone_id = $1"
+        )
+        .bind(zone_id)
+        .fetch_one(pool)
+        .await?;
+
+        let next_order = max_order.0.unwrap_or(0) + 1;
+
+        let block = sqlx::query_as::<_, ZoneBlockEntity>(
+            r#"
+            INSERT INTO zone_blocks (
+                zone_id, media_item_id, start_time_seconds, duration_seconds, order_index
+            ) VALUES ($1, $2, $3, $4, $5)
+            RETURNING *
+            "#
+        )
+        .bind(zone_id)
+        .bind(media_item_id)
+        .bind(start_time_seconds)
+        .bind(duration_seconds)
+        .bind(next_order)
+        .fetch_one(pool)
+        .await?;
+
+        Ok(block)
+    }
+
     pub async fn update_playlist_block(
         pool: &DbPool,
         id: Uuid,
@@ -258,10 +293,10 @@ impl LayoutRepository {
         duration_seconds: Option<i32>,
         transition_type: Option<String>,
         order_index: Option<i32>,
-    ) -> Result<ZonePlaylistEntity, sqlx::Error> {
-        let block = sqlx::query_as::<_, ZonePlaylistEntity>(
+    ) -> Result<ZoneBlockEntity, sqlx::Error> {
+        let block = sqlx::query_as::<_, ZoneBlockEntity>(
             r#"
-            UPDATE zone_playlists
+            UPDATE zone_blocks
             SET
                 start_time_seconds = COALESCE($2, start_time_seconds),
                 duration_seconds = COALESCE($3, duration_seconds),
@@ -283,7 +318,7 @@ impl LayoutRepository {
     }
 
     pub async fn remove_playlist_block(pool: &DbPool, block_id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM zone_playlists WHERE id = $1")
+        let result = sqlx::query("DELETE FROM zone_blocks WHERE id = $1")
             .bind(block_id)
             .execute(pool)
             .await?;
@@ -299,9 +334,9 @@ impl LayoutRepository {
     ) -> Result<crate::modules::studio::layout::model::ZonePlaylistItemOverrideEntity, sqlx::Error> {
         let override_ent = sqlx::query_as::<_, crate::modules::studio::layout::model::ZonePlaylistItemOverrideEntity>(
             r#"
-            INSERT INTO zone_playlist_item_overrides (zone_playlist_id, playlist_item_id, is_muted)
+            INSERT INTO zone_playlist_item_overrides (zone_block_id, playlist_item_id, is_muted)
             VALUES ($1, $2, $3)
-            ON CONFLICT (zone_playlist_id, playlist_item_id)
+            ON CONFLICT (zone_block_id, playlist_item_id)
             DO UPDATE SET is_muted = $3, updated_at = CURRENT_TIMESTAMP
             RETURNING *
             "#,

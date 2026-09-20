@@ -13,7 +13,7 @@ use crate::grpc::proto::studio::v1::layout::{
     ListLayoutsRequest, ListLayoutsResponse, UpdateLayoutRequest,
     DeleteLayoutRequest, DeleteLayoutResponse, CreateZoneRequest,
     GetZoneRequest, UpdateZoneRequest, DeleteZoneRequest, DeleteZoneResponse,
-    AddPlaylistBlockRequest, UpdatePlaylistBlockRequest, RemovePlaylistBlockRequest, PlaylistBlockResponse, ZonePlaylist
+    AddPlaylistBlockRequest, AddMediaBlockRequest, UpdatePlaylistBlockRequest, RemovePlaylistBlockRequest, PlaylistBlockResponse, ZonePlaylist
 };
 
 pub struct LayoutServiceImpl {
@@ -62,8 +62,10 @@ impl LayoutServiceImpl {
             blocks: dto.blocks.into_iter().map(|b| ZonePlaylist {
                 id: b.block.id.to_string(),
                 zone_id: b.block.zone_id.to_string(),
-                playlist_id: b.block.playlist_id.to_string(),
+                playlist_id: b.block.playlist_id.map(|u| u.to_string()).unwrap_or_default(),
+                media_item_id: b.block.media_item_id.map(|u| u.to_string()).unwrap_or_default(),
                 playlist: None,
+                media_item: None,
                 start_time_seconds: b.block.start_time_seconds,
                 duration_seconds: b.block.duration_seconds,
                 transition_type: b.block.transition_type.unwrap_or_default(),
@@ -71,7 +73,7 @@ impl LayoutServiceImpl {
                 created_at: b.block.created_at.to_rfc3339(),
                 item_overrides: b.item_overrides.into_iter().map(|o| crate::grpc::proto::studio::v1::layout::ZonePlaylistItemOverride {
                     id: o.id.to_string(),
-                    zone_playlist_id: o.zone_playlist_id.to_string(),
+                    zone_playlist_id: o.zone_block_id.to_string(),
                     playlist_item_id: o.playlist_item_id.to_string(),
                     is_muted: o.is_muted.unwrap_or(false),
                 }).collect(),
@@ -254,14 +256,14 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         let mut block_dtos = Vec::new();
-        let blocks = sqlx::query_as::<_, crate::modules::studio::layout::model::ZonePlaylistEntity>(
-            "SELECT * FROM zone_playlists WHERE zone_id = $1 ORDER BY order_index ASC"
+        let blocks = sqlx::query_as::<_, crate::modules::studio::layout::model::ZoneBlockEntity>(
+            "SELECT * FROM zone_blocks WHERE zone_id = $1 ORDER BY order_index ASC"
         ).bind(zone.id).fetch_all(&self.pool).await.unwrap_or_default();
         for block in blocks {
             let overrides = sqlx::query_as::<_, crate::modules::studio::layout::model::ZonePlaylistItemOverrideEntity>(
-                "SELECT * FROM zone_playlist_item_overrides WHERE zone_playlist_id = $1"
+                "SELECT * FROM zone_playlist_item_overrides WHERE zone_block_id = $1"
             ).bind(block.id).fetch_all(&self.pool).await.unwrap_or_default();
-            block_dtos.push(crate::modules::studio::layout::model::ZonePlaylistDto {
+            block_dtos.push(crate::modules::studio::layout::model::ZoneBlockDto {
                 block,
                 item_overrides: overrides,
             });
@@ -299,14 +301,14 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         // Let's refetch from layout to get blocks, but for now we'll just return empty blocks.
         // Wait, better to query the blocks here.
         let mut block_dtos = Vec::new();
-        let blocks = sqlx::query_as::<_, crate::modules::studio::layout::model::ZonePlaylistEntity>(
-            "SELECT * FROM zone_playlists WHERE zone_id = $1 ORDER BY order_index ASC"
+        let blocks = sqlx::query_as::<_, crate::modules::studio::layout::model::ZoneBlockEntity>(
+            "SELECT * FROM zone_blocks WHERE zone_id = $1 ORDER BY order_index ASC"
         ).bind(zone.id).fetch_all(&self.pool).await.unwrap_or_default();
         for block in blocks {
             let overrides = sqlx::query_as::<_, crate::modules::studio::layout::model::ZonePlaylistItemOverrideEntity>(
-                "SELECT * FROM zone_playlist_item_overrides WHERE zone_playlist_id = $1"
+                "SELECT * FROM zone_playlist_item_overrides WHERE zone_block_id = $1"
             ).bind(block.id).fetch_all(&self.pool).await.unwrap_or_default();
-            block_dtos.push(crate::modules::studio::layout::model::ZonePlaylistDto {
+            block_dtos.push(crate::modules::studio::layout::model::ZoneBlockDto {
                 block,
                 item_overrides: overrides,
             });
@@ -359,8 +361,50 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             block: Some(ZonePlaylist {
                 id: block.id.to_string(),
                 zone_id: block.zone_id.to_string(),
-                playlist_id: block.playlist_id.to_string(),
+                playlist_id: block.playlist_id.map(|u| u.to_string()).unwrap_or_default(),
+                media_item_id: String::new(),
                 playlist: None,
+                media_item: None,
+                start_time_seconds: block.start_time_seconds,
+                duration_seconds: block.duration_seconds,
+                transition_type: block.transition_type.unwrap_or_default(),
+                order_index: block.order_index,
+                created_at: block.created_at.to_rfc3339(),
+                item_overrides: vec![],
+            }),
+        }))
+    }
+
+    async fn add_media_block(
+        &self,
+        request: Request<AddMediaBlockRequest>,
+    ) -> Result<Response<PlaylistBlockResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
+        let req = request.into_inner();
+        let zone_id = Uuid::parse_str(&req.zone_id)
+            .map_err(|_| Status::invalid_argument("ID Zone tidak valid"))?;
+        let media_item_id = Uuid::parse_str(&req.media_item_id)
+            .map_err(|_| Status::invalid_argument("ID Media tidak valid"))?;
+
+        let block = crate::modules::studio::layout::repositories::LayoutRepository::add_media_block(
+            &self.pool,
+            zone_id,
+            media_item_id,
+            req.start_time_seconds,
+            if req.duration_seconds > 0 { req.duration_seconds } else { 10 },
+        )
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(PlaylistBlockResponse {
+            success: true,
+            block: Some(ZonePlaylist {
+                id: block.id.to_string(),
+                zone_id: block.zone_id.to_string(),
+                playlist_id: String::new(),
+                media_item_id: block.media_item_id.map(|u| u.to_string()).unwrap_or_default(),
+                playlist: None,
+                media_item: None,
                 start_time_seconds: block.start_time_seconds,
                 duration_seconds: block.duration_seconds,
                 transition_type: block.transition_type.unwrap_or_default(),
@@ -396,8 +440,10 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             block: Some(ZonePlaylist {
                 id: block.id.to_string(),
                 zone_id: block.zone_id.to_string(),
-                playlist_id: block.playlist_id.to_string(),
+                playlist_id: block.playlist_id.map(|u| u.to_string()).unwrap_or_default(),
+                media_item_id: block.media_item_id.map(|u| u.to_string()).unwrap_or_default(),
                 playlist: None,
+                media_item: None,
                 start_time_seconds: block.start_time_seconds,
                 duration_seconds: block.duration_seconds,
                 transition_type: block.transition_type.unwrap_or_default(),
@@ -448,7 +494,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             success: true,
             r#override: Some(crate::grpc::proto::studio::v1::layout::ZonePlaylistItemOverride {
                 id: override_ent.id.to_string(),
-                zone_playlist_id: override_ent.zone_playlist_id.to_string(),
+                zone_playlist_id: override_ent.zone_block_id.to_string(),
                 playlist_item_id: override_ent.playlist_item_id.to_string(),
                 is_muted: override_ent.is_muted.unwrap_or(false),
             }),

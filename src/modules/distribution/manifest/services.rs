@@ -58,7 +58,8 @@ impl ManifestService {
         for dto_zone in zones {
             let mut mapped_blocks = Vec::new();
             for block in dto_zone.blocks {
-                if let Ok(pl) = PlaylistService::get_playlist_by_id(pool, block.block.playlist_id).await {
+                if let Some(pl_id) = block.block.playlist_id {
+                if let Ok(pl) = PlaylistService::get_playlist_by_id(pool, pl_id).await {
                     for item in &pl.items {
                         if !required_assets_map.contains_key(&item.media_item_id) {
                             required_assets_map.insert(
@@ -84,6 +85,7 @@ impl ManifestService {
                         playlist: pl,
                     });
                 }
+                } // end if Some(pl_id)
             }
 
             enriched_zones.push(ZoneWithPlaylistDto {

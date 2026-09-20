@@ -33,10 +33,11 @@ pub struct ZoneEntity {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct ZonePlaylistEntity {
+pub struct ZoneBlockEntity {
     pub id: Uuid,
     pub zone_id: Uuid,
-    pub playlist_id: Uuid,
+    pub playlist_id: Option<Uuid>,
+    pub media_item_id: Option<Uuid>,
     pub start_time_seconds: i32,
     pub duration_seconds: i32,
     pub transition_type: Option<String>,
@@ -47,7 +48,7 @@ pub struct ZonePlaylistEntity {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ZonePlaylistItemOverrideEntity {
     pub id: Uuid,
-    pub zone_playlist_id: Uuid,
+    pub zone_block_id: Uuid,
     pub playlist_item_id: Uuid,
     pub is_muted: Option<bool>,
     pub created_at: DateTime<Utc>,
@@ -55,17 +56,21 @@ pub struct ZonePlaylistItemOverrideEntity {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ZonePlaylistDto {
+pub struct ZoneBlockDto {
     #[serde(flatten)]
-    pub block: ZonePlaylistEntity,
+    pub block: ZoneBlockEntity,
     pub item_overrides: Vec<ZonePlaylistItemOverrideEntity>,
 }
+
+// Keep old names as type aliases for backwards compat during migration
+pub type ZonePlaylistEntity = ZoneBlockEntity;
+pub type ZonePlaylistDto = ZoneBlockDto;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ZoneWithBlocksDto {
     #[serde(flatten)]
     pub zone: ZoneEntity,
-    pub blocks: Vec<ZonePlaylistDto>,
+    pub blocks: Vec<ZoneBlockDto>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

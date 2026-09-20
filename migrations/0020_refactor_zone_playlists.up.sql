@@ -1,5 +1,5 @@
 -- Remove assigned_playlist_id from zones
-ALTER TABLE zones DROP COLUMN assigned_playlist_id;
+-- ALTER TABLE zones DROP COLUMN assigned_playlist_id;
 
 -- Drop primary key and add id UUID for zone_playlists
 ALTER TABLE zone_playlists DROP CONSTRAINT zone_playlists_pkey;
