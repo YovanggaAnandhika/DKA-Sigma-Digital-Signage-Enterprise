@@ -40,8 +40,8 @@ function SynchronizedVideo({
         : targetTimeSec;
 
     if (isPlaying && active) {
-      // If drifted more than 0.4s while playing, resync
-      if (Math.abs(video.currentTime - safeTarget) > 0.4) {
+      // Optimize: Allow larger drift (1.5s) when actively playing to prevent constant seeking/stuttering
+      if (Math.abs(video.currentTime - safeTarget) > 1.5) {
         video.currentTime = safeTarget;
       }
       if (video.paused) {

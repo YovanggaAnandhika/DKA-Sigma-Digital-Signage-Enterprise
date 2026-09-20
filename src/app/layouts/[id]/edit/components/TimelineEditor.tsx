@@ -339,7 +339,7 @@ export default function TimelineEditor() {
               borderBottom: '1px solid var(--border-subtle)',
               position: 'sticky',
               top: 0,
-              backgroundColor: 'rgba(255,255,255,0.96)',
+              backgroundColor: 'var(--bg-surface-elevated)',
               backdropFilter: 'blur(4px)',
               zIndex: 10,
               cursor: 'pointer',
@@ -360,13 +360,30 @@ export default function TimelineEditor() {
                   fontSize: '0.625rem',
                   fontWeight: 600,
                   color: 'var(--text-muted)',
-                  borderLeft: '1px solid rgba(0,0,0,0.1)'
+                  borderLeft: '1px solid var(--border-subtle)'
                 }}
               >
                 {tick.label}
               </div>
             ))}
           </div>
+
+          {/* Simulated Yellow Seek Buffer Line */}
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: '20px',
+              height: '4px',
+              width: `${playheadPosition + (5 * pxPerSecond)}px`, // Fake 5s buffer ahead of playhead
+              backgroundColor: 'var(--accent-amber)',
+              opacity: 0.4,
+              borderRadius: '2px',
+              zIndex: 15,
+              pointerEvents: 'none',
+              transition: 'width 0.2s'
+            }}
+          />
 
           {/* Draggable Playhead Cursor & Line */}
           <div
@@ -434,7 +451,7 @@ export default function TimelineEditor() {
               const active = isZoneActive(z, playheadPosition);
               
               return (
-                <div key={z.id} style={{ height: '36px', borderBottom: '1px solid rgba(0,0,0,0.05)', position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <div key={z.id} style={{ height: '36px', borderBottom: '1px solid var(--border-subtle)', position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <Rnd
                     bounds="parent"
                     dragAxis="x"
