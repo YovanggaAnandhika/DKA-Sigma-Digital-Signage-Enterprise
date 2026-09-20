@@ -63,7 +63,9 @@ function SynchronizedVideo({
       if (!video.paused) {
         video.pause();
       }
-      if (Math.abs(video.currentTime - safeTarget) > 0.05) {
+      // ONLY seek if the zone is actually active.
+      // If it's outside the timeline block, it shouldn't scrub forward.
+      if (active && Math.abs(video.currentTime - safeTarget) > 0.05) {
         video.currentTime = safeTarget;
       }
     }
@@ -346,33 +348,35 @@ export default function CanvasWorkspace() {
                 }}
               >
                 {/* Visual Media Rendering */}
-                {activeMedia?.public_url && (
-                  activeMedia.media_type === 2 ? (
-                    <SynchronizedVideo
-                      src={activeMedia.public_url}
-                      isPlaying={isPlaying}
-                      active={active}
-                      isMuted={isMuted || currentItem?.is_muted}
-                      targetTimeSec={itemOffsetSec}
-                    />
-                  ) : (
-                    <img
-                      src={activeMedia.public_url}
-                      alt={activeMedia.name || z.name}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                      }}
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
-                    />
-                  )
-                )}
+                <div style={{ opacity: active ? 1 : 0, transition: 'opacity 0.2s', width: '100%', height: '100%', position: 'absolute', inset: 0 }}>
+                  {activeMedia?.public_url && (
+                    activeMedia.media_type === 2 ? (
+                      <SynchronizedVideo
+                        src={activeMedia.public_url}
+                        isPlaying={isPlaying}
+                        active={active}
+                        isMuted={isMuted || currentItem?.is_muted}
+                        targetTimeSec={itemOffsetSec}
+                      />
+                    ) : (
+                      <img
+                        src={activeMedia.public_url}
+                        alt={activeMedia.name || z.name}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                        }}
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    )
+                  )}
+                </div>
 
                 {/* Non-intrusive metadata rendering */}
                 {activeMedia?.public_url ? (
