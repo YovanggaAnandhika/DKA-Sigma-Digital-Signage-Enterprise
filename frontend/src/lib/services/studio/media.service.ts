@@ -26,8 +26,9 @@ export async function getMediaItem(id: string): Promise<MediaItem> {
 
 export async function createMedia(data: { name: string; original_filename: string; file_path: string; public_url: string; file_size_bytes: number; mime_type: string; sha256_hash: string; media_type: number; width?: number; height?: number; duration_seconds?: number }): Promise<MediaItem> {
   const result = await invokeApi<any>('/api/grpc/media/CreateMedia', data);
-  if (!result.mediaId) throw new Error('Gagal mendapatkan ID media setelah pembuatan');
-  return getMediaItem(result.mediaId);
+  const mediaId = result.media_id || result.mediaId;
+  if (!mediaId) throw new Error('Gagal mendapatkan ID media setelah pembuatan');
+  return getMediaItem(mediaId);
 }
 
 export async function updateMedia(id: string, data: { name?: string; thumbnail_url?: string }): Promise<MediaItem> {
@@ -82,14 +83,14 @@ export async function uploadMediaChunk(data: {
   const result = await invokeApi<any>('/api/grpc/media/UploadMediaChunk', payload);
   return {
     success: result.success,
-    upload_id: result.uploadId,
-    chunk_index: result.chunkIndex,
-    is_completed: result.isCompleted,
-    file_path: result.filePath,
-    public_url: result.publicUrl,
-    sha256_hash: result.sha256Hash,
-    file_size_bytes: result.fileSizeBytes,
-    error_message: result.errorMessage
+    upload_id: result.upload_id || result.uploadId || '',
+    chunk_index: result.chunk_index ?? result.chunkIndex ?? 0,
+    is_completed: result.is_completed ?? result.isCompleted ?? false,
+    file_path: result.file_path || result.filePath || '',
+    public_url: result.public_url || result.publicUrl || '',
+    sha256_hash: result.sha256_hash || result.sha256Hash || '',
+    file_size_bytes: result.file_size_bytes ?? result.fileSizeBytes ?? 0,
+    error_message: result.error_message || result.errorMessage || ''
   };
 }
 
@@ -146,8 +147,8 @@ export async function uploadFileViaGrpc(
 export async function getMediaFile(filename: string): Promise<{ success: boolean; filename: string; mime_type: string; file_data: Uint8Array }> {
   const result = await invokeApi<any>('/api/grpc/media/GetMediaFile', { filename });
 
-  // Convert base64 back to Uint8Array
-  const b64 = result.fileData || '';
+  // Convert base64 back to Uint8Array (field is now snake_case after normalization)
+  const b64 = result.file_data || result.fileData || '';
   const binaryString = atob(b64);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
@@ -157,7 +158,7 @@ export async function getMediaFile(filename: string): Promise<{ success: boolean
   return {
     success: result.success,
     filename: result.filename,
-    mime_type: result.mimeType,
+    mime_type: result.mime_type || result.mimeType || '',
     file_data: bytes,
   };
 }

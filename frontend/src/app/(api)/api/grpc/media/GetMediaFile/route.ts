@@ -35,17 +35,17 @@ export async function POST(req: NextRequest) {
       client.getMediaFile(request, getGrpcMetadata(token), (error, response) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else {
-          const obj = response.toObject();
-          // Convert Uint8Array to base64 for JSON serialization
+          const normalized = normalize(response.toObject());
+          // Override file_data with base64 binary (Uint8Array → base64)
           const rawData = response.getFileData_asU8();
           if (rawData) {
              let binary = '';
              for (let i = 0; i < rawData.byteLength; i++) {
                binary += String.fromCharCode(rawData[i]);
              }
-             (obj as any).fileData = btoa(binary);
+             normalized.file_data = btoa(binary);
           }
-          resolve(NextResponse.json(obj));
+          resolve(NextResponse.json(normalized));
         }
       });
     });
