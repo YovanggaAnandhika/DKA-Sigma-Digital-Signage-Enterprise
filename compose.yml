@@ -8,7 +8,8 @@ services:
       TZ: Asia/Makassar
       NODE_ENV: development
       PORT: 80
-      NEXT_PUBLIC_GRPC_WEB_URL: "http://localhost:8080"
+      DKA_GRPC_SERVER_HOST: "backend:50051"
+      DKA_GRPC_SERVER_SECURE: "false"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -23,27 +24,10 @@ services:
     command: bun run dev
     depends_on:
       - backend
-      - envoy
     networks:
       - dka_signage_network
 
-  # Envoy gRPC-Web Proxy (Translates browser HTTP/gRPC-Web calls to backend:50051)
-  envoy:
-    image: envoyproxy/envoy:v1.30-latest
-    container_name: dka_signage_envoy
-    restart: always
-    networks:
-      - dka_signage_network
-    ports:
-      - target: 8080
-        published: "8080"
-        protocol: tcp
-    volumes:
-      - type: bind
-        source: ./envoy/envoy.yaml
-        target: /etc/envoy/envoy.yaml
-    depends_on:
-      - backend
+
 
   # Rust Backend Server (Tonic gRPC)
   backend:

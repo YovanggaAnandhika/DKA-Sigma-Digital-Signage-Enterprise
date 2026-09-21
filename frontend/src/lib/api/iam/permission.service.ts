@@ -1,33 +1,13 @@
-import { ProtoWriter, ProtoReader, invokeGrpcMethod } from '../core/client';
+import { invokeApi } from '../core/invokeApi';
 import { Permission } from './types';
 
-export async function getPermissions(): Promise<Permission[]> {
-  const writer = new ProtoWriter();
-  const resBytes = await invokeGrpcMethod('signage.iam.v1.permission.PermissionService', 'ListPermissions', writer);
-  const reader = new ProtoReader(resBytes);
-  const perms: Permission[] = [];
-
-  while (reader.hasMore()) {
-    const tag = reader.readTag();
-    if (!tag) break;
-    if (tag.fieldNumber === 1 && tag.wireType === 2) {
-      const itemBytes = reader.readBytes();
-      const pReader = new ProtoReader(itemBytes);
-      const p: Partial<Permission> = {};
-      while (pReader.hasMore()) {
-        const pTag = pReader.readTag();
-        if (!pTag) break;
-        if (pTag.fieldNumber === 1) p.id = pReader.readString();
-        else if (pTag.fieldNumber === 2) p.code = pReader.readString();
-        else if (pTag.fieldNumber === 3) p.name = pReader.readString();
-        else if (pTag.fieldNumber === 4) p.description = pReader.readString();
-        else if (pTag.fieldNumber === 5) p.module = pReader.readString();
-        else pReader.skip(pTag.wireType);
-      }
-      if (p.id) perms.push(p as Permission);
-    } else {
-      reader.skip(tag.wireType);
-    }
-  }
-  return perms;
+export async function getPermissions(params?: { search?: string; page?: number; limit?: number }): Promise<{ data: Permission[]; total: number }> {
+  const result = await invokeApi<any>('/api/grpc/permission/ListPermissions', {
+    search: params?.search,
+    pagination: { page: params?.page || 1, limit: params?.limit || 100 }
+  });
+  return {
+    data: result.permissionsList || [],
+    total: result.pagination?.totalItems || result.permissionsList?.length || 0
+  };
 }

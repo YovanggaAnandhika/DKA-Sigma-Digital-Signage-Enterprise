@@ -1,67 +1,36 @@
-import { ProtoWriter, ProtoReader, invokeGrpcMethod } from '../core/client';
-import { UserSession } from './types';
+import { invokeApi } from '../core/invokeApi';
+import { User } from './types';
 
-export async function login(email: string, password: string): Promise<UserSession> {
-  const writer = new ProtoWriter();
-  writer.writeString(1, email);
-  writer.writeString(2, password);
-
-  const resBytes = await invokeGrpcMethod(
-    'signage.iam.v1.user.UserService',
-    'Login',
-    writer
-  );
-
-  const reader = new ProtoReader(resBytes);
-  let token = '';
-  let userSub: { id: string; email: string; fullName: string; permissions: string[] } = {
-    id: '',
-    email: '',
-    fullName: '',
-    permissions: [],
+export async function getUsers(params?: { search?: string; page?: number; limit?: number }): Promise<{ data: User[]; total: number }> {
+  const result = await invokeApi<any>('/api/grpc/user/ListUsers', {
+    search: params?.search,
+    pagination: { page: params?.page || 1, limit: params?.limit || 25 }
+  });
+  return {
+    data: result.usersList || [],
+    total: result.pagination?.totalItems || result.usersList?.length || 0
   };
-  let expiresAt = Date.now() + 86400 * 1000;
+}
 
-  while (reader.hasMore()) {
-    const tag = reader.readTag();
-    if (!tag) break;
-    if (tag.fieldNumber === 1) {
-      token = reader.readString();
-    } else if (tag.fieldNumber === 2 && tag.wireType === 2) {
-      const userBytes = reader.readBytes();
-      const uReader = new ProtoReader(userBytes);
-      while (uReader.hasMore()) {
-        const uTag = uReader.readTag();
-        if (!uTag) break;
-        if (uTag.fieldNumber === 1) userSub.id = uReader.readString();
-        else if (uTag.fieldNumber === 2) userSub.email = uReader.readString();
-        else if (uTag.fieldNumber === 3) userSub.fullName = uReader.readString();
-        else if (uTag.fieldNumber === 7) userSub.permissions.push(uReader.readString());
-        else uReader.skip(uTag.wireType);
-      }
-    } else if (tag.fieldNumber === 3) {
-      expiresAt = reader.readInt64() * 1000;
-    } else {
-      reader.skip(tag.wireType);
-    }
-  }
+export async function getUser(id: string): Promise<User> {
+  const result = await invokeApi<any>('/api/grpc/user/GetUser', { id });
+  if (!result.user) throw new Error(`User ID ${id} tidak ditemukan`);
+  return result.user as User;
+}
 
-  if (!token) {
-    throw new Error('Gagal menerima token autentikasi dari backend');
-  }
+export async function createUser(data: { email: string; full_name: string; role_id: string; password?: string }): Promise<User> {
+  const result = await invokeApi<any>('/api/grpc/user/CreateUser', data);
+  if (!result.user) throw new Error('CreateUser failed');
+  return result.user as User;
+}
 
-  const session: UserSession = {
-    id: userSub.id,
-    email: userSub.email || email,
-    fullName: userSub.fullName || 'Signage Administrator',
-    token,
-    effectivePermissions: userSub.permissions,
-    expiresAt,
-  };
+export async function updateUser(id: string, data: { email?: string; full_name?: string; role_id?: string; is_active?: boolean; password?: string }): Promise<User> {
+  const result = await invokeApi<any>('/api/grpc/user/UpdateUser', { id, ...data });
+  if (!result.user) throw new Error('UpdateUser failed');
+  return result.user as User;
+}
 
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('dkasigma_session', JSON.stringify(session));
-  }
-
-  return session;
+export async function deleteUser(id: string): Promise<boolean> {
+  await invokeApi<any>('/api/grpc/user/DeleteUser', { id });
+  return true;
 }

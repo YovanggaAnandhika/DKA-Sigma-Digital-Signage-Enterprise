@@ -86,3 +86,12 @@ export interface MediaItem {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface Schedule {
+  id: string;
+  name: string;
+  description?: string;
+  priority: number;
+  created_at?: string;
+  updated_at?: string;
+}

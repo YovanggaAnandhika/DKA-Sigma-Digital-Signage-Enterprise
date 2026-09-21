@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "generate:grpc": "bun scripts/generate_grpc.ts",
+    "postinstall": "bun scripts/generate_grpc.ts"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.5",

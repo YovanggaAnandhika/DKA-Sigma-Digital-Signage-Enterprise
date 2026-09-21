@@ -1,14 +1,9 @@
 /**
  * DKASigma Enterprise API Client Barrel
- * Modular Architecture matching project standard domain hierarchy:
- *  - Core: low-level wire protocol dispatcher (Protobuf & gRPC-Web)
- *  - IAM: User, Role, Permission services
- *  - Hardware: Device & fleet management services
- *  - Studio: Layout, Playlist, Media services
  */
 
 // Core Protocol Exports
-export * from './core/client';
+export * from './core/invokeApi';
 
 // Domain Submodule Exports
 export * from './iam';
@@ -16,7 +11,6 @@ export * from './hardware';
 export * from './studio';
 
 // Re-export domain namespaces for direct modular consumption:
-// import { iam, hardware, studio, api } from '@/lib/api';
 import * as iamModule from './iam';
 import * as hardwareModule from './hardware';
 import * as studioModule from './studio';
@@ -28,13 +22,17 @@ export const studio = studioModule;
 // Unified namespace backward-compatible export
 export const api = {
   // IAM
-  login: iamModule.login,
   getRoles: iamModule.getRoles,
   getRole: iamModule.getRole,
   createRole: iamModule.createRole,
   updateRole: iamModule.updateRole,
   deleteRole: iamModule.deleteRole,
   getPermissions: iamModule.getPermissions,
+  getUsers: iamModule.getUsers,
+  getUser: iamModule.getUser,
+  createUser: iamModule.createUser,
+  updateUser: iamModule.updateUser,
+  deleteUser: iamModule.deleteUser,
 
   // Hardware
   getDevices: hardwareModule.getDevices,
@@ -57,13 +55,9 @@ export const api = {
   deleteLayout: studioModule.deleteLayout,
 
   // Studio — Zones
-  createZone: studioModule.createZone,
+  addZone: studioModule.addZone,
   updateZone: studioModule.updateZone,
-  deleteZone: studioModule.deleteZone,
-  addPlaylistBlock: studioModule.addPlaylistBlock,
-  addMediaBlock: studioModule.addMediaBlock,
-  updatePlaylistBlock: studioModule.updatePlaylistBlock,
-  removePlaylistBlock: studioModule.removePlaylistBlock,
+  removeZone: studioModule.removeZone,
 
   // Studio — Schedules
   getSchedules: studioModule.getSchedules,
@@ -71,8 +65,6 @@ export const api = {
   createSchedule: studioModule.createSchedule,
   updateSchedule: studioModule.updateSchedule,
   deleteSchedule: studioModule.deleteSchedule,
-  addScheduleEvent: studioModule.addScheduleEvent,
-  removeScheduleEvent: studioModule.removeScheduleEvent,
 
   // Studio — Playlists
   getPlaylists: studioModule.getPlaylists,
