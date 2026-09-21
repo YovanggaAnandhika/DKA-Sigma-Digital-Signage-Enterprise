@@ -17,6 +17,8 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Erro
         ("can_manage_media", "Manage Media", "Upload, convert, and delete media files", "studio"),
         ("can_view_media", "View Media", "Browse media library", "studio"),
         ("can_manage_distribution", "Manage Distribution", "Deploy layouts to displays and manage canary rollouts", "distribution"),
+        ("can_manage_schedules", "Manage Schedules", "Create and edit playback schedules", "studio"),
+        ("can_view_schedules", "View Schedules", "View playback schedules", "studio"),
         ("can_manage_iam", "Manage IAM", "Manage users, roles, and access control permissions", "iam"),
     ];
 

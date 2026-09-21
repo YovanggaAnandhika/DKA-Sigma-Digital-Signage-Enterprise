@@ -53,7 +53,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         &self,
         request: Request<CreateScheduleRequest>,
     ) -> Result<Response<Schedule>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_playlists")?;
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
         let req = request.into_inner();
 
         let dto = CreateScheduleDto {
@@ -72,7 +72,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         &self,
         request: Request<GetScheduleRequest>,
     ) -> Result<Response<Schedule>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_playlists")?;
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_view_schedules")?;
         let req = request.into_inner();
         let id = Uuid::parse_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid ID"))?;
@@ -91,7 +91,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         &self,
         request: Request<ListSchedulesRequest>,
     ) -> Result<Response<ListSchedulesResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_playlists")?;
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_view_schedules")?;
         let schedules = ScheduleService::list_schedules(&self.pool)
             .await
             .map_err(Status::from)?;
@@ -108,7 +108,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         &self,
         request: Request<UpdateScheduleRequest>,
     ) -> Result<Response<Schedule>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_playlists")?;
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
         let req = request.into_inner();
         let id = Uuid::parse_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid ID"))?;
@@ -129,7 +129,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         &self,
         request: Request<DeleteScheduleRequest>,
     ) -> Result<Response<DeleteScheduleResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_playlists")?;
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
         let req = request.into_inner();
         let id = Uuid::parse_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid ID"))?;
@@ -145,7 +145,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         &self,
         request: Request<AddScheduleEventRequest>,
     ) -> Result<Response<ScheduleEvent>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_playlists")?;
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
         let req = request.into_inner();
         let schedule_id = Uuid::parse_str(&req.schedule_id)
             .map_err(|_| Status::invalid_argument("Invalid schedule ID"))?;
@@ -171,7 +171,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         &self,
         request: Request<RemoveScheduleEventRequest>,
     ) -> Result<Response<RemoveScheduleEventResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_playlists")?;
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
         let req = request.into_inner();
         let id = Uuid::parse_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid event ID"))?;
