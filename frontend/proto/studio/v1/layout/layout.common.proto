@@ -1,0 +1,180 @@
+syntax = "proto3";
+
+package signage.studio.v1.layout;
+
+import "common/v1/types.proto";
+import "hardware/v1/device/device.common.proto";
+import "studio/v1/playlist/playlist.common.proto";
+import "studio/v1/media/media.common.proto";
+
+message ZonePlaylistItemOverride {
+  string id = 1;
+  string zone_playlist_id = 2;
+  string playlist_item_id = 3;
+  bool is_muted = 4;
+}
+
+message Zone {
+  string id = 1;
+  string layout_id = 2;
+  string name = 3;
+  int32 x = 4;
+  int32 y = 5;
+  int32 width = 6;
+  int32 height = 7;
+  int32 z_index = 8;
+  repeated ZonePlaylist blocks = 9;
+  string background_color = 11;
+  string created_at = 12;
+  string updated_at = 13;
+}
+
+message ZonePlaylist {
+  string id = 1;
+  string zone_id = 2;
+  string playlist_id = 3;
+  signage.studio.v1.playlist.Playlist playlist = 4;
+  int32 start_time_seconds = 5;
+  int32 duration_seconds = 6;
+  string transition_type = 7;
+  int32 order_index = 8;
+  repeated ZonePlaylistItemOverride item_overrides = 9;
+  string created_at = 10;
+  string media_item_id = 11;
+  signage.studio.v1.media.MediaItem media_item = 12;
+}
+
+message Layout {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int32 canvas_width = 4;  // e.g. 1920 or 1080
+  int32 canvas_height = 5; // e.g. 1080 or 1920
+  signage.hardware.v1.device.DeviceOrientation orientation = 6;
+  string background_color = 7;
+  string background_image_url = 8;
+  repeated Zone zones = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+message CreateLayoutRequest {
+  string name = 1;
+  string description = 2;
+  int32 canvas_width = 3;
+  int32 canvas_height = 4;
+  signage.hardware.v1.device.DeviceOrientation orientation = 5;
+  string background_color = 6;
+  string background_image_url = 7;
+}
+
+message GetLayoutRequest {
+  string id = 1;
+}
+
+message ListLayoutsRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+  signage.hardware.v1.device.DeviceOrientation orientation = 3;
+}
+
+message ListLayoutsResponse {
+  repeated Layout items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateLayoutRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int32 canvas_width = 4;
+  int32 canvas_height = 5;
+  signage.hardware.v1.device.DeviceOrientation orientation = 6;
+  string background_color = 7;
+  string background_image_url = 8;
+}
+
+message DeleteLayoutRequest {
+  string id = 1;
+}
+
+message DeleteLayoutResponse {
+  bool success = 1;
+}
+
+// Zone CRUD messages
+message CreateZoneRequest {
+  string layout_id = 1;
+  string name = 2;
+  int32 x = 3;
+  int32 y = 4;
+  int32 width = 5;
+  int32 height = 6;
+  int32 z_index = 7;
+  string background_color = 9;
+}
+
+message GetZoneRequest {
+  string id = 1;
+}
+
+message UpdateZoneRequest {
+  string id = 1;
+  string name = 2;
+  int32 x = 3;
+  int32 y = 4;
+  int32 width = 5;
+  int32 height = 6;
+  int32 z_index = 7;
+  string background_color = 9;
+}
+
+message DeleteZoneRequest {
+  string id = 1;
+}
+
+message DeleteZoneResponse {
+  bool success = 1;
+}
+
+message AddPlaylistBlockRequest {
+  string zone_id = 1;
+  string playlist_id = 2;
+  int32 start_time_seconds = 3;
+  int32 duration_seconds = 4;
+}
+
+message AddMediaBlockRequest {
+  string zone_id = 1;
+  string media_item_id = 2;
+  int32 start_time_seconds = 3;
+  int32 duration_seconds = 4;
+}
+
+message UpdatePlaylistBlockRequest {
+  string block_id = 1;
+  int32 start_time_seconds = 2;
+  int32 duration_seconds = 3;
+  string transition_type = 4;
+  int32 order_index = 5;
+}
+
+message RemovePlaylistBlockRequest {
+  string block_id = 1;
+}
+
+message PlaylistBlockResponse {
+  bool success = 1;
+  ZonePlaylist block = 2;
+}
+
+message SetPlaylistItemOverrideRequest {
+  string zone_playlist_id = 1;
+  string playlist_item_id = 2;
+  bool is_muted = 3;
+}
+
+message SetPlaylistItemOverrideResponse {
+  bool success = 1;
+  ZonePlaylistItemOverride override = 2;
+}

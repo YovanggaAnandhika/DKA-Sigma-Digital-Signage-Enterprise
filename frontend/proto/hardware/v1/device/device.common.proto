@@ -1,0 +1,121 @@
+syntax = "proto3";
+
+package signage.hardware.v1.device;
+
+import "common/v1/types.proto";
+
+enum DeviceOrientation {
+  ORIENTATION_UNSPECIFIED = 0;
+  ORIENTATION_LANDSCAPE = 1;
+  ORIENTATION_PORTRAIT = 2;
+}
+
+message Device {
+  string id = 1;
+  string name = 2;
+  string pairing_code = 3;
+  bool is_paired = 4;
+  string device_token = 5;
+  int32 screen_width = 6;
+  int32 screen_height = 7;
+  DeviceOrientation orientation = 8;
+  string ip_address = 9;
+  string mac_address = 10;
+  string app_version = 11;
+  string android_version = 12;
+  int64 storage_total_bytes = 13;
+  int64 storage_free_bytes = 14;
+  string current_layout_id = 15;
+  string current_layout_name = 16;
+  string canary_group_id = 17;
+  bool is_online = 18;
+  string last_heartbeat_at = 19;
+  string created_at = 20;
+  string updated_at = 21;
+  string display_group_id = 22;
+  string schedule_id = 23;
+  string timezone = 24;
+}
+
+message RegisterDeviceRequest {
+  string mac_address = 1;
+  string app_version = 2;
+  string android_version = 3;
+  int32 screen_width = 4;
+  int32 screen_height = 5;
+  DeviceOrientation orientation = 6;
+}
+
+message RegisterDeviceResponse {
+  string device_id = 1;
+  string pairing_code = 2; // e.g. "XR8-992"
+  int64 expires_in_seconds = 3;
+}
+
+message PairDeviceRequest {
+  string pairing_code = 1;
+  string device_name = 2;
+  string store_location = 3;
+  string default_layout_id = 4;
+  string canary_group_id = 5;
+}
+
+message PairDeviceResponse {
+  bool success = 1;
+  Device device = 2;
+  string device_token = 3;
+}
+
+message HeartbeatRequest {
+  string device_id = 1;
+  string device_token = 2;
+  int64 storage_free_bytes = 3;
+  int64 storage_total_bytes = 4;
+  int32 memory_usage_percent = 5;
+  string current_playing_media_id = 6;
+  string active_layout_id = 7;
+  string active_manifest_hash = 8;
+}
+
+message HeartbeatResponse {
+  bool acknowledged = 1;
+  bool needs_manifest_sync = 2;
+  string server_time = 3;
+}
+
+message GetDeviceRequest {
+  string id = 1;
+}
+
+message ListDevicesRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+  optional bool is_online = 3;
+  string canary_group_id = 4;
+}
+
+message ListDevicesResponse {
+  repeated Device items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateDeviceRequest {
+  string id = 1;
+  string name = 2;
+  int32 screen_width = 3;
+  int32 screen_height = 4;
+  DeviceOrientation orientation = 5;
+  string current_layout_id = 6;
+  string canary_group_id = 7;
+  string display_group_id = 8;
+  string schedule_id = 9;
+  string timezone = 10;
+}
+
+message DeleteDeviceRequest {
+  string id = 1;
+}
+
+message DeleteDeviceResponse {
+  bool success = 1;
+}

@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package signage.distribution.v1.stream;
+
+import "distribution/v1/stream/stream.common.proto";
+
+service StreamService {
+  // Bi-directional streaming for Android Display
+  rpc DisplayStream(stream StreamClientMessage) returns (stream StreamServerMessage);
+
+  // Admin CMS push immediate commands
+  rpc PushCommand(PushCommandRequest) returns (PushCommandResponse);
+}

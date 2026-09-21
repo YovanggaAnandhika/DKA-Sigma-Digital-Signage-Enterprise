@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package signage.distribution.v1.canary;
+
+import "common/v1/types.proto";
+
+message CanaryGroup {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int32 rollout_percentage = 4; // 0 to 100
+  bool is_active = 5;
+  string target_layout_id = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message CreateCanaryGroupRequest {
+  string name = 1;
+  string description = 2;
+  int32 rollout_percentage = 3;
+  bool is_active = 4;
+  string target_layout_id = 5;
+}
+
+message GetCanaryGroupRequest {
+  string id = 1;
+}
+
+message ListCanaryGroupsRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+}
+
+message ListCanaryGroupsResponse {
+  repeated CanaryGroup items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateCanaryGroupRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int32 rollout_percentage = 4;
+  bool is_active = 5;
+  string target_layout_id = 6;
+}
+
+message DeleteCanaryGroupRequest {
+  string id = 1;
+}
+
+message DeleteCanaryGroupResponse {
+  bool success = 1;
+}
+
+message EvaluateCanaryRequest {
+  string device_id = 1;
+  string requested_layout_id = 2;
+}
+
+message EvaluateCanaryResponse {
+  bool is_in_canary = 1;
+  string effective_layout_id = 2;
+  string canary_group_id = 3;
+}
