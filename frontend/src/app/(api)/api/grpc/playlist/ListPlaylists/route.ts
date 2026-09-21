@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PlaylistServiceClient } from '@/lib/api/generated/studio/v1/playlist/playlist_grpc_pb';
-import { ListPlaylistsRequest } from '@/lib/api/generated/studio/v1/playlist/playlist.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/api/core/grpcClient';
+import { PlaylistServiceClient } from '@/lib/api/studio/v1/playlist/playlist_grpc_pb';
+import { ListPlaylistsRequest } from '@/lib/api/studio/v1/playlist/playlist.common_pb';
+import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const request = new ListPlaylistsRequest();
     if (body.search) request.setSearch(body.search);
     if (body.pagination) {
-      const pag = new (require('@/lib/api/generated/common/v1/types_pb').PaginationRequest)();
+      const pag = new (require('@/lib/api/common/v1/types_pb').PaginationRequest)();
       if (body.pagination.page) pag.setPage(body.pagination.page);
       if (body.pagination.limit) pag.setLimit(body.pagination.limit);
       request.setPagination(pag);

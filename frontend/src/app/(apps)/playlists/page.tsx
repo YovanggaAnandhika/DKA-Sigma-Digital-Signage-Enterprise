@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { api, Playlist } from '@/lib/api';
+import { api, Playlist } from '@/lib/services';
 import { Pagination } from '@/components/ui/Pagination';
 import { ListMusic, Plus, Search, RefreshCw, Edit, Trash2, Eye, Shuffle } from 'lucide-react';
 

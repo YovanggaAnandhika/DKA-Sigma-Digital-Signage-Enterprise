@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { api } from '@/lib/api';
-import type { DisplayGroup } from '@/lib/api/services/hardware/display-group.types';
+import { api } from '@/lib/services';
+import type { DisplayGroup } from '@/lib/services/hardware/display-group.types';
 import { Pagination } from '@/components/ui/Pagination';
 import { MonitorPlay, Plus, Search, RefreshCw, Trash2, Edit } from 'lucide-react';
 

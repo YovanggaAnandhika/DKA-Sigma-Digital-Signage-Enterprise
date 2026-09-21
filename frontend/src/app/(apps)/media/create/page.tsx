@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api } from '@/lib/api';
+import { api } from '@/lib/services';
 import { ArrowLeft, Save, Upload, UploadCloud, Film, Image as ImageIcon, Globe, CheckCircle2, X, Sparkles, FileText } from 'lucide-react';
 
 export default function CreateMediaPage() {

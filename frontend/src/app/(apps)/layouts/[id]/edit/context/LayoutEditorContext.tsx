@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { api, Layout, Zone as ApiZone, Playlist, MediaItem } from '@/lib/api';
+import { api, Layout, Zone as ApiZone, Playlist, MediaItem } from '@/lib/services';
 
 // Extend Zone for UI timeline properties
 export interface Zone extends ApiZone {

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MediaServiceClient } from '@/lib/api/generated/studio/v1/media/media_grpc_pb';
-import { ListMediaRequest } from '@/lib/api/generated/studio/v1/media/media.common_pb';
-import { PaginationRequest } from '@/lib/api/generated/common/v1/types_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/api/core/grpcClient';
+import { MediaServiceClient } from '@/lib/api/studio/v1/media/media_grpc_pb';
+import { ListMediaRequest } from '@/lib/api/studio/v1/media/media.common_pb';
+import { PaginationRequest } from '@/lib/api/common/v1/types_pb';
+import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {

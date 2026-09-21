@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { api, Role, Permission } from '@/lib/api';
+import { api, Role, Permission } from '@/lib/services';
 import { 
   ShieldCheck, 
   ArrowLeft, 

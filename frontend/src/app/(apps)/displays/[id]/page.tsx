@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api, Device } from '@/lib/api';
+import { api, Device } from '@/lib/services';
 import { ArrowLeft, Edit, Tv, Radio, Clock, HardDrive, Cpu, RefreshCw, Zap } from 'lucide-react';
 
 export default function ViewDisplayPage() {

@@ -13,7 +13,7 @@ import {
   RotateCw,
   Sparkles
 } from 'lucide-react';
-import { api, Playlist, Layout } from '@/lib/api';
+import { api, Playlist, Layout } from '@/lib/services';
 
 export default function SimulatorPage() {
   const [slideIndex, setSlideIndex] = useState(0);

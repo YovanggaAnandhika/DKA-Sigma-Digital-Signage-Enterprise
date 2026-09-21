@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { UserServiceClient } from '@/lib/api/generated/iam/v1/user/user_grpc_pb';
-import { UpdateUserRequest } from '@/lib/api/generated/iam/v1/user/user.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/api/core/grpcClient';
+import { UserServiceClient } from '@/lib/api/iam/v1/user/user_grpc_pb';
+import { UpdateUserRequest } from '@/lib/api/iam/v1/user/user.common_pb';
+import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {

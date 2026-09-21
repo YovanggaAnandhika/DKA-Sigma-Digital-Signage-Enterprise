@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DisplayGroupServiceClient } from '@/lib/api/generated/hardware/v1/display_group/display_group_grpc_pb';
-import { ListDisplayGroupsRequest } from '@/lib/api/generated/hardware/v1/display_group/display_group.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/api/core/grpcClient';
+import { DisplayGroupServiceClient } from '@/lib/api/hardware/v1/display_group/display_group_grpc_pb';
+import { ListDisplayGroupsRequest } from '@/lib/api/hardware/v1/display_group/display_group.common_pb';
+import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {

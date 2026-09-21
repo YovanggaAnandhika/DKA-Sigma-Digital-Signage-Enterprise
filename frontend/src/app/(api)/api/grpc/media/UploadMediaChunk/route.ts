@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MediaServiceClient } from '@/lib/api/generated/studio/v1/media/media_grpc_pb';
-import { UploadMediaChunkRequest } from '@/lib/api/generated/studio/v1/media/media.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/api/core/grpcClient';
+import { MediaServiceClient } from '@/lib/api/studio/v1/media/media_grpc_pb';
+import { UploadMediaChunkRequest } from '@/lib/api/studio/v1/media/media.common_pb';
+import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {

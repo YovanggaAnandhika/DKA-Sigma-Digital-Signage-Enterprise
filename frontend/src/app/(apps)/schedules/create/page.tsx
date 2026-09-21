@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api } from '@/lib/api';
+import { api } from '@/lib/services';
 import { ArrowLeft, Save } from 'lucide-react';
 
 export default function CreateSchedulePage() {

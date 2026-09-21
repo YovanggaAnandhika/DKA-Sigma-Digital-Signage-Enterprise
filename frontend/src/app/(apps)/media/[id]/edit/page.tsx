@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api, MediaItem } from '@/lib/api';
+import { api, MediaItem } from '@/lib/services';
 import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
 
 export default function EditMediaPage() {

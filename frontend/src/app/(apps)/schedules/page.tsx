@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { api } from '@/lib/api';
-import type { Schedule } from '@/lib/api/services/studio/schedule.types';
+import { api } from '@/lib/services';
+import type { Schedule } from '@/lib/services/studio/schedule.types';
 import { Pagination } from '@/components/ui/Pagination';
 import { CalendarDays, Plus, Search, RefreshCw, Trash2, Edit } from 'lucide-react';
 

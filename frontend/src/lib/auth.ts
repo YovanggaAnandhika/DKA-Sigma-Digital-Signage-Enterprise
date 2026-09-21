@@ -1,4 +1,4 @@
-import { api, getStoredSession, saveSession, clearSession } from './api';
+import { api, getStoredSession, saveSession, clearSession } from './services';
 import type { UserSession } from './api/iam';
 
 export type { UserSession };

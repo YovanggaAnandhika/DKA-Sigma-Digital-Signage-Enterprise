@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DeviceServiceClient } from '@/lib/api/generated/hardware/v1/device/device_grpc_pb';
-import { DeleteDeviceRequest } from '@/lib/api/generated/hardware/v1/device/device.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/api/core/grpcClient';
+import { DeviceServiceClient } from '@/lib/api/hardware/v1/device/device_grpc_pb';
+import { DeleteDeviceRequest } from '@/lib/api/hardware/v1/device/device.common_pb';
+import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {

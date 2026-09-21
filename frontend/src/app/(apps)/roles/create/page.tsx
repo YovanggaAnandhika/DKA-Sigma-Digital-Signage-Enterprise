@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api, Permission } from '@/lib/api';
+import { api, Permission } from '@/lib/services';
 import { ArrowLeft, Save, ShieldCheck } from 'lucide-react';
 
 export default function CreateRolePage() {

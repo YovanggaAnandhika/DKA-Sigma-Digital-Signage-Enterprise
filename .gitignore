@@ -53,7 +53,7 @@ dist/
 *.tsbuildinfo
 next-env.d.ts
 frontend/public/uploads/
-generated/
+frontend/src/lib/api/
 
 # ─── Package Managers ────────────────────────────────────────────────────────
 npm-debug.log*

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { api, Role } from '@/lib/api';
+import { api, Role } from '@/lib/services';
 import { Pagination } from '@/components/ui/Pagination';
 import { ShieldCheck, Plus, Search, RefreshCw, Edit, Trash2, Eye, Key } from 'lucide-react';
 

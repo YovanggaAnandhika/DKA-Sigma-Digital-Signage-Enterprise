@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { api } from '@/lib/api';
-import type { Device } from '@/lib/api/services/hardware';
-import type { Layout, MediaItem, Playlist } from '@/lib/api/services/studio';
+import { api } from '@/lib/services';
+import type { Device } from '@/lib/services/hardware';
+import type { Layout, MediaItem, Playlist } from '@/lib/services/studio';
 import { TimelineChart } from '@/components/charts/TimelineChart';
 import { InsightCard, InsightItem } from '@/components/InsightCard';
 import { Tv, Palette, ListMusic, FolderOpen, RefreshCw, Radio, Layers, CheckCircle2 } from 'lucide-react';
