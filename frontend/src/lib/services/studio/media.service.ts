@@ -9,16 +9,17 @@ export async function getMedia(params?: { search?: string; page?: number; limit?
       limit: params?.limit || 25
     }
   };
-  
+
   const result = await invokeApi<any>('/api/grpc/media/ListMedia', payload);
   return {
-    data: result.mediaList || [],
-    total: result.pagination?.totalItems || result.mediaList?.length || 0
+    data: result.itemsList || [],
+    total: result.pagination?.totalItems || result.itemsList?.length || 0
   };
 }
 
 export async function getMediaItem(id: string): Promise<MediaItem> {
   const result = await invokeApi<any>('/api/grpc/media/GetMedia', { id });
+  console.log(result.media)
   return result.media as MediaItem;
 }
 
@@ -143,7 +144,7 @@ export async function uploadFileViaGrpc(
 
 export async function getMediaFile(filename: string): Promise<{ success: boolean; filename: string; mime_type: string; file_data: Uint8Array }> {
   const result = await invokeApi<any>('/api/grpc/media/GetMediaFile', { filename });
-  
+
   // Convert base64 back to Uint8Array
   const b64 = result.fileData || '';
   const binaryString = atob(b64);
@@ -151,7 +152,7 @@ export async function getMediaFile(filename: string): Promise<{ success: boolean
   for (let i = 0; i < binaryString.length; i++) {
     bytes[i] = binaryString.charCodeAt(i);
   }
-  
+
   return {
     success: result.success,
     filename: result.filename,

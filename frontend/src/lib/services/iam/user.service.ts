@@ -7,8 +7,8 @@ export async function getUsers(params?: { search?: string; page?: number; limit?
     pagination: { page: params?.page || 1, limit: params?.limit || 25 }
   });
   return {
-    data: result.usersList || [],
-    total: result.pagination?.totalItems || result.usersList?.length || 0
+    data: result.itemsList || [],
+    total: result.pagination?.totalItems || result.itemsList?.length || 0
   };
 }
 

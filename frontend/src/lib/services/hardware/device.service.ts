@@ -8,8 +8,8 @@ export async function getDevices(params?: { search?: string; page?: number; limi
     status: params?.status
   });
   return {
-    data: result.devicesList || [],
-    total: result.pagination?.totalItems || result.devicesList?.length || 0
+    data: result.itemsList || [],
+    total: result.pagination?.totalItems || result.itemsList?.length || 0
   };
 }
 

@@ -19,13 +19,17 @@ export async function POST(req: NextRequest) {
         } else {
           const resObj = response.toObject();
           const u = resObj.user;
+          const rawExpiresAt = Number(resObj.expiresAt) || 0;
+          // If expiresAt is in unix seconds (less than 10^11), convert to milliseconds
+          const expiresAtMs = rawExpiresAt < 100000000000 ? rawExpiresAt * 1000 : rawExpiresAt;
+
           const userSession = {
             id: u?.id || '',
             email: u?.email || body.email,
             fullName: u?.fullName || u?.full_name || '',
             token: resObj.token,
             effectivePermissions: u?.effectivePermissionsList || [],
-            expiresAt: resObj.expiresAt || 0,
+            expiresAt: expiresAtMs || (Date.now() + 24 * 3600 * 1000),
           };
           resolve(NextResponse.json(userSession));
         }

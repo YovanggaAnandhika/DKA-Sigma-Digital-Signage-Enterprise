@@ -11,8 +11,8 @@ export async function getPlaylists(params?: { search?: string; page?: number; li
   };
   const result = await invokeApi<any>('/api/grpc/playlist/ListPlaylists', payload);
   return {
-    data: result.playlistsList || [],
-    total: result.pagination?.totalItems || result.playlistsList?.length || 0
+    data: result.itemsList || [],
+    total: result.pagination?.totalItems || result.itemsList?.length || 0
   };
 }
 

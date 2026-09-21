@@ -7,7 +7,7 @@ export async function getPermissions(params?: { search?: string; page?: number; 
     pagination: { page: params?.page || 1, limit: params?.limit || 100 }
   });
   return {
-    data: result.permissionsList || [],
-    total: result.pagination?.totalItems || result.permissionsList?.length || 0
+    data: result.itemsList || [],
+    total: result.pagination?.totalItems || result.itemsList?.length || 0
   };
 }

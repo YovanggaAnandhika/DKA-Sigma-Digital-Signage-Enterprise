@@ -7,8 +7,8 @@ export async function getDisplayGroups(params?: { search?: string; page?: number
     pagination: { page: params?.page || 1, limit: params?.limit || 25 }
   });
   return {
-    data: result.groupsList || [],
-    total: result.pagination?.totalItems || result.groupsList?.length || 0
+    data: result.itemsList || [],
+    total: result.pagination?.totalItems || result.itemsList?.length || 0
   };
 }
 

@@ -7,27 +7,30 @@ export async function getSchedules(params?: { search?: string; page?: number; li
     pagination: { page: params?.page || 1, limit: params?.limit || 25 }
   });
   return {
-    data: result.schedulesList || [],
-    total: result.pagination?.totalItems || result.schedulesList?.length || 0
+    data: result.itemsList || [],
+    total: result.pagination?.totalItems || result.itemsList?.length || 0
   };
 }
 
 export async function getSchedule(id: string): Promise<Schedule> {
   const result = await invokeApi<any>('/api/grpc/schedule/GetSchedule', { id });
-  if (!result.schedule) throw new Error(`Schedule ID ${id} tidak ditemukan`);
-  return result.schedule as Schedule;
+  const s = result.schedule || result;
+  if (!s || !s.id) throw new Error(`Schedule ID ${id} tidak ditemukan`);
+  return s as Schedule;
 }
 
 export async function createSchedule(data: { name: string; description?: string; priority?: number }): Promise<Schedule> {
   const result = await invokeApi<any>('/api/grpc/schedule/CreateSchedule', data);
-  if (!result.schedule) throw new Error('CreateSchedule failed');
-  return result.schedule as Schedule;
+  const s = result.schedule || result;
+  if (!s || !s.id) throw new Error('CreateSchedule failed');
+  return s as Schedule;
 }
 
 export async function updateSchedule(id: string, data: { name?: string; description?: string; priority?: number }): Promise<Schedule> {
   const result = await invokeApi<any>('/api/grpc/schedule/UpdateSchedule', { id, ...data });
-  if (!result.schedule) throw new Error('UpdateSchedule failed');
-  return result.schedule as Schedule;
+  const s = result.schedule || result;
+  if (!s || !s.id) throw new Error('UpdateSchedule failed');
+  return s as Schedule;
 }
 
 export async function deleteSchedule(id: string): Promise<boolean> {

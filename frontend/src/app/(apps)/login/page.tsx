@@ -47,10 +47,7 @@ export default function LoginPage() {
       const session = await loginWithGrpc(email, password);
       saveSession(session);
       setIsExiting(true);
-      setTimeout(() => {
-        router.push('/');
-        router.refresh();
-      }, 500);
+      window.location.href = '/';
     } catch (err: any) {
       setErrorMsg(err.message || 'Login gagal. Periksa kembali kredensial Anda.');
       setLoading(false);

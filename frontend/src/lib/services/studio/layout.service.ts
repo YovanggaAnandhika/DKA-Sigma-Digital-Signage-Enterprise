@@ -7,13 +7,14 @@ export async function getLayouts(params?: { search?: string; page?: number; limi
     pagination: { page: params?.page || 1, limit: params?.limit || 25 }
   });
   return {
-    data: result.layoutsList || [],
-    total: result.pagination?.totalItems || result.layoutsList?.length || 0
+    data: result.itemsList || [],
+    total: result.pagination?.totalItems || result.itemsList?.length || 0
   };
 }
 
 export async function getLayout(id: string): Promise<Layout> {
   const result = await invokeApi<any>('/api/grpc/layout/GetLayout', { id });
+  console.log(result)
   if (!result.layout) throw new Error(`Layout ID ${id} tidak ditemukan`);
   return result.layout as Layout;
 }

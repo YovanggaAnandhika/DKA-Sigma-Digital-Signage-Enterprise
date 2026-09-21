@@ -7,8 +7,8 @@ export async function getRoles(params?: { search?: string; page?: number; limit?
     pagination: { page: params?.page || 1, limit: params?.limit || 25 }
   });
   return {
-    data: result.rolesList || [],
-    total: result.pagination?.totalItems || result.rolesList?.length || 0
+    data: result.itemsList || [],
+    total: result.pagination?.totalItems || result.itemsList?.length || 0
   };
 }
 
