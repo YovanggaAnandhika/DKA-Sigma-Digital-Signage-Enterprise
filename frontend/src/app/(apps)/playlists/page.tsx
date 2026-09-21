@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { api, Playlist } from '../../lib/api';
-import { Pagination } from '../../components/ui/Pagination';
+import { api, Playlist } from '@/lib/api';
+import { Pagination } from '@/components/ui/Pagination';
 import { ListMusic, Plus, Search, RefreshCw, Edit, Trash2, Eye, Shuffle } from 'lucide-react';
 
 export default function PlaylistsPage() {

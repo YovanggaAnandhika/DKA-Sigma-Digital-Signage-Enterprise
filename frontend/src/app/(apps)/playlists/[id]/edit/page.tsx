@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api, Playlist, MediaItem, PlaylistItem } from '../../../../lib/api';
+import { api, Playlist, MediaItem, PlaylistItem } from '@/lib/api';
 import { ArrowLeft, Save, RefreshCw, Plus, Trash2, Film, Image as ImageIcon, Clock, Sparkles } from 'lucide-react';
 
 export default function EditPlaylistPage() {

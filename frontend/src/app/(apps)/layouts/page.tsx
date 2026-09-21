@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { api, Layout } from '../../lib/api';
-import { Pagination } from '../../components/ui/Pagination';
+import { api, Layout } from '@/lib/api';
+import { Pagination } from '@/components/ui/Pagination';
 import { Palette, Plus, Search, RefreshCw, Edit, Trash2, Eye, LayoutGrid } from 'lucide-react';
 
 export default function LayoutsPage() {

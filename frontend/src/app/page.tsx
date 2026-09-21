@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import type { Device } from '@/lib/api/hardware';
 import type { Layout, MediaItem, Playlist } from '@/lib/api/studio';
-import { TimelineChart } from '../components/charts/TimelineChart';
-import { InsightCard, InsightItem } from '../components/InsightCard';
+import { TimelineChart } from '@/components/charts/TimelineChart';
+import { InsightCard, InsightItem } from '@/components/InsightCard';
 import { Tv, Palette, ListMusic, FolderOpen, RefreshCw, Radio, Layers, CheckCircle2 } from 'lucide-react';
 
 export default function DashboardPage() {

@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api } from '../../../../lib/api';
-import type { Schedule, Layout } from '../../../../lib/api';
+import { api } from '@/lib/api';
+import type { Schedule, Layout } from '@/lib/api';
 import { ArrowLeft, Save, RefreshCw, Trash2, Plus } from 'lucide-react';
 
 export default function EditSchedulePage() {

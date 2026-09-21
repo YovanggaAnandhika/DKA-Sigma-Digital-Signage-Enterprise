@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { api, MediaItem } from '../../lib/api';
-import { Pagination } from '../../components/ui/Pagination';
+import { api, MediaItem } from '@/lib/api';
+import { Pagination } from '@/components/ui/Pagination';
 import { FolderOpen, Plus, Search, RefreshCw, Edit, Trash2, Eye, Film, Image as ImageIcon, Globe } from 'lucide-react';
 
 export default function MediaPage() {

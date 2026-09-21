@@ -1,7 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { ThemeProvider } from '../components/ThemeProvider';
-import AppShell from '../components/AppShell';
+import { ThemeProvider } from '@/components/ThemeProvider';
+import AppShell from '@/components/AppShell';
 
 export const metadata: Metadata = {
   title: 'DKASigma | Modern Retail Digital Signage Platform',

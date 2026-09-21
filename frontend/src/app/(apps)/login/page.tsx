@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Zap, ArrowRight, ShieldAlert, Monitor, CheckCircle2 } from 'lucide-react';
-import { loginWithGrpc, saveSession } from '../../lib/grpc-client';
+import { loginWithGrpc, saveSession } from '@/lib/grpc-client';
 
 const SLIDES = [
   {

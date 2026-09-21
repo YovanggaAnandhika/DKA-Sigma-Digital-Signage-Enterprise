@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { api, Device } from '../../lib/api';
-import { Pagination } from '../../components/ui/Pagination';
+import { api, Device } from '@/lib/api';
+import { Pagination } from '@/components/ui/Pagination';
 import { Tv, Plus, Search, RefreshCw, Edit, Trash2, Eye } from 'lucide-react';
 
 export default function DisplaysPage() {

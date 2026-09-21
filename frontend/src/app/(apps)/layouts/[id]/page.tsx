@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api, Layout, Playlist, MediaItem } from '../../../lib/api';
+import { api, Layout, Playlist, MediaItem } from '@/lib/api';
 import { ArrowLeft, Edit, RefreshCw, Film, Image as ImageIcon, Play, Pause, Layers, Clock, List, Volume2, VolumeX } from 'lucide-react';
 
 export default function ViewLayoutPage() {

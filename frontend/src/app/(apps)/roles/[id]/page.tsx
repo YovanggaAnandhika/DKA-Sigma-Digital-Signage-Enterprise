@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api, Role } from '../../../lib/api';
+import { api, Role } from '@/lib/api';
 import { ArrowLeft, Edit, ShieldCheck, RefreshCw, Key } from 'lucide-react';
 
 export default function ViewRolePage() {
