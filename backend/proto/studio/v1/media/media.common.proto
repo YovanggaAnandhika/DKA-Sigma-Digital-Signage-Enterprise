@@ -109,7 +109,10 @@ message GetMediaFileResponse {
 
 message StreamMediaFileRequest {
   string filename = 1;
+  int64 start_byte = 2;  // byte offset to start streaming from (for Range requests)
+  int64 end_byte = 3;    // last byte inclusive, -1 = stream to end of file
 }
+
 
 message StreamMediaFileResponse {
   bytes chunk_data = 1;

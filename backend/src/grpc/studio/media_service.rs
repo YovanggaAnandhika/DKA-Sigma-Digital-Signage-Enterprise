@@ -2,6 +2,8 @@ use tonic::{Request, Response, Status};
 use uuid::Uuid;
 use tokio::io::AsyncWriteExt;
 use tokio::io::AsyncReadExt;
+use tokio::io::AsyncSeekExt;
+use std::io::SeekFrom;
 use tokio_stream::wrappers::ReceiverStream;
 use sha2::{Sha256, Digest};
 use crate::db::DbPool;
@@ -304,6 +306,9 @@ impl MediaServiceTrait for MediaServiceImpl {
     ) -> Result<Response<Self::StreamMediaFileStream>, Status> {
         let req = request.into_inner();
         let filename = req.filename;
+        let start_byte = req.start_byte.max(0) as u64;
+        let end_byte_req = req.end_byte; // -1 means stream to end
+
         let clean_filename = std::path::Path::new(&filename)
             .file_name()
             .and_then(|f| f.to_str())
@@ -338,22 +343,49 @@ impl MediaServiceTrait for MediaServiceImpl {
             .map_err(|e| Status::internal(format!("Gagal membaca metadata file: {}", e)))?;
         let total_size = metadata.len() as i64;
 
+        // Resolve end byte: -1 means "to end of file"
+        let end_byte: u64 = if end_byte_req < 0 {
+            metadata.len().saturating_sub(1)
+        } else {
+            (end_byte_req as u64).min(metadata.len().saturating_sub(1))
+        };
+
+        if start_byte > end_byte {
+            return Err(Status::invalid_argument("start_byte lebih besar dari end_byte"));
+        }
+
+        let bytes_to_send = end_byte - start_byte + 1;
+
         let mut file = tokio::fs::File::open(&file_path)
             .await
             .map_err(|e| Status::internal(format!("Gagal membuka file: {}", e)))?;
 
-        let (tx, rx) = tokio::sync::mpsc::channel(4);
+        // Seek to start position for range requests
+        if start_byte > 0 {
+            file.seek(SeekFrom::Start(start_byte))
+                .await
+                .map_err(|e| Status::internal(format!("Gagal seek ke byte {}: {}", start_byte, e)))?;
+        }
+
+        let (tx, rx) = tokio::sync::mpsc::channel(8);
+        let chunk_size: u64 = 256 * 1024; // 256KB chunks for smoother buffering
 
         tokio::spawn(async move {
             let mut is_first = true;
-            let mut buffer = vec![0; 64 * 1024]; // 64KB chunks
+            let mut bytes_remaining = bytes_to_send;
 
-            loop {
+            while bytes_remaining > 0 {
+                let to_read = chunk_size.min(bytes_remaining) as usize;
+                let mut buffer = vec![0u8; to_read];
+
                 match file.read(&mut buffer).await {
                     Ok(0) => break, // EOF
                     Ok(n) => {
+                        buffer.truncate(n);
+                        bytes_remaining = bytes_remaining.saturating_sub(n as u64);
+
                         let response = StreamMediaFileResponse {
-                            chunk_data: buffer[..n].to_vec(),
+                            chunk_data: buffer,
                             mime_type: if is_first { mime_type.clone() } else { String::new() },
                             total_size: if is_first { total_size } else { 0 },
                             error_message: String::new(),
@@ -361,8 +393,7 @@ impl MediaServiceTrait for MediaServiceImpl {
                         is_first = false;
 
                         if tx.send(Ok(response)).await.is_err() {
-                            // Receiver closed the stream
-                            break;
+                            break; // Client disconnected
                         }
                     }
                     Err(e) => {
