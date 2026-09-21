@@ -1,0 +1,36 @@
+import { invokeApi } from '../../core/invokeApi';
+import { Role } from './types';
+
+export async function getRoles(params?: { search?: string; page?: number; limit?: number }): Promise<{ data: Role[]; total: number }> {
+  const result = await invokeApi<any>('/api/grpc/role/ListRoles', {
+    search: params?.search,
+    pagination: { page: params?.page || 1, limit: params?.limit || 25 }
+  });
+  return {
+    data: result.rolesList || [],
+    total: result.pagination?.totalItems || result.rolesList?.length || 0
+  };
+}
+
+export async function getRole(id: string): Promise<Role> {
+  const result = await invokeApi<any>('/api/grpc/role/GetRole', { id });
+  if (!result.role) throw new Error(`Role ID ${id} tidak ditemukan`);
+  return result.role as Role;
+}
+
+export async function createRole(data: { name: string; description?: string; permission_ids: string[] }): Promise<Role> {
+  const result = await invokeApi<any>('/api/grpc/role/CreateRole', data);
+  if (!result.role) throw new Error('CreateRole failed');
+  return result.role as Role;
+}
+
+export async function updateRole(id: string, data: { name?: string; description?: string; permission_ids?: string[] }): Promise<Role> {
+  const result = await invokeApi<any>('/api/grpc/role/UpdateRole', { id, ...data });
+  if (!result.role) throw new Error('UpdateRole failed');
+  return result.role as Role;
+}
+
+export async function deleteRole(id: string): Promise<boolean> {
+  await invokeApi<any>('/api/grpc/role/DeleteRole', { id });
+  return true;
+}

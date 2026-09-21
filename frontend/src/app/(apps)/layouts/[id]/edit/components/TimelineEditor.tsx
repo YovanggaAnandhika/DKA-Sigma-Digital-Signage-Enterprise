@@ -4,8 +4,8 @@ import React, { useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
 import { Play, Pause, RotateCcw, Film, Image as ImageIcon, Volume2, VolumeX, MicOff, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
-import { setPlaylistItemOverride } from '@/lib/api/studio/layout.service';
-import { PlaylistItem } from '@/lib/api/studio/types';
+import { setPlaylistItemOverride } from '@/lib/api/services/studio/layout.service';
+import { PlaylistItem } from '@/lib/api/services/studio/types';
 
 export default function TimelineEditor() {
   const {

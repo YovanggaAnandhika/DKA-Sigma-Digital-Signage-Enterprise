@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MediaServiceClient } from '@/lib/api/generated/studio/v1/media/media_grpc_pb';
 import { GetMediaRequest } from '@/lib/api/generated/studio/v1/media/media.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/api/grpcClient';
+import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/api/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {

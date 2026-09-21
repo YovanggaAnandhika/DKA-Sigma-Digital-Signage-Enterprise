@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { RoleServiceClient } from '@/lib/api/generated/iam/v1/role/role_grpc_pb';
 import { ListRolesRequest } from '@/lib/api/generated/iam/v1/role/role.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/api/grpcClient';
+import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/api/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {

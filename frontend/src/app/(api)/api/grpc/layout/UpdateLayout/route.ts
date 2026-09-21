@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { LayoutServiceClient } from '@/lib/api/generated/studio/v1/layout/layout_grpc_pb';
 import { UpdateLayoutRequest } from '@/lib/api/generated/studio/v1/layout/layout.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/api/grpcClient';
+import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/api/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {

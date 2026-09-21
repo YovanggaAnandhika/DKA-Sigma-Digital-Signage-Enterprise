@@ -6,14 +6,14 @@
 export * from './core/invokeApi';
 
 // Domain Submodule Exports
-export * from './iam';
-export * from './hardware';
-export * from './studio';
+export * from './services/iam';
+export * from './services/hardware';
+export * from './services/studio';
 
 // Re-export domain namespaces for direct modular consumption:
-import * as iamModule from './iam';
-import * as hardwareModule from './hardware';
-import * as studioModule from './studio';
+import * as iamModule from './services/iam';
+import * as hardwareModule from './services/hardware';
+import * as studioModule from './services/studio';
 
 export const iam = iamModule;
 export const hardware = hardwareModule;

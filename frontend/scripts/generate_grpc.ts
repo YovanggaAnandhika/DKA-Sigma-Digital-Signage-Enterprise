@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const outDir = path.join(__dirname, '../src/lib/api/generated');
+const outDir = path.join(__dirname, '../src/lib/api');
 if (!fs.existsSync(outDir)) {
   fs.mkdirSync(outDir, { recursive: true });
 }
@@ -31,16 +31,16 @@ const projectRoot = path.join(__dirname, '..');
 const command = `bunx grpc_tools_node_protoc \\
     --plugin=protoc-gen-ts=./node_modules/.bin/protoc-gen-ts \\
     --plugin=protoc-gen-grpc=./node_modules/.bin/grpc_tools_node_protoc_plugin \\
-    --js_out=import_style=commonjs,binary:./src/lib/api/generated \\
-    --grpc_out=grpc_js:./src/lib/api/generated \\
-    --ts_out=grpc_js:./src/lib/api/generated \\
+    --js_out=import_style=commonjs,binary:./src/lib/api \\
+    --grpc_out=grpc_js:./src/lib/api \\
+    --ts_out=grpc_js:./src/lib/api \\
     -I ./proto \\
     ${protoFiles}`;
 
 try {
   console.log('Generating gRPC clients...');
   execSync(command, { cwd: projectRoot, stdio: 'inherit' });
-  console.log('Successfully generated gRPC clients in src/lib/api/generated');
+  console.log('Successfully generated gRPC clients in src/lib/api');
 } catch (error: any) {
   console.error('Failed to generate gRPC clients:', error.message);
   process.exit(1);

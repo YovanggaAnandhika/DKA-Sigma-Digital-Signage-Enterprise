@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PlaylistServiceClient } from '@/lib/api/generated/studio/v1/playlist/playlist_grpc_pb';
 import { UpdatePlaylistItemRequest } from '@/lib/api/generated/studio/v1/playlist/playlist.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/api/grpcClient';
+import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/api/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {

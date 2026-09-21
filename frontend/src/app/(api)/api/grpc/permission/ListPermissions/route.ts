@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PermissionServiceClient } from '@/lib/api/generated/iam/v1/permission/permission_grpc_pb';
 import { ListPermissionsRequest } from '@/lib/api/generated/iam/v1/permission/permission.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/api/grpcClient';
+import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/api/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
