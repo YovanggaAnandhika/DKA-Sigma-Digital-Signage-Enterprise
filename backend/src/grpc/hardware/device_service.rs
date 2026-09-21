@@ -49,6 +49,9 @@ impl DeviceServiceImpl {
             last_heartbeat_at: dev.last_heartbeat_at.map(|t| t.to_rfc3339()).unwrap_or_default(),
             created_at: dev.created_at.to_rfc3339(),
             updated_at: dev.updated_at.to_rfc3339(),
+            display_group_id: dev.display_group_id.map(|id| id.to_string()).unwrap_or_default(),
+            schedule_id: dev.schedule_id.map(|id| id.to_string()).unwrap_or_default(),
+            timezone: dev.timezone,
         }
     }
 }
@@ -107,6 +110,7 @@ impl DeviceServiceTrait for DeviceServiceImpl {
         let dto = PairDeviceDto {
             pairing_code: req.pairing_code,
             device_name: req.device_name,
+            store_location: if req.store_location.is_empty() { None } else { Some(req.store_location) },
             default_layout_id,
             canary_group_id,
         };
@@ -227,6 +231,18 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             Uuid::parse_str(&req.canary_group_id).ok()
         };
 
+        let display_group_id = if req.display_group_id.is_empty() {
+            None
+        } else {
+            Uuid::parse_str(&req.display_group_id).ok()
+        };
+
+        let schedule_id = if req.schedule_id.is_empty() {
+            None
+        } else {
+            Uuid::parse_str(&req.schedule_id).ok()
+        };
+
         let dto = UpdateDeviceDto {
             name: if req.name.is_empty() { None } else { Some(req.name) },
             screen_width: if req.screen_width > 0 { Some(req.screen_width) } else { None },
@@ -234,6 +250,9 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             orientation: orientation_str,
             current_layout_id,
             canary_group_id,
+            display_group_id,
+            schedule_id,
+            timezone: if req.timezone.is_empty() { None } else { Some(req.timezone) },
         };
 
         let dev = DeviceService::update_device(&self.pool, device_id, dto)

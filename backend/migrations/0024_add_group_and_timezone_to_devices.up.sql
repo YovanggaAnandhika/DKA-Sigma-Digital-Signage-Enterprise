@@ -1,0 +1,2 @@
+ALTER TABLE devices ADD COLUMN display_group_id UUID REFERENCES display_groups(id) ON DELETE SET NULL;
+ALTER TABLE devices ADD COLUMN timezone VARCHAR(100) NOT NULL DEFAULT 'UTC';

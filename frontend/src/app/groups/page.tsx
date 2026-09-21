@@ -2,12 +2,13 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { api, Device } from '../../lib/api';
+import { api } from '../../lib/api';
+import type { DisplayGroup } from '../../lib/api/hardware/display-group.types';
 import { Pagination } from '../../components/ui/Pagination';
-import { Tv, Plus, Search, RefreshCw, Edit, Trash2, Eye } from 'lucide-react';
+import { MonitorPlay, Plus, Search, RefreshCw, Trash2, Edit } from 'lucide-react';
 
-export default function DisplaysPage() {
-  const [devices, setDevices] = useState<Device[]>([]);
+export default function DisplayGroupsPage() {
+  const [groups, setGroups] = useState<DisplayGroup[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -17,11 +18,11 @@ export default function DisplaysPage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.getDevices({ search, page, limit });
-      setDevices(res.data);
+      const res = await api.getDisplayGroups({ search, page, limit });
+      setGroups(res.data);
       setTotal(res.total);
     } catch (err) {
-      console.error('Failed to load devices:', err);
+      console.error('Failed to load display groups:', err);
     } finally {
       setLoading(false);
     }
@@ -32,12 +33,12 @@ export default function DisplaysPage() {
   }, [loadData]);
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Hapus display player "${name}"?`)) return;
+    if (!confirm(`Hapus grup layar "${name}"?`)) return;
     try {
-      await api.deleteDevice(id);
+      await api.deleteDisplayGroup(id);
       loadData();
     } catch (err: any) {
-      alert(err.message || 'Gagal menghapus perangkat');
+      alert(err.message || 'Gagal menghapus grup layar');
     }
   };
 
@@ -55,14 +56,14 @@ export default function DisplaysPage() {
               border: '1px solid rgba(59, 130, 246, 0.25)',
             }}
           >
-            <Tv size={24} />
+            <MonitorPlay size={24} />
           </div>
           <div>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-              Layar Retail (Player Fleet)
+              Grup Layar (Display Groups)
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Pusat registrasi dan pairing perangkat Android display player secara terpusat via gRPC.
+              Kelompokkan layar untuk mempermudah distribusi konten ke banyak cabang/area.
             </p>
           </div>
         </div>
@@ -71,9 +72,9 @@ export default function DisplaysPage() {
           <button onClick={loadData} className="btn btn-secondary" title="Segarkan data">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
-          <Link href="/displays/create" className="btn btn-primary">
+          <Link href="/groups/create" className="btn btn-primary">
             <Plus size={16} />
-            <span>Tambah Layar Baru</span>
+            <span>Tambah Grup</span>
           </Link>
         </div>
       </div>
@@ -89,7 +90,7 @@ export default function DisplaysPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            placeholder="Cari berdasarkan nama perangkat atau kode pairing..."
+            placeholder="Cari berdasarkan nama grup..."
             className="form-input"
             style={{ paddingLeft: '36px' }}
           />
@@ -102,79 +103,39 @@ export default function DisplaysPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Nama Perangkat</th>
-                <th>Kode Pairing</th>
-                <th>Grup Layar</th>
-                <th>Status</th>
-                <th>Resolusi & Orientasi</th>
-                <th>Alamat IP</th>
+                <th>Nama Grup</th>
+                <th>Deskripsi</th>
+                <th>Layout Default</th>
+                <th>Jadwal Aktif</th>
                 <th style={{ textAlign: 'right' }}>Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {devices.length === 0 ? (
+              {groups.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    {loading ? 'Memuat daftar layar dari backend gRPC...' : 'Tidak ada perangkat ditemukan.'}
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                    {loading ? 'Memuat data...' : 'Tidak ada grup ditemukan.'}
                   </td>
                 </tr>
               ) : (
-                devices.map((d) => (
-                  <tr key={d.id}>
+                groups.map((g) => (
+                  <tr key={g.id}>
                     <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                      <Link href={`/displays/${d.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        {d.name}
-                      </Link>
+                      {g.name}
                     </td>
-                    <td style={{ fontFamily: 'monospace' }}>
-                      <span
-                        style={{
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          backgroundColor: 'var(--bg-surface-elevated)',
-                          border: '1px solid var(--border-subtle)',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                        }}
-                      >
-                        {d.pairing_code}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                      {d.display_group_id ? 'Tergabung' : '-'}
-                    </td>
-                    <td>
-                      <span
-                        style={{
-                          padding: '2px 8px',
-                          borderRadius: '9999px',
-                          fontSize: '0.6875rem',
-                          fontWeight: 700,
-                          backgroundColor: d.is_online ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
-                          color: d.is_online ? 'var(--accent-emerald)' : 'var(--accent-rose)',
-                          border: d.is_online ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
-                        }}
-                      >
-                        {d.is_online ? 'ONLINE' : 'OFFLINE'}
-                      </span>
-                    </td>
-                    <td>
-                      {d.resolution} ({d.orientation})
-                    </td>
-                    <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{d.ip_address || '127.0.0.1'}</td>
+                    <td>{g.description || '-'}</td>
+                    <td>{g.default_layout_name || '-'}</td>
+                    <td>{g.schedule_name || '-'}</td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <Link href={`/displays/${d.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Lihat Detail">
-                          <Eye size={14} />
-                        </Link>
-                        <Link href={`/displays/${d.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit">
+                        <Link href={`/groups/${g.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit">
                           <Edit size={14} />
                         </Link>
                         <button
-                          onClick={() => handleDelete(d.id, d.name)}
+                          onClick={() => handleDelete(g.id, g.name)}
                           className="btn btn-danger"
                           style={{ padding: '5px 8px' }}
-                          title="Hapus Perangkat"
+                          title="Hapus Grup"
                         >
                           <Trash2 size={14} />
                         </button>

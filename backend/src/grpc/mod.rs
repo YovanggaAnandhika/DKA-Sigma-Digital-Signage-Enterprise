@@ -25,6 +25,9 @@ pub mod proto {
             pub mod device {
                 tonic::include_proto!("signage.hardware.v1.device");
             }
+            pub mod display_group {
+                tonic::include_proto!("signage.hardware.v1.display_group");
+            }
         }
     }
     pub mod studio {
@@ -37,6 +40,9 @@ pub mod proto {
             }
             pub mod layout {
                 tonic::include_proto!("signage.studio.v1.layout");
+            }
+            pub mod schedule {
+                tonic::include_proto!("signage.studio.v1.schedule");
             }
         }
     }

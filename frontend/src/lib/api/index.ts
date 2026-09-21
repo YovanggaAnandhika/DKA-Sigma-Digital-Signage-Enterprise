@@ -43,6 +43,12 @@ export const api = {
   updateDevice: hardwareModule.updateDevice,
   deleteDevice: hardwareModule.deleteDevice,
 
+  // Hardware - Display Groups
+  getDisplayGroups: hardwareModule.getDisplayGroups,
+  createDisplayGroup: hardwareModule.createDisplayGroup,
+  updateDisplayGroup: hardwareModule.updateDisplayGroup,
+  deleteDisplayGroup: hardwareModule.deleteDisplayGroup,
+
   // Studio — Layouts
   getLayouts: studioModule.getLayouts,
   getLayout: studioModule.getLayout,
@@ -58,6 +64,15 @@ export const api = {
   addMediaBlock: studioModule.addMediaBlock,
   updatePlaylistBlock: studioModule.updatePlaylistBlock,
   removePlaylistBlock: studioModule.removePlaylistBlock,
+
+  // Studio — Schedules
+  getSchedules: studioModule.getSchedules,
+  getSchedule: studioModule.getSchedule,
+  createSchedule: studioModule.createSchedule,
+  updateSchedule: studioModule.updateSchedule,
+  deleteSchedule: studioModule.deleteSchedule,
+  addScheduleEvent: studioModule.addScheduleEvent,
+  removeScheduleEvent: studioModule.removeScheduleEvent,
 
   // Studio — Playlists
   getPlaylists: studioModule.getPlaylists,

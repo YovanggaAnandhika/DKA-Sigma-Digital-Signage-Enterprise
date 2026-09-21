@@ -14,6 +14,8 @@ import {
   Activity,
   ChevronRight,
   ChevronDown,
+  MonitorPlay,
+  CalendarDays,
 } from 'lucide-react';
 import { useSidebar } from './SidebarProvider';
 
@@ -42,11 +44,13 @@ const navGroups: NavGroup[] = [
     heading: 'OPERASI & PERANGKAT',
     items: [
       { name: 'Layar Retail', desc: 'Manajemen & Pairing Player', href: '/displays', icon: Tv },
+      { name: 'Grup Layar', desc: 'Pengelompokan Layar', href: '/groups', icon: MonitorPlay },
     ],
   },
   {
     heading: 'STUDIO & KONTEN',
     items: [
+      { name: 'Penjadwalan', desc: 'Jadwal Putar & Prioritas', href: '/schedules', icon: CalendarDays },
       { name: 'Desain Layout', desc: 'Canvas Multi-Zona & Tata Letak', href: '/layouts', icon: Palette },
       { name: 'Daftar Putar', desc: 'Urutan & Durasi Media', href: '/playlists', icon: ListMusic },
       { name: 'Pustaka Media', desc: 'Aset Gambar & Video Promosi', href: '/media', icon: FolderOpen },

@@ -43,6 +43,9 @@ export async function getDevices(params?: { search?: string; page?: number; limi
         else if (dTag.fieldNumber === 19) dev.last_heartbeat_at = dReader.readString();
         else if (dTag.fieldNumber === 20) dev.created_at = dReader.readString();
         else if (dTag.fieldNumber === 21) dev.updated_at = dReader.readString();
+        else if (dTag.fieldNumber === 22) dev.display_group_id = dReader.readString();
+        else if (dTag.fieldNumber === 23) dev.schedule_id = dReader.readString();
+        else if (dTag.fieldNumber === 24) dev.timezone = dReader.readString();
         else dReader.skip(dTag.wireType);
       }
 
@@ -95,6 +98,9 @@ export async function getDevice(id: string): Promise<Device> {
     else if (tag.fieldNumber === 19) dev.last_heartbeat_at = reader.readString();
     else if (tag.fieldNumber === 20) dev.created_at = reader.readString();
     else if (tag.fieldNumber === 21) dev.updated_at = reader.readString();
+    else if (tag.fieldNumber === 22) dev.display_group_id = reader.readString();
+    else if (tag.fieldNumber === 23) dev.schedule_id = reader.readString();
+    else if (tag.fieldNumber === 24) dev.timezone = reader.readString();
     else reader.skip(tag.wireType);
   }
 
@@ -141,6 +147,9 @@ export async function pairDevice(data: { pairing_code: string; device_name: stri
         else if (dTag.fieldNumber === 9) dev.ip_address = dReader.readString();
         else if (dTag.fieldNumber === 18) dev.is_online = dReader.readBool();
         else if (dTag.fieldNumber === 20) dev.created_at = dReader.readString();
+        else if (dTag.fieldNumber === 22) dev.display_group_id = dReader.readString();
+        else if (dTag.fieldNumber === 23) dev.schedule_id = dReader.readString();
+        else if (dTag.fieldNumber === 24) dev.timezone = dReader.readString();
         else dReader.skip(dTag.wireType);
       }
       dev.resolution = `${screenW}x${screenH}`;
@@ -154,9 +163,9 @@ export async function pairDevice(data: { pairing_code: string; device_name: stri
   return device;
 }
 
-export async function updateDevice(id: string, data: { name?: string; screen_width?: number; screen_height?: number; orientation?: string; current_layout_id?: string; canary_group_id?: string }): Promise<Device> {
+export async function updateDevice(id: string, data: { name?: string; screen_width?: number; screen_height?: number; orientation?: string; current_layout_id?: string; canary_group_id?: string; display_group_id?: string; schedule_id?: string; timezone?: string }): Promise<Device> {
   const writer = new ProtoWriter();
-  // UpdateDeviceRequest: id=1, name=2, screen_width=3, screen_height=4, orientation=5(enum), current_layout_id=6, canary_group_id=7
+  // UpdateDeviceRequest: id=1, name=2, screen_width=3, screen_height=4, orientation=5(enum), current_layout_id=6, canary_group_id=7, display_group_id=8, schedule_id=9, timezone=10
   writer.writeString(1, id);
   if (data.name) writer.writeString(2, data.name);
   if (data.screen_width) writer.writeInt32(3, data.screen_width);
@@ -164,6 +173,9 @@ export async function updateDevice(id: string, data: { name?: string; screen_wid
   if (data.orientation) writer.writeInt32(5, data.orientation === 'portrait' ? 2 : 1);
   if (data.current_layout_id) writer.writeString(6, data.current_layout_id);
   if (data.canary_group_id) writer.writeString(7, data.canary_group_id);
+  if (data.display_group_id) writer.writeString(8, data.display_group_id);
+  if (data.schedule_id) writer.writeString(9, data.schedule_id);
+  if (data.timezone) writer.writeString(10, data.timezone);
 
   const resBytes = await invokeGrpcMethod('signage.hardware.v1.device.DeviceService', 'UpdateDevice', writer);
   const reader = new ProtoReader(resBytes);

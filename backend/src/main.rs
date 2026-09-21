@@ -78,8 +78,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Pure gRPC Server listening on {}", grpc_addr);
 
     // Hardware Services
-    use grpc::hardware::DeviceServiceImpl;
+    use grpc::hardware::{DeviceServiceImpl, DisplayGroupServiceImpl};
     use grpc::proto::hardware::v1::device::device_service_server::DeviceServiceServer;
+    use grpc::proto::hardware::v1::display_group::display_group_service_server::DisplayGroupServiceServer;
 
     // IAM Services
     use grpc::iam::{PermissionServiceImpl, RoleServiceImpl, RoleGroupServiceImpl, UserServiceImpl};
@@ -89,10 +90,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use grpc::proto::iam::v1::user::user_service_server::UserServiceServer;
 
     // Studio Services
-    use grpc::studio::{MediaServiceImpl, PlaylistServiceImpl, LayoutServiceImpl};
+    use grpc::studio::{MediaServiceImpl, PlaylistServiceImpl, LayoutServiceImpl, ScheduleServiceImpl};
     use grpc::proto::studio::v1::media::media_service_server::MediaServiceServer;
     use grpc::proto::studio::v1::playlist::playlist_service_server::PlaylistServiceServer;
     use grpc::proto::studio::v1::layout::layout_service_server::LayoutServiceServer;
+    use grpc::proto::studio::v1::schedule::schedule_service_server::ScheduleServiceServer;
 
     // Distribution Services
     use grpc::distribution::{ManifestServiceImpl, StreamServiceImpl, CanaryServiceImpl};
@@ -104,6 +106,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let stream_manager = modules::distribution::stream::services::StreamConnectionManager::new();
 
     let device_svc = DeviceServiceImpl::new(pool.clone());
+    let display_group_svc = DisplayGroupServiceImpl::new(pool.clone());
     let perm_svc = PermissionServiceImpl::new(pool.clone());
     let role_svc = RoleServiceImpl::new(pool.clone());
     let role_grp_svc = RoleGroupServiceImpl::new(pool.clone());
@@ -111,6 +114,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let media_svc = MediaServiceImpl::new(pool.clone());
     let playlist_svc = PlaylistServiceImpl::new(pool.clone());
     let layout_svc = LayoutServiceImpl::new(pool.clone());
+    let schedule_svc = ScheduleServiceImpl::new(pool.clone());
     let manifest_svc = ManifestServiceImpl::new(pool.clone());
     let stream_svc = StreamServiceImpl::new(pool.clone(), stream_manager);
     let canary_svc = CanaryServiceImpl::new(pool);
@@ -119,6 +123,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Server::builder()
         // Hardware
         .add_service(DeviceServiceServer::new(device_svc))
+        .add_service(DisplayGroupServiceServer::new(display_group_svc))
         // IAM
         .add_service(PermissionServiceServer::new(perm_svc))
         .add_service(RoleServiceServer::new(role_svc))
@@ -128,6 +133,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(MediaServiceServer::new(media_svc))
         .add_service(PlaylistServiceServer::new(playlist_svc))
         .add_service(LayoutServiceServer::new(layout_svc))
+        .add_service(ScheduleServiceServer::new(schedule_svc))
         // Distribution
         .add_service(ManifestServiceServer::new(manifest_svc))
         .add_service(StreamServiceServer::new(stream_svc))

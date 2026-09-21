@@ -14,6 +14,7 @@ pub struct DeviceEntity {
     pub screen_width: i32,
     pub screen_height: i32,
     pub orientation: String,
+    pub timezone: String,
     pub ip_address: Option<String>,
     pub mac_address: Option<String>,
     pub app_version: Option<String>,
@@ -21,6 +22,8 @@ pub struct DeviceEntity {
     pub storage_total_bytes: i64,
     pub storage_free_bytes: i64,
     pub current_layout_id: Option<Uuid>,
+    pub display_group_id: Option<Uuid>,
+    pub schedule_id: Option<Uuid>,
     pub canary_group_id: Option<Uuid>,
     pub is_online: bool,
     pub last_heartbeat_at: Option<DateTime<Utc>>,
@@ -42,6 +45,7 @@ pub struct RegisterDeviceDto {
 pub struct PairDeviceDto {
     pub pairing_code: String,
     pub device_name: String,
+    pub store_location: Option<String>,
     pub default_layout_id: Option<Uuid>,
     pub canary_group_id: Option<Uuid>,
 }
@@ -72,4 +76,7 @@ pub struct UpdateDeviceDto {
     pub orientation: Option<String>,
     pub current_layout_id: Option<Uuid>,
     pub canary_group_id: Option<Uuid>,
+    pub display_group_id: Option<Uuid>,
+    pub schedule_id: Option<Uuid>,
+    pub timezone: Option<String>,
 }

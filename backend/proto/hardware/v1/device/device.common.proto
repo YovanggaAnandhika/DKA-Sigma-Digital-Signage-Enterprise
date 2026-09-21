@@ -32,6 +32,9 @@ message Device {
   string last_heartbeat_at = 19;
   string created_at = 20;
   string updated_at = 21;
+  string display_group_id = 22;
+  string schedule_id = 23;
+  string timezone = 24;
 }
 
 message RegisterDeviceRequest {
@@ -104,6 +107,9 @@ message UpdateDeviceRequest {
   DeviceOrientation orientation = 5;
   string current_layout_id = 6;
   string canary_group_id = 7;
+  string display_group_id = 8;
+  string schedule_id = 9;
+  string timezone = 10;
 }
 
 message DeleteDeviceRequest {

@@ -4,31 +4,45 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '../../../../lib/api';
-import type { Device } from '../../../../lib/api';
+import type { Device, DisplayGroup, Schedule } from '../../../../lib/api';
 import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
 
 export default function EditDisplayPage() {
   const params = useParams() as { id: string };
   const router = useRouter();
   const [device, setDevice] = useState<Device | null>(null);
+  const [groups, setGroups] = useState<DisplayGroup[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     resolution: '1920x1080',
     orientation: 'landscape',
+    timezone: 'Asia/Jakarta',
+    display_group_id: '',
+    schedule_id: '',
   });
 
   useEffect(() => {
     const fetchDevice = async () => {
       try {
         setLoading(true);
-        const data = await api.getDevice(params.id);
+        const [data, groupsData, schedulesData] = await Promise.all([
+          api.getDevice(params.id),
+          api.getDisplayGroups({ limit: 1000 }),
+          api.getSchedules({ limit: 1000 })
+        ]);
         setDevice(data);
+        setGroups(groupsData.data);
+        setSchedules(schedulesData.data);
         setFormData({
           name: data.name,
           resolution: data.resolution || '1920x1080',
           orientation: data.orientation || 'landscape',
+          timezone: data.timezone || 'Asia/Jakarta',
+          display_group_id: data.display_group_id || '',
+          schedule_id: data.schedule_id || '',
         });
       } catch (err: any) {
         alert(err.message || 'Gagal memuat display');
@@ -50,6 +64,9 @@ export default function EditDisplayPage() {
         screen_width: sw || 1920,
         screen_height: sh || 1080,
         orientation: formData.orientation,
+        timezone: formData.timezone,
+        display_group_id: formData.display_group_id,
+        schedule_id: formData.schedule_id,
       });
       router.push(`/displays/${params.id}`);
     } catch (err: any) {
@@ -127,6 +144,56 @@ export default function EditDisplayPage() {
               >
                 <option value="landscape">Landscape (Mendatar)</option>
                 <option value="portrait">Portrait (Tegak)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                Zona Waktu (Timezone)
+              </label>
+              <select
+                value={formData.timezone}
+                onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
+                className="form-select"
+              >
+                <option value="Asia/Jakarta">WIB (Asia/Jakarta)</option>
+                <option value="Asia/Makassar">WITA (Asia/Makassar)</option>
+                <option value="Asia/Jayapura">WIT (Asia/Jayapura)</option>
+                <option value="UTC">UTC</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                Grup Layar (Display Group)
+              </label>
+              <select
+                value={formData.display_group_id}
+                onChange={(e) => setFormData({ ...formData, display_group_id: e.target.value })}
+                className="form-select"
+              >
+                <option value="">-- Tidak Tergabung --</option>
+                {groups.map(g => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                Jadwal Perangkat
+              </label>
+              <select
+                value={formData.schedule_id}
+                onChange={(e) => setFormData({ ...formData, schedule_id: e.target.value })}
+                className="form-select"
+              >
+                <option value="">-- Gunakan Jadwal Grup/Tanpa Jadwal --</option>
+                {schedules.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
               </select>
             </div>
           </div>

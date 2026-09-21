@@ -14,9 +14,9 @@ impl DeviceRepository {
             r#"
             INSERT INTO devices (
                 name, pairing_code, is_paired, screen_width, screen_height,
-                orientation, mac_address, app_version, android_version
+                orientation, timezone, mac_address, app_version, android_version
             )
-            VALUES ($1, $2, FALSE, $3, $4, $5, $6, $7, $8)
+            VALUES ($1, $2, FALSE, $3, $4, $5, 'UTC', $6, $7, $8)
             RETURNING *
             "#,
         )
@@ -161,6 +161,9 @@ impl DeviceRepository {
                 orientation = COALESCE($5, orientation),
                 current_layout_id = COALESCE($6, current_layout_id),
                 canary_group_id = COALESCE($7, canary_group_id),
+                display_group_id = COALESCE($8, display_group_id),
+                schedule_id = COALESCE($9, schedule_id),
+                timezone = COALESCE($10, timezone),
                 updated_at = NOW()
             WHERE id = $1
             RETURNING *
@@ -173,6 +176,9 @@ impl DeviceRepository {
         .bind(dto.orientation)
         .bind(dto.current_layout_id)
         .bind(dto.canary_group_id)
+        .bind(dto.display_group_id)
+        .bind(dto.schedule_id)
+        .bind(dto.timezone)
         .fetch_one(pool)
         .await?;
 

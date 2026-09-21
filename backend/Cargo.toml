@@ -35,6 +35,7 @@ dotenvy = "0.15"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 async-trait = "0.1"
+chrono-tz = "0.10.4"
 
 [build-dependencies]
 tonic-build = "0.11"

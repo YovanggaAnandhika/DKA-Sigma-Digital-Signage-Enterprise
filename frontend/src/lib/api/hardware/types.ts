@@ -12,6 +12,9 @@ export interface Device {
   last_heartbeat_at?: string;
   current_layout_id?: string;
   canary_group_id?: string;
+  display_group_id?: string;
+  schedule_id?: string;
+  timezone?: string;
   created_at?: string;
   updated_at?: string;
 }

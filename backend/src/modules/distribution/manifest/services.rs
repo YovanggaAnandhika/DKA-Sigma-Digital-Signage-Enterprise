@@ -8,10 +8,14 @@ use crate::modules::distribution::canary::services::CanaryService;
 use crate::modules::hardware::device::repositories::DeviceRepository;
 use crate::modules::studio::layout::repositories::LayoutRepository;
 use crate::modules::studio::playlist::services::PlaylistService;
-use chrono::Utc;
+use chrono::{Datelike, Utc};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use uuid::Uuid;
+use crate::modules::hardware::display_group::repositories::DisplayGroupRepository;
+use crate::modules::studio::schedule::repositories::ScheduleRepository;
+use chrono_tz::Tz;
+use std::str::FromStr;
 
 pub struct ManifestService;
 
@@ -25,11 +29,56 @@ impl ManifestService {
             .await?
             .ok_or_else(|| AppError::NotFound("Device not found".into()))?;
 
-        let base_layout_id = match device.current_layout_id {
+        let mut active_layout_id = device.current_layout_id;
+        let mut active_schedule_id = device.schedule_id;
+
+        // Display Group Fallback
+        if let Some(group_id) = device.display_group_id {
+            if let Ok(Some(group)) = DisplayGroupRepository::find_by_id(pool, group_id).await {
+                if active_layout_id.is_none() {
+                    active_layout_id = group.default_layout_id;
+                }
+                if active_schedule_id.is_none() {
+                    active_schedule_id = group.schedule_id;
+                }
+            }
+        }
+
+        // Schedule Evaluation (Latest Schedule overrides previous)
+        if let Some(schedule_id) = active_schedule_id {
+            if let Ok(Some(schedule_with_events)) = ScheduleRepository::find_by_id(pool, schedule_id).await {
+                let tz: Tz = device.timezone.parse().unwrap_or(chrono_tz::UTC);
+                let now_local = Utc::now().with_timezone(&tz);
+                let current_time = now_local.time();
+                let current_day = now_local.weekday().number_from_monday().to_string(); // 1 = Monday, 7 = Sunday
+
+                let mut latest_matched_event_created_at = None;
+
+                for event in schedule_with_events.events {
+                    if event.start_time <= current_time && event.end_time >= current_time {
+                        let days: Vec<&str> = event.days_of_week.split(',').collect();
+                        if days.contains(&current_day.as_str()) {
+                            // Apply latest event logic
+                            if let Some(latest_ts) = latest_matched_event_created_at {
+                                if event.created_at > latest_ts {
+                                    active_layout_id = Some(event.layout_id);
+                                    latest_matched_event_created_at = Some(event.created_at);
+                                }
+                            } else {
+                                active_layout_id = Some(event.layout_id);
+                                latest_matched_event_created_at = Some(event.created_at);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let base_layout_id = match active_layout_id {
             Some(id) => id,
             None => {
                 return Err(AppError::BadRequest(
-                    "No layout is assigned to this device yet".into(),
+                    "No layout is assigned to this device yet (including fallback layout)".into(),
                 ));
             }
         };
