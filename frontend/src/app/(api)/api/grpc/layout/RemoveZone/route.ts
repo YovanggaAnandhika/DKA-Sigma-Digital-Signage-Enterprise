@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { LayoutServiceClient } from '@/lib/api/studio/v1/layout/layout_grpc_pb';
-import { RemoveZoneRequest } from '@/lib/api/studio/v1/layout/layout.common_pb';
+import { DeleteZoneRequest } from '@/lib/api/studio/v1/layout/layout.common_pb';
 import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
@@ -9,11 +9,11 @@ export async function POST(req: NextRequest) {
     const token = getTokenFromRequest(req);
     const client = new LayoutServiceClient(getGrpcHost(), getGrpcCredentials());
     
-    const request = new RemoveZoneRequest();
+    const request = new DeleteZoneRequest();
     if(body.id) request.setId(body.id);
 
     return new Promise((resolve) => {
-      client.removeZone(request, getGrpcMetadata(token), (error: any, response: any) => {
+      client.deleteZone(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));
       });

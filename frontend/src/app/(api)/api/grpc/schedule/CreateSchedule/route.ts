@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     const client = new ScheduleServiceClient(getGrpcHost(), getGrpcCredentials());
     
     const request = new CreateScheduleRequest();
-    if(body.name) request.setName(body.name); if(body.description) request.setDescription(body.description); if(body.priority) request.setPriority(body.priority);
+    if(body.name) request.setName(body.name); if(body.description) request.setDescription(body.description);
 
     return new Promise((resolve) => {
       client.createSchedule(request, getGrpcMetadata(token), (error: any, response: any) => {

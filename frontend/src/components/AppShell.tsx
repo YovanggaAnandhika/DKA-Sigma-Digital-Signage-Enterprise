@@ -6,7 +6,7 @@ import { SidebarProvider } from './SidebarProvider';
 import { Sidebar } from './Sidebar';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
-import { getStoredSession, UserSession } from '../lib/grpc-client';
+import { getStoredSession, UserSession } from '../lib/auth';
 import { Sparkles } from 'lucide-react';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {

@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const token = getTokenFromRequest(req);
     const client = new MediaServiceClient(getGrpcHost(), getGrpcCredentials());
-    
+
     const request = new UpdateMediaRequest();
     if (body.id) request.setId(body.id);
     if (body.name) request.setName(body.name);

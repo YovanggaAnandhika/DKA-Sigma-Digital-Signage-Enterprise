@@ -12,8 +12,7 @@ export async function POST(req: NextRequest) {
     const request = new PairDeviceRequest();
     
         if(body.pairing_code) request.setPairingCode(body.pairing_code);
-        if(body.name) request.setName(body.name);
-        if(body.display_group_id) request.setDisplayGroupId(body.display_group_id);
+        if(body.name) request.setDeviceName(body.name);
       
 
     return new Promise((resolve) => {

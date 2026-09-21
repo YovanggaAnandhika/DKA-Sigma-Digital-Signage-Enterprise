@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     const client = new LayoutServiceClient(getGrpcHost(), getGrpcCredentials());
     
     const request = new CreateLayoutRequest();
-    if(body.name) request.setName(body.name); if(body.description) request.setDescription(body.description); if(body.width) request.setWidth(body.width); if(body.height) request.setHeight(body.height); if(body.background_color) request.setBackgroundColor(body.background_color);
+    if(body.name) request.setName(body.name); if(body.description) request.setDescription(body.description); if(body.width) request.setCanvasWidth(body.width); if(body.height) request.setCanvasHeight(body.height); if(body.background_color) request.setBackgroundColor(body.background_color);
 
     return new Promise((resolve) => {
       client.createLayout(request, getGrpcMetadata(token), (error: any, response: any) => {

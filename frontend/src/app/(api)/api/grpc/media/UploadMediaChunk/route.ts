@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     if (body.mimeType) request.setMimeType(body.mimeType);
     if (body.chunkIndex !== undefined) request.setChunkIndex(body.chunkIndex);
     if (body.totalChunks !== undefined) request.setTotalChunks(body.totalChunks);
-    if (body.totalFileSizeBytes !== undefined) request.setTotalFileSizeBytes(body.totalFileSizeBytes);
+    if (body.totalFileSizeBytes !== undefined) request.setTotalFileSize(body.totalFileSizeBytes);
 
     if (body.chunkData) {
       // Decode base64 from JSON back to Uint8Array

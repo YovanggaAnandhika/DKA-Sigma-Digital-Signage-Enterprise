@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Sun, Moon, LogOut, Menu, X, ChevronDown, User, ShieldCheck } from 'lucide-react';
 import { useSidebar } from './SidebarProvider';
 import { useTheme } from './ThemeProvider';
-import { getStoredSession, clearSession, UserSession } from '../lib/grpc-client';
+import { getStoredSession, clearSession, UserSession } from '../lib/auth';
 import { useRouter } from 'next/navigation';
 
 export function Navbar() {
@@ -37,7 +37,7 @@ export function Navbar() {
   const initials = session?.fullName
     ? session.fullName
         .split(' ')
-        .map((n) => n[0])
+        .map((n: string) => n[0])
         .join('')
         .substring(0, 2)
         .toUpperCase()
