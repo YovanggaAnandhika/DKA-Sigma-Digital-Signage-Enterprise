@@ -103,6 +103,28 @@ function deserialize_signage_studio_v1_media_MediaItem(buffer_arg) {
   return studio_v1_media_media_common_pb.MediaItem.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
+function serialize_signage_studio_v1_media_StreamMediaFileRequest(arg) {
+  if (!(arg instanceof studio_v1_media_media_common_pb.StreamMediaFileRequest)) {
+    throw new Error('Expected argument of type signage.studio.v1.media.StreamMediaFileRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_signage_studio_v1_media_StreamMediaFileRequest(buffer_arg) {
+  return studio_v1_media_media_common_pb.StreamMediaFileRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_signage_studio_v1_media_StreamMediaFileResponse(arg) {
+  if (!(arg instanceof studio_v1_media_media_common_pb.StreamMediaFileResponse)) {
+    throw new Error('Expected argument of type signage.studio.v1.media.StreamMediaFileResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_signage_studio_v1_media_StreamMediaFileResponse(buffer_arg) {
+  return studio_v1_media_media_common_pb.StreamMediaFileResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
 function serialize_signage_studio_v1_media_UpdateMediaRequest(arg) {
   if (!(arg instanceof studio_v1_media_media_common_pb.UpdateMediaRequest)) {
     throw new Error('Expected argument of type signage.studio.v1.media.UpdateMediaRequest');
@@ -214,6 +236,17 @@ var MediaServiceService = exports.MediaServiceService = {
     requestDeserialize: deserialize_signage_studio_v1_media_GetMediaFileRequest,
     responseSerialize: serialize_signage_studio_v1_media_GetMediaFileResponse,
     responseDeserialize: deserialize_signage_studio_v1_media_GetMediaFileResponse,
+  },
+  streamMediaFile: {
+    path: '/signage.studio.v1.media.MediaService/StreamMediaFile',
+    requestStream: false,
+    responseStream: true,
+    requestType: studio_v1_media_media_common_pb.StreamMediaFileRequest,
+    responseType: studio_v1_media_media_common_pb.StreamMediaFileResponse,
+    requestSerialize: serialize_signage_studio_v1_media_StreamMediaFileRequest,
+    requestDeserialize: deserialize_signage_studio_v1_media_StreamMediaFileRequest,
+    responseSerialize: serialize_signage_studio_v1_media_StreamMediaFileResponse,
+    responseDeserialize: deserialize_signage_studio_v1_media_StreamMediaFileResponse,
   },
 };
 

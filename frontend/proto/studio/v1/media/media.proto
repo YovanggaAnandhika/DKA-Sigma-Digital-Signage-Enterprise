@@ -12,6 +12,6 @@ service MediaService {
   rpc DeleteMedia(DeleteMediaRequest) returns (DeleteMediaResponse);
   rpc UploadMediaChunk(UploadMediaChunkRequest) returns (UploadMediaChunkResponse);
   rpc GetMediaFile(GetMediaFileRequest) returns (GetMediaFileResponse);
+  rpc StreamMediaFile(StreamMediaFileRequest) returns (stream StreamMediaFileResponse);
 }
-
 

@@ -16,6 +16,7 @@ interface IMediaServiceService extends grpc.ServiceDefinition<grpc.UntypedServic
     deleteMedia: IMediaServiceService_IDeleteMedia;
     uploadMediaChunk: IMediaServiceService_IUploadMediaChunk;
     getMediaFile: IMediaServiceService_IGetMediaFile;
+    streamMediaFile: IMediaServiceService_IStreamMediaFile;
 }
 
 interface IMediaServiceService_ICreateMedia extends grpc.MethodDefinition<studio_v1_media_media_common_pb.CreateMediaRequest, studio_v1_media_media_common_pb.MediaItem> {
@@ -81,6 +82,15 @@ interface IMediaServiceService_IGetMediaFile extends grpc.MethodDefinition<studi
     responseSerialize: grpc.serialize<studio_v1_media_media_common_pb.GetMediaFileResponse>;
     responseDeserialize: grpc.deserialize<studio_v1_media_media_common_pb.GetMediaFileResponse>;
 }
+interface IMediaServiceService_IStreamMediaFile extends grpc.MethodDefinition<studio_v1_media_media_common_pb.StreamMediaFileRequest, studio_v1_media_media_common_pb.StreamMediaFileResponse> {
+    path: "/signage.studio.v1.media.MediaService/StreamMediaFile";
+    requestStream: false;
+    responseStream: true;
+    requestSerialize: grpc.serialize<studio_v1_media_media_common_pb.StreamMediaFileRequest>;
+    requestDeserialize: grpc.deserialize<studio_v1_media_media_common_pb.StreamMediaFileRequest>;
+    responseSerialize: grpc.serialize<studio_v1_media_media_common_pb.StreamMediaFileResponse>;
+    responseDeserialize: grpc.deserialize<studio_v1_media_media_common_pb.StreamMediaFileResponse>;
+}
 
 export const MediaServiceService: IMediaServiceService;
 
@@ -92,6 +102,7 @@ export interface IMediaServiceServer extends grpc.UntypedServiceImplementation {
     deleteMedia: grpc.handleUnaryCall<studio_v1_media_media_common_pb.DeleteMediaRequest, studio_v1_media_media_common_pb.DeleteMediaResponse>;
     uploadMediaChunk: grpc.handleUnaryCall<studio_v1_media_media_common_pb.UploadMediaChunkRequest, studio_v1_media_media_common_pb.UploadMediaChunkResponse>;
     getMediaFile: grpc.handleUnaryCall<studio_v1_media_media_common_pb.GetMediaFileRequest, studio_v1_media_media_common_pb.GetMediaFileResponse>;
+    streamMediaFile: grpc.handleServerStreamingCall<studio_v1_media_media_common_pb.StreamMediaFileRequest, studio_v1_media_media_common_pb.StreamMediaFileResponse>;
 }
 
 export interface IMediaServiceClient {
@@ -116,6 +127,8 @@ export interface IMediaServiceClient {
     getMediaFile(request: studio_v1_media_media_common_pb.GetMediaFileRequest, callback: (error: grpc.ServiceError | null, response: studio_v1_media_media_common_pb.GetMediaFileResponse) => void): grpc.ClientUnaryCall;
     getMediaFile(request: studio_v1_media_media_common_pb.GetMediaFileRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: studio_v1_media_media_common_pb.GetMediaFileResponse) => void): grpc.ClientUnaryCall;
     getMediaFile(request: studio_v1_media_media_common_pb.GetMediaFileRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: studio_v1_media_media_common_pb.GetMediaFileResponse) => void): grpc.ClientUnaryCall;
+    streamMediaFile(request: studio_v1_media_media_common_pb.StreamMediaFileRequest, options?: Partial<grpc.CallOptions>): grpc.ClientReadableStream<studio_v1_media_media_common_pb.StreamMediaFileResponse>;
+    streamMediaFile(request: studio_v1_media_media_common_pb.StreamMediaFileRequest, metadata?: grpc.Metadata, options?: Partial<grpc.CallOptions>): grpc.ClientReadableStream<studio_v1_media_media_common_pb.StreamMediaFileResponse>;
 }
 
 export class MediaServiceClient extends grpc.Client implements IMediaServiceClient {
@@ -141,4 +154,6 @@ export class MediaServiceClient extends grpc.Client implements IMediaServiceClie
     public getMediaFile(request: studio_v1_media_media_common_pb.GetMediaFileRequest, callback: (error: grpc.ServiceError | null, response: studio_v1_media_media_common_pb.GetMediaFileResponse) => void): grpc.ClientUnaryCall;
     public getMediaFile(request: studio_v1_media_media_common_pb.GetMediaFileRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: studio_v1_media_media_common_pb.GetMediaFileResponse) => void): grpc.ClientUnaryCall;
     public getMediaFile(request: studio_v1_media_media_common_pb.GetMediaFileRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: studio_v1_media_media_common_pb.GetMediaFileResponse) => void): grpc.ClientUnaryCall;
+    public streamMediaFile(request: studio_v1_media_media_common_pb.StreamMediaFileRequest, options?: Partial<grpc.CallOptions>): grpc.ClientReadableStream<studio_v1_media_media_common_pb.StreamMediaFileResponse>;
+    public streamMediaFile(request: studio_v1_media_media_common_pb.StreamMediaFileRequest, metadata?: grpc.Metadata, options?: Partial<grpc.CallOptions>): grpc.ClientReadableStream<studio_v1_media_media_common_pb.StreamMediaFileResponse>;
 }

@@ -107,4 +107,13 @@ message GetMediaFileResponse {
   string error_message = 5;
 }
 
+message StreamMediaFileRequest {
+  string filename = 1;
+}
 
+message StreamMediaFileResponse {
+  bytes chunk_data = 1;
+  string mime_type = 2;
+  int64 total_size = 3;
+  string error_message = 4;
+}

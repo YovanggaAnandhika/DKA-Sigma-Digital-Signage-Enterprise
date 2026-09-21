@@ -1,6 +1,8 @@
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 use tokio::io::AsyncWriteExt;
+use tokio::io::AsyncReadExt;
+use tokio_stream::wrappers::ReceiverStream;
 use sha2::{Sha256, Digest};
 use crate::db::DbPool;
 use crate::modules::studio::media::model::{CreateMediaDto, MediaEntity, UpdateMediaDto};
@@ -12,6 +14,7 @@ use crate::grpc::proto::studio::v1::media::{
     DeleteMediaRequest, DeleteMediaResponse,
     UploadMediaChunkRequest, UploadMediaChunkResponse,
     GetMediaFileRequest, GetMediaFileResponse,
+    StreamMediaFileRequest, StreamMediaFileResponse,
 };
 
 pub struct MediaServiceImpl {
@@ -291,6 +294,86 @@ impl MediaServiceTrait for MediaServiceImpl {
             file_data,
             error_message: String::new(),
         }))
+    }
+
+    type StreamMediaFileStream = ReceiverStream<Result<StreamMediaFileResponse, Status>>;
+
+    async fn stream_media_file(
+        &self,
+        request: Request<StreamMediaFileRequest>,
+    ) -> Result<Response<Self::StreamMediaFileStream>, Status> {
+        let req = request.into_inner();
+        let filename = req.filename;
+        let clean_filename = std::path::Path::new(&filename)
+            .file_name()
+            .and_then(|f| f.to_str())
+            .ok_or_else(|| Status::invalid_argument("Nama file tidak valid"))?;
+
+        let upload_dir = std::env::var("UPLOAD_DIR").unwrap_or_else(|_| "./uploads".to_string());
+        let file_path = std::path::Path::new(&upload_dir).join(clean_filename);
+
+        if !file_path.exists() {
+            return Err(Status::not_found(format!("File {} tidak ditemukan di backend", clean_filename)));
+        }
+
+        let ext = std::path::Path::new(clean_filename)
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+
+        let mime_type = match ext.as_str() {
+            "jpg" | "jpeg" => "image/jpeg",
+            "png" => "image/png",
+            "webp" => "image/webp",
+            "gif" => "image/gif",
+            "svg" => "image/svg+xml",
+            "mp4" => "video/mp4",
+            "webm" => "video/webm",
+            _ => "application/octet-stream",
+        }.to_string();
+
+        let metadata = tokio::fs::metadata(&file_path)
+            .await
+            .map_err(|e| Status::internal(format!("Gagal membaca metadata file: {}", e)))?;
+        let total_size = metadata.len() as i64;
+
+        let mut file = tokio::fs::File::open(&file_path)
+            .await
+            .map_err(|e| Status::internal(format!("Gagal membuka file: {}", e)))?;
+
+        let (tx, rx) = tokio::sync::mpsc::channel(4);
+
+        tokio::spawn(async move {
+            let mut is_first = true;
+            let mut buffer = vec![0; 64 * 1024]; // 64KB chunks
+
+            loop {
+                match file.read(&mut buffer).await {
+                    Ok(0) => break, // EOF
+                    Ok(n) => {
+                        let response = StreamMediaFileResponse {
+                            chunk_data: buffer[..n].to_vec(),
+                            mime_type: if is_first { mime_type.clone() } else { String::new() },
+                            total_size: if is_first { total_size } else { 0 },
+                            error_message: String::new(),
+                        };
+                        is_first = false;
+
+                        if tx.send(Ok(response)).await.is_err() {
+                            // Receiver closed the stream
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        let _ = tx.send(Err(Status::internal(format!("Error membaca file: {}", e)))).await;
+                        break;
+                    }
+                }
+            }
+        });
+
+        Ok(Response::new(ReceiverStream::new(rx)))
     }
 }
 

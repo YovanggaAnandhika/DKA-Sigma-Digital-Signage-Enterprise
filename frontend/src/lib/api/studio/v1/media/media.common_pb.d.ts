@@ -403,6 +403,57 @@ export namespace GetMediaFileResponse {
     }
 }
 
+export class StreamMediaFileRequest extends jspb.Message { 
+    getFilename(): string;
+    setFilename(value: string): StreamMediaFileRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): StreamMediaFileRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: StreamMediaFileRequest): StreamMediaFileRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: StreamMediaFileRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): StreamMediaFileRequest;
+    static deserializeBinaryFromReader(message: StreamMediaFileRequest, reader: jspb.BinaryReader): StreamMediaFileRequest;
+}
+
+export namespace StreamMediaFileRequest {
+    export type AsObject = {
+        filename: string,
+    }
+}
+
+export class StreamMediaFileResponse extends jspb.Message { 
+    getChunkData(): Uint8Array | string;
+    getChunkData_asU8(): Uint8Array;
+    getChunkData_asB64(): string;
+    setChunkData(value: Uint8Array | string): StreamMediaFileResponse;
+    getMimeType(): string;
+    setMimeType(value: string): StreamMediaFileResponse;
+    getTotalSize(): number;
+    setTotalSize(value: number): StreamMediaFileResponse;
+    getErrorMessage(): string;
+    setErrorMessage(value: string): StreamMediaFileResponse;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): StreamMediaFileResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: StreamMediaFileResponse): StreamMediaFileResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: StreamMediaFileResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): StreamMediaFileResponse;
+    static deserializeBinaryFromReader(message: StreamMediaFileResponse, reader: jspb.BinaryReader): StreamMediaFileResponse;
+}
+
+export namespace StreamMediaFileResponse {
+    export type AsObject = {
+        chunkData: Uint8Array | string,
+        mimeType: string,
+        totalSize: number,
+        errorMessage: string,
+    }
+}
+
 export enum MediaType {
     MEDIA_TYPE_UNSPECIFIED = 0,
     MEDIA_TYPE_IMAGE = 1,
