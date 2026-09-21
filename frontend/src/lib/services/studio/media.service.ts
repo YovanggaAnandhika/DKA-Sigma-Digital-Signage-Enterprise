@@ -1,6 +1,35 @@
 import { invokeApi } from '../../core/invokeApi';
 import { MediaItem } from './types';
 
+/**
+ * Returns a URL that streams the media file directly from gRPC backend.
+ * The URL can be used as src for <video> or <img> elements.
+ * Uses the filename (file_path basename or public_url path) as identifier.
+ */
+export function getMediaStreamUrl(filename: string): string {
+  return `/api/grpc/media/StreamMediaFile?filename=${encodeURIComponent(filename)}`;
+}
+
+/**
+ * Returns the best display URL for a media item:
+ * 1. public_url if available and non-empty (e.g. /api/assets/...)
+ * 2. Falls back to gRPC stream URL using file_path basename
+ *    (backend stores files as {timestamp}_{sanitized_name}, not original_filename)
+ */
+export function getMediaDisplayUrl(item: MediaItem): string {
+  if (item.public_url && item.public_url.startsWith('/api/assets/')) {
+    return item.public_url;
+  }
+  if (item.public_url && item.public_url.startsWith('http')) {
+    return item.public_url;
+  }
+  // Use file_path basename — this is the actual stored filename on backend
+  // e.g. file_path = "/storage/media/1724490720000_vidssave.com_Hi-Tech_Intro_720P.mp4"
+  const storedFilename = item.file_path?.split('/').pop() || '';
+  if (storedFilename) return getMediaStreamUrl(storedFilename);
+  return '';
+}
+
 export async function getMedia(params?: { search?: string; page?: number; limit?: number }): Promise<{ data: MediaItem[]; total: number }> {
   const payload = {
     search: params?.search,
@@ -12,8 +41,8 @@ export async function getMedia(params?: { search?: string; page?: number; limit?
 
   const result = await invokeApi<any>('/api/grpc/media/ListMedia', payload);
   return {
-    data: result.itemsList || [],
-    total: result.pagination?.totalItems || result.itemsList?.length || 0
+    data: result.items || [],
+    total: result.pagination?.total_items || result.items?.length || 0
   };
 }
 

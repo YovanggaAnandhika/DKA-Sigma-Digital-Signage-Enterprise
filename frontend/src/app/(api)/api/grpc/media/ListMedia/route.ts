@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
           console.error('[gRPC Error ListMedia]', error);
           resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         } else {
-          resolve(NextResponse.json(response.toObject()));
+          resolve(NextResponse.json(normalize(response.toObject())));
         }
       });
     });

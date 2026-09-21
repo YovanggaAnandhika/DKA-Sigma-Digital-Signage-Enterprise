@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { api, MediaItem } from '@/lib/services';
+import { getMediaDisplayUrl } from '@/lib/services/studio/media.service';
 import { Pagination } from '@/components/ui/Pagination';
 import { FolderOpen, Plus, Search, RefreshCw, Edit, Trash2, Eye, Film, Image as ImageIcon, Globe } from 'lucide-react';
 
@@ -147,22 +148,32 @@ export default function MediaPage() {
                   >
                     {/* Thumbnail Area */}
                     <div style={{ height: '140px', backgroundColor: '#0f172a', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {m.public_url && m.media_type === 2 ? (
-                        <video src={m.public_url} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : m.media_type === 2 ? (
-                        <Film size={32} color="var(--accent-cyan)" />
-                      ) : m.media_type === 3 ? (
-                        <Globe size={32} color="var(--accent-amber)" />
-                      ) : m.public_url ? (
-                        <img
-                          src={m.public_url}
-                          alt={m.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
-                        />
-                      ) : (
-                        <ImageIcon size={32} color="var(--accent-emerald)" />
-                      )}
+                      {(() => {
+                        const displayUrl = getMediaDisplayUrl(m);
+                        return m.media_type === 2 && displayUrl ? (
+                          <video
+                            src={displayUrl}
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        ) : m.media_type === 2 ? (
+                          <Film size={32} color="var(--accent-cyan)" />
+                        ) : m.media_type === 3 ? (
+                          <Globe size={32} color="var(--accent-amber)" />
+                        ) : displayUrl ? (
+                          <img
+                            src={displayUrl}
+                            alt={m.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <ImageIcon size={32} color="var(--accent-emerald)" />
+                        );
+                      })()}
                       
                       {/* Badge Tipe */}
                       <div style={{ position: 'absolute', top: '8px', left: '8px', backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', padding: '4px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', color: '#fff', fontSize: '0.6875rem', fontWeight: 600 }}>
@@ -215,17 +226,20 @@ export default function MediaPage() {
             </div>
             
             <div style={{ height: '180px', backgroundColor: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {selectedMedia.public_url && selectedMedia.media_type === 2 ? (
-                <video src={selectedMedia.public_url} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-              ) : selectedMedia.media_type === 2 ? (
-                <Film size={48} color="var(--accent-cyan)" />
-              ) : selectedMedia.media_type === 3 ? (
-                <Globe size={48} color="var(--accent-amber)" />
-              ) : selectedMedia.public_url ? (
-                <img src={selectedMedia.public_url} alt={selectedMedia.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-              ) : (
-                <ImageIcon size={48} color="var(--accent-emerald)" />
-              )}
+              {(() => {
+                const displayUrl = getMediaDisplayUrl(selectedMedia);
+                return selectedMedia.media_type === 2 && displayUrl ? (
+                  <video src={displayUrl} autoPlay loop muted playsInline controls style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                ) : selectedMedia.media_type === 2 ? (
+                  <Film size={48} color="var(--accent-cyan)" />
+                ) : selectedMedia.media_type === 3 ? (
+                  <Globe size={48} color="var(--accent-amber)" />
+                ) : displayUrl ? (
+                  <img src={displayUrl} alt={selectedMedia.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                ) : (
+                  <ImageIcon size={48} color="var(--accent-emerald)" />
+                );
+              })()}
             </div>
             
             <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
