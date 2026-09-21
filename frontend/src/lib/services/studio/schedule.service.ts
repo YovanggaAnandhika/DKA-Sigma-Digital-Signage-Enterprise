@@ -1,5 +1,5 @@
 import { invokeApi } from '../../core/invokeApi';
-import { Schedule } from './types';
+import { Schedule } from './schedule.types';
 
 export async function getSchedules(params?: { search?: string; page?: number; limit?: number }): Promise<{ data: Schedule[]; total: number }> {
   const result = await invokeApi<any>('/api/grpc/schedule/ListSchedules', {
@@ -34,3 +34,13 @@ export async function deleteSchedule(id: string): Promise<boolean> {
   await invokeApi<any>('/api/grpc/schedule/DeleteSchedule', { id });
   return true;
 }
+
+export async function addScheduleEvent(data: { schedule_id: string; layout_id: string; start_time: string; end_time: string; days_of_week?: string }): Promise<any> {
+  return await invokeApi<any>('/api/grpc/schedule/AddScheduleEvent', data);
+}
+
+export async function removeScheduleEvent(id: string, schedule_id?: string): Promise<boolean> {
+  await invokeApi<any>('/api/grpc/schedule/RemoveScheduleEvent', { id, schedule_id });
+  return true;
+}
+

@@ -19,10 +19,3 @@ export interface Device {
   updated_at?: string;
 }
 
-export interface DisplayGroup {
-  id: string;
-  name: string;
-  description?: string;
-  created_at?: string;
-  updated_at?: string;
-}

@@ -20,8 +20,8 @@ export default function CreateRolePage() {
   useEffect(() => {
     const fetchPerms = async () => {
       try {
-        const perms = await api.getPermissions();
-        setPermissions(perms);
+        const perms = await api.getPermissions({ limit: 1000 });
+        setPermissions(perms.data);
       } catch (err) {
         console.error('Failed to fetch permissions:', err);
       }
@@ -41,7 +41,6 @@ export default function CreateRolePage() {
       setLoading(true);
       await api.createRole({
         name: formData.name,
-        slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '_'),
         description: formData.description,
         permission_ids: selectedPermIds,
       });

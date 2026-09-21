@@ -59,11 +59,12 @@ export default function EditDisplayPage() {
     try {
       setSaving(true);
       const [sw, sh] = formData.resolution.split('x').map(Number);
+      const orientationVal = formData.orientation === 'portrait' ? 2 : 1;
       await api.updateDevice(params.id, {
         name: formData.name,
         screen_width: sw || 1920,
         screen_height: sh || 1080,
-        orientation: formData.orientation,
+        orientation: orientationVal,
         timezone: formData.timezone,
         display_group_id: formData.display_group_id,
         schedule_id: formData.schedule_id,

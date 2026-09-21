@@ -34,7 +34,6 @@ export default function CreateLayoutPage() {
         name,
         canvas_width: width,
         canvas_height: height,
-        orientation,
       });
 
       router.push(`/layouts/${layout.id}/edit`);

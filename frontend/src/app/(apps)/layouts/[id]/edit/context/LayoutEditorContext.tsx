@@ -294,8 +294,10 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
 
       // 2. Delete removed zones and blocks from backend
       for (const zoneId of deletedZoneIds) {
+        if (selectedZoneId === zoneId) setSelectedZoneId(null);
         try {
-          await api.deleteZone(zoneId);
+          await api.deleteZone(zoneId, params.id);
+          setZones(prev => prev.filter(z => z.id !== zoneId));
         } catch (e) {
           console.error('Failed to delete zone:', zoneId, e);
         }

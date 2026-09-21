@@ -50,10 +50,10 @@ export default function EditRolePage() {
 
         setName(role.name);
         setDescription(role.description || '');
-        setAvailablePermissions(perms || []);
+        setAvailablePermissions(perms.data || []);
         
         // Match permissions: if role.permissions contains codes or IDs, match them
-        const permIds = (perms || [])
+        const permIds = (perms.data || [])
           .filter((p: Permission) => (role.permissions || []).includes(p.code) || (role.permissions || []).includes(p.id))
           .map((p: Permission) => p.id);
 

@@ -34,3 +34,8 @@ export async function deleteUser(id: string): Promise<boolean> {
   await invokeApi<any>('/api/grpc/user/DeleteUser', { id });
   return true;
 }
+
+export async function login(email: string, password: string): Promise<any> {
+  const result = await invokeApi<any>('/api/auth/login', { email, password });
+  return result;
+}

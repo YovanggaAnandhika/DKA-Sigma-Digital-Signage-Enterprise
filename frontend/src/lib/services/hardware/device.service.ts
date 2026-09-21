@@ -19,13 +19,13 @@ export async function getDevice(id: string): Promise<Device> {
   return result.device as Device;
 }
 
-export async function pairDevice(pairingCode: string, name: string, displayGroupId?: string): Promise<Device> {
-  const result = await invokeApi<any>('/api/grpc/device/PairDevice', { pairing_code: pairingCode, name, display_group_id: displayGroupId });
+export async function pairDevice(data: { pairing_code: string; device_name: string; default_layout_id?: string; canary_group_id?: string; }): Promise<Device> {
+  const result = await invokeApi<any>('/api/grpc/device/PairDevice', data);
   if (!result.device) throw new Error('Gagal pair device');
   return result.device as Device;
 }
 
-export async function updateDevice(id: string, data: { name?: string; display_group_id?: string; status?: string }): Promise<Device> {
+export async function updateDevice(id: string, data: { name?: string; display_group_id?: string; status?: string; screen_width?: number; screen_height?: number; orientation?: number; timezone?: string; schedule_id?: string; }): Promise<Device> {
   await invokeApi<any>('/api/grpc/device/UpdateDevice', { id, ...data });
   return getDevice(id);
 }

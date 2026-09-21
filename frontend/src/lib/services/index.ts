@@ -33,6 +33,7 @@ export const api = {
   createUser: iamModule.createUser,
   updateUser: iamModule.updateUser,
   deleteUser: iamModule.deleteUser,
+  login: iamModule.login,
 
   // Hardware
   getDevices: hardwareModule.getDevices,
@@ -55,9 +56,14 @@ export const api = {
   deleteLayout: studioModule.deleteLayout,
 
   // Studio — Zones
-  addZone: studioModule.addZone,
+  createZone: studioModule.createZone,
   updateZone: studioModule.updateZone,
-  removeZone: studioModule.removeZone,
+  deleteZone: studioModule.deleteZone,
+  addPlaylistBlock: studioModule.addPlaylistBlock,
+  updatePlaylistBlock: studioModule.updatePlaylistBlock,
+  removePlaylistBlock: studioModule.removePlaylistBlock,
+  addMediaBlock: studioModule.addMediaBlock,
+  setPlaylistItemOverride: studioModule.setPlaylistItemOverride,
 
   // Studio — Schedules
   getSchedules: studioModule.getSchedules,
@@ -65,6 +71,8 @@ export const api = {
   createSchedule: studioModule.createSchedule,
   updateSchedule: studioModule.updateSchedule,
   deleteSchedule: studioModule.deleteSchedule,
+  addScheduleEvent: studioModule.addScheduleEvent,
+  removeScheduleEvent: studioModule.removeScheduleEvent,
 
   // Studio — Playlists
   getPlaylists: studioModule.getPlaylists,

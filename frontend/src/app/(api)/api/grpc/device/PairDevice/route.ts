@@ -12,8 +12,9 @@ export async function POST(req: NextRequest) {
     const request = new PairDeviceRequest();
     
         if(body.pairing_code) request.setPairingCode(body.pairing_code);
-        if(body.name) request.setDeviceName(body.name);
-      
+        if(body.device_name) request.setDeviceName(body.device_name);
+        if(body.default_layout_id) request.setDefaultLayoutId(body.default_layout_id);
+        if(body.canary_group_id) request.setCanaryGroupId(body.canary_group_id);
 
     return new Promise((resolve) => {
       client.pairDevice(request, getGrpcMetadata(token), (error: any, response: any) => {
