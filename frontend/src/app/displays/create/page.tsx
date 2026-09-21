@@ -48,7 +48,7 @@ export default function CreateDisplayPage() {
         </div>
       </div>
 
-      <div className="card-elevated" style={{ padding: '24px', maxWidth: '640px' }}>
+      <div className="card-elevated" style={{ padding: '24px', width: '100%' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', padding: '12px 16px', background: 'rgba(99,102,241,0.08)', borderRadius: '10px', border: '1px solid rgba(99,102,241,0.2)' }}>
           <Link2 size={16} color="var(--accent-purple)" />
           <p style={{ fontSize: '0.8125rem', color: 'var(--accent-purple)', lineHeight: 1.5 }}>

@@ -69,7 +69,7 @@ export default function CreateRolePage() {
         </div>
       </div>
 
-      <div className="card-elevated" style={{ padding: '24px', maxWidth: '720px' }}>
+      <div className="card-elevated" style={{ padding: '24px', width: '100%' }}>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>

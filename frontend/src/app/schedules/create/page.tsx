@@ -46,7 +46,7 @@ export default function CreateSchedulePage() {
         </div>
       </div>
 
-      <div className="card-elevated" style={{ padding: '24px', maxWidth: '640px' }}>
+      <div className="card-elevated" style={{ padding: '24px', width: '100%' }}>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
