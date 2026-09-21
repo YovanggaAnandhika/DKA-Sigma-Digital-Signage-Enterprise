@@ -19,8 +19,9 @@ export async function getMedia(params?: { search?: string; page?: number; limit?
 
 export async function getMediaItem(id: string): Promise<MediaItem> {
   const result = await invokeApi<any>('/api/grpc/media/GetMedia', { id });
-  console.log(result.media)
-  return result.media as MediaItem;
+  const m = result.media || result;
+  if (!m || !m.id) throw new Error(`Media ID ${id} tidak ditemukan`);
+  return m as MediaItem;
 }
 
 export async function createMedia(data: { name: string; original_filename: string; file_path: string; public_url: string; file_size_bytes: number; mime_type: string; sha256_hash: string; media_type: number; width?: number; height?: number; duration_seconds?: number }): Promise<MediaItem> {

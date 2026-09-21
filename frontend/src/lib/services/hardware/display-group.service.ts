@@ -14,14 +14,16 @@ export async function getDisplayGroups(params?: { search?: string; page?: number
 
 export async function createDisplayGroup(data: { name: string; description?: string }): Promise<DisplayGroup> {
   const result = await invokeApi<any>('/api/grpc/display_group/CreateDisplayGroup', data);
-  if (!result.group) throw new Error('CreateDisplayGroup failed');
-  return result.group as DisplayGroup;
+  const g = result.group || result;
+  if (!g || !g.id) throw new Error('CreateDisplayGroup failed');
+  return g as DisplayGroup;
 }
 
 export async function updateDisplayGroup(id: string, data: { name?: string; description?: string; default_layout_id?: string; schedule_id?: string; }): Promise<DisplayGroup> {
   const result = await invokeApi<any>('/api/grpc/display_group/UpdateDisplayGroup', { id, ...data });
-  if (!result.group) throw new Error('UpdateDisplayGroup failed');
-  return result.group as DisplayGroup;
+  const g = result.group || result;
+  if (!g || !g.id) throw new Error('UpdateDisplayGroup failed');
+  return g as DisplayGroup;
 }
 
 export async function deleteDisplayGroup(id: string): Promise<boolean> {

@@ -14,20 +14,23 @@ export async function getRoles(params?: { search?: string; page?: number; limit?
 
 export async function getRole(id: string): Promise<Role> {
   const result = await invokeApi<any>('/api/grpc/role/GetRole', { id });
-  if (!result.role) throw new Error(`Role ID ${id} tidak ditemukan`);
-  return result.role as Role;
+  const r = result.role || result;
+  if (!r || !r.id) throw new Error(`Role ID ${id} tidak ditemukan`);
+  return r as Role;
 }
 
 export async function createRole(data: { name: string; description?: string; permission_ids: string[] }): Promise<Role> {
   const result = await invokeApi<any>('/api/grpc/role/CreateRole', data);
-  if (!result.role) throw new Error('CreateRole failed');
-  return result.role as Role;
+  const r = result.role || result;
+  if (!r || !r.id) throw new Error('CreateRole failed');
+  return r as Role;
 }
 
 export async function updateRole(id: string, data: { name?: string; description?: string; permission_ids?: string[] }): Promise<Role> {
   const result = await invokeApi<any>('/api/grpc/role/UpdateRole', { id, ...data });
-  if (!result.role) throw new Error('UpdateRole failed');
-  return result.role as Role;
+  const r = result.role || result;
+  if (!r || !r.id) throw new Error('UpdateRole failed');
+  return r as Role;
 }
 
 export async function deleteRole(id: string): Promise<boolean> {

@@ -15,14 +15,16 @@ export async function getDevices(params?: { search?: string; page?: number; limi
 
 export async function getDevice(id: string): Promise<Device> {
   const result = await invokeApi<any>('/api/grpc/device/GetDevice', { id });
-  if (!result.device) throw new Error(`Device ID ${id} tidak ditemukan`);
-  return result.device as Device;
+  const d = result.device || result;
+  if (!d || !d.id) throw new Error(`Device ID ${id} tidak ditemukan`);
+  return d as Device;
 }
 
 export async function pairDevice(data: { pairing_code: string; device_name: string; default_layout_id?: string; canary_group_id?: string; }): Promise<Device> {
   const result = await invokeApi<any>('/api/grpc/device/PairDevice', data);
-  if (!result.device) throw new Error('Gagal pair device');
-  return result.device as Device;
+  const d = result.device || result;
+  if (!d || !d.id) throw new Error('Gagal pair device');
+  return d as Device;
 }
 
 export async function updateDevice(id: string, data: { name?: string; display_group_id?: string; status?: string; screen_width?: number; screen_height?: number; orientation?: number; timezone?: string; schedule_id?: string; }): Promise<Device> {

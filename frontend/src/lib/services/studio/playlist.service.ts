@@ -18,8 +18,9 @@ export async function getPlaylists(params?: { search?: string; page?: number; li
 
 export async function getPlaylist(id: string): Promise<Playlist> {
   const result = await invokeApi<any>('/api/grpc/playlist/GetPlaylist', { id });
-  if (!result.playlist) throw new Error(`Playlist ID ${id} tidak ditemukan`);
-  return result.playlist as Playlist;
+  const p = result.playlist || result;
+  if (!p || !p.id) throw new Error(`Playlist ID ${id} tidak ditemukan`);
+  return p as Playlist;
 }
 
 export async function createPlaylist(data: { name: string; description?: string; is_shuffle?: boolean }): Promise<Playlist> {

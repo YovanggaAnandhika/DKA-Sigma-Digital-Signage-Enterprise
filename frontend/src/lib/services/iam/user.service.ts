@@ -14,20 +14,23 @@ export async function getUsers(params?: { search?: string; page?: number; limit?
 
 export async function getUser(id: string): Promise<User> {
   const result = await invokeApi<any>('/api/grpc/user/GetUser', { id });
-  if (!result.user) throw new Error(`User ID ${id} tidak ditemukan`);
-  return result.user as User;
+  const u = result.user || result;
+  if (!u || !u.id) throw new Error(`User ID ${id} tidak ditemukan`);
+  return u as User;
 }
 
 export async function createUser(data: { email: string; full_name: string; role_id: string; password?: string }): Promise<User> {
   const result = await invokeApi<any>('/api/grpc/user/CreateUser', data);
-  if (!result.user) throw new Error('CreateUser failed');
-  return result.user as User;
+  const u = result.user || result;
+  if (!u || !u.id) throw new Error('CreateUser failed');
+  return u as User;
 }
 
 export async function updateUser(id: string, data: { email?: string; full_name?: string; role_id?: string; is_active?: boolean; password?: string }): Promise<User> {
   const result = await invokeApi<any>('/api/grpc/user/UpdateUser', { id, ...data });
-  if (!result.user) throw new Error('UpdateUser failed');
-  return result.user as User;
+  const u = result.user || result;
+  if (!u || !u.id) throw new Error('UpdateUser failed');
+  return u as User;
 }
 
 export async function deleteUser(id: string): Promise<boolean> {

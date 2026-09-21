@@ -14,9 +14,9 @@ export async function getLayouts(params?: { search?: string; page?: number; limi
 
 export async function getLayout(id: string): Promise<Layout> {
   const result = await invokeApi<any>('/api/grpc/layout/GetLayout', { id });
-  console.log(result)
-  if (!result.layout) throw new Error(`Layout ID ${id} tidak ditemukan`);
-  return result.layout as Layout;
+  const l = result.layout || result;
+  if (!l || !l.id) throw new Error(`Layout ID ${id} tidak ditemukan`);
+  return l as Layout;
 }
 
 export async function createLayout(data: { name: string; description?: string; canvas_width: number; canvas_height: number; background_color?: string }): Promise<Layout> {
@@ -26,8 +26,9 @@ export async function createLayout(data: { name: string; description?: string; c
     height: data.canvas_height
   };
   const result = await invokeApi<any>('/api/grpc/layout/CreateLayout', payload);
-  if (!result.layout) throw new Error('CreateLayout failed');
-  return result.layout as Layout;
+  const l = result.layout || result;
+  if (!l || !l.id) throw new Error('CreateLayout failed');
+  return l as Layout;
 }
 
 export async function updateLayout(id: string, data: { name?: string; description?: string; canvas_width?: number; canvas_height?: number; background_color?: string }): Promise<Layout> {
@@ -37,8 +38,9 @@ export async function updateLayout(id: string, data: { name?: string; descriptio
     height: data.canvas_height
   };
   const result = await invokeApi<any>('/api/grpc/layout/UpdateLayout', { id, ...payload });
-  if (!result.layout) throw new Error('UpdateLayout failed');
-  return result.layout as Layout;
+  const l = result.layout || result;
+  if (!l || !l.id) throw new Error('UpdateLayout failed');
+  return l as Layout;
 }
 
 export async function deleteLayout(id: string): Promise<boolean> {
