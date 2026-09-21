@@ -55,11 +55,13 @@ next-env.d.ts
 frontend/public/uploads/
 frontend/src/lib/api/
 
-# Exclude all Protobuf & gRPC generated files
+# Exclude all generated proto & gRPC files
 **/*_pb.js
 **/*_pb.d.ts
 **/*_grpc_pb.js
 **/*_grpc_pb.d.ts
+**/*_grpc_pb.ts
+**/*_pb.ts
 
 # ─── Package Managers ────────────────────────────────────────────────────────
 npm-debug.log*
