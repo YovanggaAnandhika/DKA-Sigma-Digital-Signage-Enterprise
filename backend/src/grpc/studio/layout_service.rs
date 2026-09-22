@@ -431,6 +431,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             if req.duration_seconds > 0 { Some(req.duration_seconds) } else { None },
             if req.transition_type.is_empty() { None } else { Some(req.transition_type) },
             if req.order_index > 0 { Some(req.order_index) } else { None },
+            req.is_muted,
         )
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -448,6 +449,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
                 duration_seconds: block.duration_seconds,
                 transition_type: block.transition_type.unwrap_or_default(),
                 order_index: block.order_index,
+
                 created_at: block.created_at.to_rfc3339(),
                 item_overrides: vec![],
             }),

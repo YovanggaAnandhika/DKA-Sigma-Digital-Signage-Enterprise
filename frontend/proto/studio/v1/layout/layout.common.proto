@@ -157,6 +157,7 @@ message UpdatePlaylistBlockRequest {
   int32 duration_seconds = 3;
   string transition_type = 4;
   int32 order_index = 5;
+  optional bool is_muted = 6;
 }
 
 message RemovePlaylistBlockRequest {

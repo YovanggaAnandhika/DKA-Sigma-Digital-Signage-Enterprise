@@ -293,6 +293,7 @@ impl LayoutRepository {
         duration_seconds: Option<i32>,
         transition_type: Option<String>,
         order_index: Option<i32>,
+        is_muted: Option<bool>,
     ) -> Result<ZoneBlockEntity, sqlx::Error> {
         let block = sqlx::query_as::<_, ZoneBlockEntity>(
             r#"
@@ -301,7 +302,8 @@ impl LayoutRepository {
                 start_time_seconds = COALESCE($2, start_time_seconds),
                 duration_seconds = COALESCE($3, duration_seconds),
                 transition_type = CASE WHEN $4 = 'none' THEN NULL WHEN $4 IS NOT NULL THEN $4 ELSE transition_type END,
-                order_index = COALESCE($5, order_index)
+                order_index = COALESCE($5, order_index),
+                is_muted = COALESCE($6, is_muted)
             WHERE id = $1
             RETURNING *
             "#
@@ -311,6 +313,7 @@ impl LayoutRepository {
         .bind(duration_seconds)
         .bind(transition_type)
         .bind(order_index)
+        .bind(is_muted)
         .fetch_one(pool)
         .await?;
 

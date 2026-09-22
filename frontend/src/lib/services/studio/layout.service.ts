@@ -70,7 +70,7 @@ export async function addPlaylistBlock(zone_id: string, playlist_id: string, sta
   return await invokeApi<any>('/api/grpc/layout/AddPlaylistBlock', { zone_id, playlist_id, start_time_seconds, duration_seconds });
 }
 
-export async function updatePlaylistBlock(id: string, data: { start_time_seconds?: number; duration_seconds?: number; transition_type?: string; }): Promise<any> {
+export async function updatePlaylistBlock(id: string, data: { start_time_seconds?: number; duration_seconds?: number; transition_type?: string; is_muted?: boolean; }): Promise<any> {
   return await invokeApi<any>('/api/grpc/layout/UpdatePlaylistBlock', { id, ...data });
 }
 

@@ -42,6 +42,7 @@ pub struct ZoneBlockEntity {
     pub duration_seconds: i32,
     pub transition_type: Option<String>,
     pub order_index: i32,
+    pub is_muted: bool,
     pub created_at: DateTime<Utc>,
 }
 

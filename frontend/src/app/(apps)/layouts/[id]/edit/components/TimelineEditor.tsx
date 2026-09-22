@@ -4,7 +4,7 @@ import React, { useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
 import { Play, Pause, RotateCcw, Film, Image as ImageIcon, Volume2, VolumeX, MicOff, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
-import { setPlaylistItemOverride } from '@/lib/services/studio/layout.service';
+import { setPlaylistItemOverride, updatePlaylistBlock } from '@/lib/services/studio/layout.service';
 import { PlaylistItem } from '@/lib/services/studio/types';
 
 export default function TimelineEditor() {
@@ -66,8 +66,8 @@ export default function TimelineEditor() {
     e.stopPropagation();
     try {
       if (isMediaBlock) {
-        // Direct media block: call API first, only update UI on success
-        await setPlaylistItemOverride(zonePlaylistId, item.id, !currentMuted);
+        // Media block: use updatePlaylistBlock with is_muted (no playlist_item_id exists)
+        await updatePlaylistBlock(zonePlaylistId, { is_muted: !currentMuted });
         // UI update only happens after API succeeds
         setZones(prev => prev.map(z => ({
           ...z,
