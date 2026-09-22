@@ -66,7 +66,9 @@ export default function TimelineEditor() {
     e.stopPropagation();
     try {
       if (isMediaBlock) {
-        // Direct media block: update zone block mute state locally
+        // Direct media block: call API first, only update UI on success
+        await setPlaylistItemOverride(zonePlaylistId, item.id, !currentMuted);
+        // UI update only happens after API succeeds
         setZones(prev => prev.map(z => ({
           ...z,
           blocks: z.blocks.map(b => {
@@ -84,8 +86,7 @@ export default function TimelineEditor() {
         })));
       } else {
         const override = await setPlaylistItemOverride(zonePlaylistId, item.id, !currentMuted);
-        
-        // Update local state so UI reflects immediately without global refresh
+        // UI update only happens after API succeeds
         setZones(prev => prev.map(z => ({
           ...z,
           blocks: z.blocks.map(b => {
@@ -104,6 +105,7 @@ export default function TimelineEditor() {
         })));
       }
     } catch (err: any) {
+      // API failed — UI state is NOT updated, toast shown to user
       showToast(err.message || 'Gagal mengubah status mute video', 'error');
     }
   };
