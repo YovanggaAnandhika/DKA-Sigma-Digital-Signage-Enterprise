@@ -35,23 +35,30 @@ export function LayoutPlaybackProvider({ children, layers }: { children: ReactNo
   };
 
   const zoomOutTimeline = () => {
-    setPxPerSecond((prev) => Math.max(5, Math.round(prev / 1.3)));
+    setPxPerSecond((prev) => Math.max(0.5, prev / 1.3));
   };
 
   const resetTimelineZoom = () => {
     setPxPerSecond(20);
   };
 
-  let maxTimeSec = 60;
+  let contentMaxTimeSec = 0;
   for (const z of layers) {
     for (const b of (z.blocksList || [])) {
       const endSec = (b.startTimeSeconds || 0) + (b.durationSeconds || 10);
-      if (endSec > maxTimeSec) {
-        maxTimeSec = endSec;
+      if (endSec > contentMaxTimeSec) {
+        contentMaxTimeSec = endSec;
       }
     }
   }
-  const timelineDuration = maxTimeSec * pxPerSecond;
+  
+  // Actual content ends here. If empty, default to loop every 10s.
+  const loopEndSec = contentMaxTimeSec > 0 ? contentMaxTimeSec : 10;
+  const loopEndPx = loopEndSec * pxPerSecond;
+  
+  // Visual timeline duration should always give some extra space (min 60s)
+  const visualMaxSec = Math.max(60, contentMaxTimeSec + 30);
+  const timelineDuration = visualMaxSec * pxPerSecond;
 
   useEffect(() => {
     let animationFrameId: number;
@@ -63,8 +70,8 @@ export function LayoutPlaybackProvider({ children, layers }: { children: ReactNo
 
       setPlayheadPosition((prev) => {
         const next = prev + deltaSec * pxPerSecond;
-        if (next >= timelineDuration) {
-          return 0;
+        if (next >= loopEndPx) {
+          return 0; // Loop back to start based on actual content duration!
         }
         return next;
       });

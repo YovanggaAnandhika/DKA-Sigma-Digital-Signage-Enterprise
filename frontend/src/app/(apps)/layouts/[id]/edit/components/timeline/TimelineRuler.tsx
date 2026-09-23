@@ -8,12 +8,19 @@ export default function TimelineRuler() {
 
   const secTicks = Math.ceil(timelineDuration / (pxPerSecond || 20));
 
-  // Determine tick interval dynamically based on zoom (pxPerSecond)
+  // Determine tick interval dynamically based on zoom (pxPerSecond) to keep ticks ~50px apart
   let step = 5;
-  if (pxPerSecond >= 50) step = 1;
-  else if (pxPerSecond >= 30) step = 2;
-  else if (pxPerSecond <= 8) step = 10;
-  else if (pxPerSecond <= 12) step = 10;
+  const targetPxDist = 50;
+  const idealStep = targetPxDist / (pxPerSecond || 20);
+  
+  if (idealStep <= 1) step = 1;
+  else if (idealStep <= 2) step = 2;
+  else if (idealStep <= 5) step = 5;
+  else if (idealStep <= 10) step = 10;
+  else if (idealStep <= 30) step = 30;
+  else if (idealStep <= 60) step = 60;
+  else if (idealStep <= 120) step = 120;
+  else step = 300;
 
   const handleRulerClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
