@@ -1,3 +1,4 @@
+use crate::modules::studio::layer::model::LayerWithBlocksDto;
 use crate::modules::studio::layout::model::LayoutWithLayersDto;
 use crate::modules::studio::playlist::model::PlaylistWithItemsDto;
 use serde::{Deserialize, Serialize};
@@ -50,7 +51,7 @@ pub struct CompiledManifestDto {
     pub orientation: String,
     pub background_color: String,
     pub background_image_url: Option<String>,
-    pub zones: Vec<ZoneWithPlaylistDto>,
+    pub layers: Vec<LayerWithBlocksDto>,
     pub required_assets: Vec<ManifestAssetDto>,
     pub total_download_size_bytes: i64,
     pub is_canary: bool,

@@ -1,5 +1,5 @@
 use super::model::{
-    CompiledManifestDto, ManifestAssetDto, ManifestSyncResponseDto, ZoneWithPlaylistDto,
+    CompiledManifestDto, ManifestAssetDto, ManifestSyncResponseDto, LayerWithBlocksDto,
 };
 use super::repositories::ManifestRepository;
 use crate::common::AppError;
@@ -137,15 +137,15 @@ impl ManifestService {
                 } // end if Some(pl_id)
             }
 
-            enriched_zones.push(ZoneWithPlaylistDto {
-                id: dto_zone.zone.id,
-                name: dto_zone.zone.name,
-                x: dto_zone.zone.x,
-                y: dto_zone.zone.y,
-                width: dto_zone.zone.width,
-                height: dto_zone.zone.height,
-                z_index: dto_zone.zone.z_index,
-                background_color: dto_zone.zone.background_color,
+            enriched_zones.push(LayerWithBlocksDto {
+                id: dto_zone.layer.id,
+                name: dto_zone.layer.name,
+                x: dto_zone.layer.x,
+                y: dto_zone.layer.y,
+                width: dto_zone.layer.width,
+                height: dto_zone.layer.height,
+                z_index: dto_zone.layer.z_index,
+                background_color: dto_zone.layer.background_color,
                 blocks: mapped_blocks,
             });
         }
@@ -176,10 +176,10 @@ impl ManifestService {
             layout_name: layout.name,
             canvas_width: layout.canvas_width,
             canvas_height: layout.canvas_height,
-            orientation: layout.orientation_id,
+            orientation: layout.orientation_id.to_string(),
             background_color: layout.background_color,
             background_image_url: layout.background_image_url,
-            zones: enriched_zones,
+            layers: enriched_zones,
             required_assets: assets_vec,
             total_download_size_bytes: total_size,
             is_canary: canary_res.is_in_canary,

@@ -44,7 +44,7 @@ pub struct LayerPlaylistItemOverrideEntity {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LayerBlockDto {
     #[serde(flatten)]
     pub block: LayerBlockEntity,
@@ -54,7 +54,7 @@ pub struct LayerBlockDto {
 pub type LayerPlaylistEntity = LayerBlockEntity;
 pub type LayerPlaylistDto = LayerBlockDto;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LayerWithBlocksDto {
     #[serde(flatten)]
     pub layer: LayerEntity,
