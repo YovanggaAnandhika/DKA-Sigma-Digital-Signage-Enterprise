@@ -81,6 +81,7 @@ message UploadMediaChunkRequest {
   int32 total_chunks = 5;
   bytes chunk_data = 6;
   int64 total_file_size = 7;
+  int64 chunk_offset = 10;
 }
 
 message UploadMediaChunkResponse {
@@ -119,4 +120,9 @@ message StreamMediaFileResponse {
   string mime_type = 2;
   int64 total_size = 3;
   string error_message = 4;
+}
+
+message FinalizeUploadRequest {
+  string upload_id = 1;
+  string original_filename = 2;
 }

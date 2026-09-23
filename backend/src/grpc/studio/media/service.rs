@@ -17,6 +17,7 @@ use crate::grpc::proto::studio::v1::media::{
     UploadMediaChunkRequest, UploadMediaChunkResponse,
     GetMediaFileRequest, GetMediaFileResponse,
     StreamMediaFileRequest, StreamMediaFileResponse,
+    FinalizeUploadRequest,
 };
 
 pub struct MediaServiceImpl {
