@@ -126,7 +126,11 @@ export default function MediaMetadataForm({
       {uploadProgress !== null && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary-600)' }}>
-            <span>Mengunggah berkas via gRPC chunks ke backend...</span>
+            <span>
+              {uploadProgress === 100 
+                ? 'Menyatukan file part & verifikasi SHA-256...' 
+                : 'Mengunggah berkas via gRPC chunks ke backend...'}
+            </span>
             <span>{uploadProgress}%</span>
           </div>
           <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--bg-surface)', borderRadius: '3px', overflow: 'hidden' }}>
@@ -155,7 +159,9 @@ export default function MediaMetadataForm({
           <Save size={16} />
           <span>
             {uploadProgress !== null
-              ? `Mengunggah (${uploadProgress}%)...`
+              ? uploadProgress === 100 
+                ? 'Menyatukan File...' 
+                : `Mengunggah (${uploadProgress}%)...`
               : loading
               ? 'Menyimpan Media...'
               : 'Simpan Media ke Pustaka'}

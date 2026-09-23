@@ -222,14 +222,15 @@ export async function uploadFileViaGrpc(
   // Wait for any remaining chunks
   await Promise.all(executing);
 
+  // Set progress to 100% to indicate finalization step
+  if (onProgress) onProgress(100);
+
   // All chunks uploaded, now finalize
   const finalResult = await finalizeUpload(uploadId, file.name, totalChunks);
   
   if (!finalResult || !finalResult.is_completed) {
     throw new Error('Upload gagal diselesaikan (Finalize) oleh backend gRPC');
   }
-
-  if (onProgress) onProgress(100);
 
   return {
     publicUrl: finalResult.publicUrl,
