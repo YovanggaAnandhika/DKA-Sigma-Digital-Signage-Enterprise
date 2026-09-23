@@ -1,9 +1,10 @@
-pub mod media_service;
-pub mod playlist_service;
-pub mod layout_service;
-pub mod schedule_service;
+pub mod media;
+pub mod playlist;
+pub mod layout;
+pub mod schedule;
+pub mod layer;
 
-pub use media_service::MediaServiceImpl;
-pub use playlist_service::PlaylistServiceImpl;
-pub use layout_service::LayoutServiceImpl;
-pub use schedule_service::ScheduleServiceImpl;
+pub use media::service::MediaServiceImpl;
+pub use playlist::service::PlaylistServiceImpl;
+pub use layout::service::LayoutServiceImpl;
+pub use schedule::service::ScheduleServiceImpl;

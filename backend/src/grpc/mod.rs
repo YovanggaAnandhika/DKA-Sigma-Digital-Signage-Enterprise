@@ -65,5 +65,6 @@ pub mod proto {
 pub mod iam;
 pub mod hardware;
 pub mod studio;
+pub mod common;
 pub mod distribution;
 pub mod middleware;
