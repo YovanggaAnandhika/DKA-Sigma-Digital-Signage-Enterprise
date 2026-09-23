@@ -4,7 +4,10 @@ import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/services';
-import { ArrowLeft, Save, Upload, UploadCloud, Film, Image as ImageIcon, Globe, CheckCircle2, X, Sparkles, FileText } from 'lucide-react';
+import { ArrowLeft, UploadCloud, Globe } from 'lucide-react';
+import FileUploadDropzone from './components/FileUploadDropzone';
+import MediaPreviewCard from './components/MediaPreviewCard';
+import MediaMetadataForm from './components/MediaMetadataForm';
 
 export default function CreateMediaPage() {
   const router = useRouter();
@@ -193,14 +196,6 @@ export default function CreateMediaPage() {
     }
   };
 
-  const formatBytes = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
       {/* Header */}
@@ -270,264 +265,35 @@ export default function CreateMediaPage() {
         {/* Upload Dropzone Mode */}
         {mode === 'upload' && (
           <div className="card-elevated" style={{ padding: '24px' }}>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm"
-              style={{ display: 'none' }}
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  handleFile(e.target.files[0]);
-                }
-              }}
-            />
-
             {!selectedFile && !previewUrl ? (
-              <div
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-                style={{
-                  border: `2px dashed ${dragActive ? 'var(--primary-500)' : 'var(--border-subtle)'}`,
-                  backgroundColor: dragActive ? 'rgba(56, 189, 248, 0.05)' : 'var(--bg-surface-elevated)',
-                  borderRadius: '12px',
-                  padding: '48px 24px',
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '12px'
-                }}
-              >
-                <div
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: '50%',
-                    backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                    color: 'var(--primary-600)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: '4px'
-                  }}
-                >
-                  <UploadCloud size={32} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-                    Tarik & Letakkan gambar atau video di sini
-                  </h3>
-                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px', margin: 0 }}>
-                    atau <span style={{ color: 'var(--primary-600)', fontWeight: 600, textDecoration: 'underline' }}>klik untuk memilih berkas</span> dari komputer Anda
-                  </p>
-                </div>
-                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                  <span style={{ fontSize: '0.6875rem', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'var(--bg-base)', color: 'var(--text-secondary)' }}>JPG, PNG, WebP</span>
-                  <span style={{ fontSize: '0.6875rem', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'var(--bg-base)', color: 'var(--text-secondary)' }}>MP4, WebM Video</span>
-                </div>
-              </div>
+              <FileUploadDropzone
+                fileInputRef={fileInputRef}
+                handleFile={handleFile}
+                dragActive={dragActive}
+                handleDragOver={handleDragOver}
+                handleDragLeave={handleDragLeave}
+                handleDrop={handleDrop}
+              />
             ) : (
-              /* Visual Preview Card */
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--primary-600)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <CheckCircle2 size={16} color="#10b981" /> Berkas Terpilih & Terdeteksi
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleClearFile}
-                    className="btn btn-outline"
-                    style={{ fontSize: '0.75rem', padding: '4px 10px', color: 'var(--accent-rose)', display: 'flex', alignItems: 'center', gap: '4px' }}
-                  >
-                    <X size={14} /> Ganti Berkas
-                  </button>
-                </div>
-
-                <div style={{ display: 'flex', gap: '20px', backgroundColor: 'var(--bg-base)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)', alignItems: 'center' }}>
-                  {/* Media Preview Box */}
-                  <div
-                    style={{
-                      width: '160px',
-                      height: '100px',
-                      borderRadius: '6px',
-                      overflow: 'hidden',
-                      backgroundColor: '#0f172a',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
-                    }}
-                  >
-                    {formData.mediaType === 2 ? (
-                      <video src={previewUrl!} style={{ width: '100%', height: '100%', objectFit: 'contain' }} muted />
-                    ) : (
-                      <img src={previewUrl!} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                    )}
-                  </div>
-
-                  {/* Detected File Details */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, overflow: 'hidden' }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {formData.originalFilename}
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                      <span>Ukuran: <strong>{formatBytes(formData.fileSizeBytes)}</strong></span>
-                      <span>Resolusi: <strong>{formData.width} × {formData.height} px</strong></span>
-                      <span>Format: <strong>{formData.mimeType}</strong></span>
-                      {formData.mediaType === 2 && (
-                        <span>Durasi: <strong style={{ color: 'var(--accent-amber)' }}>{formData.durationSeconds} detik</strong></span>
-                      )}
-                    </div>
-                    {fileSha256 && (
-                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        SHA-256: {fileSha256}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <MediaPreviewCard
+                previewUrl={previewUrl}
+                formData={formData}
+                fileSha256={fileSha256}
+                handleClearFile={handleClearFile}
+              />
             )}
           </div>
         )}
 
         {/* Form Metadata Fields */}
-        <div className="card-elevated" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <h2 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-            Informasi & Properti Penayangan
-          </h2>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-              Nama Aset Media <span style={{ color: 'var(--accent-rose)' }}>*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Contoh: Banner Promo Weekend Spesial"
-              className="form-input"
-            />
-          </div>
-
-          {mode === 'url' && (
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                Tautan URL Konten / Web Stream <span style={{ color: 'var(--accent-rose)' }}>*</span>
-              </label>
-              <input
-                type="url"
-                required
-                value={formData.publicUrl}
-                onChange={(e) => setFormData({ ...formData, publicUrl: e.target.value })}
-                placeholder="https://example.com/stream/promo.mp4"
-                className="form-input"
-              />
-            </div>
-          )}
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                Tipe Media
-              </label>
-              <select
-                value={formData.mediaType}
-                onChange={(e) => setFormData({ ...formData, mediaType: Number(e.target.value) })}
-                className="form-input"
-              >
-                <option value={1}>🖼️ Gambar Statis (JPG / PNG / WebP)</option>
-                <option value={2}>🎬 Video Berulang (MP4 / WebM)</option>
-                <option value={3}>🌐 Halaman Web URL</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                Durasi Tayang Default (Detik) <span style={{ color: 'var(--accent-rose)' }}>*</span>
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={3600}
-                required
-                value={formData.durationSeconds}
-                onChange={(e) => setFormData({ ...formData, durationSeconds: Number(e.target.value) })}
-                className="form-input"
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                Lebar Resolusi (Width Pixel)
-              </label>
-              <input
-                type="number"
-                value={formData.width}
-                onChange={(e) => setFormData({ ...formData, width: Number(e.target.value) })}
-                className="form-input"
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                Tinggi Resolusi (Height Pixel)
-              </label>
-              <input
-                type="number"
-                value={formData.height}
-                onChange={(e) => setFormData({ ...formData, height: Number(e.target.value) })}
-                className="form-input"
-              />
-            </div>
-          </div>
-
-          {uploadProgress !== null && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary-600)' }}>
-                <span>Mengunggah berkas via gRPC chunks ke backend...</span>
-                <span>{uploadProgress}%</span>
-              </div>
-              <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--bg-surface)', borderRadius: '3px', overflow: 'hidden' }}>
-                <div
-                  style={{
-                    width: `${uploadProgress}%`,
-                    height: '100%',
-                    backgroundColor: 'var(--primary-600)',
-                    transition: 'width 0.15s ease',
-                  }}
-                />
-              </div>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
-            <Link href="/media" className="btn btn-secondary">
-              Batal
-            </Link>
-            <button
-              type="submit"
-              disabled={loading || (mode === 'upload' && !selectedFile && !formData.name)}
-              className="btn btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '180px', justifyContent: 'center' }}
-            >
-              <Save size={16} />
-              <span>
-                {uploadProgress !== null
-                  ? `Mengunggah (${uploadProgress}%)...`
-                  : loading
-                  ? 'Menyimpan Media...'
-                  : 'Simpan Media ke Pustaka'}
-              </span>
-            </button>
-          </div>
-        </div>
+        <MediaMetadataForm
+          mode={mode}
+          formData={formData}
+          setFormData={setFormData}
+          uploadProgress={uploadProgress}
+          loading={loading}
+          selectedFile={selectedFile}
+        />
       </form>
     </div>
   );
