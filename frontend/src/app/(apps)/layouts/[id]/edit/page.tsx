@@ -13,7 +13,40 @@ import PlaylistPickerModal from './components/PlaylistPickerModal';
 import MediaPickerModal from './components/MediaPickerModal';
 
 function EditorContent() {
-  const { loading, layout, togglePlay, isFullscreen, toast } = useLayoutEditor();
+  const {
+    loading,
+    layout,
+    togglePlay,
+    isFullscreen,
+    toast,
+    leftSidebarWidth,
+    setLeftSidebarWidth,
+    isLayersCollapsed,
+    isPlaylistCollapsed,
+  } = useLayoutEditor();
+  const [isDraggingSidebar, setIsDraggingSidebar] = React.useState(false);
+
+  const areBothCollapsed = isLayersCollapsed && isPlaylistCollapsed;
+  const currentSidebarWidth = areBothCollapsed ? 36 : leftSidebarWidth;
+
+  const handleSidebarResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDraggingSidebar(true);
+    const startX = e.clientX;
+    const startW = leftSidebarWidth;
+
+    const onMouseMove = (ev: MouseEvent) => {
+      const delta = ev.clientX - startX;
+      setLeftSidebarWidth(Math.min(500, Math.max(180, startW + delta)));
+    };
+    const onMouseUp = () => {
+      setIsDraggingSidebar(false);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -67,12 +100,46 @@ function EditorContent() {
 
       {/* Main Workspace */}
       <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        {/* Left Stacked Column: Top (Layers) and Bottom (Alokasi Playlist) */}
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', flexShrink: 0 }}>
+        {/* Left Stacked Column: Top (Layers) and Bottom (Alokasi Playlist) with unified resize */}
+        <div
+          style={{
+            width: `${currentSidebarWidth}px`,
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            flexShrink: 0,
+            borderRight: '1px solid var(--border-subtle)',
+            backgroundColor: 'var(--bg-surface)',
+            position: 'relative',
+            zIndex: 5,
+            transition: isDraggingSidebar ? 'none' : 'width 0.2s ease',
+          }}
+        >
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <LayersPanel />
           </div>
           <LayerBlockList />
+
+          {/* Unified continuous resize handle on the right edge (only when not both collapsed) */}
+          {!areBothCollapsed && (
+            <div
+              onMouseDown={handleSidebarResizeMouseDown}
+              style={{
+                position: 'absolute',
+                top: 0,
+                right: -3,
+                bottom: 0,
+                width: '6px',
+                cursor: 'col-resize',
+                zIndex: 20,
+                backgroundColor: isDraggingSidebar ? 'var(--primary-400)' : 'transparent',
+                transition: 'background 0.15s',
+              }}
+              title="Tarik untuk mengubah lebar panel sidebar"
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(14,165,233,0.3)'; }}
+              onMouseLeave={(e) => { if (!isDraggingSidebar) e.currentTarget.style.backgroundColor = 'transparent'; }}
+            />
+          )}
         </div>
 
         {/* Center Column: Canvas */}

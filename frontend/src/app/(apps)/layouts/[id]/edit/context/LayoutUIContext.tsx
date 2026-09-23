@@ -22,6 +22,10 @@ interface LayoutUIContextType {
   reportBuffer: (ranges: { start: number; end: number }[]) => void;
   leftSidebarWidth: number;
   setLeftSidebarWidth: React.Dispatch<React.SetStateAction<number>>;
+  isLayersCollapsed: boolean;
+  setIsLayersCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  isPlaylistCollapsed: boolean;
+  setIsPlaylistCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   availablePlaylists: Playlist[];
   mediaList: MediaItem[];
   refreshPlaylistsAndMedia: () => Promise<void>;
@@ -39,6 +43,8 @@ export function LayoutUIProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [bufferedRanges, setBufferedRanges] = useState<{ start: number; end: number }[]>([]);
   const [leftSidebarWidth, setLeftSidebarWidth] = useState<number>(240);
+  const [isLayersCollapsed, setIsLayersCollapsed] = useState<boolean>(false);
+  const [isPlaylistCollapsed, setIsPlaylistCollapsed] = useState<boolean>(false);
   const [availablePlaylists, setAvailablePlaylists] = useState<Playlist[]>([]);
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
 
@@ -103,6 +109,10 @@ export function LayoutUIProvider({ children }: { children: ReactNode }) {
         reportBuffer,
         leftSidebarWidth,
         setLeftSidebarWidth,
+        isLayersCollapsed,
+        setIsLayersCollapsed,
+        isPlaylistCollapsed,
+        setIsPlaylistCollapsed,
         availablePlaylists,
         mediaList,
         refreshPlaylistsAndMedia,

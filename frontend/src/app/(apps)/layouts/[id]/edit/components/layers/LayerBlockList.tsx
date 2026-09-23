@@ -6,30 +6,11 @@ import { ListMusic, ChevronLeft, ChevronRight, ExternalLink, Film, Trash2 } from
 import { useLayoutEditor } from '../../context/LayoutEditorContext';
 
 export default function LayerBlockList() {
-  const { zones, selectedZoneId, availablePlaylists, mediaList, updateSelectedZone, setPickerZoneId, setMediaPickerZoneId, leftSidebarWidth, setLeftSidebarWidth } = useLayoutEditor();
-  const [collapsed, setCollapsed] = useState(false);
-  const [isDraggingResize, setIsDraggingResize] = useState(false);
+  const { zones, selectedZoneId, availablePlaylists, mediaList, updateSelectedZone, setPickerZoneId, setMediaPickerZoneId, isPlaylistCollapsed, setIsPlaylistCollapsed } = useLayoutEditor();
+  const collapsed = isPlaylistCollapsed;
+  const setCollapsed = setIsPlaylistCollapsed;
 
   const selectedZone = zones.find((z) => z.id === selectedZoneId);
-
-  const handleResizeMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDraggingResize(true);
-    const startX = e.clientX;
-    const startW = leftSidebarWidth;
-
-    const onMouseMove = (ev: MouseEvent) => {
-      const delta = ev.clientX - startX;
-      setLeftSidebarWidth(Math.min(500, Math.max(180, startW + delta)));
-    };
-    const onMouseUp = () => {
-      setIsDraggingResize(false);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-  };
 
   return (
     <div
@@ -37,14 +18,12 @@ export default function LayerBlockList() {
         display: 'flex',
         flexDirection: 'column',
         borderTop: '1px solid var(--border-subtle)',
-        borderRight: '1px solid var(--border-subtle)',
         backgroundColor: 'var(--bg-surface)',
-        width: collapsed ? '36px' : `${leftSidebarWidth}px`,
+        width: collapsed ? '36px' : '100%',
         maxHeight: '340px',
         overflow: 'hidden',
-        transition: isDraggingResize ? 'none' : 'width 0.2s ease',
+        transition: 'width 0.2s ease',
         flexShrink: 0,
-        position: 'relative',
       }}
     >
       {/* Header */}
