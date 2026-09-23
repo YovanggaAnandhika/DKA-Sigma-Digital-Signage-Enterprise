@@ -11,17 +11,11 @@ export async function POST(req: NextRequest) {
     
     const request = new CreateVisualFilterRequest();
     if (body.name !== undefined) request.setName(body.name);
-    if (body.name !== undefined) request.setName(body.name);
-    if (body.brightness !== undefined) request.setBrightness(body.brightness);
     if (body.brightness !== undefined) request.setBrightness(body.brightness);
     if (body.contrast !== undefined) request.setContrast(body.contrast);
-    if (body.contrast !== undefined) request.setContrast(body.contrast);
     if (body.saturation !== undefined) request.setSaturation(body.saturation);
-    if (body.saturation !== undefined) request.setSaturation(body.saturation);
-    if (body.grayscale !== undefined) request.setGrayscale(body.grayscale);
-    if (body.grayscale !== undefined) request.setGrayscale(body.grayscale);
+    if (body.hueRotate !== undefined) request.setHueRotate(body.hueRotate);
     if (body.blurPx !== undefined) request.setBlurPx(body.blurPx);
-    if (body.blur_px !== undefined) request.setBlurPx(body.blur_px);
     
     return new Promise<NextResponse>((resolve) => {
       client.createVisualFilter(request, getGrpcMetadata(token), (error: any, response: any) => {

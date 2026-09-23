@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     if (body.id) request.setId(body.id);
     if (body.startTimeSeconds !== undefined) request.setStartTimeSeconds(body.startTimeSeconds);
     if (body.durationSeconds !== undefined) request.setDurationSeconds(body.durationSeconds);
-    if (body.transitionType !== undefined) request.setTransitionType(body.transitionType);
+    if (body.transitionId !== undefined) request.setTransitionId(body.transitionId);
     if (body.orderIndex !== undefined) request.setOrderIndex(body.orderIndex);
     if (body.isMuted !== undefined) request.setIsMuted(body.isMuted);
     if (body.volumeLevel !== undefined) request.setVolumeLevel(body.volumeLevel);

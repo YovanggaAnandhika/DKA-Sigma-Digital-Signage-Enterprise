@@ -104,16 +104,14 @@ export default function InspectorPanel() {
   }
 
   // Helper to update specific block in state & API
-  const handleUpdateBlock = async (updates: { durationSeconds?: number; startTimeSeconds?: number; isMuted?: boolean; volumeLevel?: number; trimStartSeconds?: number; trimEndSeconds?: number; transitionId?: string; visualFilterId?: string }) => {
+  const handleUpdateBlock = async (updates: { durationSeconds?: number; startTimeSeconds?: number; isMuted?: boolean; volumeLevel?: number; transitionId?: string; visualFilterId?: string }) => {
     if (!selectedBlock || !blockZone) return;
 
-    if ((updates.isMuted !== undefined || updates.volumeLevel !== undefined || updates.trimStartSeconds !== undefined || updates.trimEndSeconds !== undefined || 'transitionId' in updates || 'visualFilterId' in updates) && !selectedBlock.id.startsWith('temp-')) {
+    if ((updates.isMuted !== undefined || updates.volumeLevel !== undefined || 'transitionId' in updates || 'visualFilterId' in updates) && !selectedBlock.id.startsWith('temp-')) {
       try {
         await updatePlaylistBlock(selectedBlock.id, { 
           isMuted: updates.isMuted !== undefined ? updates.isMuted : selectedBlock.isMuted,
           volumeLevel: updates.volumeLevel !== undefined ? updates.volumeLevel : selectedBlock.volumeLevel,
-          trimStartSeconds: updates.trimStartSeconds,
-          trimEndSeconds: updates.trimEndSeconds,
           transitionId: updates.transitionId,
           visualFilterId: updates.visualFilterId
         });
@@ -188,7 +186,6 @@ export default function InspectorPanel() {
         id: newBlockId,
         startTimeSeconds: Math.floor(playheadSec),
         durationSeconds: newDur2,
-        trimStartSeconds: (selectedBlock.trimStartSeconds || 0) + newDur1, // offset trim start
       };
 
       setLayers((prev) =>
@@ -512,39 +509,6 @@ export default function InspectorPanel() {
                   <Sparkles size={13} /> Visual Effects & Trimming
                 </span>
                 
-                {/* Trimming */}
-                {isVideo && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                        TRIM START (DETIK)
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={selectedBlock.trimStartSeconds || 0}
-                        onChange={(e) => handleUpdateBlock({ trimStartSeconds: Math.max(0, Number(e.target.value) || 0) })}
-                        className="form-input"
-                        style={{ fontSize: '0.75rem', padding: '6px 10px' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                        TRIM END (DETIK)
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        placeholder="Akhir Asli"
-                        value={selectedBlock.trimEndSeconds || ''}
-                        onChange={(e) => handleUpdateBlock({ trimEndSeconds: e.target.value ? Number(e.target.value) : undefined })}
-                        className="form-input"
-                        style={{ fontSize: '0.75rem', padding: '6px 10px' }}
-                      />
-                    </div>
-                  </div>
-                )}
-
                 {/* Transitions */}
                 <div>
                   <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>

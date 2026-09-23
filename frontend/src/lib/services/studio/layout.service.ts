@@ -82,7 +82,7 @@ export async function addMediaBlock(layer_id: string, media_id: string, startTim
   return await invokeApi<any>('/api/grpc/layer_block/CreateLayerBlock', { layer_id, media_item_id: media_id, startTimeSeconds, durationSeconds });
 }
 
-export async function updatePlaylistBlock(id: string, data: { startTimeSeconds?: number; durationSeconds?: number; transitionType?: string; isMuted?: boolean; orderIndex?: number; volumeLevel?: number; }): Promise<any> {
+export async function updatePlaylistBlock(id: string, data: { startTimeSeconds?: number; durationSeconds?: number; transitionId?: string; isMuted?: boolean; orderIndex?: number; volumeLevel?: number; visualFilterId?: string; }): Promise<any> {
   return await invokeApi<any>('/api/grpc/layer_block/UpdateLayerBlock', {
     id,
     ...data,

@@ -163,8 +163,8 @@ export default function TimelineTrackBlock({ layer, block, color }: TimelineTrac
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          {hasTransition && <Blend size={10} color="#60a5fa" title="Transisi Aktif" />}
-          {hasFilter && <Sparkles size={10} color="#f472b6" title="Filter Aktif" />}
+          {hasTransition && <Blend size={10} color="#60a5fa" />}
+          {hasFilter && <Sparkles size={10} color="#f472b6" />}
           <span style={{ fontSize: '0.625rem', opacity: 0.9, fontFamily: 'monospace' }}>
             {block.durationSeconds}s
           </span>

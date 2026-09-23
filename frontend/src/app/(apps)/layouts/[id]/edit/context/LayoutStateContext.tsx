@@ -61,7 +61,8 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
             mediaItem: b.mediaItem,
             startTimeSeconds: b.startTimeSeconds ?? 0,
             durationSeconds: b.durationSeconds ?? 10,
-            transitionType: b.transitionType || 'none',
+            transitionId: b.transitionId,
+            transition: b.transition,
             orderIndex: b.orderIndex ?? b.position ?? 0,
             isMuted: b.isMuted ?? b.is_muted ?? false,
             itemOverridesList: (b.itemOverridesList || []).map((o: any) => ({
@@ -164,7 +165,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
             await api.updatePlaylistBlock(b.id, {
               startTimeSeconds: b.startTimeSeconds,
               durationSeconds: b.durationSeconds,
-              transitionType: b.transitionType,
+              transitionId: b.transitionId,
               isMuted: blockMuted !== undefined ? blockMuted : false,
               volumeLevel: b.volumeLevel !== undefined ? b.volumeLevel : 100,
             });
@@ -193,7 +194,8 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
             mediaItem: b.mediaItem,
             startTimeSeconds: b.startTimeSeconds ?? 0,
             durationSeconds: b.durationSeconds ?? 10,
-            transitionType: b.transitionType || 'none',
+            transitionId: b.transitionId,
+            transition: b.transition,
             orderIndex: b.orderIndex ?? b.position ?? 0,
             volumeLevel: b.volumeLevel ?? prevBlock?.volumeLevel ?? 100,
             isMuted: b.isMuted ?? b.is_muted ?? prevBlock?.isMuted ?? false,
