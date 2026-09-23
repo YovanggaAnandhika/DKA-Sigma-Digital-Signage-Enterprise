@@ -2,9 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { api, Layout, Layer as ApiZone } from '@/lib/services';
+import { api, Layout, Layer as ApiLayer } from '@/lib/services';
 
-export interface Layer extends ApiZone {
+export interface Layer extends ApiLayer {
   timeline_start?: number;
   timeline_width?: number;
 }
@@ -48,8 +48,8 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         setLayout(data);
         setLayoutName(data.name);
 
-        const rawZones = data.layersList || [];
-        const sanitizedZones = rawZones.map((z: any) => {
+        const rawLayers = data.layersList || [];
+        const sanitizedLayers = rawLayers.map((z: any) => {
           const rawBlocks = z.blocksList || [];
           const blocks = rawBlocks.map((b: any) => ({
             ...b,
@@ -66,7 +66,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
             isMuted: b.isMuted ?? b.is_muted ?? false,
             itemOverridesList: (b.itemOverridesList || []).map((o: any) => ({
               id: o.id,
-              zonePlaylistId: o.zonePlaylistId || o.zone_playlist_id,
+              layerPlaylistId: o.layerPlaylistId || o.layer_playlist_id,
               playlistItemId: o.playlistItemId,
               isMuted: o.isMuted ?? false,
             })),
@@ -87,9 +87,9 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
           };
         });
 
-        setLayers(sanitizedZones);
-        if (sanitizedZones.length > 0) {
-          setSelectedLayerId(sanitizedZones[0].id);
+        setLayers(sanitizedLayers);
+        if (sanitizedLayers.length > 0) {
+          setSelectedLayerId(sanitizedLayers[0].id);
         }
       } catch (err: any) {
         alert(err.message || 'Gagal memuat layout');
@@ -127,7 +127,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         const height = Math.round(Number(z.height) || 200);
         const z_index = Math.round(Number(z.zIndex) || 1);
 
-        let realZoneId = z.id;
+        let realLayerId = z.id;
         if (z.id.startsWith('z-')) {
           const newZ = await api.createLayer({
             layoutId: params.id,
@@ -139,7 +139,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
             zIndex: z_index,
             backgroundColor: z.backgroundColor,
           });
-          realZoneId = newZ.id;
+          realLayerId = newZ.id;
         } else {
           await api.updateLayer(z.id, {
             name: z.name,
@@ -155,9 +155,9 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         for (const b of (z.blocksList || [])) {
           if (b.id.startsWith('temp-')) {
             if (b.mediaItemId) {
-              await api.addMediaBlock(realZoneId, b.mediaItemId, b.startTimeSeconds, b.durationSeconds);
+              await api.addMediaBlock(realLayerId, b.mediaItemId, b.startTimeSeconds, b.durationSeconds);
             } else {
-              await api.addPlaylistBlock(realZoneId, b.playlistId, b.startTimeSeconds, b.durationSeconds);
+              await api.addPlaylistBlock(realLayerId, b.playlistId, b.startTimeSeconds, b.durationSeconds);
             }
           } else {
             const blockMuted = b.isMuted ?? b.itemOverridesList?.find((o: any) => o.playlistItemId === b.id)?.isMuted;
@@ -175,13 +175,13 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
       setLayout(data);
       setLayoutName(data.name);
 
-      const prevZones = layers;
-      const rawZones = data.layersList || [];
-      const sanitizedZones = rawZones.map((z: any) => {
-        const prevZone = prevZones.find((pz) => pz.id === z.id);
+      const prevLayers = layers;
+      const rawLayers = data.layersList || [];
+      const sanitizedLayers = rawLayers.map((z: any) => {
+        const prevLayer = prevLayers.find((pz) => pz.id === z.id);
         const rawBlocks = z.blocksList || [];
         const blocks = rawBlocks.map((b: any) => {
-          const prevBlock = prevZone?.blocksList?.find((pb) => pb.id === b.id);
+          const prevBlock = prevLayer?.blocksList?.find((pb) => pb.id === b.id);
           return {
             ...b,
             id: b.id,
@@ -197,7 +197,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
             isMuted: b.isMuted ?? b.is_muted ?? prevBlock?.isMuted ?? false,
             itemOverridesList: prevBlock?.itemOverridesList || (b.itemOverridesList || []).map((o: any) => ({
               id: o.id,
-              zonePlaylistId: o.zonePlaylistId || o.zone_playlist_id,
+              layerPlaylistId: o.layerPlaylistId || o.layer_playlist_id,
               playlistItemId: o.playlistItemId,
               isMuted: o.isMuted ?? false,
             })),
@@ -217,7 +217,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
           blocksList: blocks,
         };
       });
-      setLayers(sanitizedZones);
+      setLayers(sanitizedLayers);
       showToast('Template layout dan seluruh posisi zona berhasil disimpan!');
     } catch (err: any) {
       showToast(err.message || 'Gagal menyimpan layout', 'error');
@@ -239,7 +239,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         zIndex: layers.length + 1,
         backgroundColor: '#1e293b',
       });
-      const newZone: Layer = {
+      const newLayer: Layer = {
         id: newZ.id,
         layoutId: layout.id,
         name: newZ.name,
@@ -253,8 +253,8 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         createdAt: newZ.createdAt || new Date().toISOString(),
         updatedAt: newZ.updatedAt || new Date().toISOString(),
       };
-      setLayers([...layers, newZone]);
-      setSelectedLayerId(newZone.id);
+      setLayers([...layers, newLayer]);
+      setSelectedLayerId(newLayer.id);
     } catch (err: any) {
       console.error('Failed to create layer:', err);
     }
