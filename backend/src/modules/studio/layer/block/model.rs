@@ -11,7 +11,10 @@ pub struct LayerBlockEntity {
     pub media_item_id: Option<Uuid>,
     pub start_time_seconds: i32,
     pub duration_seconds: i32,
-    pub transition_type: Option<String>,
+    pub trim_start_seconds: i32,
+    pub trim_end_seconds: Option<i32>,
+    pub transition_id: Option<Uuid>,
+    pub visual_filter_id: Option<Uuid>,
     pub order_index: i32,
     pub is_muted: bool,
     pub volume_level: i32,
@@ -26,13 +29,20 @@ pub struct CreateLayerBlockDto {
     pub media_item_id: Option<Uuid>,
     pub start_time_seconds: i32,
     pub duration_seconds: i32,
+    pub trim_start_seconds: Option<i32>,
+    pub trim_end_seconds: Option<i32>,
+    pub transition_id: Option<Uuid>,
+    pub visual_filter_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateLayerBlockDto {
     pub start_time_seconds: Option<i32>,
     pub duration_seconds: Option<i32>,
-    pub transition_type: Option<String>,
+    pub trim_start_seconds: Option<i32>,
+    pub trim_end_seconds: Option<i32>,
+    pub transition_id: Option<Uuid>,
+    pub visual_filter_id: Option<Uuid>,
     pub order_index: Option<i32>,
     pub is_muted: Option<bool>,
     pub volume_level: Option<i32>,

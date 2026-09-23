@@ -3,6 +3,8 @@ pub mod layout;
 pub mod media;
 pub mod playlist;
 pub mod schedule;
+pub mod transition;
+pub mod visual_filter;
 
 #[macro_export]
 macro_rules! register_studio_services {
@@ -28,6 +30,16 @@ macro_rules! register_studio_services {
             ))
             .add_service(crate::grpc::proto::studio::v1::schedule::schedule_service_server::ScheduleServiceServer::new(
                 crate::grpc::studio::schedule::service::ScheduleServiceImpl::new($pool.clone())
+            ))
+            .add_service(crate::grpc::proto::studio::v1::transition::transition_service_server::TransitionServiceServer::new(
+                crate::grpc::studio::transition::service::MyTransitionService::new(
+                    std::sync::Arc::new(crate::modules::studio::transition::repositories::TransitionRepository::new($pool.clone()))
+                )
+            ))
+            .add_service(crate::grpc::proto::studio::v1::visual_filter::visual_filter_service_server::VisualFilterServiceServer::new(
+                crate::grpc::studio::visual_filter::service::MyVisualFilterService::new(
+                    std::sync::Arc::new(crate::modules::studio::visual_filter::repositories::VisualFilterRepository::new($pool.clone()))
+                )
             ))
     };
 }
