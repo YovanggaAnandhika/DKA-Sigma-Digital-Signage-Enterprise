@@ -226,24 +226,38 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const handleAddZone = () => {
+  const handleAddZone = async () => {
     if (!layout) return;
-    const newZone: Zone = {
-      id: `z-${Date.now()}`,
-      layoutId: layout.id,
-      name: `Kotak Zona ${zones.length + 1}`,
-      x: 100,
-      y: 100,
-      width: Math.round(layout.canvasWidth * 0.4),
-      height: Math.round(layout.canvasHeight * 0.4),
-      zIndex: zones.length + 1,
-      blocksList: [],
-      backgroundColor: '#1e293b',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setZones([...zones, newZone]);
-    setSelectedZoneId(newZone.id);
+    try {
+      const newZ = await api.createZone({
+        layoutId: layout.id,
+        name: `Kotak Zona ${zones.length + 1}`,
+        x: 100,
+        y: 100,
+        width: Math.round(layout.canvasWidth * 0.4),
+        height: Math.round(layout.canvasHeight * 0.4),
+        zIndex: zones.length + 1,
+        backgroundColor: '#1e293b',
+      });
+      const newZone: Zone = {
+        id: newZ.id,
+        layoutId: layout.id,
+        name: newZ.name,
+        x: Number(newZ.x) || 100,
+        y: Number(newZ.y) || 100,
+        width: Number(newZ.width) || Math.round(layout.canvasWidth * 0.4),
+        height: Number(newZ.height) || Math.round(layout.canvasHeight * 0.4),
+        zIndex: Number(newZ.zIndex) || (zones.length + 1),
+        blocksList: [],
+        backgroundColor: newZ.backgroundColor || '#1e293b',
+        createdAt: newZ.createdAt || new Date().toISOString(),
+        updatedAt: newZ.updatedAt || new Date().toISOString(),
+      };
+      setZones([...zones, newZone]);
+      setSelectedZoneId(newZone.id);
+    } catch (err: any) {
+      console.error('Failed to create zone:', err);
+    }
   };
 
   const handleDeleteZone = (zoneId: string) => {

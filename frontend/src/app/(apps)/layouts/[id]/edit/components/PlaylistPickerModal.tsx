@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Search, X, Check, Film, Image as ImageIcon, PlayCircle, Clock } from 'lucide-react';
+import { addPlaylistBlock, createZone } from '@/lib/services/studio/layout.service';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 
 export default function PlaylistPickerModal() {
@@ -9,9 +10,10 @@ export default function PlaylistPickerModal() {
     pickerZoneId, 
     setPickerZoneId, 
     zones, 
+    setZones,
     availablePlaylists, 
     mediaList, 
-    updateSelectedZone 
+    showToast,
   } = useLayoutEditor();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,7 +27,7 @@ export default function PlaylistPickerModal() {
     setPickerZoneId(null);
   };
 
-  const handleSelect = (plId: string) => {
+  const handleSelect = async (plId: string) => {
     const pl = availablePlaylists.find(p => p.id === plId);
     
     // Calculate the start time of the new block by summing all previous block durations
@@ -37,21 +39,58 @@ export default function PlaylistPickerModal() {
     
     const duration_seconds = pl?.totalDurationSeconds || 10;
 
-    const newBlock: any = {
-      id: 'temp-' + Date.now(),
-      zoneId: targetZone.id,
-      playlistId: plId,
-      mediaItemId: '',
-      startTimeSeconds: start_time_seconds,
-      durationSeconds: duration_seconds,
-      transitionType: 'none',
-      orderIndex: currentBlocks.length,
-      itemOverridesList: [],
-      createdAt: new Date().toISOString(),
-    };
-    // Append block
-    updateSelectedZone('blocksList', [...currentBlocks, newBlock]);
-    handleClose();
+    try {
+      let realZoneId = targetZone.id;
+      if (realZoneId.startsWith('z-')) {
+        const newZ = await createZone({
+          layoutId: targetZone.layoutId,
+          name: targetZone.name,
+          x: targetZone.x,
+          y: targetZone.y,
+          width: targetZone.width,
+          height: targetZone.height,
+          zIndex: targetZone.zIndex,
+          backgroundColor: targetZone.backgroundColor,
+        });
+        realZoneId = newZ.id;
+      }
+
+      const res = await addPlaylistBlock(realZoneId, plId, start_time_seconds, duration_seconds);
+      const createdBlock = res.block || res;
+
+      const newBlock: any = {
+        ...createdBlock,
+        id: createdBlock.id,
+        zoneId: realZoneId,
+        playlistId: plId,
+        mediaItemId: '',
+        playlist: pl,
+        startTimeSeconds: start_time_seconds,
+        durationSeconds: duration_seconds,
+        transitionType: 'none',
+        orderIndex: currentBlocks.length,
+        itemOverridesList: [],
+        isMuted: false,
+        createdAt: new Date().toISOString(),
+      };
+
+      setZones((prev) =>
+        prev.map((z) => {
+          if (z.id === targetZone.id || z.id === realZoneId) {
+            return {
+              ...z,
+              id: realZoneId,
+              blocksList: [...(z.blocksList || []), newBlock],
+            };
+          }
+          return z;
+        })
+      );
+      showToast('Playlist berhasil ditambahkan');
+      handleClose();
+    } catch (err: any) {
+      showToast(err.message || 'Gagal menambahkan playlist block', 'error');
+    }
   };
 
   const filteredPlaylists = availablePlaylists.filter(pl => 

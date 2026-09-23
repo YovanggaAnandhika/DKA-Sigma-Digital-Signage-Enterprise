@@ -37,7 +37,9 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
     e.stopPropagation();
     const nextMuted = !isBlockMuted;
     try {
-      await updatePlaylistBlock(block.id, { isMuted: nextMuted });
+      if (!block.id.startsWith('temp-')) {
+        await updatePlaylistBlock(block.id, { isMuted: nextMuted });
+      }
       setZones((prev) =>
         prev.map((z) => ({
           ...z,

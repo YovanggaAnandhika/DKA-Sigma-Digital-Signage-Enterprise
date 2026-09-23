@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Search, X, Check, Film, Image as ImageIcon, PlayCircle, Clock } from 'lucide-react';
+import { addMediaBlock, createZone } from '@/lib/services/studio/layout.service';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 
 export default function MediaPickerModal() {
@@ -9,8 +10,9 @@ export default function MediaPickerModal() {
     mediaPickerZoneId, 
     setMediaPickerZoneId, 
     zones, 
+    setZones,
     mediaList, 
-    updateSelectedZone 
+    showToast,
   } = useLayoutEditor();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,7 +26,7 @@ export default function MediaPickerModal() {
     setMediaPickerZoneId(null);
   };
 
-  const handleSelect = (mediaId: string) => {
+  const handleSelect = async (mediaId: string) => {
     const media = mediaList.find(m => m.id === mediaId);
     if (!media) return;
     
@@ -37,22 +39,58 @@ export default function MediaPickerModal() {
     
     const duration_seconds = media.durationSeconds > 0 ? media.durationSeconds : 10;
 
-    const newBlock: any = {
-      id: 'temp-' + Date.now(),
-      zoneId: targetZone.id,
-      playlistId: '',
-      mediaItemId: mediaId,
-      mediaItem: media,
-      startTimeSeconds: start_time_seconds,
-      durationSeconds: duration_seconds,
-      transitionType: 'none',
-      orderIndex: currentBlocks.length,
-      itemOverridesList: [],
-      createdAt: new Date().toISOString(),
-    };
-    // Append block
-    updateSelectedZone('blocksList', [...currentBlocks, newBlock]);
-    handleClose();
+    try {
+      let realZoneId = targetZone.id;
+      if (realZoneId.startsWith('z-')) {
+        const newZ = await createZone({
+          layoutId: targetZone.layoutId,
+          name: targetZone.name,
+          x: targetZone.x,
+          y: targetZone.y,
+          width: targetZone.width,
+          height: targetZone.height,
+          zIndex: targetZone.zIndex,
+          backgroundColor: targetZone.backgroundColor,
+        });
+        realZoneId = newZ.id;
+      }
+
+      const res = await addMediaBlock(realZoneId, mediaId, start_time_seconds, duration_seconds);
+      const createdBlock = res.block || res;
+
+      const newBlock: any = {
+        ...createdBlock,
+        id: createdBlock.id,
+        zoneId: realZoneId,
+        playlistId: '',
+        mediaItemId: mediaId,
+        mediaItem: media,
+        startTimeSeconds: start_time_seconds,
+        durationSeconds: duration_seconds,
+        transitionType: 'none',
+        orderIndex: currentBlocks.length,
+        itemOverridesList: [],
+        isMuted: false,
+        createdAt: new Date().toISOString(),
+      };
+
+      setZones((prev) =>
+        prev.map((z) => {
+          if (z.id === targetZone.id || z.id === realZoneId) {
+            return {
+              ...z,
+              id: realZoneId,
+              blocksList: [...(z.blocksList || []), newBlock],
+            };
+          }
+          return z;
+        })
+      );
+      showToast('Media berhasil ditambahkan');
+      handleClose();
+    } catch (err: any) {
+      showToast(err.message || 'Gagal menambahkan media block', 'error');
+    }
   };
 
   const filteredMedia = mediaList.filter(m => 

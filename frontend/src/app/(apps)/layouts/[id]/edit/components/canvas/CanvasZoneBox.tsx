@@ -84,15 +84,21 @@ export default function CanvasZoneBox({ zone: z, idx }: CanvasZoneBoxProps) {
     }
   }
   
-  // Resolve mute state: check item_overrides first (per-block toggle in timeline)
+  // Resolve mute state: check activeBlock.isMuted and overrides
   let isCurrentItemMuted = false;
   if (activeBlock) {
-    const overrideItemId = activeBlock.mediaItemId ? activeBlock.id : currentItem?.id;
-    const override = (activeBlock.itemOverridesList || []).find(
-      (o: any) => o.playlistItemId === overrideItemId
+    const isBlockMuted = activeBlock.isMuted !== undefined
+      ? !!activeBlock.isMuted
+      : !!(activeBlock.itemOverridesList || []).find((o: any) => o.playlistItemId === activeBlock.id)?.isMuted;
+
+    const itemOverride = (activeBlock.itemOverridesList || []).find(
+      (o: any) => o.playlistItemId === currentItem?.id
     );
-    isCurrentItemMuted = override ? !!override.isMuted : !!(currentItem?.isMuted);
+    const isItemMuted = itemOverride ? !!itemOverride.isMuted : !!(currentItem?.isMuted);
+
+    isCurrentItemMuted = isBlockMuted || isItemMuted;
   }
+  const isEffectiveMuted = isMuted || isCurrentItemMuted;
 
   return (
     <Rnd
@@ -190,7 +196,7 @@ export default function CanvasZoneBox({ zone: z, idx }: CanvasZoneBoxProps) {
                 src={activeMedia.publicUrl}
                 isPlaying={isPlaying}
                 active={active}
-                isMuted={isMuted || isCurrentItemMuted}
+                isMuted={isEffectiveMuted}
                 targetTimeSec={itemOffsetSec}
                 onBufferUpdate={reportBuffer}
                 timelineStartSec={absoluteStartSec}
@@ -267,16 +273,16 @@ export default function CanvasZoneBox({ zone: z, idx }: CanvasZoneBoxProps) {
                 <span
                   style={{
                     fontSize: '0.5625rem',
-                    color: isMuted ? '#f87171' : '#4ade80',
+                    color: isEffectiveMuted ? '#f87171' : '#4ade80',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '2px',
                     borderLeft: '1px solid rgba(255,255,255,0.2)',
                     paddingLeft: '4px',
                   }}
-                  title={isMuted ? 'Suara dibisukan (Muted)' : 'Suara aktif (Unmuted)'}
+                  title={isEffectiveMuted ? 'Suara dibisukan (Muted)' : 'Suara aktif (Unmuted)'}
                 >
-                  {isMuted ? <VolumeX size={11} /> : <Volume2 size={11} />}
+                  {isEffectiveMuted ? <VolumeX size={11} /> : <Volume2 size={11} />}
                 </span>
               )}
             </div>

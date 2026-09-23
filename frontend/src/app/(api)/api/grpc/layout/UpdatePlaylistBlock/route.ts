@@ -9,10 +9,12 @@ export async function POST(req: NextRequest) {
     const token = getTokenFromRequest(req);
     const client = new LayoutServiceClient(getGrpcHost(), getGrpcCredentials());
     const request = new UpdatePlaylistBlockRequest();
-    if (body.id) request.setBlockId(body.id);
+    const blockId = body.block_id || body.blockId || body.id;
+    if (blockId) request.setBlockId(blockId);
     if (body.startTimeSeconds !== undefined) request.setStartTimeSeconds(body.startTimeSeconds);
     if (body.durationSeconds !== undefined) request.setDurationSeconds(body.durationSeconds);
-    if (body.transitionType) request.setTransitionType(body.transitionType);
+    const transition = body.transitionType || body.transition_type;
+    if (transition) request.setTransitionType(transition);
     if (body.position !== undefined) request.setOrderIndex(body.position);
     if (body.isMuted !== undefined) request.setIsMuted(body.isMuted);
     return new Promise<NextResponse>((resolve) => {
