@@ -95,6 +95,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use grpc::proto::studio::v1::playlist::playlist_service_server::PlaylistServiceServer;
     use grpc::proto::studio::v1::layout::layout_service_server::LayoutServiceServer;
     use grpc::proto::studio::v1::layer::layer_service_server::LayerServiceServer;
+    use grpc::proto::studio::v1::layer::layer_block_service_server::LayerBlockServiceServer;
+    use grpc::proto::studio::v1::layer::layer_item_override_service_server::LayerItemOverrideServiceServer;
     use grpc::proto::common::v1::orientation::orientation_service_server::OrientationServiceServer;
     use grpc::proto::studio::v1::schedule::schedule_service_server::ScheduleServiceServer;
 
@@ -116,7 +118,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let media_svc = MediaServiceImpl::new(pool.clone());
     let playlist_svc = PlaylistServiceImpl::new(pool.clone());
     let layout_svc = LayoutServiceImpl::new(pool.clone());
-    let layer_svc = crate::grpc::studio::layer::service::LayerServiceImpl::new(pool.clone());
+    let layer_svc = crate::grpc::studio::layer::layer::service::LayerServiceImpl::new(pool.clone());
+    let block_svc = crate::grpc::studio::layer::block::service::LayerBlockServiceImpl::new(pool.clone());
+    let item_override_svc = crate::grpc::studio::layer::item_override::service::LayerItemOverrideServiceImpl::new(pool.clone());
     let orientation_svc = crate::grpc::common::orientation::service::OrientationServiceImpl::new(pool.clone());
     let schedule_svc = ScheduleServiceImpl::new(pool.clone());
     let manifest_svc = ManifestServiceImpl::new(pool.clone());
@@ -138,6 +142,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(PlaylistServiceServer::new(playlist_svc))
         .add_service(LayoutServiceServer::new(layout_svc))
         .add_service(LayerServiceServer::new(layer_svc))
+        .add_service(LayerBlockServiceServer::new(block_svc))
+        .add_service(LayerItemOverrideServiceServer::new(item_override_svc))
         .add_service(OrientationServiceServer::new(orientation_svc))
         .add_service(ScheduleServiceServer::new(schedule_svc))
         // Distribution

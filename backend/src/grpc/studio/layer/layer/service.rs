@@ -6,16 +6,16 @@ use uuid::Uuid;
 use crate::grpc::proto::studio::v1::layer::{
     layer_service_server::LayerService as LayerServiceTrait,
     CreateLayerRequest, DeleteLayerRequest,
-    DeleteLayerResponse, GetLayerRequest, Layer as ProtoLayer, LayerPlaylist,
+    GetLayerRequest, Layer as ProtoLayer, LayerPlaylist,
     LayerPlaylistItemOverride,
     CreateLayerBlockRequest, UpdateLayerBlockRequest, DeleteLayerBlockRequest,
-    LayerBlockResponse, DeleteLayerBlockResponse,
-    SetPlaylistItemOverrideRequest, SetPlaylistItemOverrideResponse, UpdateLayerRequest,
+    ListLayersResponse, DeleteLayerResponse,
+    UpdateLayerRequest,
 };
 use crate::grpc::proto::studio::v1::media::MediaItem as ProtoMediaItem;
 use crate::grpc::proto::studio::v1::playlist::Playlist as ProtoPlaylist;
 
-use crate::modules::studio::layer::{
+use crate::modules::studio::layer::layer::{
     model::{CreateLayerDto, LayerBlockDto, UpdateLayerDto, CreateLayerBlockDto, UpdateLayerBlockDto},
     services::LayerService,
 };
@@ -29,7 +29,7 @@ impl LayerServiceImpl {
         Self { pool }
     }
 
-    pub fn map_layer_with_blocks(dto: crate::modules::studio::layer::model::LayerWithBlocksDto) -> ProtoLayer {
+    pub fn map_layer_with_blocks(dto: crate::modules::studio::layer::layer::model::LayerWithBlocksDto) -> ProtoLayer {
         ProtoLayer {
             id: dto.layer.id.to_string(),
             layout_id: dto.layer.layout_id.to_string(),
@@ -101,7 +101,7 @@ impl LayerServiceTrait for LayerServiceImpl {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        let full_dto = crate::modules::studio::layer::model::LayerWithBlocksDto {
+        let full_dto = crate::modules::studio::layer::layer::model::LayerWithBlocksDto {
             layer,
             blocks: vec![],
         };
@@ -121,7 +121,7 @@ impl LayerServiceTrait for LayerServiceImpl {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        let full_dto = crate::modules::studio::layer::model::LayerWithBlocksDto {
+        let full_dto = crate::modules::studio::layer::layer::model::LayerWithBlocksDto {
             layer,
             blocks: vec![],
         };
@@ -164,7 +164,7 @@ impl LayerServiceTrait for LayerServiceImpl {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        let full_dto = crate::modules::studio::layer::model::LayerWithBlocksDto {
+        let full_dto = crate::modules::studio::layer::layer::model::LayerWithBlocksDto {
             layer,
             blocks: vec![],
         };

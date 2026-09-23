@@ -15,7 +15,7 @@ use crate::modules::studio::layout::{
     model::{CreateLayoutDto, LayoutWithLayersDto, UpdateLayoutDto},
     services::LayoutService,
 };
-use crate::grpc::studio::layer::service::LayerServiceImpl;
+use crate::grpc::studio::layer::layer::service::LayerServiceImpl;
 
 pub struct LayoutServiceImpl {
     pub pool: PgPool,

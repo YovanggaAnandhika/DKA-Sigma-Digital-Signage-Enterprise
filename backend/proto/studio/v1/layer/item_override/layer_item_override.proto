@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package signage.studio.v1.layer;
+
+import "studio/v1/layer/item_override/layer_item_override.common.proto";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+service LayerItemOverrideService {
+  rpc CreateLayerItemOverride(CreateLayerItemOverrideRequest) returns (LayerPlaylistItemOverride);
+  rpc GetLayerItemOverride(GetLayerItemOverrideRequest) returns (LayerPlaylistItemOverride);
+  rpc ListLayerItemOverrides(ListLayerItemOverridesRequest) returns (ListLayerItemOverridesResponse);
+  rpc UpdateLayerItemOverride(UpdateLayerItemOverrideRequest) returns (LayerPlaylistItemOverride);
+  rpc DeleteLayerItemOverride(DeleteLayerItemOverrideRequest) returns (DeleteLayerItemOverrideResponse);
+}

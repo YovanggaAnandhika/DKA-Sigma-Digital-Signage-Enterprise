@@ -2,7 +2,28 @@ syntax = "proto3";
 
 package signage.studio.v1.layer;
 
-import "studio/v1/layer/layer.common.proto";
+import "common/v1/types.proto";
+import "studio/v1/playlist/playlist.common.proto";
+import "studio/v1/media/media.common.proto";
+import "studio/v1/layer/item_override/layer_item_override.common.proto";
+
+message LayerPlaylist {
+  string id = 1;
+  string layer_id = 2;
+  string playlist_id = 3;
+  signage.studio.v1.playlist.Playlist playlist = 4;
+  int32 start_time_seconds = 5;
+  int32 duration_seconds = 6;
+  string transition_type = 7;
+  int32 order_index = 8;
+  repeated LayerPlaylistItemOverride item_overrides = 9;
+  string created_at = 10;
+  string media_item_id = 11;
+  signage.studio.v1.media.MediaItem media_item = 12;
+  bool is_muted = 13;
+  int32 volume_level = 14;
+}
+
 
 message CreateLayerBlockRequest {
   string layer_id = 1;
@@ -45,12 +66,4 @@ message DeleteLayerBlockRequest {
 
 message DeleteLayerBlockResponse {
   bool success = 1;
-}
-
-service LayerBlockService {
-  rpc CreateLayerBlock(CreateLayerBlockRequest) returns (LayerPlaylist);
-  rpc GetLayerBlock(GetLayerBlockRequest) returns (LayerPlaylist);
-  rpc ListLayerBlocks(ListLayerBlocksRequest) returns (ListLayerBlocksResponse);
-  rpc UpdateLayerBlock(UpdateLayerBlockRequest) returns (LayerPlaylist);
-  rpc DeleteLayerBlock(DeleteLayerBlockRequest) returns (DeleteLayerBlockResponse);
 }

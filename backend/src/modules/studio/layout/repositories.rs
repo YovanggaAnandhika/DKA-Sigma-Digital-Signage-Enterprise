@@ -1,7 +1,7 @@
 use super::model::{
     CreateLayoutDto, LayoutEntity, UpdateLayoutDto, LayoutWithLayersDto
 };
-use crate::modules::studio::layer::model::{LayerEntity, LayerBlockEntity, LayerBlockDto, LayerPlaylistItemOverrideEntity, LayerWithBlocksDto};
+use crate::modules::studio::layer::layer::model::{LayerEntity, LayerBlockEntity, LayerBlockDto, LayerPlaylistItemOverrideEntity, LayerWithBlocksDto};
 use crate::db::DbPool;
 use uuid::Uuid;
 

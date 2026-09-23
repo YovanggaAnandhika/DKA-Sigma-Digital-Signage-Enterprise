@@ -4,7 +4,7 @@ use sqlx::FromRow;
 use uuid::Uuid;
 
 use crate::modules::common::orientation::model::OrientationEntity;
-use crate::modules::studio::layer::model::LayerWithBlocksDto;
+use crate::modules::studio::layer::layer::model::LayerWithBlocksDto;
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct LayoutEntity {

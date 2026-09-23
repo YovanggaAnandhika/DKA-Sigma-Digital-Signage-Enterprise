@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package signage.studio.v1.layer;
+
+import "studio/v1/layer/layer/layer.common.proto";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+service LayerService {
+  rpc CreateLayer(CreateLayerRequest) returns (Layer);
+  rpc GetLayer(GetLayerRequest) returns (Layer);
+  rpc ListLayers(ListLayersRequest) returns (ListLayersResponse);
+  rpc UpdateLayer(UpdateLayerRequest) returns (Layer);
+  rpc DeleteLayer(DeleteLayerRequest) returns (DeleteLayerResponse);
+}

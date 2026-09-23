@@ -1,6 +1,6 @@
 use super::model::{
-    CompiledManifestDto, ManifestAssetDto, ManifestSyncResponseDto, LayerWithBlocksDto,
-};
+    CompiledManifestDto, ManifestAssetDto, ManifestSyncResponseDto};
+use crate::modules::studio::layer::layer::model::LayerWithBlocksDto;
 use super::repositories::ManifestRepository;
 use crate::common::AppError;
 use crate::db::DbPool;

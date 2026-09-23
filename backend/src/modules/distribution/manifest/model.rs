@@ -1,4 +1,4 @@
-use crate::modules::studio::layer::model::LayerWithBlocksDto;
+use crate::modules::studio::layer::layer::model::LayerWithBlocksDto;
 use crate::modules::studio::layout::model::LayoutWithLayersDto;
 use crate::modules::studio::playlist::model::PlaylistWithItemsDto;
 use serde::{Deserialize, Serialize};

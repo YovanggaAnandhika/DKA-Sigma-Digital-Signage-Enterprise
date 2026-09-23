@@ -4,7 +4,7 @@ package signage.studio.v1.layout;
 
 import "common/v1/types.proto";
 import "common/v1/orientation/orientation.common.proto";
-import "studio/v1/layer/layer.common.proto";
+import "studio/v1/layer/layer/layer.common.proto";
 
 message Layout {
   string id = 1;
