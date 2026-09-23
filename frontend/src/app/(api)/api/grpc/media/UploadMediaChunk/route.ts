@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
     if (body.chunkIndex !== undefined) request.setChunkIndex(body.chunkIndex);
     if (body.totalChunks !== undefined) request.setTotalChunks(body.totalChunks);
     if (body.totalFileSizeBytes !== undefined) request.setTotalFileSize(body.totalFileSizeBytes);
+    if (body.chunkOffset !== undefined) request.setChunkOffset(body.chunkOffset);
 
     if (body.chunkData) {
       const binaryString = atob(body.chunkData);

@@ -96,6 +96,7 @@ export async function uploadMediaChunk(data: {
   total_chunks: number;
   chunk_data: Uint8Array;
   total_file_size: number;
+  chunk_offset?: number;
 }): Promise<UploadChunkResult> {
   // Convert Uint8Array to base64 for JSON transport
   let binary = '';
@@ -112,7 +113,8 @@ export async function uploadMediaChunk(data: {
     chunkIndex: data.chunk_index,
     totalChunks: data.total_chunks,
     chunkData: chunkDataB64,
-    totalFileSizeBytes: data.total_file_size
+    totalFileSizeBytes: data.total_file_size,
+    chunkOffset: data.chunk_offset
   };
 
   const result = await invokeApi<any>('/api/grpc/media/UploadMediaChunk', payload);
@@ -121,6 +123,21 @@ export async function uploadMediaChunk(data: {
     upload_id: result.upload_id || result.uploadId || '',
     chunk_index: result.chunk_index ?? result.chunkIndex ?? 0,
     is_completed: result.is_completed ?? result.isCompleted ?? false,
+    filePath: result.filePath || result.filePath || '',
+    publicUrl: result.publicUrl || result.publicUrl || '',
+    sha256Hash: result.sha256Hash || result.sha256Hash || '',
+    fileSizeBytes: result.fileSizeBytes ?? result.fileSizeBytes ?? 0,
+    error_message: result.error_message || result.errorMessage || ''
+  };
+}
+
+export async function finalizeUpload(uploadId: string, originalFilename: string, totalChunks: number): Promise<UploadChunkResult> {
+  const result = await invokeApi<any>('/api/grpc/media/FinalizeUpload', { uploadId, originalFilename, totalChunks });
+  return {
+    success: result.success,
+    upload_id: result.upload_id || result.uploadId || '',
+    chunk_index: result.chunk_index ?? result.chunkIndex ?? -1,
+    is_completed: result.is_completed ?? result.isCompleted ?? true,
     filePath: result.filePath || result.filePath || '',
     publicUrl: result.publicUrl || result.publicUrl || '',
     sha256Hash: result.sha256Hash || result.sha256Hash || '',
@@ -138,16 +155,21 @@ export async function uploadFileViaGrpc(
   const totalChunks = Math.max(1, Math.ceil(totalBytes / CHUNK_SIZE));
   const uploadId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `up_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-  let lastResult: UploadChunkResult | null = null;
-
-  for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+  let completedChunks = 0;
+  const MAX_CONCURRENCY = 5; // IDM-like parallel connections
+  
+  // Create an array of chunk indices
+  const chunkIndices = Array.from({ length: totalChunks }, (_, i) => i);
+  
+  // Helper to process a single chunk
+  const processChunk = async (chunkIndex: number) => {
     const start = chunkIndex * CHUNK_SIZE;
     const end = Math.min(start + CHUNK_SIZE, totalBytes);
     const slice = file.slice(start, end);
     const arrayBuffer = await slice.arrayBuffer();
     const chunkData = new Uint8Array(arrayBuffer);
 
-    lastResult = await uploadMediaChunk({
+    const res = await uploadMediaChunk({
       upload_id: uploadId,
       originalFilename: file.name,
       mimeType: file.type || 'application/octet-stream',
@@ -155,27 +177,49 @@ export async function uploadFileViaGrpc(
       total_chunks: totalChunks,
       chunk_data: chunkData,
       total_file_size: totalBytes,
+      chunk_offset: start,
     });
 
-    if (!lastResult.success && lastResult.error_message) {
-      throw new Error(`Gagal upload chunk ${chunkIndex + 1}/${totalChunks}: ${lastResult.error_message}`);
+    if (!res.success && res.error_message) {
+      throw new Error(`Gagal upload chunk ${chunkIndex + 1}/${totalChunks}: ${res.error_message}`);
     }
 
+    completedChunks++;
     if (onProgress) {
-      const progress = Math.min(100, Math.round(((chunkIndex + 1) / totalChunks) * 100));
+      const progress = Math.min(99, Math.round((completedChunks / totalChunks) * 100)); // Cap at 99% until finalize
       onProgress(progress);
     }
+  };
+
+  // Process chunks with concurrency limit
+  const executing = new Set<Promise<void>>();
+  for (const index of chunkIndices) {
+    const p = processChunk(index);
+    executing.add(p);
+    p.finally(() => executing.delete(p));
+    
+    if (executing.size >= MAX_CONCURRENCY) {
+      await Promise.race(executing);
+    }
+  }
+  
+  // Wait for any remaining chunks
+  await Promise.all(executing);
+
+  // All chunks uploaded, now finalize
+  const finalResult = await finalizeUpload(uploadId, file.name, totalChunks);
+  
+  if (!finalResult || !finalResult.is_completed) {
+    throw new Error('Upload gagal diselesaikan (Finalize) oleh backend gRPC');
   }
 
-  if (!lastResult || !lastResult.is_completed) {
-    throw new Error('Upload gagal diselesaikan oleh backend gRPC');
-  }
+  if (onProgress) onProgress(100);
 
   return {
-    publicUrl: lastResult.publicUrl,
-    sha256Hash: lastResult.sha256Hash,
-    filePath: lastResult.filePath,
-    fileSizeBytes: lastResult.fileSizeBytes,
+    publicUrl: finalResult.publicUrl,
+    sha256Hash: finalResult.sha256Hash,
+    filePath: finalResult.filePath,
+    fileSizeBytes: finalResult.fileSizeBytes,
   };
 }
 

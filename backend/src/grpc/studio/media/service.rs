@@ -188,67 +188,82 @@ impl MediaServiceTrait for MediaServiceImpl {
 
         let mut file = tokio::fs::OpenOptions::new()
             .create(true)
-            .append(true)
+            .write(true)
             .open(&temp_path)
             .await
             .map_err(|e| Status::internal(format!("Gagal membuka file temp chunk: {}", e)))?;
+
+        file.seek(SeekFrom::Start(req.chunk_offset as u64))
+            .await
+            .map_err(|e| Status::internal(format!("Gagal seek ke offset file: {}", e)))?;
 
         file.write_all(&req.chunk_data)
             .await
             .map_err(|e| Status::internal(format!("Gagal menulis data chunk: {}", e)))?;
 
-        let is_completed = (req.chunk_index + 1) >= req.total_chunks;
+        file.flush()
+            .await
+            .map_err(|e| Status::internal(format!("Gagal flush file: {}", e)))?;
 
-        if is_completed {
-            file.flush()
-                .await
-                .map_err(|e| Status::internal(format!("Gagal flush file: {}", e)))?;
-            drop(file);
+        Ok(Response::new(UploadMediaChunkResponse {
+            success: true,
+            upload_id,
+            chunk_index: req.chunk_index,
+            is_completed: false,
+            file_path: String::new(),
+            public_url: String::new(),
+            sha256_hash: String::new(),
+            file_size_bytes: 0,
+            error_message: String::new(),
+        }))
+    }
 
-            let full_bytes = tokio::fs::read(&temp_path)
-                .await
-                .map_err(|e| Status::internal(format!("Gagal membaca file lengkap: {}", e)))?;
+    async fn finalize_upload(
+        &self,
+        request: Request<FinalizeUploadRequest>,
+    ) -> Result<Response<UploadMediaChunkResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_media")?;
+        let req = request.into_inner();
 
-            let mut hasher = Sha256::new();
-            hasher.update(&full_bytes);
-            let sha256_hash = format!("{:x}", hasher.finalize());
+        let upload_dir = std::env::var("UPLOAD_DIR").unwrap_or_else(|_| "./uploads".to_string());
+        let temp_filename = format!(".part_{}", req.upload_id);
+        let temp_path = std::path::Path::new(&upload_dir).join(&temp_filename);
 
-            let clean_name = req.original_filename.replace(|c: char| !c.is_alphanumeric() && c != '.' && c != '_' && c != '-', "_");
-            let final_filename = format!("{}_{}", chrono::Utc::now().timestamp_millis(), clean_name);
-            let final_path = std::path::Path::new(&upload_dir).join(&final_filename);
-
-            tokio::fs::rename(&temp_path, &final_path)
-                .await
-                .map_err(|e| Status::internal(format!("Gagal memindahkan file upload: {}", e)))?;
-
-            let file_size_bytes = full_bytes.len() as i64;
-            let public_url = format!("/api/assets/{}", final_filename);
-            let file_path = format!("/storage/media/{}", final_filename);
-
-            Ok(Response::new(UploadMediaChunkResponse {
-                success: true,
-                upload_id,
-                chunk_index: req.chunk_index,
-                is_completed: true,
-                file_path,
-                public_url,
-                sha256_hash,
-                file_size_bytes,
-                error_message: String::new(),
-            }))
-        } else {
-            Ok(Response::new(UploadMediaChunkResponse {
-                success: true,
-                upload_id,
-                chunk_index: req.chunk_index,
-                is_completed: false,
-                file_path: String::new(),
-                public_url: String::new(),
-                sha256_hash: String::new(),
-                file_size_bytes: 0,
-                error_message: String::new(),
-            }))
+        if !temp_path.exists() {
+            return Err(Status::not_found("File sementara tidak ditemukan"));
         }
+
+        let full_bytes = tokio::fs::read(&temp_path)
+            .await
+            .map_err(|e| Status::internal(format!("Gagal membaca file lengkap: {}", e)))?;
+
+        let mut hasher = Sha256::new();
+        hasher.update(&full_bytes);
+        let sha256_hash = format!("{:x}", hasher.finalize());
+
+        let clean_name = req.original_filename.replace(|c: char| !c.is_alphanumeric() && c != '.' && c != '_' && c != '-', "_");
+        let final_filename = format!("{}_{}", chrono::Utc::now().timestamp_millis(), clean_name);
+        let final_path = std::path::Path::new(&upload_dir).join(&final_filename);
+
+        tokio::fs::rename(&temp_path, &final_path)
+            .await
+            .map_err(|e| Status::internal(format!("Gagal memindahkan file upload: {}", e)))?;
+
+        let file_size_bytes = full_bytes.len() as i64;
+        let public_url = format!("/api/assets/{}", final_filename);
+        let file_path = format!("/storage/media/{}", final_filename);
+
+        Ok(Response::new(UploadMediaChunkResponse {
+            success: true,
+            upload_id: req.upload_id,
+            chunk_index: -1,
+            is_completed: true,
+            file_path,
+            public_url,
+            sha256_hash,
+            file_size_bytes,
+            error_message: String::new(),
+        }))
     }
 
     async fn get_media_file(
