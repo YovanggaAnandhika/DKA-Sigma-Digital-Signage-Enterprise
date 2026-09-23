@@ -49,6 +49,7 @@ export interface LayerPlaylistItemOverride {
   layerPlaylistId: string;
   playlistItemId: string;
   isMuted: boolean;
+  volumeLevel?: number;
 }
 
 export interface PlaylistItem {
