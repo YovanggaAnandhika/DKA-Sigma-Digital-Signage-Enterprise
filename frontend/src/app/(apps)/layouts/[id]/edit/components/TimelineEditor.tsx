@@ -11,7 +11,7 @@ import TimelineTrackBlock from './timeline/TimelineTrackBlock';
 
 export default function TimelineEditor() {
   const { zones } = useLayoutState();
-  const { isTimelineExpanded, bufferedRanges } = useLayoutUI();
+  const { isTimelineExpanded, bufferedRanges, setInspectorTarget, setIsInspectorCollapsed } = useLayoutUI();
   const { timelineDuration, pxPerSecond, playheadPosition } = useLayoutPlayback();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -136,6 +136,12 @@ export default function TimelineEditor() {
 
             {/* Right Tracks Area */}
             <div
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setInspectorTarget('timeline');
+                  setIsInspectorCollapsed(false);
+                }
+              }}
               style={{
                 flex: 1,
                 minWidth: `${timelineDuration + 200}px`,

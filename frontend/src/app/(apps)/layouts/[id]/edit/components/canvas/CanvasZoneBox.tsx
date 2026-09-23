@@ -26,7 +26,9 @@ export default function CanvasZoneBox({ zone: z, idx }: CanvasZoneBoxProps) {
     mediaList,
     pxPerSecond,
     hiddenZones,
-    reportBuffer
+    reportBuffer,
+    setSelectedBlockId,
+    setInspectorTarget,
   } = useLayoutEditor();
 
   const zColors = ['#38bdf8', '#34d399', '#fbbf24', '#f472b6', '#a78bfa'];
@@ -107,6 +109,8 @@ export default function CanvasZoneBox({ zone: z, idx }: CanvasZoneBoxProps) {
       position={{ x: (Number(z.x) || 0) * scale, y: (Number(z.y) || 0) * scale }}
       onDragStart={() => {
         if (selectedZoneId !== z.id) setSelectedZoneId(z.id);
+        setSelectedBlockId(null);
+        setInspectorTarget('zone');
       }}
       onDrag={(e, d) => {
         const nextX = Math.round(d.x / scale);
@@ -128,6 +132,13 @@ export default function CanvasZoneBox({ zone: z, idx }: CanvasZoneBoxProps) {
       }}
       onResizeStart={() => {
         if (selectedZoneId !== z.id) setSelectedZoneId(z.id);
+        setSelectedBlockId(null);
+        setInspectorTarget('zone');
+      }}
+      onMouseDown={() => {
+        setSelectedZoneId(z.id);
+        setSelectedBlockId(null);
+        setInspectorTarget('zone');
       }}
       onResize={(e, direction, ref, delta, position) => {
         const nextW = Math.round(ref.offsetWidth / scale);

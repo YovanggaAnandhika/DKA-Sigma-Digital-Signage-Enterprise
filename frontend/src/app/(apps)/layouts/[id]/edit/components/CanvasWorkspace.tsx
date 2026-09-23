@@ -16,6 +16,8 @@ export default function CanvasWorkspace() {
     zoomIn,
     zoomOut,
     zoomFit,
+    setSelectedBlockId,
+    setInspectorTarget,
   } = useLayoutEditor();
 
   if (!layout) return null;
@@ -86,6 +88,8 @@ export default function CanvasWorkspace() {
         onClick={(e) => {
           if (e.target === e.currentTarget) {
             setSelectedZoneId(null);
+            setSelectedBlockId(null);
+            setInspectorTarget('layout');
           }
         }}
       >
