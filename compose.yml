@@ -54,6 +54,7 @@ services:
       RUST_LOG: info,signage_backend=debug
       DKA_HEALTHY_CHECK_HTTP: "false"
       DKA_HEALTHY_CHECK_GRPC: "false"
+      DKA_RUST_CARGO_WATCH_SKIP: "true"
     volumes:
       - type: bind
         source: ./backend
