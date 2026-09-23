@@ -10,7 +10,7 @@ interface LayerItemCardProps {
 }
 
 export default function LayerItemCard({ z }: LayerItemCardProps) {
-  const { selectedZoneId, setSelectedZoneId, availablePlaylists, mediaList, setPickerZoneId } = useLayoutEditor();
+  const { selectedZoneId, setSelectedZoneId, availablePlaylists, mediaList, setPickerZoneId, setInspectorTarget, setSelectedBlockId, setIsInspectorCollapsed } = useLayoutEditor();
 
   const isSelected = z.id === selectedZoneId;
   const hasBlocks = z.blocksList && z.blocksList.length > 0;
@@ -21,9 +21,16 @@ export default function LayerItemCard({ z }: LayerItemCardProps) {
   const layerMedia = firstItem ? mediaList.find((m) => m.id === firstItem.mediaItemId) : null;
   const isVideo = layerMedia?.mediaType === 2;
 
+  const handleClick = () => {
+    setSelectedZoneId(z.id);
+    setSelectedBlockId(null);
+    setInspectorTarget('zone');
+    setIsInspectorCollapsed(false);
+  };
+
   return (
     <div
-      onClick={() => setSelectedZoneId(z.id)}
+      onClick={handleClick}
       style={{
         display: 'flex',
         alignItems: 'center',

@@ -30,6 +30,10 @@ interface LayoutUIContextType {
   setRightSidebarWidth: React.Dispatch<React.SetStateAction<number>>;
   isInspectorCollapsed: boolean;
   setIsInspectorCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  selectedBlockId: string | null;
+  setSelectedBlockId: React.Dispatch<React.SetStateAction<string | null>>;
+  inspectorTarget: 'zone' | 'block' | 'timeline' | 'layout';
+  setInspectorTarget: React.Dispatch<React.SetStateAction<'zone' | 'block' | 'timeline' | 'layout'>>;
   availablePlaylists: Playlist[];
   mediaList: MediaItem[];
   refreshPlaylistsAndMedia: () => Promise<void>;
@@ -51,6 +55,8 @@ export function LayoutUIProvider({ children }: { children: ReactNode }) {
   const [isPlaylistCollapsed, setIsPlaylistCollapsed] = useState<boolean>(false);
   const [rightSidebarWidth, setRightSidebarWidth] = useState<number>(300);
   const [isInspectorCollapsed, setIsInspectorCollapsed] = useState<boolean>(false);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [inspectorTarget, setInspectorTarget] = useState<'zone' | 'block' | 'timeline' | 'layout'>('zone');
   const [availablePlaylists, setAvailablePlaylists] = useState<Playlist[]>([]);
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
 
@@ -123,6 +129,10 @@ export function LayoutUIProvider({ children }: { children: ReactNode }) {
         setRightSidebarWidth,
         isInspectorCollapsed,
         setIsInspectorCollapsed,
+        selectedBlockId,
+        setSelectedBlockId,
+        inspectorTarget,
+        setInspectorTarget,
         availablePlaylists,
         mediaList,
         refreshPlaylistsAndMedia,

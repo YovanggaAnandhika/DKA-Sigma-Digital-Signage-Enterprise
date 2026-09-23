@@ -8,7 +8,7 @@ import { useLayoutPlayback } from '../../context/LayoutPlaybackContext';
 
 export default function TimelineTrackHeader() {
   const { zones, selectedZoneId, setSelectedZoneId } = useLayoutState();
-  const { hiddenZones, toggleZoneVisibility } = useLayoutUI();
+  const { hiddenZones, toggleZoneVisibility, setInspectorTarget, setSelectedBlockId, setIsInspectorCollapsed } = useLayoutUI();
   const { playheadPosition, isZoneActive } = useLayoutPlayback();
 
   return (
@@ -20,10 +20,17 @@ export default function TimelineTrackHeader() {
         const zColors = ['#38bdf8', '#34d399', '#fbbf24', '#f472b6', '#a78bfa'];
         const color = zColors[idx % zColors.length];
 
+        const handleTrackClick = () => {
+          setSelectedZoneId(z.id);
+          setSelectedBlockId(null);
+          setInspectorTarget('zone');
+          setIsInspectorCollapsed(false);
+        };
+
         return (
           <div
             key={z.id}
-            onClick={() => setSelectedZoneId(z.id)}
+            onClick={handleTrackClick}
             style={{
               height: '48px',
               borderBottom: '1px solid var(--border-subtle)',

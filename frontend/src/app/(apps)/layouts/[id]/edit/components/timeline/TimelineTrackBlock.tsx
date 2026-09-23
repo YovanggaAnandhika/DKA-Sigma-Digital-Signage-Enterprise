@@ -16,9 +16,11 @@ interface TimelineTrackBlockProps {
 }
 
 export default function TimelineTrackBlock({ zone, block, color }: TimelineTrackBlockProps) {
-  const { setZones } = useLayoutState();
+  const { setZones, setSelectedZoneId } = useLayoutState();
   const { pxPerSecond } = useLayoutPlayback();
-  const { availablePlaylists, mediaList, showToast } = useLayoutUI();
+  const { availablePlaylists, mediaList, showToast, selectedBlockId, setSelectedBlockId, setInspectorTarget, setIsInspectorCollapsed } = useLayoutUI();
+
+  const isSelected = selectedBlockId === block.id;
 
   const isMediaBlock = !block.playlistId && !!block.mediaItemId;
   const media = isMediaBlock ? mediaList.find((m) => m.id === block.mediaItemId) : null;
@@ -116,12 +118,20 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
         padding: '4px 8px',
         fontSize: '0.75rem',
         fontWeight: 700,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+        boxShadow: isSelected ? '0 0 0 2px #fff, 0 0 0 4px var(--primary-500)' : '0 2px 8px rgba(0,0,0,0.3)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
-        zIndex: 10,
+        zIndex: isSelected ? 25 : 10,
         overflow: 'hidden',
+        cursor: 'pointer',
+      }}
+      onClick={(e: React.MouseEvent) => {
+        e.stopPropagation();
+        setSelectedZoneId(zone.id);
+        setSelectedBlockId(block.id);
+        setInspectorTarget('block');
+        setIsInspectorCollapsed(false);
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>

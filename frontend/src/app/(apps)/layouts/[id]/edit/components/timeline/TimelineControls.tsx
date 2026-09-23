@@ -7,7 +7,7 @@ import { useLayoutUI } from '../../context/LayoutUIContext';
 
 export default function TimelineControls() {
   const { isPlaying, togglePlay, stopPlay, isMuted, toggleMute, playheadPosition, pxPerSecond } = useLayoutPlayback();
-  const { isTimelineExpanded, setIsTimelineExpanded } = useLayoutUI();
+  const { isTimelineExpanded, setIsTimelineExpanded, setInspectorTarget, setIsInspectorCollapsed } = useLayoutUI();
 
   const formattedTime = (playheadPosition / (pxPerSecond || 20)).toFixed(1);
 
@@ -52,7 +52,16 @@ export default function TimelineControls() {
         </span>
       </div>
 
-      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+      <div
+        onClick={() => {
+          setInspectorTarget('timeline');
+          setIsInspectorCollapsed(false);
+        }}
+        style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+        title="Klik untuk melihat properti & pengaturan timeline di panel kanan"
+        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--primary-600)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+      >
         SIMULASI TIMELINE LAYER
       </div>
     </div>

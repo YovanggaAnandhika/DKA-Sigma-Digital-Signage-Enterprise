@@ -6,7 +6,21 @@ import { ListMusic, ChevronLeft, ChevronRight, ExternalLink, Film, Trash2 } from
 import { useLayoutEditor } from '../../context/LayoutEditorContext';
 
 export default function LayerBlockList() {
-  const { zones, selectedZoneId, availablePlaylists, mediaList, updateSelectedZone, setPickerZoneId, setMediaPickerZoneId, isPlaylistCollapsed, setIsPlaylistCollapsed } = useLayoutEditor();
+  const {
+    zones,
+    selectedZoneId,
+    availablePlaylists,
+    mediaList,
+    updateSelectedZone,
+    setPickerZoneId,
+    setMediaPickerZoneId,
+    isPlaylistCollapsed,
+    setIsPlaylistCollapsed,
+    selectedBlockId,
+    setSelectedBlockId,
+    setInspectorTarget,
+    setIsInspectorCollapsed,
+  } = useLayoutEditor();
   const collapsed = isPlaylistCollapsed;
   const setCollapsed = setIsPlaylistCollapsed;
 
@@ -120,13 +134,33 @@ export default function LayerBlockList() {
                 detail2 = `${pl?.totalDurationSeconds || 0}s`;
               }
 
+              const isBlockSelected = selectedBlockId === block.id;
+
               return (
-                <div key={block.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px', backgroundColor: 'var(--bg-base)', border: '1px solid var(--border-subtle)', borderRadius: '6px' }}>
-                  <div style={{ width: '24px', height: '24px', borderRadius: '4px', backgroundColor: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                <div
+                  key={block.id}
+                  onClick={() => {
+                    setSelectedBlockId(block.id);
+                    setInspectorTarget('block');
+                    setIsInspectorCollapsed(false);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px',
+                    backgroundColor: isBlockSelected ? 'rgba(56, 189, 248, 0.1)' : 'var(--bg-base)',
+                    border: `1px solid ${isBlockSelected ? 'var(--primary-500)' : 'var(--border-subtle)'}`,
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <div style={{ width: '24px', height: '24px', borderRadius: '4px', backgroundColor: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6875rem', fontWeight: 600, color: isBlockSelected ? 'var(--primary-600)' : 'var(--text-secondary)' }}>
                     {index + 1}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: isBlockSelected ? 700 : 600, color: isBlockSelected ? 'var(--primary-600)' : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {icon} {name}
                     </span>
                     <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
@@ -135,10 +169,15 @@ export default function LayerBlockList() {
                     </div>
                   </div>
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (window.confirm('Hapus blok playlist ini dari zona?')) {
                         const newBlocks = (selectedZone.blocksList || []).filter(b => b.id !== block.id);
                         updateSelectedZone('blocksList', newBlocks);
+                        if (selectedBlockId === block.id) {
+                          setSelectedBlockId(null);
+                          setInspectorTarget('zone');
+                        }
                       }
                     }}
                     style={{ padding: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '4px' }}
