@@ -12,10 +12,7 @@ export default function TimelineTrackHeader() {
   const { playheadPosition, isZoneActive } = useLayoutPlayback();
 
   return (
-    <div style={{ width: '220px', borderRight: '1px solid var(--border-subtle)', overflowY: 'auto', backgroundColor: 'var(--bg-surface)', flexShrink: 0 }}>
-      <div style={{ height: '24px', borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface-elevated)', display: 'flex', alignItems: 'center', padding: '0 12px' }}>
-        <span style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Layers / Tracks</span>
-      </div>
+    <div style={{ width: '220px', backgroundColor: 'var(--bg-surface)', flexShrink: 0 }}>
       {zones.map((z, idx) => {
         const active = isZoneActive(z, playheadPosition);
         const isSelected = z.id === selectedZoneId;

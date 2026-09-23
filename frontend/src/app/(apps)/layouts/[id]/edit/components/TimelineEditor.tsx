@@ -69,65 +69,130 @@ export default function TimelineEditor() {
       
       {/* Timeline Workspace */}
       {isTimelineExpanded && (
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          {/* Left Track Headers */}
-          <TimelineTrackHeader />
-
-          {/* Right Scrollable Timeline Tracks and Ruler */}
+        <div
+          ref={scrollContainerRef}
+          style={{
+            flex: 1,
+            position: 'relative',
+            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {/* Sticky Header Row (24px height) */}
           <div
-            ref={scrollContainerRef}
             style={{
-              flex: 1,
-              position: 'relative',
-              overflow: 'auto',
-              backgroundImage: 'repeating-linear-gradient(to right, transparent, transparent 99px, var(--border-subtle) 100px)',
-              backgroundSize: '100px 100%'
+              display: 'flex',
+              position: 'sticky',
+              top: 0,
+              zIndex: 35,
+              backgroundColor: 'var(--bg-surface)',
             }}
           >
-            {/* Ruler Bar */}
-            <TimelineRuler />
-
-            {/* Playhead Vertical Line */}
+            {/* Top-Left Corner Header (Sticky Top & Left) */}
             <div
               style={{
-                position: 'absolute',
-                left: `${playheadPosition}px`,
-                top: 0,
-                bottom: 0,
-                width: '1px',
-                backgroundColor: '#ef4444',
-                zIndex: 25,
-                pointerEvents: 'none',
+                width: '220px',
+                height: '24px',
+                flexShrink: 0,
+                position: 'sticky',
+                left: 0,
+                zIndex: 40,
+                borderRight: '1px solid var(--border-subtle)',
+                borderBottom: '1px solid var(--border-subtle)',
+                backgroundColor: 'var(--bg-surface-elevated)',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0 12px',
               }}
-            />
+            >
+              <span style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                Layers / Tracks
+              </span>
+            </div>
 
-            {/* Real Yellow Seek Buffer Lines */}
-            {bufferedRanges && bufferedRanges.map((range, idx) => (
+            {/* Ruler (Sticky Top, Scrolls Horizontally) */}
+            <div style={{ flex: 1, minWidth: `${timelineDuration + 200}px` }}>
+              <TimelineRuler />
+            </div>
+          </div>
+
+          {/* Body: Left Sticky Column + Right Tracks Area */}
+          <div style={{ display: 'flex', position: 'relative', flex: 1 }}>
+            {/* Left Track Headers (Sticky Left) */}
+            <div
+              style={{
+                width: '220px',
+                flexShrink: 0,
+                position: 'sticky',
+                left: 0,
+                zIndex: 20,
+                backgroundColor: 'var(--bg-surface)',
+                borderRight: '1px solid var(--border-subtle)',
+              }}
+            >
+              <TimelineTrackHeader />
+            </div>
+
+            {/* Right Tracks Area */}
+            <div
+              style={{
+                flex: 1,
+                minWidth: `${timelineDuration + 200}px`,
+                position: 'relative',
+                backgroundImage: 'repeating-linear-gradient(to right, transparent, transparent 99px, var(--border-subtle) 100px)',
+                backgroundSize: '100px 100%',
+              }}
+            >
+              {/* Playhead Vertical Line */}
               <div
-                key={`buffer-${idx}`}
                 style={{
                   position: 'absolute',
-                  left: `${range.start * pxPerSecond}px`,
-                  top: '20px',
-                  height: '4px',
-                  width: `${(range.end - range.start) * pxPerSecond}px`,
-                  backgroundColor: 'var(--accent-amber)',
-                  opacity: 0.6,
-                  borderRadius: '2px',
-                  zIndex: 15,
+                  left: `${playheadPosition}px`,
+                  top: 0,
+                  bottom: 0,
+                  width: '1px',
+                  backgroundColor: '#ef4444',
+                  zIndex: 25,
                   pointerEvents: 'none',
                 }}
               />
-            ))}
 
-            {/* Tracks Area */}
-            <div style={{ position: 'relative', minWidth: `${timelineDuration + 200}px` }}>
+              {/* Real Yellow Seek Buffer Lines */}
+              {bufferedRanges && bufferedRanges.map((range, idx) => (
+                <div
+                  key={`buffer-${idx}`}
+                  style={{
+                    position: 'absolute',
+                    left: `${range.start * pxPerSecond}px`,
+                    top: '0px',
+                    height: '3px',
+                    width: `${(range.end - range.start) * pxPerSecond}px`,
+                    backgroundColor: 'var(--accent-amber)',
+                    opacity: 0.7,
+                    borderRadius: '2px',
+                    zIndex: 15,
+                    pointerEvents: 'none',
+                  }}
+                />
+              ))}
+
+              {/* Tracks Rows */}
               {zones.map((z, i) => {
                 const zColors = ['#38bdf8', '#34d399', '#fbbf24', '#f472b6', '#a78bfa'];
                 const color = zColors[i % zColors.length];
                 
                 return (
-                  <div key={z.id} style={{ height: '48px', borderBottom: '1px solid var(--border-subtle)', position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <div
+                    key={z.id}
+                    style={{
+                      height: '48px',
+                      borderBottom: '1px solid var(--border-subtle)',
+                      position: 'relative',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
                     {(z.blocksList || []).map((block) => (
                       <TimelineTrackBlock
                         key={block.id}

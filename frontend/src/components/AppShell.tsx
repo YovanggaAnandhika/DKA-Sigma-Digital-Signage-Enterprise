@@ -54,12 +54,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-primary)' }}>
+      <div style={{ display: 'flex', height: isEditorPage ? '100vh' : undefined, minHeight: '100vh', backgroundColor: 'var(--bg-primary)', overflow: isEditorPage ? 'hidden' : undefined }}>
         <Sidebar />
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: '100vh' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: isEditorPage ? '100vh' : undefined, minHeight: isEditorPage ? undefined : '100vh', overflow: isEditorPage ? 'hidden' : undefined }}>
           <Navbar />
-          <main style={{ flex: 1, padding: isEditorPage ? 0 : '24px', overflowY: isEditorPage ? 'hidden' : 'auto', backgroundColor: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ maxWidth: isEditorPage ? 'none' : '1440px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: isEditorPage ? 0 : '24px', flex: 1 }}>
+          <main style={{ flex: 1, padding: isEditorPage ? 0 : '24px', overflow: isEditorPage ? 'hidden' : undefined, overflowY: isEditorPage ? 'hidden' : 'auto', backgroundColor: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div style={{ maxWidth: isEditorPage ? 'none' : '1440px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: isEditorPage ? 0 : '24px', flex: 1, minHeight: 0 }}>
               {children}
             </div>
           </main>

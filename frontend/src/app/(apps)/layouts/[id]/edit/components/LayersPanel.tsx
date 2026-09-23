@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { Layers, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 import LayerItemCard from './layers/LayerItemCard';
-import LayerBlockList from './layers/LayerBlockList';
 
 export default function LayersPanel() {
   const { zones, handleAddZone, selectedZoneId, setSelectedZoneId } = useLayoutEditor();
@@ -115,9 +114,6 @@ export default function LayersPanel() {
           )}
         </div>
       )}
-
-      {/* Playlist Allocation panel (bottom) */}
-      {!collapsed && <LayerBlockList />}
 
       {/* Collapsed: zone dots */}
       {collapsed && (

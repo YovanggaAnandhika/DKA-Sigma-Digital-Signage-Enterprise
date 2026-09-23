@@ -45,6 +45,8 @@ function EditorContent() {
         display: 'flex',
         flexDirection: 'column',
         flex: 1,
+        height: '100%',
+        minHeight: 0,
         backgroundColor: 'var(--bg-surface-elevated)',
         overflow: 'hidden',
         position: 'relative',
@@ -63,11 +65,11 @@ function EditorContent() {
       <TopToolbar />
 
       {/* Main Workspace */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <LayersPanel />
 
         {/* Center Column: Canvas */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--bg-surface-elevated)' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', backgroundColor: 'var(--bg-surface-elevated)' }}>
           <CanvasWorkspace />
         </div>
 
