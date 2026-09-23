@@ -20,8 +20,9 @@ import {
   RotateCcw,
   Sparkles,
   Layers,
+  Scissors,
 } from 'lucide-react';
-import { updatePlaylistBlock } from '@/lib/services/studio/layout.service';
+import { updatePlaylistBlock, addPlaylistBlock, addMediaBlock, removePlaylistBlock } from '@/lib/services/studio/layout.service';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 
 
@@ -154,6 +155,68 @@ export default function InspectorPanel() {
       setSelectedBlockId(null);
       setInspectorTarget('layer');
       showToast('Item berhasil dihapus dari alokasi');
+      
+      // Attempt API deletion if it was already saved
+      if (!selectedBlock.id.startsWith('temp-')) {
+        try {
+          removePlaylistBlock(selectedBlock.id);
+        } catch (err) {}
+      }
+    }
+  };
+
+  const handleSplitBlock = async () => {
+    if (!selectedBlock || !blockZone) return;
+
+    const playheadSec = playheadPosition / (pxPerSecond || 20);
+    const blockStart = selectedBlock.startTimeSeconds || 0;
+    const blockDur = selectedBlock.durationSeconds || 0;
+    const cutOffset = playheadSec - blockStart;
+
+    if (cutOffset > 0 && cutOffset < blockDur) {
+      // 1. Durasi block asli dikurangi
+      const newDur1 = Math.floor(cutOffset);
+      const newDur2 = Math.floor(blockDur - cutOffset);
+      
+      // Update first block
+      handleUpdateBlock({ durationSeconds: newDur1 });
+
+      // Create new block
+      const newBlockId = `temp-${Date.now()}`;
+      const newBlock = {
+        ...selectedBlock,
+        id: newBlockId,
+        startTimeSeconds: Math.floor(playheadSec),
+        durationSeconds: newDur2,
+        trimStartSeconds: (selectedBlock.trimStartSeconds || 0) + newDur1, // offset trim start
+      };
+
+      setLayers((prev) =>
+        prev.map((z) => {
+          if (z.id === blockZone.id) {
+            return {
+              ...z,
+              blocksList: [...(z.blocksList || []), newBlock],
+            };
+          }
+          return z;
+        })
+      );
+      
+      // If it's a real block, try creating in DB
+      if (!selectedBlock.id.startsWith('temp-')) {
+        try {
+          if (newBlock.mediaItemId) {
+            await addMediaBlock(blockZone.id, newBlock.mediaItemId, newBlock.startTimeSeconds, newBlock.durationSeconds);
+          } else if (newBlock.playlistId) {
+            await addPlaylistBlock(blockZone.id, newBlock.playlistId, newBlock.startTimeSeconds, newBlock.durationSeconds);
+          }
+        } catch (e) {}
+      }
+
+      showToast('Berhasil dipotong!');
+    } else {
+      showToast('Garis playhead tidak berada di dalam durasi block ini', 'error');
     }
   };
 
@@ -535,6 +598,22 @@ export default function InspectorPanel() {
                   style={{ flex: 1, fontSize: '0.6875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', height: '28px' }}
                 >
                   <Layers size={13} /> Edit Layer
+                </button>
+                <button
+                  onClick={handleSplitBlock}
+                  title="Potong (Split) di posisi Playhead"
+                  className="btn btn-secondary btn-sm"
+                  style={{ flex: 1, fontSize: '0.6875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', height: '28px' }}
+                >
+                  <Scissors size={13} /> Split
+                </button>
+                <button
+                  onClick={handleSplitBlock}
+                  title="Potong (Split) di posisi Playhead"
+                  className="btn btn-secondary btn-sm"
+                  style={{ flex: 1, fontSize: '0.6875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', height: '28px' }}
+                >
+                  <Scissors size={13} /> Split
                 </button>
                 <button
                   onClick={handleDeleteBlock}

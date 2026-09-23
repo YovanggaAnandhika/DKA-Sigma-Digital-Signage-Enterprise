@@ -7,8 +7,8 @@ export async function getTransitions(params?: { search?: string; page?: number; 
     pagination: { page: params?.page || 1, limit: params?.limit || 25 }
   });
   return {
-    data: result.itemsList || [],
-    total: result.pagination?.totalItems || result.itemsList?.length || 0
+    data: result.transitionsList || result.itemsList || [],
+    total: result.pagination?.totalItems || result.transitionsList?.length || result.itemsList?.length || 0
   };
 }
 
