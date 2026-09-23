@@ -2,6 +2,9 @@ pub mod proto {
     pub mod common {
         pub mod v1 {
             tonic::include_proto!("signage.common.v1");
+            pub mod orientation {
+                tonic::include_proto!("signage.common.v1.orientation");
+            }
         }
     }
     pub mod iam {
@@ -37,6 +40,9 @@ pub mod proto {
             }
             pub mod playlist {
                 tonic::include_proto!("signage.studio.v1.playlist");
+            }
+            pub mod layer {
+                tonic::include_proto!("signage.studio.v1.layer");
             }
             pub mod layout {
                 tonic::include_proto!("signage.studio.v1.layout");

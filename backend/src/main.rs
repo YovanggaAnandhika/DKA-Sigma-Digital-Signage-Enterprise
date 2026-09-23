@@ -94,6 +94,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use grpc::proto::studio::v1::media::media_service_server::MediaServiceServer;
     use grpc::proto::studio::v1::playlist::playlist_service_server::PlaylistServiceServer;
     use grpc::proto::studio::v1::layout::layout_service_server::LayoutServiceServer;
+    use grpc::proto::studio::v1::layer::layer_service_server::LayerServiceServer;
+    use grpc::proto::common::v1::orientation::orientation_service_server::OrientationServiceServer;
     use grpc::proto::studio::v1::schedule::schedule_service_server::ScheduleServiceServer;
 
     // Distribution Services
@@ -114,6 +116,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let media_svc = MediaServiceImpl::new(pool.clone());
     let playlist_svc = PlaylistServiceImpl::new(pool.clone());
     let layout_svc = LayoutServiceImpl::new(pool.clone());
+    let layer_svc = crate::grpc::studio::layer::service::LayerServiceImpl::new(pool.clone());
+    let orientation_svc = crate::grpc::common::orientation::service::OrientationServiceImpl::new(pool.clone());
     let schedule_svc = ScheduleServiceImpl::new(pool.clone());
     let manifest_svc = ManifestServiceImpl::new(pool.clone());
     let stream_svc = StreamServiceImpl::new(pool.clone(), stream_manager);
@@ -133,6 +137,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(MediaServiceServer::new(media_svc))
         .add_service(PlaylistServiceServer::new(playlist_svc))
         .add_service(LayoutServiceServer::new(layout_svc))
+        .add_service(LayerServiceServer::new(layer_svc))
+        .add_service(OrientationServiceServer::new(orientation_svc))
         .add_service(ScheduleServiceServer::new(schedule_svc))
         // Distribution
         .add_service(ManifestServiceServer::new(manifest_svc))

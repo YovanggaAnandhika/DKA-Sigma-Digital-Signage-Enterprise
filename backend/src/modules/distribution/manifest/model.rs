@@ -1,4 +1,4 @@
-use crate::modules::studio::layout::model::LayoutWithZonesDto;
+use crate::modules::studio::layout::model::LayoutWithLayersDto;
 use crate::modules::studio::playlist::model::PlaylistWithItemsDto;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;

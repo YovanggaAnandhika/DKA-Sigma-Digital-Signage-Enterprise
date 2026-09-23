@@ -7,8 +7,7 @@ pub struct OrientationRepository;
 
 impl OrientationRepository {
     pub async fn find_all(pool: &PgPool) -> Result<Vec<OrientationEntity>, AppError> {
-        let items = sqlx::query_as!(
-            OrientationEntity,
+        let items = sqlx::query_as::<_, OrientationEntity>(
             "SELECT id, name, value, created_at, updated_at FROM orientations ORDER BY name ASC"
         )
         .fetch_all(pool)
@@ -19,11 +18,10 @@ impl OrientationRepository {
     }
 
     pub async fn find_by_id(pool: &PgPool, id: Uuid) -> Result<OrientationEntity, AppError> {
-        let item = sqlx::query_as!(
-            OrientationEntity,
-            "SELECT id, name, value, created_at, updated_at FROM orientations WHERE id = $1",
-            id
+        let item = sqlx::query_as::<_, OrientationEntity>(
+            "SELECT id, name, value, created_at, updated_at FROM orientations WHERE id = $1"
         )
+        .bind(id)
         .fetch_optional(pool)
         .await
         .map_err(|e| AppError::Database(e))?

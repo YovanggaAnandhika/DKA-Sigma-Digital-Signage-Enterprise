@@ -8,7 +8,8 @@ use crate::grpc::proto::distribution::v1::manifest::{
     CompiledManifest, ManifestAsset, GetActiveManifestRequest, GetActiveManifestResponse,
     AssignLayoutToDeviceRequest, AssignLayoutToDeviceResponse,
 };
-use crate::grpc::proto::studio::v1::layout::{Layout, Zone};
+use crate::grpc::proto::studio::v1::layout::Layout;
+use crate::grpc::proto::studio::v1::layer::{Layer, LayerPlaylist};
 
 pub struct ManifestServiceImpl {
     pub pool: DbPool,
@@ -20,8 +21,8 @@ impl ManifestServiceImpl {
     }
 
     fn map_compiled_manifest(dto: CompiledManifestDto) -> CompiledManifest {
-        let zones = dto.zones.into_iter().map(|z| {
-            Zone {
+        let layers = dto.layers.into_iter().map(|z| {
+            Layer {
                 id: z.id.to_string(),
                 layout_id: dto.layout_id.to_string(),
                 name: z.name,
@@ -31,7 +32,7 @@ impl ManifestServiceImpl {
                 height: z.height,
                 z_index: z.z_index,
                 background_color: z.background_color,
-                blocks: z.blocks.into_iter().map(|b| crate::grpc::proto::studio::v1::layout::ZonePlaylist {
+                blocks: z.blocks.into_iter().map(|b| LayerPlaylist {
                     id: b.id.to_string(),
                     zone_id: z.id.to_string(),
                     playlist_id: b.playlist.playlist.id.to_string(),
@@ -65,7 +66,7 @@ impl ManifestServiceImpl {
             orientation,
             background_color: dto.background_color,
             background_image_url: dto.background_image_url.unwrap_or_default(),
-            zones,
+            layers,
             created_at: dto.generated_at.clone(),
             updated_at: dto.generated_at.clone(),
         };
