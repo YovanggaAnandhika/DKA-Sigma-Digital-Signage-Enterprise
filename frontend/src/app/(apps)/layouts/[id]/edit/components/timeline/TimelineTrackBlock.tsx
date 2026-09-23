@@ -127,7 +127,8 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
       style={{
         backgroundColor: color,
         borderRadius: '6px',
-        color: '#0f172a',
+        color: '#ffffff',
+        textShadow: '0 1px 2px rgba(0,0,0,0.4)',
         padding: '4px 8px',
         fontSize: '0.75rem',
         fontWeight: 700,
@@ -143,8 +144,29 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
           {isMediaBlock ? <Film size={12} /> : <ImageIcon size={12} />}
           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
+          <button
+            onClick={(e) => {
+              const currentMuted = block.itemOverridesList?.find((o) => o.playlistItemId === block.id)?.isMuted || false;
+              handleToggleItemMute(e, { id: block.id } as any, block.id, currentMuted, isMediaBlock);
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: block.itemOverridesList?.find((o) => o.playlistItemId === block.id)?.isMuted ? '#f43f5e' : '#ffffff',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '2px',
+              marginLeft: '2px',
+              borderRadius: '4px',
+              backgroundColor: 'rgba(0,0,0,0.2)',
+            }}
+            title={block.itemOverridesList?.find((o) => o.playlistItemId === block.id)?.isMuted ? 'Unmute Block' : 'Mute Block'}
+          >
+            {block.itemOverridesList?.find((o) => o.playlistItemId === block.id)?.isMuted ? <VolumeX size={10} /> : <Volume2 size={10} />}
+          </button>
         </div>
-        <span style={{ fontSize: '0.625rem', opacity: 0.8, fontFamily: 'monospace' }}>
+        <span style={{ fontSize: '0.625rem', opacity: 0.9, fontFamily: 'monospace' }}>
           {block.durationSeconds}s
         </span>
       </div>

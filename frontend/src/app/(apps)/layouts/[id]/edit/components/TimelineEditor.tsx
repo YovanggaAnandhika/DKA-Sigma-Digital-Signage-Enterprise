@@ -12,7 +12,7 @@ import TimelineTrackBlock from './timeline/TimelineTrackBlock';
 export default function TimelineEditor() {
   const { zones } = useLayoutState();
   const { isTimelineExpanded, bufferedRanges } = useLayoutUI();
-  const { timelineDuration, pxPerSecond } = useLayoutPlayback();
+  const { timelineDuration, pxPerSecond, playheadPosition } = useLayoutPlayback();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [timelineHeight, setTimelineHeight] = useState(220);
@@ -86,6 +86,20 @@ export default function TimelineEditor() {
           >
             {/* Ruler Bar */}
             <TimelineRuler />
+
+            {/* Playhead Vertical Line */}
+            <div
+              style={{
+                position: 'absolute',
+                left: `${playheadPosition}px`,
+                top: 0,
+                bottom: 0,
+                width: '1px',
+                backgroundColor: '#ef4444',
+                zIndex: 25,
+                pointerEvents: 'none',
+              }}
+            />
 
             {/* Real Yellow Seek Buffer Lines */}
             {bufferedRanges && bufferedRanges.map((range, idx) => (
