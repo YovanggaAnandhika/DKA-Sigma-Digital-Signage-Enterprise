@@ -8,6 +8,7 @@ import LayersPanel from './components/LayersPanel';
 import CanvasWorkspace from './components/CanvasWorkspace';
 import TimelineEditor from './components/TimelineEditor';
 import InspectorPanel from './components/InspectorPanel';
+import LayerBlockList from './components/layers/LayerBlockList';
 import PlaylistPickerModal from './components/PlaylistPickerModal';
 import MediaPickerModal from './components/MediaPickerModal';
 
@@ -66,7 +67,13 @@ function EditorContent() {
 
       {/* Main Workspace */}
       <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        <LayersPanel />
+        {/* Left Stacked Column: Top (Layers) and Bottom (Alokasi Playlist) */}
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', flexShrink: 0 }}>
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <LayersPanel />
+          </div>
+          <LayerBlockList />
+        </div>
 
         {/* Center Column: Canvas */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', backgroundColor: 'var(--bg-surface-elevated)' }}>

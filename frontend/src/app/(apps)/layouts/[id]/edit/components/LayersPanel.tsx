@@ -45,7 +45,7 @@ export default function LayersPanel() {
         position: 'relative',
       }}
     >
-      {/* Header */}
+      {/* Top Header: Layers */}
       <div
         style={{
           padding: collapsed ? '10px 6px' : '10px 14px',
@@ -78,7 +78,7 @@ export default function LayersPanel() {
 
         <button
           onClick={() => setCollapsed(prev => !prev)}
-          title={collapsed ? 'Tampilkan panel Layers' : 'Sembunyikan panel Layers'}
+          title={collapsed ? 'Tampilkan panel samping' : 'Sembunyikan panel samping'}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -115,7 +115,7 @@ export default function LayersPanel() {
         </div>
       )}
 
-      {/* Collapsed: zone dots */}
+      {/* Collapsed sidebar: zone dots */}
       {collapsed && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', paddingTop: '8px' }}>
           {zones.map((z) => {
