@@ -111,22 +111,24 @@ export default function MediaPickerModal() {
       animation: 'fadeIn 0.2s ease-out'
     }}>
       <div style={{
-        width: '600px',
-        maxHeight: '85vh',
-        backgroundColor: '#fff',
-        borderRadius: '12px',
-        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+        width: '95vw',
+        maxWidth: '1100px',
+        maxHeight: '90vh',
+        backgroundColor: 'var(--bg-surface)',
+        borderRadius: '14px',
+        border: '1px solid var(--border-subtle)',
+        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.7)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
         animation: 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
       }}>
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ImageIcon size={18} color="var(--primary-500)" />
+        <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-surface)' }}>
+          <h2 style={{ fontSize: '1.0625rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ImageIcon size={20} color="var(--primary-500)" />
             Pilih Media Langsung untuk Zona
-            <span style={{ color: 'var(--primary-600)', backgroundColor: 'var(--primary-50)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8125rem' }}>
+            <span style={{ color: 'var(--primary-400)', backgroundColor: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8125rem' }}>
               {targetZone.name}
             </span>
           </h2>
@@ -139,7 +141,7 @@ export default function MediaPickerModal() {
         </div>
 
         {/* Search */}
-        <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border-subtle)', backgroundColor: '#fafafa' }}>
+        <div style={{ padding: '14px 24px', borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface-elevated)' }}>
           <div style={{ position: 'relative' }}>
             <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '10px' }} />
             <input
@@ -154,8 +156,8 @@ export default function MediaPickerModal() {
         </div>
 
         {/* Grid List */}
-        <div style={{ padding: '20px', overflowY: 'auto', flex: 1, backgroundColor: 'var(--bg-base)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div style={{ padding: '24px', overflowY: 'auto', flex: 1, backgroundColor: 'var(--bg-primary)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px' }}>
             {/* Media Cards */}
             {filteredMedia.map(media => {
               const isSelected = targetZone.blocksList?.some(b => b.mediaItemId === media.id) || false;
@@ -166,8 +168,8 @@ export default function MediaPickerModal() {
                   key={media.id}
                   onClick={() => handleSelect(media.id)}
                   style={{
-                    border: `2px solid ${isSelected ? 'var(--primary-500)' : 'var(--border-subtle)'}`,
-                    backgroundColor: isSelected ? 'var(--primary-50)' : '#fff',
+                    border: `1.5px solid ${isSelected ? 'var(--primary-500)' : 'var(--border-subtle)'}`,
+                    backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.12)' : 'var(--bg-surface)',
                     borderRadius: '8px',
                     padding: '12px',
                     cursor: 'pointer',
@@ -177,22 +179,29 @@ export default function MediaPickerModal() {
                     transition: 'all 0.15s'
                   }}
                   onMouseEnter={(e) => {
-                    if (!isSelected) e.currentTarget.style.borderColor = 'var(--primary-300)';
+                    if (!isSelected) {
+                      e.currentTarget.style.borderColor = 'var(--primary-400)';
+                      e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)';
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    if (!isSelected) e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                    if (!isSelected) {
+                      e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                      e.currentTarget.style.backgroundColor = 'var(--bg-surface)';
+                    }
                   }}
                 >
                   <div style={{ 
-                    width: '64px', height: '48px', borderRadius: '6px', backgroundColor: '#0f172a', 
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0
+                    width: '68px', height: '52px', borderRadius: '6px', backgroundColor: 'var(--bg-surface-elevated)', 
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0,
+                    border: '1px solid var(--border-subtle)'
                   }}>
                     {media.publicUrl && !isVideo ? (
                       <img src={media.publicUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : isVideo ? (
-                      <Film size={16} color="var(--accent-amber)" />
+                      <Film size={18} color="var(--accent-amber)" />
                     ) : (
-                      <ImageIcon size={16} color="#94a3b8" />
+                      <ImageIcon size={18} color="var(--text-muted)" />
                     )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -202,7 +211,7 @@ export default function MediaPickerModal() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                       <span style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '3px' }}>
                         {isVideo ? <Film size={10} /> : <ImageIcon size={10} />}
-                        {isVideo ? 'Video' : 'Image'}
+                        {isVideo ? 'Video' : 'Gambar'}
                       </span>
                       {isVideo && (
                         <span style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '3px' }}>

@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS zones (
     width INT NOT NULL,
     height INT NOT NULL,
     z_index INT NOT NULL DEFAULT 0,
-    assigned_playlist_id UUID,
     background_color VARCHAR(30) NOT NULL DEFAULT 'transparent',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

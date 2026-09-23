@@ -1,2 +1,0 @@
-DROP TABLE IF EXISTS schedule_events CASCADE;
-DROP TABLE IF EXISTS schedules CASCADE;

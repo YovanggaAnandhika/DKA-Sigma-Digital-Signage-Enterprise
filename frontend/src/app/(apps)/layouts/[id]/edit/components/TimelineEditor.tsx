@@ -97,13 +97,14 @@ export default function TimelineEditor() {
                 flexShrink: 0,
                 position: 'sticky',
                 left: 0,
-                zIndex: 40,
+                zIndex: 60,
                 borderRight: '1px solid var(--border-subtle)',
                 borderBottom: '1px solid var(--border-subtle)',
                 backgroundColor: 'var(--bg-surface-elevated)',
                 display: 'flex',
                 alignItems: 'center',
                 padding: '0 12px',
+                isolation: 'isolate',
               }}
             >
               <span style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
@@ -119,17 +120,18 @@ export default function TimelineEditor() {
 
           {/* Body: Left Sticky Column + Right Tracks Area */}
           <div style={{ display: 'flex', position: 'relative', flex: 1 }}>
-            {/* Left Track Headers (Sticky Left) */}
+            {/* Left Track Headers (Sticky Left with elevated z-index and opaque background to prevent blocks bleeding under) */}
             <div
               style={{
                 width: '220px',
                 flexShrink: 0,
                 position: 'sticky',
                 left: 0,
-                zIndex: 30,
+                zIndex: 50,
                 backgroundColor: 'var(--bg-surface)',
                 borderRight: '1px solid var(--border-subtle)',
-                boxShadow: '2px 0 6px rgba(0,0,0,0.15)',
+                boxShadow: '3px 0 8px rgba(0,0,0,0.25)',
+                isolation: 'isolate',
               }}
             >
               <TimelineTrackHeader />

@@ -14,6 +14,7 @@ export default function TimelineControls() {
     toggleMute,
     playheadPosition,
     pxPerSecond,
+    setPxPerSecond,
     zoomInTimeline,
     zoomOutTimeline,
     resetTimelineZoom,
@@ -34,10 +35,10 @@ export default function TimelineControls() {
         <button
           onClick={togglePlay}
           className="btn btn-sm btn-primary"
-          style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+          style={{ width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          title={isPlaying ? 'Jeda Simulasi (Pause)' : 'Putar Simulasi (Play)'}
         >
-          {isPlaying ? <Pause size={12} /> : <Play size={12} />}
-          <span>{isPlaying ? 'Pause' : 'Play Simulation'}</span>
+          {isPlaying ? <Pause size={13} /> : <Play size={13} />}
         </button>
 
         <button
@@ -64,66 +65,77 @@ export default function TimelineControls() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        {/* Timeline Zoom Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--bg-surface)', padding: '2px 6px', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
+        {/* Timeline Zoom Range Slider */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--bg-surface)', padding: '3px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
           <button
             type="button"
             onClick={zoomOutTimeline}
             disabled={pxPerSecond <= 5}
-            title="Zoom Out Durasi Timeline"
+            title="Zoom Out Durasi"
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '22px',
-              height: '22px',
               background: 'none',
               border: 'none',
-              borderRadius: '4px',
+              padding: 0,
               cursor: pxPerSecond <= 5 ? 'not-allowed' : 'pointer',
               color: pxPerSecond <= 5 ? 'var(--text-muted)' : 'var(--text-secondary)',
             }}
           >
-            <ZoomOut size={12} />
+            <ZoomOut size={13} />
           </button>
 
-          <span
-            onClick={resetTimelineZoom}
-            title="Klik untuk reset zoom durasi ke normal"
+          <input
+            type="range"
+            min="5"
+            max="80"
+            step="1"
+            value={pxPerSecond}
+            onChange={(e) => setPxPerSecond(Number(e.target.value))}
+            title={`Zoom Timeline: ${Math.round((pxPerSecond / 20) * 100)}%`}
             style={{
-              fontSize: '0.6875rem',
-              fontWeight: 700,
-              fontFamily: 'monospace',
-              color: 'var(--text-primary)',
-              minWidth: '38px',
-              textAlign: 'center',
+              width: '84px',
+              height: '4px',
+              accentColor: 'var(--primary-500)',
               cursor: 'pointer',
-              padding: '0 2px',
             }}
-          >
-            {Math.round((pxPerSecond / 20) * 100)}%
-          </span>
+          />
 
           <button
             type="button"
             onClick={zoomInTimeline}
             disabled={pxPerSecond >= 80}
-            title="Zoom In Durasi Timeline"
+            title="Zoom In Durasi"
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '22px',
-              height: '22px',
               background: 'none',
               border: 'none',
-              borderRadius: '4px',
+              padding: 0,
               cursor: pxPerSecond >= 80 ? 'not-allowed' : 'pointer',
               color: pxPerSecond >= 80 ? 'var(--text-muted)' : 'var(--text-secondary)',
             }}
           >
-            <ZoomIn size={12} />
+            <ZoomIn size={13} />
           </button>
+
+          <span
+            onClick={resetTimelineZoom}
+            title="Klik dua kali / klik untuk reset ke 100%"
+            style={{
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              fontFamily: 'monospace',
+              color: 'var(--text-primary)',
+              minWidth: '36px',
+              textAlign: 'right',
+              cursor: 'pointer',
+            }}
+          >
+            {Math.round((pxPerSecond / 20) * 100)}%
+          </span>
         </div>
 
         <div

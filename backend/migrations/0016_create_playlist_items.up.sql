@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS playlist_items (
     position INT NOT NULL DEFAULT 0,
     duration_seconds INT NOT NULL DEFAULT 10,
     transition_type VARCHAR(50) NOT NULL DEFAULT 'fade',
+    is_muted BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

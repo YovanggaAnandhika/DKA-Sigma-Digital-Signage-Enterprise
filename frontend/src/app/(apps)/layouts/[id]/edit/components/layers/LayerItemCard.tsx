@@ -16,7 +16,7 @@ export default function LayerItemCard({ z }: LayerItemCardProps) {
   const hasBlocks = z.blocksList && z.blocksList.length > 0;
   const firstBlock = hasBlocks ? z.blocksList[0] : null;
   const assignedPl = firstBlock ? availablePlaylists.find((p) => p.id === firstBlock.playlistId) : null;
-  const playlistName = hasBlocks ? `${z.blocksList.length} Blok Playlist` : null;
+  const playlistName = hasBlocks ? `${z.blocksList.length} Blok Konten` : null;
   const firstItem = assignedPl?.itemsList?.[0];
   const layerMedia = firstItem ? mediaList.find((m) => m.id === firstItem.mediaItemId) : null;
   const isVideo = layerMedia?.mediaType === 2;
@@ -110,7 +110,7 @@ export default function LayerItemCard({ z }: LayerItemCardProps) {
             marginTop: '2px',
             cursor: 'pointer',
           }}
-          title="Klik untuk ubah alokasi playlist"
+          title="Klik untuk ubah konten zona"
           onMouseEnter={(e) => {
             e.currentTarget.style.filter = 'brightness(0.95)';
           }}

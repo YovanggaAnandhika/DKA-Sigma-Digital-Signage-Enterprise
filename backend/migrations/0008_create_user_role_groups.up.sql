@@ -5,5 +5,5 @@ CREATE TABLE IF NOT EXISTS user_role_groups (
     PRIMARY KEY (user_id, role_group_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_user_role_groups_user ON user_role_groups(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_role_groups_group ON user_role_groups(role_group_id);
+CREATE INDEX IF NOT EXISTS idx_urg_user ON user_role_groups(user_id);
+CREATE INDEX IF NOT EXISTS idx_urg_group ON user_role_groups(role_group_id);

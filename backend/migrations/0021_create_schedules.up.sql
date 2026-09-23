@@ -17,3 +17,7 @@ CREATE TABLE IF NOT EXISTS schedule_events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_schedule_events_schedule ON schedule_events(schedule_id);
+
+-- References to schedules from display_groups and devices
+ALTER TABLE display_groups ADD COLUMN IF NOT EXISTS schedule_id UUID REFERENCES schedules(id) ON DELETE SET NULL;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS schedule_id UUID REFERENCES schedules(id) ON DELETE SET NULL;

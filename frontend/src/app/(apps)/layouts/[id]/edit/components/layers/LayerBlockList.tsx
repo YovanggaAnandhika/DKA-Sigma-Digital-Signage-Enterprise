@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ListMusic, ChevronLeft, ChevronRight, ExternalLink, Film, Trash2 } from 'lucide-react';
+import { LayoutGrid, ChevronLeft, ChevronRight, ExternalLink, Film, ListMusic, Trash2 } from 'lucide-react';
 import { useLayoutEditor } from '../../context/LayoutEditorContext';
 
 export default function LayerBlockList() {
@@ -45,8 +45,8 @@ export default function LayerBlockList() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: collapsed ? 'center' : 'space-between',
-          padding: collapsed ? '10px 6px' : '10px 14px',
-          minHeight: '44px',
+          padding: collapsed ? '6px 4px' : '6px 12px',
+          minHeight: '36px',
           backgroundColor: 'var(--bg-surface-elevated)',
           borderBottom: collapsed ? 'none' : '1px solid var(--border-subtle)',
           flexShrink: 0,
@@ -55,22 +55,23 @@ export default function LayerBlockList() {
       >
         {!collapsed && (
           <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-600)', display: 'flex', alignItems: 'center', gap: '6px', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-            <ListMusic size={14} style={{ flexShrink: 0 }} /> ALOKASI PLAYLIST
+            <LayoutGrid size={13} style={{ flexShrink: 0 }} /> KONTEN ZONA
           </label>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-          {!collapsed && selectedZone?.blocksList && selectedZone.blocksList.length > 0 && (
+          {!collapsed && selectedZone?.blocksList && selectedZone.blocksList.length > 0 && selectedZone.blocksList[0].playlistId && (
             <Link
               href={`/playlists/${selectedZone.blocksList[0].playlistId}`}
               target="_blank"
               style={{ fontSize: '0.6875rem', color: 'var(--primary-500)', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}
+              title="Buka Playlist"
             >
               Buka <ExternalLink size={10} />
             </Link>
           )}
           <button
             onClick={() => setCollapsed(prev => !prev)}
-            title={collapsed ? 'Tampilkan Alokasi Playlist' : 'Sembunyikan Alokasi Playlist'}
+            title={collapsed ? 'Tampilkan Konten Zona' : 'Sembunyikan Konten Zona'}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -79,14 +80,14 @@ export default function LayerBlockList() {
               height: '22px',
               border: '1px solid var(--border-subtle)',
               borderRadius: '5px',
-              backgroundColor: '#fff',
+              backgroundColor: 'var(--bg-surface-elevated)',
               cursor: 'pointer',
               color: 'var(--text-secondary)',
               flexShrink: 0,
               transition: 'background 0.15s',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--hover-surface)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; }}
           >
             {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
           </button>
@@ -97,10 +98,10 @@ export default function LayerBlockList() {
       {collapsed && (
         <div 
           onClick={() => setCollapsed(false)}
-          title="Klik untuk membuka Alokasi Playlist"
-          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '12px', cursor: 'pointer', color: 'var(--primary-600)' }}
+          title="Klik untuk membuka Konten Zona"
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '10px', cursor: 'pointer', color: 'var(--primary-600)' }}
         >
-          <ListMusic size={16} />
+          <LayoutGrid size={16} />
         </div>
       )}
 
@@ -109,7 +110,7 @@ export default function LayerBlockList() {
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {!selectedZone ? (
             <div style={{ padding: '20px 14px', fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-              Pilih layer/zona di atas untuk mengatur alokasi playlist.
+              Pilih layer/zona di atas untuk mengatur kontennya.
             </div>
           ) : (
         <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
@@ -196,27 +197,27 @@ export default function LayerBlockList() {
             </div>
           )}
           
-            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-              <button
-                onClick={() => setPickerZoneId(selectedZone.id)}
-                style={{ flex: 1, padding: '8px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'var(--bg-surface-elevated)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-50)'; e.currentTarget.style.borderColor = 'var(--primary-300)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
-                title="Tambah Playlist"
-              >
-                <ListMusic size={14} /> Playlist
-              </button>
-              <button
-                onClick={() => setMediaPickerZoneId(selectedZone.id)}
-                style={{ flex: 1, padding: '8px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'var(--bg-surface-elevated)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-50)'; e.currentTarget.style.borderColor = 'var(--primary-300)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
-                title="Tambah Media Langsung"
-              >
-                <Film size={14} /> Media
-              </button>
-            </div>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+            <button
+              onClick={() => setPickerZoneId(selectedZone.id)}
+              style={{ flex: 1, padding: '6px 8px', fontSize: '0.6875rem', fontWeight: 600, backgroundColor: 'var(--bg-surface-elevated)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-50)'; e.currentTarget.style.borderColor = 'var(--primary-300)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
+              title="Tambah Playlist ke Zona Ini"
+            >
+              <ListMusic size={13} /> + Playlist
+            </button>
+            <button
+              onClick={() => setMediaPickerZoneId(selectedZone.id)}
+              style={{ flex: 1, padding: '6px 8px', fontSize: '0.6875rem', fontWeight: 600, backgroundColor: 'var(--bg-surface-elevated)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-50)'; e.currentTarget.style.borderColor = 'var(--primary-300)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
+              title="Tambah Media Langsung ke Zona Ini"
+            >
+              <Film size={13} /> + Media
+            </button>
           </div>
+        </div>
         )}
       </div>
     )}

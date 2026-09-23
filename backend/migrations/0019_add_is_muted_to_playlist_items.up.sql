@@ -1,1 +1,0 @@
-ALTER TABLE playlist_items ADD COLUMN is_muted BOOLEAN NOT NULL DEFAULT false;

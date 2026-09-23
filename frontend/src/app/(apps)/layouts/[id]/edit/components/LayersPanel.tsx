@@ -27,31 +27,46 @@ export default function LayersPanel() {
       {/* Top Header: Layers */}
       <div
         style={{
-          padding: collapsed ? '10px 6px' : '10px 14px',
+          padding: collapsed ? '6px 4px' : '6px 12px',
           borderBottom: '1px solid var(--border-subtle)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: collapsed ? 'center' : 'space-between',
           backgroundColor: 'var(--bg-surface-elevated)',
-          minHeight: '44px',
+          minHeight: '36px',
           flexShrink: 0,
           gap: '6px',
         }}
       >
         {!collapsed && (
-          <h3 style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px', margin: 0, flex: 1 }}>
-            <Layers size={14} />
-            Layers
+          <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px', margin: 0, flex: 1 }}>
+            <Layers size={13} />
+            LAYERS
           </h3>
         )}
 
         {!collapsed && (
           <button
             onClick={handleAddZone}
-            className="btn btn-primary"
-            style={{ padding: '3px 7px', fontSize: '0.6875rem', height: 'auto', flexShrink: 0 }}
+            title="Tambah Layer / Zona Baru"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '22px',
+              height: '22px',
+              border: 'none',
+              borderRadius: '5px',
+              backgroundColor: 'var(--primary-600)',
+              color: '#ffffff',
+              cursor: 'pointer',
+              flexShrink: 0,
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-700)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-600)'; }}
           >
-            <Plus size={12} /> Baru
+            <Plus size={13} />
           </button>
         )}
 
@@ -66,14 +81,14 @@ export default function LayersPanel() {
             height: '22px',
             border: '1px solid var(--border-subtle)',
             borderRadius: '5px',
-            backgroundColor: '#fff',
+            backgroundColor: 'var(--bg-surface-elevated)',
             cursor: 'pointer',
             color: 'var(--text-secondary)',
             flexShrink: 0,
             transition: 'background 0.15s',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--hover-surface)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; }}
         >
           {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
         </button>

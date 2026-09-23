@@ -180,7 +180,7 @@ function EditorContent() {
                 flexShrink: 0,
                 transition: 'background 0.15s',
               }}
-              title="Tarik atas/bawah untuk mengubah tinggi Alokasi Playlist"
+              title="Tarik atas/bawah untuk mengubah tinggi Konten Zona"
               onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-400)'; }}
               onMouseLeave={(e) => { if (!isDraggingVertical) e.currentTarget.style.backgroundColor = 'var(--border-subtle)'; }}
             />

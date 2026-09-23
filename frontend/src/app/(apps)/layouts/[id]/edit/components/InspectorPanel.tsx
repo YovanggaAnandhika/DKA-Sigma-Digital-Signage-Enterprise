@@ -157,7 +157,7 @@ export default function InspectorPanel() {
               height: '22px',
               border: '1px solid var(--border-subtle)',
               borderRadius: '5px',
-              backgroundColor: '#fff',
+              backgroundColor: 'var(--bg-surface-elevated)',
               cursor: 'pointer',
               color: 'var(--text-secondary)',
             }}
@@ -211,15 +211,15 @@ export default function InspectorPanel() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '10px 14px',
-          minHeight: '44px',
+          padding: '6px 12px',
+          minHeight: '36px',
           backgroundColor: 'var(--bg-surface-elevated)',
           borderBottom: '1px solid var(--border-subtle)',
           flexShrink: 0,
         }}
       >
-        <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {headerIcon} {headerTitle}
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {headerIcon} {headerTitle.toUpperCase()}
         </span>
         <button
           onClick={() => setIsInspectorCollapsed(true)}
@@ -232,13 +232,13 @@ export default function InspectorPanel() {
             height: '22px',
             border: '1px solid var(--border-subtle)',
             borderRadius: '5px',
-            backgroundColor: '#fff',
+            backgroundColor: 'var(--bg-surface-elevated)',
             cursor: 'pointer',
             color: 'var(--text-secondary)',
             transition: 'background 0.15s',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--hover-surface)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; }}
         >
           <ChevronRight size={12} />
         </button>
@@ -392,7 +392,7 @@ export default function InspectorPanel() {
               </div>
 
               {/* Quick Actions */}
-              <div style={{ display: 'flex', gap: '8px', paddingTop: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', paddingTop: '4px' }}>
                 <button
                   onClick={() => {
                     if (blockZone) {
@@ -402,27 +402,30 @@ export default function InspectorPanel() {
                     }
                   }}
                   className="btn btn-secondary btn-sm"
-                  style={{ flex: 1, fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                  style={{ flex: 1, fontSize: '0.6875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', height: '28px' }}
                 >
                   <Layers size={13} /> Edit Zona
                 </button>
                 <button
                   onClick={handleDeleteBlock}
+                  title="Hapus Item dari Alokasi Zona"
                   style={{
-                    padding: '6px 12px',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    borderRadius: '6px',
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '5px',
                     backgroundColor: 'rgba(225, 29, 72, 0.1)',
                     border: '1px solid rgba(225, 29, 72, 0.2)',
                     color: 'var(--accent-rose)',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
+                    justifyContent: 'center',
+                    flexShrink: 0,
                   }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(225, 29, 72, 0.2)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(225, 29, 72, 0.1)'; }}
                 >
-                  <Trash2 size={13} /> Hapus
+                  <Trash2 size={13} />
                 </button>
               </div>
             </div>
@@ -434,25 +437,28 @@ export default function InspectorPanel() {
           <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-600)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Properti Dimensi & Posisi
+                Dimensi & Posisi
               </span>
               <button
                 onClick={() => handleDeleteZone(selectedZone.id)}
+                title="Hapus Zona Ini"
                 style={{
+                  width: '26px',
+                  height: '26px',
                   backgroundColor: 'rgba(225, 29, 72, 0.1)',
                   border: '1px solid rgba(225, 29, 72, 0.2)',
                   color: 'var(--accent-rose)',
-                  fontSize: '0.6875rem',
-                  fontWeight: 700,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  padding: '3px 7px',
-                  borderRadius: '4px',
+                  justifyContent: 'center',
+                  borderRadius: '5px',
+                  flexShrink: 0,
                 }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(225, 29, 72, 0.2)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(225, 29, 72, 0.1)'; }}
               >
-                <Trash2 size={12} /> Hapus Zona
+                <Trash2 size={13} />
               </button>
             </div>
 
@@ -538,22 +544,24 @@ export default function InspectorPanel() {
               </div>
 
               {/* Quick block allocation button inside zone */}
-              <div style={{ marginTop: '10px', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)' }}>
-                <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>
-                  TAMBAH ALOKASI KONTEN KE ZONA INI
+              <div style={{ marginTop: '8px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
+                <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  TAMBAH KONTEN KE ZONA INI
                 </span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
                     onClick={() => setPickerZoneId(selectedZone.id)}
-                    style={{ flex: 1, padding: '7px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'var(--bg-base)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    style={{ flex: 1, padding: '6px 8px', fontSize: '0.6875rem', fontWeight: 600, backgroundColor: 'var(--bg-base)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                    title="Tambah Playlist"
                   >
-                    <ListMusic size={13} /> Playlist
+                    <ListMusic size={13} /> + Playlist
                   </button>
                   <button
                     onClick={() => setMediaPickerZoneId(selectedZone.id)}
-                    style={{ flex: 1, padding: '7px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'var(--bg-base)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    style={{ flex: 1, padding: '6px 8px', fontSize: '0.6875rem', fontWeight: 600, backgroundColor: 'var(--bg-base)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                    title="Tambah Media"
                   >
-                    <Film size={13} /> Media
+                    <Film size={13} /> + Media
                   </button>
                 </div>
               </div>
@@ -729,7 +737,7 @@ export default function InspectorPanel() {
             <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'var(--bg-base)', border: '1px dashed var(--border-subtle)', textAlign: 'center', marginTop: '8px' }}>
               <MousePointer2 size={20} style={{ opacity: 0.5, margin: '0 auto 6px auto', color: 'var(--text-secondary)' }} />
               <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', display: 'block' }}>
-                Klik suatu <strong>Zona</strong> di canvas, item di <strong>Alokasi Playlist</strong>, atau blok di <strong>Timeline</strong> untuk langsung beralih melihat dan mengedit propertinya di panel ini.
+                Klik suatu <strong>Zona</strong> di canvas, item di <strong>Konten Zona</strong>, atau blok di <strong>Timeline</strong> untuk langsung beralih melihat dan mengedit propertinya di panel ini.
               </span>
             </div>
           </div>
