@@ -34,12 +34,17 @@ impl LayerBlockServiceImpl {
             media_item: None,
             start_time_seconds: block.start_time_seconds,
             duration_seconds: block.duration_seconds,
-            transition_type: block.transition_type.unwrap_or_default(),
+            trim_start_seconds: block.trim_start_seconds,
+            trim_end_seconds: block.trim_end_seconds,
+            transition_id: block.transition_id.map(|id| id.to_string()),
+            visual_filter_id: block.visual_filter_id.map(|id| id.to_string()),
             order_index: block.order_index,
             is_muted: block.is_muted,
             volume_level: block.volume_level,
             created_at: block.created_at.to_rfc3339(),
             item_overrides: vec![], // Populated elsewhere if needed
+            transition: None,
+            visual_filter: None,
         }
     }
 }
@@ -63,6 +68,10 @@ impl LayerBlockServiceTrait for LayerBlockServiceImpl {
             media_item_id,
             start_time_seconds: req.start_time_seconds,
             duration_seconds: req.duration_seconds,
+            trim_start_seconds: req.trim_start_seconds,
+            trim_end_seconds: req.trim_end_seconds,
+            transition_id: req.transition_id.and_then(|id| Uuid::from_str(&id).ok()),
+            visual_filter_id: req.visual_filter_id.and_then(|id| Uuid::from_str(&id).ok()),
         };
 
         let block = LayerBlockService::create(&self.pool, dto)
@@ -117,7 +126,10 @@ impl LayerBlockServiceTrait for LayerBlockServiceImpl {
         let dto = UpdateLayerBlockDto {
             start_time_seconds: req.start_time_seconds,
             duration_seconds: req.duration_seconds,
-            transition_type: req.transition_type,
+            trim_start_seconds: req.trim_start_seconds,
+            trim_end_seconds: req.trim_end_seconds,
+            transition_id: req.transition_id.and_then(|id| Uuid::from_str(&id).ok()),
+            visual_filter_id: req.visual_filter_id.and_then(|id| Uuid::from_str(&id).ok()),
             order_index: req.order_index,
             is_muted: req.is_muted,
             volume_level: req.volume_level,

@@ -56,7 +56,10 @@ impl LayerServiceImpl {
             media_item: None, // Filled later if needed via JOIN
             start_time_seconds: dto.block.start_time_seconds,
             duration_seconds: dto.block.duration_seconds,
-            transition_type: dto.block.transition_type.unwrap_or_default(),
+            trim_start_seconds: dto.block.trim_start_seconds,
+            trim_end_seconds: dto.block.trim_end_seconds,
+            transition_id: dto.block.transition_id.map(|id| id.to_string()),
+            visual_filter_id: dto.block.visual_filter_id.map(|id| id.to_string()),
             order_index: dto.block.order_index,
             is_muted: dto.block.is_muted,
             volume_level: dto.block.volume_level,
@@ -72,6 +75,8 @@ impl LayerServiceImpl {
                     volume_level: ov.volume_level.unwrap_or(100),
                 })
                 .collect(),
+            transition: None,
+            visual_filter: None,
         }
     }
 }

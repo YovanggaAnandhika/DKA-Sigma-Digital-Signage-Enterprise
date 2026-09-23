@@ -50,6 +50,12 @@ pub mod proto {
             pub mod schedule {
                 tonic::include_proto!("signage.studio.v1.schedule");
             }
+            pub mod transition {
+                tonic::include_proto!("signage.studio.v1.transition");
+            }
+            pub mod visual_filter {
+                tonic::include_proto!("signage.studio.v1.visual_filter");
+            }
         }
     }
     pub mod distribution {

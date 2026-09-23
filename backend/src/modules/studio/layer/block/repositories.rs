@@ -18,8 +18,8 @@ impl LayerBlockRepository {
         let block = sqlx::query_as::<_, LayerBlockEntity>(
             r#"
             INSERT INTO layer_blocks (
-                layer_id, playlist_id, media_item_id, start_time_seconds, duration_seconds, order_index
-            ) VALUES ($1, $2, $3, $4, $5, $6)
+                layer_id, playlist_id, media_item_id, start_time_seconds, duration_seconds, order_index, trim_start_seconds, trim_end_seconds, transition_id, visual_filter_id
+            ) VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 0), $8, $9, $10)
             RETURNING *
             "#
         )
@@ -29,6 +29,10 @@ impl LayerBlockRepository {
         .bind(dto.start_time_seconds)
         .bind(dto.duration_seconds)
         .bind(next_order)
+        .bind(dto.trim_start_seconds)
+        .bind(dto.trim_end_seconds)
+        .bind(dto.transition_id)
+        .bind(dto.visual_filter_id)
         .fetch_one(pool)
         .await?;
 
@@ -67,10 +71,13 @@ impl LayerBlockRepository {
             SET
                 start_time_seconds = COALESCE($2, start_time_seconds),
                 duration_seconds = COALESCE($3, duration_seconds),
-                transition_type = CASE WHEN $4 = 'none' THEN NULL WHEN $4 IS NOT NULL THEN $4 ELSE transition_type END,
-                order_index = COALESCE($5, order_index),
-                is_muted = COALESCE($6, is_muted),
-                volume_level = COALESCE($7, volume_level),
+                trim_start_seconds = COALESCE($4, trim_start_seconds),
+                trim_end_seconds = COALESCE($5, trim_end_seconds),
+                transition_id = COALESCE($6, transition_id),
+                visual_filter_id = COALESCE($7, visual_filter_id),
+                order_index = COALESCE($8, order_index),
+                is_muted = COALESCE($9, is_muted),
+                volume_level = COALESCE($10, volume_level),
                 updated_at = NOW()
             WHERE id = $1
             RETURNING *
@@ -79,7 +86,10 @@ impl LayerBlockRepository {
         .bind(id)
         .bind(dto.start_time_seconds)
         .bind(dto.duration_seconds)
-        .bind(dto.transition_type)
+        .bind(dto.trim_start_seconds)
+        .bind(dto.trim_end_seconds)
+        .bind(dto.transition_id)
+        .bind(dto.visual_filter_id)
         .bind(dto.order_index)
         .bind(dto.is_muted)
         .bind(dto.volume_level)
