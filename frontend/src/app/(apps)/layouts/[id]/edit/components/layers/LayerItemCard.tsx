@@ -3,16 +3,16 @@
 import React from 'react';
 import { Film, ListMusic } from 'lucide-react';
 import { useLayoutEditor } from '../../context/LayoutEditorContext';
-import { Zone } from '../../context/LayoutStateContext';
+import { Layer } from '../../context/LayoutStateContext';
 
 interface LayerItemCardProps {
-  z: Zone;
+  z: Layer;
 }
 
 export default function LayerItemCard({ z }: LayerItemCardProps) {
-  const { selectedZoneId, setSelectedZoneId, availablePlaylists, mediaList, setPickerZoneId, setInspectorTarget, setSelectedBlockId, setIsInspectorCollapsed } = useLayoutEditor();
+  const { selectedLayerId, setSelectedLayerId, availablePlaylists, mediaList, setPickerZoneId, setInspectorTarget, setSelectedBlockId, setIsInspectorCollapsed } = useLayoutEditor();
 
-  const isSelected = z.id === selectedZoneId;
+  const isSelected = z.id === selectedLayerId;
   const hasBlocks = z.blocksList && z.blocksList.length > 0;
   const firstBlock = hasBlocks ? z.blocksList[0] : null;
   const assignedPl = firstBlock ? availablePlaylists.find((p) => p.id === firstBlock.playlistId) : null;
@@ -22,9 +22,9 @@ export default function LayerItemCard({ z }: LayerItemCardProps) {
   const isVideo = layerMedia?.mediaType === 2;
 
   const handleClick = () => {
-    setSelectedZoneId(z.id);
+    setSelectedLayerId(z.id);
     setSelectedBlockId(null);
-    setInspectorTarget('zone');
+    setInspectorTarget('layer');
     setIsInspectorCollapsed(false);
   };
 

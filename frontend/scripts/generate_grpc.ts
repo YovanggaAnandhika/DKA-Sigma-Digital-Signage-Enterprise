@@ -7,7 +7,8 @@ if (!fs.existsSync(outDir)) {
   fs.mkdirSync(outDir, { recursive: true });
 }
 
-const protoDir = path.join(__dirname, '../proto');
+// Point directly to the backend's proto folder
+const protoDir = path.join(__dirname, '../../backend/proto');
 
 const getAllFiles = (dirPath: string, arrayOfFiles?: string[]): string[] => {
   const files = fs.readdirSync(dirPath);
@@ -25,7 +26,7 @@ const getAllFiles = (dirPath: string, arrayOfFiles?: string[]): string[] => {
 
 const protoFiles = getAllFiles(protoDir).join(' ');
 
-// Use the project root as CWD
+// Use the frontend root as CWD
 const projectRoot = path.join(__dirname, '..');
 
 const command = `bunx grpc_tools_node_protoc \\
@@ -34,11 +35,11 @@ const command = `bunx grpc_tools_node_protoc \\
     --js_out=import_style=commonjs,binary:./src/lib/api \\
     --grpc_out=grpc_js:./src/lib/api \\
     --ts_out=grpc_js:./src/lib/api \\
-    -I ./proto \\
+    -I ../backend/proto \\
     ${protoFiles}`;
 
 try {
-  console.log('Generating gRPC clients...');
+  console.log('Generating gRPC clients from backend protos...');
   execSync(command, { cwd: projectRoot, stdio: 'inherit' });
   console.log('Successfully generated gRPC clients in src/lib/api');
 } catch (error: any) {

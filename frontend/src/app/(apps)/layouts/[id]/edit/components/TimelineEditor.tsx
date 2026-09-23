@@ -10,7 +10,7 @@ import TimelineRuler from './timeline/TimelineRuler';
 import TimelineTrackBlock from './timeline/TimelineTrackBlock';
 
 export default function TimelineEditor() {
-  const { zones } = useLayoutState();
+  const { layers } = useLayoutState();
   const { isTimelineExpanded, bufferedRanges, setInspectorTarget, setIsInspectorCollapsed } = useLayoutUI();
   const { timelineDuration, pxPerSecond, playheadPosition } = useLayoutPlayback();
 
@@ -187,7 +187,7 @@ export default function TimelineEditor() {
               ))}
 
               {/* Tracks Rows */}
-              {zones.map((z, i) => {
+              {layers.map((z, i) => {
                 const zColors = ['#1d4ed8', '#047857', '#b45309', '#be185d', '#6d28d9', '#0f766e', '#4338ca'];
                 const color = zColors[i % zColors.length];
                 
@@ -205,7 +205,7 @@ export default function TimelineEditor() {
                     {(z.blocksList || []).map((block) => (
                       <TimelineTrackBlock
                         key={block.id}
-                        zone={z}
+                        layer={z}
                         block={block}
                         color={color}
                       />

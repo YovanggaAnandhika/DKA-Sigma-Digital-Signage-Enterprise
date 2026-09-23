@@ -1,19 +1,19 @@
 'use client';
 
 import React, { ReactNode } from 'react';
-import { LayoutStateProvider, useLayoutState, Zone } from './LayoutStateContext';
+import { LayoutStateProvider, useLayoutState, Layer } from './LayoutStateContext';
 import { LayoutPlaybackProvider, useLayoutPlayback } from './LayoutPlaybackContext';
 import { LayoutCanvasProvider, useLayoutCanvas } from './LayoutCanvasContext';
 import { LayoutUIProvider, useLayoutUI } from './LayoutUIContext';
 
-export type { Zone };
+export type { Layer };
 export { useLayoutState, useLayoutPlayback, useLayoutCanvas, useLayoutUI };
 
 function LayoutEditorInnerProvider({ children }: { children: ReactNode }) {
-  const { zones, layout } = useLayoutState();
+  const { layers, layout } = useLayoutState();
 
   return (
-    <LayoutPlaybackProvider zones={zones}>
+    <LayoutPlaybackProvider layers={layers}>
       <LayoutCanvasProvider layout={layout}>
         <LayoutUIProvider>{children}</LayoutUIProvider>
       </LayoutCanvasProvider>

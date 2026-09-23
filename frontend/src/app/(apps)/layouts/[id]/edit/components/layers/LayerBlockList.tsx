@@ -7,11 +7,11 @@ import { useLayoutEditor } from '../../context/LayoutEditorContext';
 
 export default function LayerBlockList() {
   const {
-    zones,
-    selectedZoneId,
+    layers,
+    selectedLayerId,
     availablePlaylists,
     mediaList,
-    updateSelectedZone,
+    updateSelectedLayer,
     setPickerZoneId,
     setMediaPickerZoneId,
     isPlaylistCollapsed,
@@ -24,7 +24,7 @@ export default function LayerBlockList() {
   const collapsed = isPlaylistCollapsed;
   const setCollapsed = setIsPlaylistCollapsed;
 
-  const selectedZone = zones.find((z) => z.id === selectedZoneId);
+  const selectedZone = layers.find((z) => z.id === selectedLayerId);
 
   return (
     <div
@@ -174,10 +174,10 @@ export default function LayerBlockList() {
                       e.stopPropagation();
                       if (window.confirm('Hapus blok playlist ini dari zona?')) {
                         const newBlocks = (selectedZone.blocksList || []).filter(b => b.id !== block.id);
-                        updateSelectedZone('blocksList', newBlocks);
+                        updateSelectedLayer('blocksList', newBlocks);
                         if (selectedBlockId === block.id) {
                           setSelectedBlockId(null);
-                          setInspectorTarget('zone');
+                          setInspectorTarget('layer');
                         }
                       }
                     }}

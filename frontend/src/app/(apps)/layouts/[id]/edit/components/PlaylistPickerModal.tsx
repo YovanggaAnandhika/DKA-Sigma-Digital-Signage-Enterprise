@@ -2,15 +2,15 @@
 
 import React, { useState } from 'react';
 import { Search, X, Check, Film, Image as ImageIcon, PlayCircle, Clock } from 'lucide-react';
-import { addPlaylistBlock, createZone } from '@/lib/services/studio/layout.service';
+import { addPlaylistBlock, createLayer } from '@/lib/services/studio/layout.service';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 
 export default function PlaylistPickerModal() {
   const { 
     pickerZoneId, 
     setPickerZoneId, 
-    zones, 
-    setZones,
+    layers, 
+    setLayers,
     availablePlaylists, 
     mediaList, 
     showToast,
@@ -20,7 +20,7 @@ export default function PlaylistPickerModal() {
 
   if (!pickerZoneId) return null;
 
-  const targetZone = zones.find(z => z.id === pickerZoneId);
+  const targetZone = layers.find(z => z.id === pickerZoneId);
   if (!targetZone) return null;
 
   const handleClose = () => {
@@ -42,7 +42,7 @@ export default function PlaylistPickerModal() {
     try {
       let realZoneId = targetZone.id;
       if (realZoneId.startsWith('z-')) {
-        const newZ = await createZone({
+        const newZ = await createLayer({
           layoutId: targetZone.layoutId,
           name: targetZone.name,
           x: targetZone.x,
@@ -61,7 +61,7 @@ export default function PlaylistPickerModal() {
       const newBlock: any = {
         ...createdBlock,
         id: createdBlock.id,
-        zoneId: realZoneId,
+        layerId: realZoneId,
         playlistId: plId,
         mediaItemId: '',
         playlist: pl,
@@ -74,7 +74,7 @@ export default function PlaylistPickerModal() {
         createdAt: new Date().toISOString(),
       };
 
-      setZones((prev) =>
+      setLayers((prev) =>
         prev.map((z) => {
           if (z.id === targetZone.id || z.id === realZoneId) {
             return {

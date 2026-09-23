@@ -7,23 +7,23 @@ import { useLayoutUI } from '../../context/LayoutUIContext';
 import { useLayoutPlayback } from '../../context/LayoutPlaybackContext';
 
 export default function TimelineTrackHeader() {
-  const { zones, selectedZoneId, setSelectedZoneId } = useLayoutState();
+  const { layers, selectedLayerId, setSelectedLayerId } = useLayoutState();
   const { hiddenZones, toggleZoneVisibility, setInspectorTarget, setSelectedBlockId, setIsInspectorCollapsed } = useLayoutUI();
-  const { playheadPosition, isZoneActive } = useLayoutPlayback();
+  const { playheadPosition, isLayerActive } = useLayoutPlayback();
 
   return (
     <div style={{ width: '220px', backgroundColor: 'var(--bg-surface)', flexShrink: 0 }}>
-      {zones.map((z, idx) => {
-        const active = isZoneActive(z, playheadPosition);
-        const isSelected = z.id === selectedZoneId;
+      {layers.map((z, idx) => {
+        const active = isLayerActive(z, playheadPosition);
+        const isSelected = z.id === selectedLayerId;
         const isHidden = hiddenZones.includes(z.id);
         const zColors = ['#1d4ed8', '#047857', '#b45309', '#be185d', '#6d28d9', '#0f766e', '#4338ca'];
         const color = zColors[idx % zColors.length];
 
         const handleTrackClick = () => {
-          setSelectedZoneId(z.id);
+          setSelectedLayerId(z.id);
           setSelectedBlockId(null);
-          setInspectorTarget('zone');
+          setInspectorTarget('layer');
           setIsInspectorCollapsed(false);
         };
 

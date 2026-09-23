@@ -1,5 +1,5 @@
 import { invokeApi } from '../../core/invokeApi';
-import { Layout } from './types';
+import { Layout, Layer } from './types';
 
 export async function getLayouts(params?: { search?: string; page?: number; limit?: number }): Promise<{ data: Layout[]; total: number }> {
   const result = await invokeApi<any>('/api/grpc/layout/ListLayouts', {
@@ -48,63 +48,55 @@ export async function deleteLayout(id: string): Promise<boolean> {
   return true;
 }
 
-export async function createZone(data: { layoutId?: string; layout_id?: string; name: string; x: number; y: number; width: number; height: number; zIndex: number; backgroundColor?: string; background_color?: string }): Promise<any> {
-  const result = await invokeApi<any>('/api/grpc/layout/CreateZone', {
+export async function createLayer(data: { layoutId?: string; layout_id?: string; name: string; x: number; y: number; width: number; height: number; zIndex?: number; backgroundColor?: string; }): Promise<any> {
+  const result = await invokeApi<any>('/api/grpc/layer/CreateLayer', {
     ...data,
     layout_id: data.layoutId || data.layout_id,
     layoutId: data.layoutId || data.layout_id,
-    backgroundColor: data.backgroundColor || data.background_color,
   });
-  return result.zone || result;
+  return result.layer || result;
 }
 
-export async function updateZone(id: string, data: { name?: string; x?: number; y?: number; width?: number; height?: number; zIndex?: number; z_index?: number; backgroundColor?: string; background_color?: string; layoutId?: string; layout_id?: string }): Promise<Layout | any> {
+export async function updateLayer(id: string, data: { name?: string; x?: number; y?: number; width?: number; height?: number; zIndex?: number; backgroundColor?: string; layoutId?: string; }): Promise<Layout | any> {
   const payload = {
     ...data,
-    zIndex: data.zIndex ?? data.z_index,
-    backgroundColor: data.backgroundColor || data.background_color,
-    background_color: data.backgroundColor || data.background_color,
   };
-  const res = await invokeApi<any>('/api/grpc/layout/UpdateZone', { id, ...payload });
-  const targetLayoutId = data.layoutId || data.layout_id;
+  const res = await invokeApi<any>('/api/grpc/layer/UpdateLayer', { id, ...payload });
+  const targetLayoutId = data.layoutId;
   if (targetLayoutId) {
     return getLayout(targetLayoutId);
   }
   return res;
 }
 
-export async function deleteZone(id: string, layout_id: string): Promise<Layout> {
-  await invokeApi<any>('/api/grpc/layout/DeleteZone', { id });
+export async function deleteLayer(id: string, layout_id: string): Promise<Layout> {
+  await invokeApi<any>('/api/grpc/layer/DeleteLayer', { id });
   return getLayout(layout_id);
 }
 
-export async function addPlaylistBlock(zone_id: string, playlistId: string, startTimeSeconds: number, durationSeconds: number): Promise<any> {
-  return await invokeApi<any>('/api/grpc/layout/AddPlaylistBlock', { zone_id, playlistId, startTimeSeconds, durationSeconds });
+export async function addPlaylistBlock(layer_id: string, playlistId: string, startTimeSeconds: number, durationSeconds: number): Promise<any> {
+  return await invokeApi<any>('/api/grpc/layer_block/CreateLayerBlock', { layer_id, playlistId, startTimeSeconds, durationSeconds });
 }
 
-export async function updatePlaylistBlock(id: string, data: { startTimeSeconds?: number; durationSeconds?: number; transitionType?: string; transition_type?: string; isMuted?: boolean; position?: number; }): Promise<any> {
-  return await invokeApi<any>('/api/grpc/layout/UpdatePlaylistBlock', {
+export async function addMediaBlock(layer_id: string, media_id: string, startTimeSeconds: number, durationSeconds: number): Promise<any> {
+  return await invokeApi<any>('/api/grpc/layer_block/CreateLayerBlock', { layer_id, media_item_id: media_id, startTimeSeconds, durationSeconds });
+}
+
+export async function updatePlaylistBlock(id: string, data: { startTimeSeconds?: number; durationSeconds?: number; transitionType?: string; isMuted?: boolean; orderIndex?: number; volumeLevel?: number; }): Promise<any> {
+  return await invokeApi<any>('/api/grpc/layer_block/UpdateLayerBlock', {
     id,
     ...data,
-    transitionType: data.transitionType || data.transition_type,
-  });
-}
-
-export async function addMediaBlock(zone_id: string, media_id: string, startTimeSeconds: number, durationSeconds: number): Promise<any> {
-  return await invokeApi<any>('/api/grpc/layout/AddMediaBlock', { zone_id, media_id, startTimeSeconds, durationSeconds });
-}
-
-export async function setPlaylistItemOverride(zonePlaylistId: string, playlistItemId: string, isMuted: boolean): Promise<any> {
-  return await invokeApi<any>('/api/grpc/layout/SetPlaylistItemOverride', {
-    zonePlaylistId,
-    zone_playlistId: zonePlaylistId,
-    zone_playlist_id: zonePlaylistId,
-    playlistItemId,
-    isMuted
   });
 }
 
 export async function removePlaylistBlock(id: string): Promise<any> {
-  return await invokeApi<any>('/api/grpc/layout/RemovePlaylistBlock', { id });
+  return await invokeApi<any>('/api/grpc/layer_block/DeleteLayerBlock', { id });
 }
 
+export async function setPlaylistItemOverride(layerPlaylistId: string, playlistItemId: string, isMuted: boolean): Promise<any> {
+  return await invokeApi<any>('/api/grpc/layer_override/SetItemOverride', {
+    layerPlaylistId,
+    playlistItemId,
+    isMuted
+  });
+}

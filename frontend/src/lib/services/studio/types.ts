@@ -7,12 +7,12 @@ export interface Layout {
   orientation: number | string;
   backgroundColor: string;
   backgroundImageUrl: string;
-  zonesList: Zone[];
+  layersList: Layer[];
   createdAt: string;
   updatedAt: string;
 }
 
-export interface Zone {
+export interface Layer {
   id: string;
   layoutId: string;
   name: string;
@@ -21,15 +21,15 @@ export interface Zone {
   width: number;
   height: number;
   zIndex: number;
-  blocksList: ZonePlaylist[];
+  blocksList: LayerPlaylist[];
   backgroundColor: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface ZonePlaylist {
+export interface LayerPlaylist {
   id: string;
-  zoneId: string;
+  layerId: string;
   playlistId: string;
   mediaItemId: string;
   playlist?: Playlist;
@@ -38,14 +38,15 @@ export interface ZonePlaylist {
   durationSeconds: number;
   transitionType: string;
   orderIndex: number;
-  itemOverridesList: ZonePlaylistItemOverride[];
+  itemOverridesList: LayerPlaylistItemOverride[];
   isMuted?: boolean;
+  volumeLevel?: number;
   createdAt: string;
 }
 
-export interface ZonePlaylistItemOverride {
+export interface LayerPlaylistItemOverride {
   id: string;
-  zonePlaylistId: string;
+  layerPlaylistId: string;
   playlistItemId: string;
   isMuted: boolean;
 }
@@ -90,5 +91,3 @@ export interface MediaItem {
   createdAt: string;
   updatedAt: string;
 }
-
-

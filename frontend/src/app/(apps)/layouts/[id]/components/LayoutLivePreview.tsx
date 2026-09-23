@@ -10,9 +10,9 @@ interface LayoutLivePreviewProps {
   togglePlayPause: () => void;
   globalMuted: boolean;
   toggleMute: () => void;
-  selectedZoneId: string | null;
-  setSelectedZoneId: (id: string) => void;
-  resolveZoneMedia: (zone: any) => { media: MediaItem; playlistName: string | null } | null;
+  selectedLayerId: string | null;
+  setSelectedLayerId: (id: string) => void;
+  resolveZoneMedia: (layer: any) => { media: MediaItem; playlistName: string | null } | null;
   videoRefs: React.MutableRefObject<Map<string, HTMLVideoElement>>;
   zColors: string[];
   playlists: Playlist[];
@@ -24,8 +24,8 @@ export default function LayoutLivePreview({
   togglePlayPause,
   globalMuted,
   toggleMute,
-  selectedZoneId,
-  setSelectedZoneId,
+  selectedLayerId,
+  setSelectedLayerId,
   resolveZoneMedia,
   videoRefs,
   zColors,
@@ -95,11 +95,11 @@ export default function LayoutLivePreview({
             boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
           }}
         >
-          {layout.zonesList?.map((z, idx) => {
+          {layout.layersList?.map((z, idx) => {
             const color = zColors[idx % zColors.length];
             const resolved = resolveZoneMedia(z);
             const isVideo = resolved?.media.mediaType === 2;
-            const isSelected = z.id === selectedZoneId;
+            const isSelected = z.id === selectedLayerId;
             const assignedPlName = (() => {
               for (const block of (z.blocksList || [])) {
                 if (block.playlistId) {
@@ -113,7 +113,7 @@ export default function LayoutLivePreview({
             return (
               <div
                 key={z.id}
-                onClick={() => setSelectedZoneId(z.id)}
+                onClick={() => setSelectedLayerId(z.id)}
                 style={{
                   position: 'absolute',
                   left: `${((Number(z.x) || 0) / layout.canvasWidth) * 100}%`,
@@ -170,7 +170,7 @@ export default function LayoutLivePreview({
                   {Number(z.width)} × {Number(z.height)} px
                 </div>
 
-                {/* Empty zone fallback */}
+                {/* Empty layer fallback */}
                 {!resolved && (
                   <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
                     <div style={{ fontSize: '0.625rem', fontWeight: 700, color: '#fff', textAlign: 'center', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>

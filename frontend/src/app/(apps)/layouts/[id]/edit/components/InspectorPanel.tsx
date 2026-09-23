@@ -29,12 +29,12 @@ export default function InspectorPanel() {
     layout,
     layoutName,
     setLayoutName,
-    zones,
-    setZones,
-    selectedZoneId,
-    setSelectedZoneId,
-    handleDeleteZone,
-    updateSelectedZone,
+    layers,
+    setLayers,
+    selectedLayerId,
+    setSelectedLayerId,
+    handleDeleteLayer,
+    updateSelectedLayer,
     availablePlaylists,
     mediaList,
     setPickerZoneId,
@@ -56,13 +56,13 @@ export default function InspectorPanel() {
     timelineDuration,
   } = useLayoutEditor();
 
-  const selectedZone = zones.find((z) => z.id === selectedZoneId);
+  const selectedZone = layers.find((z) => z.id === selectedLayerId);
 
   // Find active block if block is selected
   let selectedBlock: any = null;
   let blockZone = selectedZone;
   if (selectedBlockId) {
-    for (const z of zones) {
+    for (const z of layers) {
       const found = (z.blocksList || []).find((b) => b.id === selectedBlockId);
       if (found) {
         selectedBlock = found;
@@ -84,7 +84,7 @@ export default function InspectorPanel() {
       }
     }
 
-    setZones((prev) =>
+    setLayers((prev) =>
       prev.map((z) => {
         if (z.id === blockZone!.id) {
           return {
@@ -107,15 +107,15 @@ export default function InspectorPanel() {
     if (!selectedBlock || !blockZone) return;
     if (window.confirm('Hapus item ini dari alokasi zona?')) {
       const newBlocks = (blockZone.blocksList || []).filter((b) => b.id !== selectedBlock.id);
-      if (blockZone.id === selectedZoneId) {
-        updateSelectedZone('blocksList', newBlocks);
+      if (blockZone.id === selectedLayerId) {
+        updateSelectedLayer('blocksList', newBlocks);
       } else {
-        setZones((prev) =>
+        setLayers((prev) =>
           prev.map((z) => (z.id === blockZone!.id ? { ...z, blocksList: newBlocks } : z))
         );
       }
       setSelectedBlockId(null);
-      setInspectorTarget('zone');
+      setInspectorTarget('layer');
       showToast('Item berhasil dihapus dari alokasi');
     }
   };
@@ -314,7 +314,7 @@ export default function InspectorPanel() {
                 </div>
               )}
 
-              {/* Title & Zone Source */}
+              {/* Title & Layer Source */}
               <div>
                 <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
                   NAMA ITEM
@@ -396,9 +396,9 @@ export default function InspectorPanel() {
                 <button
                   onClick={() => {
                     if (blockZone) {
-                      setSelectedZoneId(blockZone.id);
+                      setSelectedLayerId(blockZone.id);
                       setSelectedBlockId(null);
-                      setInspectorTarget('zone');
+                      setInspectorTarget('layer');
                     }
                   }}
                   className="btn btn-secondary btn-sm"
@@ -433,14 +433,14 @@ export default function InspectorPanel() {
         })() : null}
 
         {/* CASE 2: ZONE / LAYER PROPERTIES */}
-        {inspectorTarget === 'zone' && selectedZone ? (
+        {inspectorTarget === 'layer' && selectedZone ? (
           <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-600)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Dimensi & Posisi
               </span>
               <button
-                onClick={() => handleDeleteZone(selectedZone.id)}
+                onClick={() => handleDeleteLayer(selectedZone.id)}
                 title="Hapus Zona Ini"
                 style={{
                   width: '26px',
@@ -470,7 +470,7 @@ export default function InspectorPanel() {
                 <input
                   type="text"
                   value={selectedZone.name}
-                  onChange={(e) => updateSelectedZone('name', e.target.value)}
+                  onChange={(e) => updateSelectedLayer('name', e.target.value)}
                   className="form-input"
                   style={{ fontSize: '0.75rem', padding: '6px 10px' }}
                 />
@@ -484,7 +484,7 @@ export default function InspectorPanel() {
                   <input
                     type="number"
                     value={Math.round(selectedZone.x || 0)}
-                    onChange={(e) => updateSelectedZone('x', Number(e.target.value))}
+                    onChange={(e) => updateSelectedLayer('x', Number(e.target.value))}
                     className="form-input"
                     style={{ fontSize: '0.75rem', padding: '6px 10px' }}
                   />
@@ -496,7 +496,7 @@ export default function InspectorPanel() {
                   <input
                     type="number"
                     value={Math.round(selectedZone.y || 0)}
-                    onChange={(e) => updateSelectedZone('y', Number(e.target.value))}
+                    onChange={(e) => updateSelectedLayer('y', Number(e.target.value))}
                     className="form-input"
                     style={{ fontSize: '0.75rem', padding: '6px 10px' }}
                   />
@@ -511,7 +511,7 @@ export default function InspectorPanel() {
                   <input
                     type="number"
                     value={Math.round(selectedZone.width || 200)}
-                    onChange={(e) => updateSelectedZone('width', Number(e.target.value))}
+                    onChange={(e) => updateSelectedLayer('width', Number(e.target.value))}
                     className="form-input"
                     style={{ fontSize: '0.75rem', padding: '6px 10px' }}
                   />
@@ -523,7 +523,7 @@ export default function InspectorPanel() {
                   <input
                     type="number"
                     value={Math.round(selectedZone.height || 200)}
-                    onChange={(e) => updateSelectedZone('height', Number(e.target.value))}
+                    onChange={(e) => updateSelectedLayer('height', Number(e.target.value))}
                     className="form-input"
                     style={{ fontSize: '0.75rem', padding: '6px 10px' }}
                   />
@@ -537,13 +537,13 @@ export default function InspectorPanel() {
                 <input
                   type="number"
                   value={selectedZone.zIndex || 1}
-                  onChange={(e) => updateSelectedZone('zIndex', Number(e.target.value))}
+                  onChange={(e) => updateSelectedLayer('zIndex', Number(e.target.value))}
                   className="form-input"
                   style={{ fontSize: '0.75rem', padding: '6px 10px' }}
                 />
               </div>
 
-              {/* Quick block allocation button inside zone */}
+              {/* Quick block allocation button inside layer */}
               <div style={{ marginTop: '8px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
                 <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
                   TAMBAH KONTEN KE ZONA INI
@@ -646,19 +646,19 @@ export default function InspectorPanel() {
             {/* Timeline Tracks Overview */}
             <div>
               <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
-                Ringkasan Track ({zones.length} Layer)
+                Ringkasan Track ({layers.length} Layer)
               </span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {zones.map((z, idx) => {
+                {layers.map((z, idx) => {
                   const zColors = ['#1d4ed8', '#047857', '#b45309', '#be185d', '#6d28d9', '#0f766e', '#4338ca'];
                   const color = zColors[idx % zColors.length];
                   return (
                     <div
                       key={z.id}
                       onClick={() => {
-                        setSelectedZoneId(z.id);
+                        setSelectedLayerId(z.id);
                         setSelectedBlockId(null);
-                        setInspectorTarget('zone');
+                        setInspectorTarget('layer');
                       }}
                       style={{
                         padding: '6px 10px',

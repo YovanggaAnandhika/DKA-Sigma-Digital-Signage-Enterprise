@@ -2,15 +2,15 @@
 
 import React, { useState } from 'react';
 import { Search, X, Check, Film, Image as ImageIcon, PlayCircle, Clock } from 'lucide-react';
-import { addMediaBlock, createZone } from '@/lib/services/studio/layout.service';
+import { addMediaBlock, createLayer } from '@/lib/services/studio/layout.service';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 
 export default function MediaPickerModal() {
   const { 
     mediaPickerZoneId, 
     setMediaPickerZoneId, 
-    zones, 
-    setZones,
+    layers, 
+    setLayers,
     mediaList, 
     showToast,
   } = useLayoutEditor();
@@ -19,7 +19,7 @@ export default function MediaPickerModal() {
 
   if (!mediaPickerZoneId) return null;
 
-  const targetZone = zones.find(z => z.id === mediaPickerZoneId);
+  const targetZone = layers.find(z => z.id === mediaPickerZoneId);
   if (!targetZone) return null;
 
   const handleClose = () => {
@@ -42,7 +42,7 @@ export default function MediaPickerModal() {
     try {
       let realZoneId = targetZone.id;
       if (realZoneId.startsWith('z-')) {
-        const newZ = await createZone({
+        const newZ = await createLayer({
           layoutId: targetZone.layoutId,
           name: targetZone.name,
           x: targetZone.x,
@@ -61,7 +61,7 @@ export default function MediaPickerModal() {
       const newBlock: any = {
         ...createdBlock,
         id: createdBlock.id,
-        zoneId: realZoneId,
+        layerId: realZoneId,
         playlistId: '',
         mediaItemId: mediaId,
         mediaItem: media,
@@ -74,7 +74,7 @@ export default function MediaPickerModal() {
         createdAt: new Date().toISOString(),
       };
 
-      setZones((prev) =>
+      setLayers((prev) =>
         prev.map((z) => {
           if (z.id === targetZone.id || z.id === realZoneId) {
             return {

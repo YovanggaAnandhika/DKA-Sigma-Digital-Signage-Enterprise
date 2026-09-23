@@ -9,7 +9,7 @@ interface LayoutUIContextType {
   mediaPickerZoneId: string | null;
   setMediaPickerZoneId: React.Dispatch<React.SetStateAction<string | null>>;
   hiddenZones: string[];
-  toggleZoneVisibility: (zoneId: string) => void;
+  toggleZoneVisibility: (layerId: string) => void;
   isTimelineExpanded: boolean;
   setIsTimelineExpanded: React.Dispatch<React.SetStateAction<boolean>>;
   isLayoutMetaExpanded: boolean;
@@ -32,8 +32,8 @@ interface LayoutUIContextType {
   setIsInspectorCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   selectedBlockId: string | null;
   setSelectedBlockId: React.Dispatch<React.SetStateAction<string | null>>;
-  inspectorTarget: 'zone' | 'block' | 'timeline' | 'layout';
-  setInspectorTarget: React.Dispatch<React.SetStateAction<'zone' | 'block' | 'timeline' | 'layout'>>;
+  inspectorTarget: 'layer' | 'block' | 'timeline' | 'layout';
+  setInspectorTarget: React.Dispatch<React.SetStateAction<'layer' | 'block' | 'timeline' | 'layout'>>;
   availablePlaylists: Playlist[];
   mediaList: MediaItem[];
   refreshPlaylistsAndMedia: () => Promise<void>;
@@ -56,7 +56,7 @@ export function LayoutUIProvider({ children }: { children: ReactNode }) {
   const [rightSidebarWidth, setRightSidebarWidth] = useState<number>(300);
   const [isInspectorCollapsed, setIsInspectorCollapsed] = useState<boolean>(false);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
-  const [inspectorTarget, setInspectorTarget] = useState<'zone' | 'block' | 'timeline' | 'layout'>('zone');
+  const [inspectorTarget, setInspectorTarget] = useState<'layer' | 'block' | 'timeline' | 'layout'>('layer');
   const [availablePlaylists, setAvailablePlaylists] = useState<Playlist[]>([]);
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
 
@@ -82,8 +82,8 @@ export function LayoutUIProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const toggleZoneVisibility = (zoneId: string) => {
-    setHiddenZones((prev) => (prev.includes(zoneId) ? prev.filter((id) => id !== zoneId) : [...prev, zoneId]));
+  const toggleZoneVisibility = (layerId: string) => {
+    setHiddenZones((prev) => (prev.includes(layerId) ? prev.filter((id) => id !== layerId) : [...prev, layerId]));
   };
 
   const toggleFullscreen = () => {

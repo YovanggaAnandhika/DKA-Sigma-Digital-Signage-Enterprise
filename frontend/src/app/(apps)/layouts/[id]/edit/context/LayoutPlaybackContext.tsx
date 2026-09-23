@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Zone } from './LayoutStateContext';
+import { Layer } from './LayoutStateContext';
 
 interface LayoutPlaybackContextType {
   isPlaying: boolean;
@@ -19,12 +19,12 @@ interface LayoutPlaybackContextType {
   isMuted: boolean;
   setIsMuted: React.Dispatch<React.SetStateAction<boolean>>;
   toggleMute: () => void;
-  isZoneActive: (zone: Zone, currentPos?: number) => boolean;
+  isLayerActive: (layer: Layer, currentPos?: number) => boolean;
 }
 
 const LayoutPlaybackContext = createContext<LayoutPlaybackContextType | undefined>(undefined);
 
-export function LayoutPlaybackProvider({ children, zones }: { children: ReactNode; zones: Zone[] }) {
+export function LayoutPlaybackProvider({ children, layers }: { children: ReactNode; layers: Layer[] }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playheadPosition, setPlayheadPosition] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
@@ -43,7 +43,7 @@ export function LayoutPlaybackProvider({ children, zones }: { children: ReactNod
   };
 
   let maxTimeSec = 60;
-  for (const z of zones) {
+  for (const z of layers) {
     for (const b of (z.blocksList || [])) {
       const endSec = (b.startTimeSeconds || 0) + (b.durationSeconds || 10);
       if (endSec > maxTimeSec) {
@@ -89,10 +89,10 @@ export function LayoutPlaybackProvider({ children, zones }: { children: ReactNod
   };
   const toggleMute = () => setIsMuted((prev) => !prev);
 
-  const isZoneActive = (zone: Zone, currentPos = playheadPosition) => {
-    if (!zone.blocksList || zone.blocksList.length === 0) return true;
+  const isLayerActive = (layer: Layer, currentPos = playheadPosition) => {
+    if (!layer.blocksList || layer.blocksList.length === 0) return true;
     const sec = currentPos / pxPerSecond;
-    return zone.blocksList.some((b) => sec >= b.startTimeSeconds && sec < b.startTimeSeconds + b.durationSeconds);
+    return layer.blocksList.some((b) => sec >= b.startTimeSeconds && sec < b.startTimeSeconds + b.durationSeconds);
   };
 
   return (
@@ -113,7 +113,7 @@ export function LayoutPlaybackProvider({ children, zones }: { children: ReactNod
         isMuted,
         setIsMuted,
         toggleMute,
-        isZoneActive,
+        isLayerActive,
       }}
     >
       {children}

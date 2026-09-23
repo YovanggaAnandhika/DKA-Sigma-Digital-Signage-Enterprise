@@ -2,9 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { api, Layout, Zone as ApiZone } from '@/lib/services';
+import { api, Layout, Layer as ApiZone } from '@/lib/services';
 
-export interface Zone extends ApiZone {
+export interface Layer extends ApiZone {
   timeline_start?: number;
   timeline_width?: number;
 }
@@ -13,16 +13,16 @@ interface LayoutStateContextType {
   layout: Layout | null;
   layoutName: string;
   setLayoutName: (name: string) => void;
-  zones: Zone[];
-  setZones: React.Dispatch<React.SetStateAction<Zone[]>>;
-  selectedZoneId: string | null;
-  setSelectedZoneId: (id: string | null) => void;
+  layers: Layer[];
+  setLayers: React.Dispatch<React.SetStateAction<Layer[]>>;
+  selectedLayerId: string | null;
+  setSelectedLayerId: (id: string | null) => void;
   loading: boolean;
   saving: boolean;
   handleSave: (showToast: (msg: string, type?: 'success' | 'error') => void) => Promise<void>;
-  handleAddZone: () => void;
-  handleDeleteZone: (zoneId: string) => void;
-  updateSelectedZone: (field: keyof Zone, value: any) => void;
+  handleAddLayer: () => void;
+  handleDeleteLayer: (layerId: string) => void;
+  updateSelectedLayer: (field: keyof Layer, value: any) => void;
 }
 
 const LayoutStateContext = createContext<LayoutStateContextType | undefined>(undefined);
@@ -33,9 +33,9 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
 
   const [layout, setLayout] = useState<Layout | null>(null);
   const [layoutName, setLayoutName] = useState('');
-  const [zones, setZones] = useState<Zone[]>([]);
-  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
-  const [deletedZoneIds, setDeletedZoneIds] = useState<string[]>([]);
+  const [layers, setLayers] = useState<Layer[]>([]);
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
+  const [deletedLayerIds, setDeletedLayerIds] = useState<string[]>([]);
   const [deletedBlockIds, setDeletedBlockIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -48,13 +48,13 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         setLayout(data);
         setLayoutName(data.name);
 
-        const rawZones = data.zonesList || [];
+        const rawZones = data.layersList || [];
         const sanitizedZones = rawZones.map((z: any) => {
           const rawBlocks = z.blocksList || [];
           const blocks = rawBlocks.map((b: any) => ({
             ...b,
             id: b.id,
-            zoneId: b.zoneId || b.zone_id,
+            layerId: b.layerId || b.layer_id,
             playlistId: b.playlistId || '',
             mediaItemId: b.mediaItemId || '',
             playlist: b.playlist,
@@ -87,9 +87,9 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
           };
         });
 
-        setZones(sanitizedZones);
+        setLayers(sanitizedZones);
         if (sanitizedZones.length > 0) {
-          setSelectedZoneId(sanitizedZones[0].id);
+          setSelectedLayerId(sanitizedZones[0].id);
         }
       } catch (err: any) {
         alert(err.message || 'Gagal memuat layout');
@@ -110,17 +110,17 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         await api.updateLayout(params.id, { name: layoutName });
       }
 
-      for (const delId of deletedZoneIds) {
-        await api.deleteZone(delId, params.id);
+      for (const delId of deletedLayerIds) {
+        await api.deleteLayer(delId, params.id);
       }
-      setDeletedZoneIds([]);
+      setDeletedLayerIds([]);
 
       for (const delBId of deletedBlockIds) {
         await api.removePlaylistBlock(delBId);
       }
       setDeletedBlockIds([]);
 
-      for (const z of zones) {
+      for (const z of layers) {
         const x = Math.round(Number(z.x) || 0);
         const y = Math.round(Number(z.y) || 0);
         const width = Math.round(Number(z.width) || 200);
@@ -129,7 +129,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
 
         let realZoneId = z.id;
         if (z.id.startsWith('z-')) {
-          const newZ = await api.createZone({
+          const newZ = await api.createLayer({
             layoutId: params.id,
             name: z.name,
             x,
@@ -141,7 +141,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
           });
           realZoneId = newZ.id;
         } else {
-          await api.updateZone(z.id, {
+          await api.updateLayer(z.id, {
             name: z.name,
             x,
             y,
@@ -175,8 +175,8 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
       setLayout(data);
       setLayoutName(data.name);
 
-      const prevZones = zones;
-      const rawZones = data.zonesList || [];
+      const prevZones = layers;
+      const rawZones = data.layersList || [];
       const sanitizedZones = rawZones.map((z: any) => {
         const prevZone = prevZones.find((pz) => pz.id === z.id);
         const rawBlocks = z.blocksList || [];
@@ -185,7 +185,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
           return {
             ...b,
             id: b.id,
-            zoneId: b.zoneId || b.zone_id,
+            layerId: b.layerId || b.layer_id,
             playlistId: b.playlistId || '',
             mediaItemId: b.mediaItemId || '',
             playlist: b.playlist,
@@ -217,7 +217,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
           blocksList: blocks,
         };
       });
-      setZones(sanitizedZones);
+      setLayers(sanitizedZones);
       showToast('Template layout dan seluruh posisi zona berhasil disimpan!');
     } catch (err: any) {
       showToast(err.message || 'Gagal menyimpan layout', 'error');
@@ -226,20 +226,20 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const handleAddZone = async () => {
+  const handleAddLayer = async () => {
     if (!layout) return;
     try {
-      const newZ = await api.createZone({
+      const newZ = await api.createLayer({
         layoutId: layout.id,
-        name: `Kotak Zona ${zones.length + 1}`,
+        name: `Kotak Lapisan ${layers.length + 1}`,
         x: 100,
         y: 100,
         width: Math.round(layout.canvasWidth * 0.4),
         height: Math.round(layout.canvasHeight * 0.4),
-        zIndex: zones.length + 1,
+        zIndex: layers.length + 1,
         backgroundColor: '#1e293b',
       });
-      const newZone: Zone = {
+      const newZone: Layer = {
         id: newZ.id,
         layoutId: layout.id,
         name: newZ.name,
@@ -247,35 +247,35 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         y: Number(newZ.y) || 100,
         width: Number(newZ.width) || Math.round(layout.canvasWidth * 0.4),
         height: Number(newZ.height) || Math.round(layout.canvasHeight * 0.4),
-        zIndex: Number(newZ.zIndex) || (zones.length + 1),
+        zIndex: Number(newZ.zIndex) || (layers.length + 1),
         blocksList: [],
         backgroundColor: newZ.backgroundColor || '#1e293b',
         createdAt: newZ.createdAt || new Date().toISOString(),
         updatedAt: newZ.updatedAt || new Date().toISOString(),
       };
-      setZones([...zones, newZone]);
-      setSelectedZoneId(newZone.id);
+      setLayers([...layers, newZone]);
+      setSelectedLayerId(newZone.id);
     } catch (err: any) {
-      console.error('Failed to create zone:', err);
+      console.error('Failed to create layer:', err);
     }
   };
 
-  const handleDeleteZone = (zoneId: string) => {
-    if (!zoneId.startsWith('z-')) {
-      setDeletedZoneIds((prev) => [...prev, zoneId]);
+  const handleDeleteLayer = (layerId: string) => {
+    if (!layerId.startsWith('z-')) {
+      setDeletedLayerIds((prev) => [...prev, layerId]);
     }
-    const updated = zones.filter((z) => z.id !== zoneId);
-    setZones(updated);
-    if (selectedZoneId === zoneId) {
-      setSelectedZoneId(updated.length > 0 ? updated[0].id : null);
+    const updated = layers.filter((z) => z.id !== layerId);
+    setLayers(updated);
+    if (selectedLayerId === layerId) {
+      setSelectedLayerId(updated.length > 0 ? updated[0].id : null);
     }
   };
 
-  const updateSelectedZone = (field: keyof Zone, value: any) => {
-    if (!selectedZoneId) return;
+  const updateSelectedLayer = (field: keyof Layer, value: any) => {
+    if (!selectedLayerId) return;
 
     if (field === 'blocksList') {
-      const currentBlocks = zones.find((z) => z.id === selectedZoneId)?.blocksList || [];
+      const currentBlocks = layers.find((z) => z.id === selectedLayerId)?.blocksList || [];
       const newBlocks = (value || []) as any[];
       const newBlockIds = newBlocks.map((b) => b.id);
       const removedBlocks = currentBlocks.filter((b) => !newBlockIds.includes(b.id) && !b.id.startsWith('temp-'));
@@ -284,9 +284,9 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    setZones((prev) =>
+    setLayers((prev) =>
       prev.map((z) => {
-        if (z.id === selectedZoneId) {
+        if (z.id === selectedLayerId) {
           return { ...z, [field]: value };
         }
         return z;
@@ -300,16 +300,16 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         layout,
         layoutName,
         setLayoutName,
-        zones,
-        setZones,
-        selectedZoneId,
-        setSelectedZoneId,
+        layers,
+        setLayers,
+        selectedLayerId,
+        setSelectedLayerId,
         loading,
         saving,
         handleSave,
-        handleAddZone,
-        handleDeleteZone,
-        updateSelectedZone,
+        handleAddLayer,
+        handleDeleteLayer,
+        updateSelectedLayer,
       }}
     >
       {children}

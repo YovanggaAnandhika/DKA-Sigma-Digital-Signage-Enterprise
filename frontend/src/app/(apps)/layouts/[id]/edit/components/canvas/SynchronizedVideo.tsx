@@ -66,7 +66,7 @@ export default function SynchronizedVideo({
       if (!video.paused) {
         video.pause();
       }
-      // ONLY seek if the zone is actually active.
+      // ONLY seek if the layer is actually active.
       // If it's outside the timeline block, it shouldn't scrub forward.
       if (active && Math.abs(video.currentTime - safeTarget) > 0.05) {
         video.currentTime = safeTarget;

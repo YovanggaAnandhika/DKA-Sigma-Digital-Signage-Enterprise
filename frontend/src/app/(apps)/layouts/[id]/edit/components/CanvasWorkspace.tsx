@@ -3,13 +3,13 @@
 import React from 'react';
 import { MousePointer2, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
-import CanvasZoneBox from './canvas/CanvasZoneBox';
+import CanvasLayerBox from './canvas/CanvasLayerBox';
 
 export default function CanvasWorkspace() {
   const {
     layout,
-    zones,
-    setSelectedZoneId,
+    layers,
+    setSelectedLayerId,
     previewHeight,
     canvasDisplayWidth,
     zoomLevel,
@@ -87,7 +87,7 @@ export default function CanvasWorkspace() {
         style={{ flex: 1, overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '52px', paddingBottom: '16px', paddingLeft: '16px', paddingRight: '16px' }}
         onClick={(e) => {
           if (e.target === e.currentTarget) {
-            setSelectedZoneId(null);
+            setSelectedLayerId(null);
             setSelectedBlockId(null);
             setInspectorTarget('layout');
           }
@@ -106,12 +106,12 @@ export default function CanvasWorkspace() {
           }}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              setSelectedZoneId(null);
+              setSelectedLayerId(null);
             }
           }}
         >
-          {zones.map((z, idx) => (
-            <CanvasZoneBox key={z.id} zone={z} idx={idx} />
+          {layers.map((z, idx) => (
+            <CanvasLayerBox key={z.id} layer={z} idx={idx} />
           ))}
         </div>
       </div>

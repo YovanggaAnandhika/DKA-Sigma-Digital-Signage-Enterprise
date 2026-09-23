@@ -6,7 +6,7 @@ import { useLayoutEditor } from '../context/LayoutEditorContext';
 import LayerItemCard from './layers/LayerItemCard';
 
 export default function LayersPanel() {
-  const { zones, handleAddZone, selectedZoneId, setSelectedZoneId, isLayersCollapsed, setIsLayersCollapsed } = useLayoutEditor();
+  const { layers, handleAddLayer, selectedLayerId, setSelectedLayerId, isLayersCollapsed, setIsLayersCollapsed } = useLayoutEditor();
   const collapsed = isLayersCollapsed;
   const setCollapsed = setIsLayersCollapsed;
 
@@ -47,7 +47,7 @@ export default function LayersPanel() {
 
         {!collapsed && (
           <button
-            onClick={handleAddZone}
+            onClick={handleAddLayer}
             title="Tambah Layer / Zona Baru"
             style={{
               display: 'flex',
@@ -94,30 +94,30 @@ export default function LayersPanel() {
         </button>
       </div>
 
-      {/* Zone list */}
+      {/* Layer list */}
       {!collapsed && (
         <div style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', flex: 1 }}>
-          {zones.length === 0 ? (
+          {layers.length === 0 ? (
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', padding: '32px 16px' }}>
               Belum ada layer. Klik &ldquo;Baru&rdquo; untuk menambahkan.
             </div>
           ) : (
-            [...zones].sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0)).map((z) => (
+            [...layers].sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0)).map((z) => (
               <LayerItemCard key={z.id} z={z} />
             ))
           )}
         </div>
       )}
 
-      {/* Collapsed sidebar: zone dots */}
+      {/* Collapsed sidebar: layer dots */}
       {collapsed && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', paddingTop: '8px' }}>
-          {zones.map((z) => {
-            const isSelected = z.id === selectedZoneId;
+          {layers.map((z) => {
+            const isSelected = z.id === selectedLayerId;
             return (
               <button
                 key={z.id}
-                onClick={() => setSelectedZoneId(z.id)}
+                onClick={() => setSelectedLayerId(z.id)}
                 title={z.name}
                 style={{
                   width: '20px',
@@ -138,7 +138,7 @@ export default function LayersPanel() {
             );
           })}
           <button
-            onClick={handleAddZone}
+            onClick={handleAddLayer}
             title="Tambah Layer Baru"
             style={{
               width: '20px',

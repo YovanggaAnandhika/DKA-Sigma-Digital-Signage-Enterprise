@@ -4,19 +4,19 @@ import React from 'react';
 import { Rnd } from 'react-rnd';
 import { Film, Image as ImageIcon, Volume2, VolumeX } from 'lucide-react';
 import { updatePlaylistBlock } from '@/lib/services/studio/layout.service';
-import { ZonePlaylist } from '@/lib/services/studio/types';
-import { useLayoutState, Zone } from '../../context/LayoutStateContext';
+import { LayerPlaylist } from '@/lib/services/studio/types';
+import { useLayoutState, Layer } from '../../context/LayoutStateContext';
 import { useLayoutPlayback } from '../../context/LayoutPlaybackContext';
 import { useLayoutUI } from '../../context/LayoutUIContext';
 
 interface TimelineTrackBlockProps {
-  zone: Zone;
-  block: ZonePlaylist;
+  layer: Layer;
+  block: LayerPlaylist;
   color: string;
 }
 
-export default function TimelineTrackBlock({ zone, block, color }: TimelineTrackBlockProps) {
-  const { setZones, setSelectedZoneId } = useLayoutState();
+export default function TimelineTrackBlock({ layer, block, color }: TimelineTrackBlockProps) {
+  const { setLayers, setSelectedLayerId } = useLayoutState();
   const { pxPerSecond } = useLayoutPlayback();
   const { availablePlaylists, mediaList, showToast, selectedBlockId, setSelectedBlockId, setInspectorTarget, setIsInspectorCollapsed } = useLayoutUI();
 
@@ -42,7 +42,7 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
       if (!block.id.startsWith('temp-')) {
         await updatePlaylistBlock(block.id, { isMuted: nextMuted });
       }
-      setZones((prev) =>
+      setLayers((prev) =>
         prev.map((z) => ({
           ...z,
           blocksList: z.blocksList.map((b) => {
@@ -81,9 +81,9 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
       grid={[10, 1]}
       onDragStop={(_, d) => {
         const newStartSec = Math.max(0, Math.round(d.x / (pxPerSecond || 20)));
-        setZones((prev) =>
+        setLayers((prev) =>
           prev.map((z) => {
-            if (z.id === zone.id) {
+            if (z.id === layer.id) {
               return {
                 ...z,
                 blocksList: z.blocksList.map((b) => (b.id === block.id ? { ...b, startTimeSeconds: newStartSec } : b)),
@@ -96,9 +96,9 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
       onResizeStop={(_, __, ref, ___, position) => {
         const newDurSec = Math.max(1, Math.round(ref.offsetWidth / (pxPerSecond || 20)));
         const newStartSec = Math.max(0, Math.round(position.x / (pxPerSecond || 20)));
-        setZones((prev) =>
+        setLayers((prev) =>
           prev.map((z) => {
-            if (z.id === zone.id) {
+            if (z.id === layer.id) {
               return {
                 ...z,
                 blocksList: z.blocksList.map((b) =>
@@ -129,7 +129,7 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
       }}
       onClick={(e: React.MouseEvent) => {
         e.stopPropagation();
-        setSelectedZoneId(zone.id);
+        setSelectedLayerId(layer.id);
         setSelectedBlockId(block.id);
         setInspectorTarget('block');
         setIsInspectorCollapsed(false);
