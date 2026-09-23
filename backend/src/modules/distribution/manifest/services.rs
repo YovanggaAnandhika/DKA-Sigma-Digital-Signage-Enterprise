@@ -125,29 +125,12 @@ impl ManifestService {
                             );
                         }
                     }
-                    mapped_blocks.push(crate::modules::distribution::manifest::model::ZonePlaylistBlockDto {
-                        id: block.block.id,
-                        start_time_seconds: block.block.start_time_seconds,
-                        duration_seconds: block.block.duration_seconds,
-                        transition_type: block.block.transition_type,
-                        order_index: block.block.order_index,
-                        playlist: pl,
-                    });
+                    mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto { block: block.block.clone(), item_overrides: block.item_overrides.clone() });
                 }
                 } // end if Some(pl_id)
             }
 
-            enriched_zones.push(LayerWithBlocksDto {
-                id: dto_zone.layer.id,
-                name: dto_zone.layer.name,
-                x: dto_zone.layer.x,
-                y: dto_zone.layer.y,
-                width: dto_zone.layer.width,
-                height: dto_zone.layer.height,
-                z_index: dto_zone.layer.z_index,
-                background_color: dto_zone.layer.background_color,
-                blocks: mapped_blocks,
-            });
+            enriched_zones.push(LayerWithBlocksDto { layer: dto_zone.layer.clone(), blocks: mapped_blocks });
         }
 
         let total_size: i64 = required_assets_map.values().map(|a| a.file_size_bytes).sum();
