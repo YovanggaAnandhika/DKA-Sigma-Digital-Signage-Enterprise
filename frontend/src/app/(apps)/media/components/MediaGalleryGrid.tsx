@@ -47,6 +47,13 @@ export default function MediaGalleryGrid({
                   const displayUrl = getMediaDisplayUrl(m);
                   return m.mediaType === 2 && displayUrl ? (
                     <video
+                      ref={(el) => {
+                        if (el) {
+                          el.defaultMuted = true;
+                          el.muted = true;
+                          el.play().catch(() => {});
+                        }
+                      }}
                       src={displayUrl}
                       autoPlay
                       muted

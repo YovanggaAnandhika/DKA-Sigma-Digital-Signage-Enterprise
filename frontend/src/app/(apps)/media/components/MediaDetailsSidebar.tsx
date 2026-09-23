@@ -50,7 +50,22 @@ export default function MediaDetailsSidebar({
         {(() => {
           const displayUrl = getMediaDisplayUrl(selectedMedia);
           return selectedMedia.mediaType === 2 && displayUrl ? (
-            <video src={displayUrl} autoPlay loop muted playsInline controls style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            <video 
+              ref={(el) => {
+                if (el) {
+                  el.defaultMuted = true;
+                  el.muted = true;
+                  el.play().catch(() => {});
+                }
+              }}
+              src={displayUrl} 
+              autoPlay 
+              loop 
+              muted 
+              playsInline 
+              controls 
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+            />
           ) : selectedMedia.mediaType === 2 ? (
             <Film size={48} color="var(--accent-cyan)" />
           ) : selectedMedia.mediaType === 3 ? (
