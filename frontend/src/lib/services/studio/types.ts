@@ -36,7 +36,12 @@ export interface LayerPlaylist {
   mediaItem?: MediaItem;
   startTimeSeconds: number;
   durationSeconds: number;
-  transitionType: string;
+  trimStartSeconds: number;
+  trimEndSeconds?: number;
+  transitionId?: string;
+  visualFilterId?: string;
+  transition?: Transition;
+  visualFilter?: VisualFilter;
   orderIndex: number;
   itemOverridesList: LayerPlaylistItemOverride[];
   isMuted?: boolean;
@@ -91,4 +96,23 @@ export interface MediaItem {
   thumbnailUrl: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Transition {
+  id: string;
+  name: string;
+  cssClass: string;
+  durationMs: number;
+  createdAt?: string;
+}
+
+export interface VisualFilter {
+  id: string;
+  name: string;
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  grayscale?: number;
+  blurPx?: number;
+  createdAt?: string;
 }

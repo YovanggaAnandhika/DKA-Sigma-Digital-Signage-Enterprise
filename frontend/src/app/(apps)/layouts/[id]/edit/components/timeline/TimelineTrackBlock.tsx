@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Rnd } from 'react-rnd';
-import { Film, Image as ImageIcon, Volume2, VolumeX } from 'lucide-react';
+import { Film, Image as ImageIcon, Volume2, VolumeX, Sparkles, Blend } from 'lucide-react';
 import { updatePlaylistBlock } from '@/lib/services/studio/layout.service';
 import { LayerPlaylist } from '@/lib/services/studio/types';
 import { useLayoutState, Layer } from '../../context/LayoutStateContext';
@@ -18,7 +18,7 @@ interface TimelineTrackBlockProps {
 export default function TimelineTrackBlock({ layer, block, color }: TimelineTrackBlockProps) {
   const { setLayers, setSelectedLayerId } = useLayoutState();
   const { pxPerSecond } = useLayoutPlayback();
-  const { availablePlaylists, mediaList, showToast, selectedBlockId, setSelectedBlockId, setInspectorTarget, setIsInspectorCollapsed } = useLayoutUI();
+  const { availablePlaylists, mediaList, transitionsList, visualFiltersList, showToast, selectedBlockId, setSelectedBlockId, setInspectorTarget, setIsInspectorCollapsed } = useLayoutUI();
 
   const isSelected = selectedBlockId === block.id;
 
@@ -30,6 +30,9 @@ export default function TimelineTrackBlock({ layer, block, color }: TimelineTrac
 
   const leftPx = (block.startTimeSeconds || 0) * (pxPerSecond || 20);
   const widthPx = (block.durationSeconds || 10) * (pxPerSecond || 20);
+
+  const hasTransition = !!block.transitionId && transitionsList.some(t => t.id === block.transitionId);
+  const hasFilter = !!block.visualFilterId && visualFiltersList.some(f => f.id === block.visualFilterId);
 
   const isBlockMuted = block.isMuted !== undefined
     ? !!block.isMuted
@@ -158,9 +161,14 @@ export default function TimelineTrackBlock({ layer, block, color }: TimelineTrac
             {isBlockMuted ? <VolumeX size={10} /> : <Volume2 size={10} />}
           </button>
         </div>
-        <span style={{ fontSize: '0.625rem', opacity: 0.9, fontFamily: 'monospace' }}>
-          {block.durationSeconds}s
-        </span>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {hasTransition && <Blend size={10} color="#60a5fa" title="Transisi Aktif" />}
+          {hasFilter && <Sparkles size={10} color="#f472b6" title="Filter Aktif" />}
+          <span style={{ fontSize: '0.625rem', opacity: 0.9, fontFamily: 'monospace' }}>
+            {block.durationSeconds}s
+          </span>
+        </div>
       </div>
     </Rnd>
   );

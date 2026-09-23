@@ -65,6 +65,8 @@ export default function InspectorPanel() {
     updateSelectedLayer,
     availablePlaylists,
     mediaList,
+    transitionsList,
+    visualFiltersList,
     setPickerZoneId,
     setMediaPickerZoneId,
     isInspectorCollapsed,
@@ -101,14 +103,18 @@ export default function InspectorPanel() {
   }
 
   // Helper to update specific block in state & API
-  const handleUpdateBlock = async (updates: { durationSeconds?: number; startTimeSeconds?: number; isMuted?: boolean; volumeLevel?: number }) => {
+  const handleUpdateBlock = async (updates: { durationSeconds?: number; startTimeSeconds?: number; isMuted?: boolean; volumeLevel?: number; trimStartSeconds?: number; trimEndSeconds?: number; transitionId?: string; visualFilterId?: string }) => {
     if (!selectedBlock || !blockZone) return;
 
-    if ((updates.isMuted !== undefined || updates.volumeLevel !== undefined) && !selectedBlock.id.startsWith('temp-')) {
+    if ((updates.isMuted !== undefined || updates.volumeLevel !== undefined || updates.trimStartSeconds !== undefined || updates.trimEndSeconds !== undefined || 'transitionId' in updates || 'visualFilterId' in updates) && !selectedBlock.id.startsWith('temp-')) {
       try {
         await updatePlaylistBlock(selectedBlock.id, { 
           isMuted: updates.isMuted !== undefined ? updates.isMuted : selectedBlock.isMuted,
-          volumeLevel: updates.volumeLevel !== undefined ? updates.volumeLevel : selectedBlock.volumeLevel
+          volumeLevel: updates.volumeLevel !== undefined ? updates.volumeLevel : selectedBlock.volumeLevel,
+          trimStartSeconds: updates.trimStartSeconds,
+          trimEndSeconds: updates.trimEndSeconds,
+          transitionId: updates.transitionId,
+          visualFilterId: updates.visualFilterId
         });
       } catch (err: any) {
         console.error('Failed to update block audio:', err);
@@ -435,6 +441,84 @@ export default function InspectorPanel() {
                     onCommit={(val) => handleUpdateBlock({ volumeLevel: val })} 
                   />
                 </div>
+              </div>
+
+              {/* NLE & Visual Effects */}
+              <div style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface-elevated)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Sparkles size={13} /> Visual Effects & Trimming
+                </span>
+                
+                {/* Trimming */}
+                {isVideo && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                        TRIM START (DETIK)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={selectedBlock.trimStartSeconds || 0}
+                        onChange={(e) => handleUpdateBlock({ trimStartSeconds: Math.max(0, Number(e.target.value) || 0) })}
+                        className="form-input"
+                        style={{ fontSize: '0.75rem', padding: '6px 10px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                        TRIM END (DETIK)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        placeholder="Akhir Asli"
+                        value={selectedBlock.trimEndSeconds || ''}
+                        onChange={(e) => handleUpdateBlock({ trimEndSeconds: e.target.value ? Number(e.target.value) : undefined })}
+                        className="form-input"
+                        style={{ fontSize: '0.75rem', padding: '6px 10px' }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Transitions */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    TRANSISI MASUK
+                  </label>
+                  <select
+                    className="form-input"
+                    style={{ fontSize: '0.75rem', padding: '6px 10px' }}
+                    value={selectedBlock.transitionId || ''}
+                    onChange={(e) => handleUpdateBlock({ transitionId: e.target.value || undefined })}
+                  >
+                    <option value="">(Tidak ada transisi)</option>
+                    {transitionsList.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name} ({t.durationMs}ms)</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Visual Filter */}
+                {isMedia && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                      VISUAL FILTER EFEK
+                    </label>
+                    <select
+                      className="form-input"
+                      style={{ fontSize: '0.75rem', padding: '6px 10px' }}
+                      value={selectedBlock.visualFilterId || ''}
+                      onChange={(e) => handleUpdateBlock({ visualFilterId: e.target.value || undefined })}
+                    >
+                      <option value="">(Original - Tanpa Filter)</option>
+                      {visualFiltersList.map((f) => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               {/* Quick Actions */}

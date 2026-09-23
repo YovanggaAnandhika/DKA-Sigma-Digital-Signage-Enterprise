@@ -94,6 +94,20 @@ export const api = {
   uploadMediaChunk: studioModule.uploadMediaChunk,
   uploadFileViaGrpc: studioModule.uploadFileViaGrpc,
   getMediaFile: studioModule.getMediaFile,
+
+  // Studio — Transitions
+  getTransitions: studioModule.getTransitions,
+  getTransition: studioModule.getTransition,
+  createTransition: studioModule.createTransition,
+  updateTransition: studioModule.updateTransition,
+  deleteTransition: studioModule.deleteTransition,
+
+  // Studio — Visual Filters
+  getVisualFilters: studioModule.getVisualFilters,
+  getVisualFilter: studioModule.getVisualFilter,
+  createVisualFilter: studioModule.createVisualFilter,
+  updateVisualFilter: studioModule.updateVisualFilter,
+  deleteVisualFilter: studioModule.deleteVisualFilter,
 };
 
 // Storage & Session Helpers

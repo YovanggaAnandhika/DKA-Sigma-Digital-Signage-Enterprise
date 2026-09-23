@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { api, Playlist, MediaItem } from '@/lib/services';
+import { api, Playlist, MediaItem, Transition, VisualFilter } from '@/lib/services';
 
 interface LayoutUIContextType {
   pickerZoneId: string | null;
@@ -36,6 +36,8 @@ interface LayoutUIContextType {
   setInspectorTarget: React.Dispatch<React.SetStateAction<'layer' | 'block' | 'timeline' | 'layout'>>;
   availablePlaylists: Playlist[];
   mediaList: MediaItem[];
+  transitionsList: Transition[];
+  visualFiltersList: VisualFilter[];
   refreshPlaylistsAndMedia: () => Promise<void>;
 }
 
@@ -59,15 +61,21 @@ export function LayoutUIProvider({ children }: { children: ReactNode }) {
   const [inspectorTarget, setInspectorTarget] = useState<'layer' | 'block' | 'timeline' | 'layout'>('layer');
   const [availablePlaylists, setAvailablePlaylists] = useState<Playlist[]>([]);
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
+  const [transitionsList, setTransitionsList] = useState<Transition[]>([]);
+  const [visualFiltersList, setVisualFiltersList] = useState<VisualFilter[]>([]);
 
   const refreshPlaylistsAndMedia = useCallback(async () => {
     try {
-      const [playlistsRes, mediaRes] = await Promise.all([
+      const [playlistsRes, mediaRes, transitionsRes, filtersRes] = await Promise.all([
         api.getPlaylists({ limit: 100 }).catch(() => ({ data: [] })),
         api.getMedia({ limit: 100 }).catch(() => ({ data: [] })),
+        api.getTransitions({ limit: 100 }).catch(() => ({ data: [] })),
+        api.getVisualFilters({ limit: 100 }).catch(() => ({ data: [] })),
       ]);
       setAvailablePlaylists((playlistsRes as any).data || []);
       setMediaList((mediaRes as any).data || []);
+      setTransitionsList((transitionsRes as any).data || []);
+      setVisualFiltersList((filtersRes as any).data || []);
     } catch {
       // Graceful catch
     }
@@ -135,6 +143,8 @@ export function LayoutUIProvider({ children }: { children: ReactNode }) {
         setInspectorTarget,
         availablePlaylists,
         mediaList,
+        transitionsList,
+        visualFiltersList,
         refreshPlaylistsAndMedia,
       }}
     >

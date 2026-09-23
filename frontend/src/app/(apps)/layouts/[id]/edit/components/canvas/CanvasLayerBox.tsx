@@ -29,6 +29,7 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
     reportBuffer,
     setSelectedBlockId,
     setInspectorTarget,
+    visualFiltersList,
   } = useLayoutEditor();
 
   const zColors = ['#1d4ed8', '#047857', '#b45309', '#be185d', '#6d28d9', '#0f766e', '#4338ca'];
@@ -114,6 +115,22 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
     } else if (activeBlock.volumeLevel !== undefined) {
        currentVolumeLevel = activeBlock.volumeLevel;
     }
+  }
+
+  // Visual Filter Application
+  const activeFilter = activeBlock?.visualFilterId
+    ? visualFiltersList.find((f) => f.id === activeBlock.visualFilterId)
+    : null;
+
+  let filterCssString = '';
+  if (activeFilter) {
+    const parts = [];
+    if (activeFilter.brightness !== undefined) parts.push(`brightness(${activeFilter.brightness}%)`);
+    if (activeFilter.contrast !== undefined) parts.push(`contrast(${activeFilter.contrast}%)`);
+    if (activeFilter.saturation !== undefined) parts.push(`saturate(${activeFilter.saturation}%)`);
+    if (activeFilter.grayscale !== undefined) parts.push(`grayscale(${activeFilter.grayscale}%)`);
+    if (activeFilter.blurPx !== undefined) parts.push(`blur(${activeFilter.blurPx}px)`);
+    filterCssString = parts.join(' ');
   }
 
   return (
@@ -217,16 +234,18 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
         <div style={{ opacity: active ? 1 : 0, transition: 'opacity 0.2s', width: '100%', height: '100%', position: 'absolute', inset: 0 }}>
           {activeMedia?.publicUrl && (
             activeMedia.mediaType === 2 ? (
-              <SynchronizedVideo
-                src={activeMedia.publicUrl}
-                isPlaying={isPlaying}
-                active={active}
-                isMuted={isEffectiveMuted}
-                volumeLevel={currentVolumeLevel}
-                targetTimeSec={itemOffsetSec}
-                onBufferUpdate={reportBuffer}
-                timelineStartSec={absoluteStartSec}
-              />
+              <div style={{ filter: filterCssString, width: '100%', height: '100%' }}>
+                <SynchronizedVideo
+                  src={activeMedia.publicUrl}
+                  isPlaying={isPlaying}
+                  active={active}
+                  isMuted={isEffectiveMuted}
+                  volumeLevel={currentVolumeLevel}
+                  targetTimeSec={itemOffsetSec}
+                  onBufferUpdate={reportBuffer}
+                  timelineStartSec={absoluteStartSec}
+                />
+              </div>
             ) : (
               <img
                 src={activeMedia.publicUrl}
@@ -238,6 +257,7 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
+                  filter: filterCssString,
                 }}
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
