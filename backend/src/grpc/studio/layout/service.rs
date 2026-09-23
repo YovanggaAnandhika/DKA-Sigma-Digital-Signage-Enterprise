@@ -89,7 +89,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         let dto = LayoutService::get_layout_by_id(&self.pool, layout_id)
             .await
             .map_err(|e| match e {
-                crate::error::AppError::NotFound(m) => Status::not_found(m),
+                crate::common::AppError::NotFound(m) => Status::not_found(m),
                 _ => Status::internal(e.to_string()),
             })?;
 

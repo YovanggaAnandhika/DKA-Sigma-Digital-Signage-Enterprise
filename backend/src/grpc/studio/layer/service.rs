@@ -279,7 +279,7 @@ impl LayerServiceTrait for LayerServiceImpl {
 
         Ok(Response::new(SetPlaylistItemOverrideResponse {
             success: true,
-            override: Some(LayerPlaylistItemOverride {
+            r#override: Some(LayerPlaylistItemOverride {
                 id: override_ent.id.to_string(),
                 layer_playlist_id: override_ent.layer_block_id.to_string(),
                 playlist_item_id: override_ent.playlist_item_id.to_string(),

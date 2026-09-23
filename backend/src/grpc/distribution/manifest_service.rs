@@ -34,7 +34,8 @@ impl ManifestServiceImpl {
                 background_color: z.background_color,
                 blocks: z.blocks.into_iter().map(|b| LayerPlaylist {
                     id: b.id.to_string(),
-                    zone_id: z.id.to_string(),
+                    layer_id: z.id.to_string(),
+                    volume_level: 100,
                     playlist_id: b.playlist.playlist.id.to_string(),
                     media_item_id: String::new(),
                     playlist: None, // Simplified for now
@@ -52,10 +53,11 @@ impl ManifestServiceImpl {
             }
         }).collect();
 
-        let orientation = match dto.orientation.to_lowercase().as_str() {
-            "portrait" => crate::grpc::proto::hardware::v1::device::DeviceOrientation::OrientationPortrait as i32,
-            _ => crate::grpc::proto::hardware::v1::device::DeviceOrientation::OrientationLandscape as i32,
-        };
+        let orientation = Some(crate::grpc::proto::common::v1::orientation::Orientation {
+            id: String::new(),
+            name: dto.orientation.clone(),
+            value: dto.orientation.clone(),
+        });
 
         let layout = Layout {
             id: dto.layout_id.to_string(),

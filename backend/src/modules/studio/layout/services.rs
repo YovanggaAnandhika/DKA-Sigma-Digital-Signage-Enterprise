@@ -4,7 +4,7 @@ use super::model::{
 use super::repositories::LayoutRepository;
 use crate::modules::common::orientation::repositories::OrientationRepository;
 use crate::db::DbPool;
-use crate::error::AppError;
+use crate::common::AppError;
 use uuid::Uuid;
 
 pub struct LayoutService;

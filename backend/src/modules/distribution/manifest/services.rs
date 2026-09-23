@@ -99,7 +99,7 @@ impl ManifestService {
             .await?
             .ok_or_else(|| AppError::NotFound("Layout not found".into()))?;
 
-        let zones = LayoutRepository::get_zones_by_layout_id(pool, effective_layout_id).await?;
+        let zones = LayoutRepository::get_layers_by_layout_id(pool, effective_layout_id).await?;
 
         let mut enriched_zones = Vec::new();
         let mut required_assets_map: HashMap<Uuid, ManifestAssetDto> = HashMap::new();
@@ -176,7 +176,7 @@ impl ManifestService {
             layout_name: layout.name,
             canvas_width: layout.canvas_width,
             canvas_height: layout.canvas_height,
-            orientation: layout.orientation,
+            orientation: layout.orientation_id,
             background_color: layout.background_color,
             background_image_url: layout.background_image_url,
             zones: enriched_zones,

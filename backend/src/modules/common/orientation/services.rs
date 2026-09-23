@@ -1,6 +1,6 @@
 use sqlx::PgPool;
 use uuid::Uuid;
-use crate::error::AppError;
+use crate::common::AppError;
 use super::model::OrientationEntity;
 use super::repositories::OrientationRepository;
 

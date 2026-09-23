@@ -3,7 +3,7 @@ use super::model::{
 };
 use super::repositories::LayerRepository;
 use crate::db::DbPool;
-use crate::error::AppError;
+use crate::common::AppError;
 use uuid::Uuid;
 
 pub struct LayerService;
