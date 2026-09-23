@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const request = new ListLayoutsRequest();
     if(body.search) request.setSearch(body.search);
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       client.listLayouts(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));

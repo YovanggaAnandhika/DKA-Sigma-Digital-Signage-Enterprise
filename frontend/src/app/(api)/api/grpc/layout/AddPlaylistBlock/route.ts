@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     if (body.playlist_id) request.setPlaylistId(body.playlist_id);
     if (body.start_time_seconds !== undefined) request.setStartTimeSeconds(body.start_time_seconds);
     if (body.duration_seconds !== undefined) request.setDurationSeconds(body.duration_seconds);
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       client.addPlaylistBlock(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     if (body.description !== undefined) request.setDescription(body.description);
     if (body.is_shuffle !== undefined) request.setIsShuffle(body.is_shuffle);
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       client.updatePlaylist(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));

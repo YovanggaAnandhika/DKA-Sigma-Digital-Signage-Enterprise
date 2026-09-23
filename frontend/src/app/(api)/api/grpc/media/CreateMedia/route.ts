@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     if (body.height) request.setHeight(body.height);
     if (body.duration_seconds) request.setDurationSeconds(body.duration_seconds);
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       client.createMedia(request, getGrpcMetadata(token), (error, response) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));

@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     if (body.end_time) request.setEndTime(body.end_time);
     if (body.days_of_week) request.setDaysOfWeek(body.days_of_week);
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       client.addScheduleEvent(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));

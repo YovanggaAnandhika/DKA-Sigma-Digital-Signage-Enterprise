@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
         if(body.default_layout_id) request.setDefaultLayoutId(body.default_layout_id);
         if(body.canary_group_id) request.setCanaryGroupId(body.canary_group_id);
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       client.pairDevice(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));

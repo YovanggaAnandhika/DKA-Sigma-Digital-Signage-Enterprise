@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const request = new CreateRoleRequest();
     if(body.name) request.setName(body.name); if(body.description) request.setDescription(body.description); if(body.permission_ids) request.setPermissionIdsList(body.permission_ids);
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       client.createRole(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));

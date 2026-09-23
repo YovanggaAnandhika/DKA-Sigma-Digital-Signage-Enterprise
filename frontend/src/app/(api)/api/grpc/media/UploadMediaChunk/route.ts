@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       request.setChunkData(bytes);
     }
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       client.uploadMediaChunk(request, getGrpcMetadata(token), (error, response) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     if (body.transition_type) request.setTransitionType(body.transition_type);
     if (body.order_index !== undefined) request.setOrderIndex(body.order_index);
     if (body.is_muted !== undefined) request.setIsMuted(body.is_muted);
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       client.updatePlaylistBlock(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));

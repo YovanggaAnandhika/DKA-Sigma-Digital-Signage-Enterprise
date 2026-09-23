@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const request = new GetMediaRequest();
     if (body.id) request.setId(body.id);
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       client.getMedia(request, getGrpcMetadata(token), (error, response) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));

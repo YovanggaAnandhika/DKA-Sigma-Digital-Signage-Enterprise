@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const request = new UpdateScheduleRequest();
     if(body.id) request.setId(body.id); if(body.name) request.setName(body.name); if(body.description !== undefined) request.setDescription(body.description);
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       client.updateSchedule(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));

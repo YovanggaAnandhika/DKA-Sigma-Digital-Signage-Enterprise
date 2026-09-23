@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     const client = new LayoutServiceClient(getGrpcHost(), getGrpcCredentials());
     const request = new RemovePlaylistBlockRequest();
     if (body.id) request.setBlockId(body.id);
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       client.removePlaylistBlock(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));

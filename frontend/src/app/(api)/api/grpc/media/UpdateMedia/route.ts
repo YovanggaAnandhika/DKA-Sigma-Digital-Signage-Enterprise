@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     if (body.id) request.setId(body.id);
     if (body.name) request.setName(body.name);
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       client.updateMedia(request, getGrpcMetadata(token), (error, response) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));

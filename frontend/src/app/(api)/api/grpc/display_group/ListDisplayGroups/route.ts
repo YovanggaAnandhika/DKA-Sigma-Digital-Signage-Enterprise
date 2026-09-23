@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const request = new ListDisplayGroupsRequest();
     if(body.search) request.setSearch(body.search);
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       client.listDisplayGroups(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else { const o = response.toObject(); resolve(NextResponse.json({ itemsList: (o.itemsList || []), pagination: o.pagination })); }

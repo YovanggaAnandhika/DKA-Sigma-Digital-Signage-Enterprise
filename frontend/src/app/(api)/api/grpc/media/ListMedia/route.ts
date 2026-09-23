@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       request.setSearch(body.search);
     }
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       client.listMedia(request, metadata, (error, response) => {
         if (error) {
           console.error('[gRPC Error ListMedia]', error);

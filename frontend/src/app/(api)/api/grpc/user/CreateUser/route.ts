@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const request = new CreateUserRequest();
     if(body.email) request.setEmail(body.email); if(body.full_name) request.setFullName(body.full_name); if(body.role_id) request.setRoleIdsList([body.role_id]); if(body.password) request.setPassword(body.password);
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       client.createUser(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));

@@ -12,19 +12,20 @@ export async function POST(req: NextRequest) {
     const request = new GetMediaFileRequest();
     if (body.filename) request.setFilename(body.filename);
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       client.getMediaFile(request, getGrpcMetadata(token), (error, response) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else {
-          const normalized = response.toObject();
-          // Override file_data with base64 binary (Uint8Array → base64)
+          const normalized: any = response.toObject();
+          // Override fileData with base64 binary (Uint8Array → base64)
           const rawData = response.getFileData_asU8();
           if (rawData) {
              let binary = '';
              for (let i = 0; i < rawData.byteLength; i++) {
                binary += String.fromCharCode(rawData[i]);
              }
-             normalized.file_data = btoa(binary);
+             normalized.fileData = btoa(binary);
+             normalized.file_data = normalized.fileData;
           }
           resolve(NextResponse.json(normalized));
         }

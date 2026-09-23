@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
         if(body.background_color) request.setBackgroundColor(body.background_color);
       
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       client.createZone(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));
