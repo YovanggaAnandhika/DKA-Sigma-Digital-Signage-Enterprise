@@ -8,6 +8,41 @@ mod modules;
 mod seeders;
 
 use config::Config;
+use crate::grpc::common::orientation::service::OrientationServiceImpl;
+use crate::grpc::studio::layer::block::service::LayerBlockServiceImpl;
+use crate::grpc::studio::layer::item_override::service::LayerItemOverrideServiceImpl;
+use crate::grpc::studio::layer::layer::service::LayerServiceImpl;
+use crate::modules::distribution::stream::services::StreamConnectionManager;
+use grpc::distribution::canary::service::CanaryServiceImpl;
+use grpc::distribution::manifest::service::ManifestServiceImpl;
+use grpc::distribution::stream::service::StreamServiceImpl;
+use grpc::hardware::device::service::DeviceServiceImpl;
+use grpc::hardware::display_group::service::DisplayGroupServiceImpl;
+use grpc::iam::permission::service::PermissionServiceImpl;
+use grpc::iam::role::service::RoleServiceImpl;
+use grpc::iam::role_group::service::RoleGroupServiceImpl;
+use grpc::iam::user::service::UserServiceImpl;
+use grpc::proto::common::v1::orientation::orientation_service_server::OrientationServiceServer;
+use grpc::proto::distribution::v1::canary::canary_service_server::CanaryServiceServer;
+use grpc::proto::distribution::v1::manifest::manifest_service_server::ManifestServiceServer;
+use grpc::proto::distribution::v1::stream::stream_service_server::StreamServiceServer;
+use grpc::proto::hardware::v1::device::device_service_server::DeviceServiceServer;
+use grpc::proto::hardware::v1::display_group::display_group_service_server::DisplayGroupServiceServer;
+use grpc::proto::iam::v1::permission::permission_service_server::PermissionServiceServer;
+use grpc::proto::iam::v1::role::role_service_server::RoleServiceServer;
+use grpc::proto::iam::v1::role_group::role_group_service_server::RoleGroupServiceServer;
+use grpc::proto::iam::v1::user::user_service_server::UserServiceServer;
+use grpc::proto::studio::v1::layer::layer_block_service_server::LayerBlockServiceServer;
+use grpc::proto::studio::v1::layer::layer_item_override_service_server::LayerItemOverrideServiceServer;
+use grpc::proto::studio::v1::layer::layer_service_server::LayerServiceServer;
+use grpc::proto::studio::v1::layout::layout_service_server::LayoutServiceServer;
+use grpc::proto::studio::v1::media::media_service_server::MediaServiceServer;
+use grpc::proto::studio::v1::playlist::playlist_service_server::PlaylistServiceServer;
+use grpc::proto::studio::v1::schedule::schedule_service_server::ScheduleServiceServer;
+use grpc::studio::media::service::MediaServiceImpl;
+use grpc::studio::playlist::service::PlaylistServiceImpl;
+use grpc::studio::layout::service::LayoutServiceImpl;
+use grpc::studio::schedule::service::ScheduleServiceImpl;
 use std::env;
 use std::net::SocketAddr;
 use tonic::transport::Server;
@@ -77,86 +112,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let grpc_addr: SocketAddr = format!("{}:{}", config.host, config.grpc_port).parse()?;
     info!("Pure gRPC Server listening on {}", grpc_addr);
 
-    // Hardware Services
-    use grpc::hardware::device::service::DeviceServiceImpl;
-    use grpc::hardware::display_group::service::DisplayGroupServiceImpl;
-    use grpc::proto::hardware::v1::device::device_service_server::DeviceServiceServer;
-    use grpc::proto::hardware::v1::display_group::display_group_service_server::DisplayGroupServiceServer;
-
-    // IAM Services
-    use grpc::iam::permission::service::PermissionServiceImpl;
-    use grpc::iam::role::service::RoleServiceImpl;
-    use grpc::iam::role_group::service::RoleGroupServiceImpl;
-    use grpc::iam::user::service::UserServiceImpl;
-    use grpc::proto::iam::v1::permission::permission_service_server::PermissionServiceServer;
-    use grpc::proto::iam::v1::role::role_service_server::RoleServiceServer;
-    use grpc::proto::iam::v1::role_group::role_group_service_server::RoleGroupServiceServer;
-    use grpc::proto::iam::v1::user::user_service_server::UserServiceServer;
-
-    // Studio Services
-    use grpc::studio::{MediaServiceImpl, PlaylistServiceImpl, LayoutServiceImpl, ScheduleServiceImpl};
-    use grpc::proto::studio::v1::media::media_service_server::MediaServiceServer;
-    use grpc::proto::studio::v1::playlist::playlist_service_server::PlaylistServiceServer;
-    use grpc::proto::studio::v1::layout::layout_service_server::LayoutServiceServer;
-    use grpc::proto::studio::v1::layer::layer_service_server::LayerServiceServer;
-    use grpc::proto::studio::v1::layer::layer_block_service_server::LayerBlockServiceServer;
-    use grpc::proto::studio::v1::layer::layer_item_override_service_server::LayerItemOverrideServiceServer;
-    use grpc::proto::common::v1::orientation::orientation_service_server::OrientationServiceServer;
-    use grpc::proto::studio::v1::schedule::schedule_service_server::ScheduleServiceServer;
-
-    // Distribution Services
-    use grpc::distribution::manifest::service::ManifestServiceImpl;
-    use grpc::distribution::stream::service::StreamServiceImpl;
-    use grpc::distribution::canary::service::CanaryServiceImpl;
-    use grpc::proto::distribution::v1::manifest::manifest_service_server::ManifestServiceServer;
-    use grpc::proto::distribution::v1::stream::stream_service_server::StreamServiceServer;
-    use grpc::proto::distribution::v1::canary::canary_service_server::CanaryServiceServer;
-
     // Instantiate service implementations
-    let stream_manager = modules::distribution::stream::services::StreamConnectionManager::new();
+    let stream_manager = StreamConnectionManager::new();
 
-    let device_svc = DeviceServiceImpl::new(pool.clone());
-    let display_group_svc = DisplayGroupServiceImpl::new(pool.clone());
-    let perm_svc = PermissionServiceImpl::new(pool.clone());
-    let role_svc = RoleServiceImpl::new(pool.clone());
-    let role_grp_svc = RoleGroupServiceImpl::new(pool.clone());
-    let user_svc = UserServiceImpl::new(pool.clone(), config);
-    let media_svc = MediaServiceImpl::new(pool.clone());
-    let playlist_svc = PlaylistServiceImpl::new(pool.clone());
-    let layout_svc = LayoutServiceImpl::new(pool.clone());
-    let layer_svc = crate::grpc::studio::layer::layer::service::LayerServiceImpl::new(pool.clone());
-    let block_svc = crate::grpc::studio::layer::block::service::LayerBlockServiceImpl::new(pool.clone());
-    let item_override_svc = crate::grpc::studio::layer::item_override::service::LayerItemOverrideServiceImpl::new(pool.clone());
-    let orientation_svc = crate::grpc::common::orientation::service::OrientationServiceImpl::new(pool.clone());
-    let schedule_svc = ScheduleServiceImpl::new(pool.clone());
-    let manifest_svc = ManifestServiceImpl::new(pool.clone());
-    let stream_svc = StreamServiceImpl::new(pool.clone(), stream_manager);
-    let canary_svc = CanaryServiceImpl::new(pool);
+    
 
     // Build and serve Tonic gRPC server
-    Server::builder()
-        // Hardware
-        .add_service(DeviceServiceServer::new(device_svc))
-        .add_service(DisplayGroupServiceServer::new(display_group_svc))
-        // IAM
-        .add_service(PermissionServiceServer::new(perm_svc))
-        .add_service(RoleServiceServer::new(role_svc))
-        .add_service(RoleGroupServiceServer::new(role_grp_svc))
-        .add_service(UserServiceServer::new(user_svc))
-        // Studio
-        .add_service(MediaServiceServer::new(media_svc))
-        .add_service(PlaylistServiceServer::new(playlist_svc))
-        .add_service(LayoutServiceServer::new(layout_svc))
-        .add_service(LayerServiceServer::new(layer_svc))
-        .add_service(LayerBlockServiceServer::new(block_svc))
-        .add_service(LayerItemOverrideServiceServer::new(item_override_svc))
-        .add_service(OrientationServiceServer::new(orientation_svc))
-        .add_service(ScheduleServiceServer::new(schedule_svc))
-        // Distribution
-        .add_service(ManifestServiceServer::new(manifest_svc))
-        .add_service(StreamServiceServer::new(stream_svc))
-        .add_service(CanaryServiceServer::new(canary_svc))
-        .serve(grpc_addr)
+    let mut router = Server::builder();
+    let router = crate::register_hardware_services!(router, pool);
+    let router = crate::register_iam_services!(router, pool, config);
+    let router = crate::register_studio_services!(router, pool);
+    let router = crate::register_distribution_services!(router, pool, stream_manager.clone());
+    let router = crate::register_common_services!(router, pool);
+    
+    router.serve(grpc_addr)
         .await?;
 
     Ok(())
