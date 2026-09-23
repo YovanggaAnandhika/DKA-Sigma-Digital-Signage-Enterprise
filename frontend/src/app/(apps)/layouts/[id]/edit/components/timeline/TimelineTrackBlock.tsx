@@ -73,8 +73,8 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
 
   return (
     <Rnd
-      size={{ width: widthPx, height: 40 }}
-      position={{ x: leftPx, y: 4 }}
+      size={{ width: widthPx, height: 26 }}
+      position={{ x: leftPx, y: 3 }}
       bounds="parent"
       dragAxis="x"
       enableResizing={{ right: true }}
@@ -112,13 +112,14 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
       }}
       style={{
         backgroundColor: color,
-        borderRadius: '6px',
+        borderRadius: '5px',
         color: '#ffffff',
-        textShadow: '0 1px 2px rgba(0,0,0,0.4)',
-        padding: '4px 8px',
-        fontSize: '0.75rem',
-        fontWeight: 700,
-        boxShadow: isSelected ? '0 0 0 2px #fff, 0 0 0 4px var(--primary-500)' : '0 2px 8px rgba(0,0,0,0.3)',
+        textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+        padding: '2px 7px',
+        fontSize: '0.6875rem',
+        fontWeight: 600,
+        border: `1px solid rgba(255, 255, 255, 0.25)`,
+        boxShadow: isSelected ? '0 0 0 2px #fff, 0 0 0 4px var(--primary-500)' : '0 2px 5px rgba(0,0,0,0.35)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',

@@ -126,9 +126,10 @@ export default function TimelineEditor() {
                 flexShrink: 0,
                 position: 'sticky',
                 left: 0,
-                zIndex: 20,
+                zIndex: 30,
                 backgroundColor: 'var(--bg-surface)',
                 borderRight: '1px solid var(--border-subtle)',
+                boxShadow: '2px 0 6px rgba(0,0,0,0.15)',
               }}
             >
               <TimelineTrackHeader />
@@ -146,8 +147,8 @@ export default function TimelineEditor() {
                 flex: 1,
                 minWidth: `${timelineDuration + 200}px`,
                 position: 'relative',
-                backgroundImage: 'repeating-linear-gradient(to right, transparent, transparent 99px, var(--border-subtle) 100px)',
-                backgroundSize: '100px 100%',
+                backgroundImage: `repeating-linear-gradient(to right, transparent, transparent ${5 * pxPerSecond - 1}px, var(--border-subtle) ${5 * pxPerSecond}px)`,
+                backgroundSize: `${5 * pxPerSecond}px 100%`,
               }}
             >
               {/* Playhead Vertical Line */}
@@ -185,14 +186,14 @@ export default function TimelineEditor() {
 
               {/* Tracks Rows */}
               {zones.map((z, i) => {
-                const zColors = ['#38bdf8', '#34d399', '#fbbf24', '#f472b6', '#a78bfa'];
+                const zColors = ['#1d4ed8', '#047857', '#b45309', '#be185d', '#6d28d9', '#0f766e', '#4338ca'];
                 const color = zColors[i % zColors.length];
                 
                 return (
                   <div
                     key={z.id}
                     style={{
-                      height: '48px',
+                      height: '34px',
                       borderBottom: '1px solid var(--border-subtle)',
                       position: 'relative',
                       display: 'flex',

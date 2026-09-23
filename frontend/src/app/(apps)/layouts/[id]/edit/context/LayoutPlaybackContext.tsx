@@ -10,6 +10,10 @@ interface LayoutPlaybackContextType {
   setPlayheadPosition: React.Dispatch<React.SetStateAction<number>>;
   timelineDuration: number;
   pxPerSecond: number;
+  setPxPerSecond: React.Dispatch<React.SetStateAction<number>>;
+  zoomInTimeline: () => void;
+  zoomOutTimeline: () => void;
+  resetTimelineZoom: () => void;
   togglePlay: () => void;
   stopPlay: () => void;
   isMuted: boolean;
@@ -24,8 +28,19 @@ export function LayoutPlaybackProvider({ children, zones }: { children: ReactNod
   const [isPlaying, setIsPlaying] = useState(false);
   const [playheadPosition, setPlayheadPosition] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
+  const [pxPerSecond, setPxPerSecond] = useState(20);
 
-  const pxPerSecond = 20;
+  const zoomInTimeline = () => {
+    setPxPerSecond((prev) => Math.min(80, Math.round(prev * 1.3)));
+  };
+
+  const zoomOutTimeline = () => {
+    setPxPerSecond((prev) => Math.max(5, Math.round(prev / 1.3)));
+  };
+
+  const resetTimelineZoom = () => {
+    setPxPerSecond(20);
+  };
 
   let maxTimeSec = 60;
   for (const z of zones) {
@@ -89,6 +104,10 @@ export function LayoutPlaybackProvider({ children, zones }: { children: ReactNod
         setPlayheadPosition,
         timelineDuration,
         pxPerSecond,
+        setPxPerSecond,
+        zoomInTimeline,
+        zoomOutTimeline,
+        resetTimelineZoom,
         togglePlay,
         stopPlay,
         isMuted,

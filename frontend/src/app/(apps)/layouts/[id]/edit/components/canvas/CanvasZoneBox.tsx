@@ -31,7 +31,7 @@ export default function CanvasZoneBox({ zone: z, idx }: CanvasZoneBoxProps) {
     setInspectorTarget,
   } = useLayoutEditor();
 
-  const zColors = ['#38bdf8', '#34d399', '#fbbf24', '#f472b6', '#a78bfa'];
+  const zColors = ['#1d4ed8', '#047857', '#b45309', '#be185d', '#6d28d9', '#0f766e', '#4338ca'];
   const color = zColors[idx % zColors.length];
   const isSelected = z.id === selectedZoneId;
   const active = isZoneActive(z, playheadPosition);

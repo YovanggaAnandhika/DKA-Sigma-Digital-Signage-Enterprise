@@ -642,7 +642,7 @@ export default function InspectorPanel() {
               </span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {zones.map((z, idx) => {
-                  const zColors = ['#38bdf8', '#34d399', '#fbbf24', '#f472b6', '#a78bfa'];
+                  const zColors = ['#1d4ed8', '#047857', '#b45309', '#be185d', '#6d28d9', '#0f766e', '#4338ca'];
                   const color = zColors[idx % zColors.length];
                   return (
                     <div

@@ -17,7 +17,7 @@ export default function TimelineTrackHeader() {
         const active = isZoneActive(z, playheadPosition);
         const isSelected = z.id === selectedZoneId;
         const isHidden = hiddenZones.includes(z.id);
-        const zColors = ['#38bdf8', '#34d399', '#fbbf24', '#f472b6', '#a78bfa'];
+        const zColors = ['#1d4ed8', '#047857', '#b45309', '#be185d', '#6d28d9', '#0f766e', '#4338ca'];
         const color = zColors[idx % zColors.length];
 
         const handleTrackClick = () => {
@@ -32,13 +32,13 @@ export default function TimelineTrackHeader() {
             key={z.id}
             onClick={handleTrackClick}
             style={{
-              height: '48px',
+              height: '34px',
               borderBottom: '1px solid var(--border-subtle)',
-              padding: '0 10px',
+              padding: '0 8px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              backgroundColor: isSelected ? 'var(--bg-surface-elevated)' : 'transparent',
+              backgroundColor: isSelected ? 'var(--bg-surface-elevated)' : 'var(--bg-surface)',
               borderLeft: `4px solid ${color}`,
               cursor: 'pointer',
               opacity: isHidden ? 0.4 : 1,
