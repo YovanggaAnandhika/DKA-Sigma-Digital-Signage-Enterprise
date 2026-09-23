@@ -70,7 +70,7 @@ export default function TimelineControls() {
           <button
             type="button"
             onClick={zoomOutTimeline}
-            disabled={pxPerSecond <= 5}
+            disabled={pxPerSecond <= 0.5}
             title="Zoom Out Durasi"
             style={{
               display: 'flex',
@@ -79,8 +79,8 @@ export default function TimelineControls() {
               background: 'none',
               border: 'none',
               padding: 0,
-              cursor: pxPerSecond <= 5 ? 'not-allowed' : 'pointer',
-              color: pxPerSecond <= 5 ? 'var(--text-muted)' : 'var(--text-secondary)',
+              cursor: pxPerSecond <= 0.5 ? 'not-allowed' : 'pointer',
+              color: pxPerSecond <= 0.5 ? 'var(--text-muted)' : 'var(--text-secondary)',
             }}
           >
             <ZoomOut size={13} />
@@ -88,9 +88,9 @@ export default function TimelineControls() {
 
           <input
             type="range"
-            min="5"
+            min="0.5"
             max="80"
-            step="1"
+            step="0.5"
             value={pxPerSecond}
             onChange={(e) => setPxPerSecond(Number(e.target.value))}
             title={`Zoom Timeline: ${Math.round((pxPerSecond / 20) * 100)}%`}
