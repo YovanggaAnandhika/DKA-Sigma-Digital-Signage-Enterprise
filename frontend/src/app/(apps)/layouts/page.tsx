@@ -138,7 +138,7 @@ export default function LayoutsPage() {
                           fontWeight: 600,
                         }}
                       >
-                        {l.orientation}
+                        {typeof l.orientation === 'object' ? (l.orientation as any)?.name : l.orientation}
                       </span>
                     </td>
                     <td>

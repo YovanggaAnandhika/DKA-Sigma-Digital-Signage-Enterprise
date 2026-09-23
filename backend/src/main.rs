@@ -50,10 +50,17 @@ use tracing::{info, warn};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let rust_env = env::var("RUST_ENV").unwrap_or_else(|_| "development".to_string());
+    let default_filter = if rust_env == "production" {
+        "error"
+    } else {
+        "info,signage_backend=debug"
+    };
+
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info,signage_backend=debug".into()),
+                .unwrap_or_else(|_| default_filter.into()),
         )
         .init();
 
@@ -118,7 +125,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
 
     // Build and serve Tonic gRPC server
-    let mut router = Server::builder();
+    let mut router = Server::builder()
+        .layer(tower_http::trace::TraceLayer::new_for_grpc());
     let router = crate::register_hardware_services!(router, pool);
     let router = crate::register_iam_services!(router, pool, config);
     let router = crate::register_studio_services!(router, pool);

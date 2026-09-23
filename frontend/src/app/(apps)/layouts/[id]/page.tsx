@@ -152,7 +152,7 @@ export default function ViewLayoutPage() {
               {layout.name}
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Resolusi: {layout.canvasWidth} × {layout.canvasHeight} px ({layout.orientation}) &bull; {layout.layersList?.length || 0} Lapisan Kotak
+              Resolusi: {layout.canvasWidth} × {layout.canvasHeight} px ({typeof layout.orientation === 'object' ? (layout.orientation as any)?.name : layout.orientation}) &bull; {layout.layersList?.length || 0} Lapisan Kotak
             </p>
           </div>
         </div>
