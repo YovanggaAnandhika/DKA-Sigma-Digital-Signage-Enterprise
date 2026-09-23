@@ -23,11 +23,16 @@ function EditorContent() {
     setLeftSidebarWidth,
     isLayersCollapsed,
     isPlaylistCollapsed,
+    rightSidebarWidth,
+    setRightSidebarWidth,
+    isInspectorCollapsed,
   } = useLayoutEditor();
   const [isDraggingSidebar, setIsDraggingSidebar] = React.useState(false);
+  const [isDraggingRightSidebar, setIsDraggingRightSidebar] = React.useState(false);
 
   const areBothCollapsed = isLayersCollapsed && isPlaylistCollapsed;
   const currentSidebarWidth = areBothCollapsed ? 36 : leftSidebarWidth;
+  const currentRightSidebarWidth = isInspectorCollapsed ? 36 : rightSidebarWidth;
 
   const [playlistHeight, setPlaylistHeight] = React.useState<number>(260);
   const [isDraggingVertical, setIsDraggingVertical] = React.useState(false);
@@ -45,6 +50,26 @@ function EditorContent() {
     };
     const onMouseUp = () => {
       setIsDraggingVertical(false);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  const handleRightSidebarResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDraggingRightSidebar(true);
+    const startX = e.clientX;
+    const startW = rightSidebarWidth;
+
+    const onMouseMove = (ev: MouseEvent) => {
+      // Dragging left increases rightSidebarWidth, dragging right decreases
+      const delta = startX - ev.clientX;
+      setRightSidebarWidth(Math.min(600, Math.max(220, startW + delta)));
+    };
+    const onMouseUp = () => {
+      setIsDraggingRightSidebar(false);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
     };
@@ -203,7 +228,44 @@ function EditorContent() {
           <CanvasWorkspace />
         </div>
 
-        <InspectorPanel />
+        {/* Right Column: Inspector with continuous draggable left edge */}
+        <div
+          style={{
+            width: `${currentRightSidebarWidth}px`,
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            flexShrink: 0,
+            borderLeft: '1px solid var(--border-subtle)',
+            backgroundColor: 'var(--bg-surface)',
+            position: 'relative',
+            zIndex: 5,
+            transition: isDraggingRightSidebar ? 'none' : 'width 0.2s ease',
+          }}
+        >
+          {/* Continuous resize handle on the left edge (when not collapsed) */}
+          {!isInspectorCollapsed && (
+            <div
+              onMouseDown={handleRightSidebarResizeMouseDown}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: -3,
+                bottom: 0,
+                width: '6px',
+                cursor: 'col-resize',
+                zIndex: 20,
+                backgroundColor: isDraggingRightSidebar ? 'var(--primary-400)' : 'transparent',
+                transition: 'background 0.15s',
+              }}
+              title="Tarik untuk mengubah lebar panel kanan"
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(14,165,233,0.3)'; }}
+              onMouseLeave={(e) => { if (!isDraggingRightSidebar) e.currentTarget.style.backgroundColor = 'transparent'; }}
+            />
+          )}
+
+          <InspectorPanel />
+        </div>
       </div>
 
       {/* Timeline spans full width at the bottom */}

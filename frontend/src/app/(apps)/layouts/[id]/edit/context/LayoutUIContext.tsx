@@ -26,6 +26,10 @@ interface LayoutUIContextType {
   setIsLayersCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   isPlaylistCollapsed: boolean;
   setIsPlaylistCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  rightSidebarWidth: number;
+  setRightSidebarWidth: React.Dispatch<React.SetStateAction<number>>;
+  isInspectorCollapsed: boolean;
+  setIsInspectorCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
   availablePlaylists: Playlist[];
   mediaList: MediaItem[];
   refreshPlaylistsAndMedia: () => Promise<void>;
@@ -45,6 +49,8 @@ export function LayoutUIProvider({ children }: { children: ReactNode }) {
   const [leftSidebarWidth, setLeftSidebarWidth] = useState<number>(240);
   const [isLayersCollapsed, setIsLayersCollapsed] = useState<boolean>(false);
   const [isPlaylistCollapsed, setIsPlaylistCollapsed] = useState<boolean>(false);
+  const [rightSidebarWidth, setRightSidebarWidth] = useState<number>(300);
+  const [isInspectorCollapsed, setIsInspectorCollapsed] = useState<boolean>(false);
   const [availablePlaylists, setAvailablePlaylists] = useState<Playlist[]>([]);
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
 
@@ -113,6 +119,10 @@ export function LayoutUIProvider({ children }: { children: ReactNode }) {
         setIsLayersCollapsed,
         isPlaylistCollapsed,
         setIsPlaylistCollapsed,
+        rightSidebarWidth,
+        setRightSidebarWidth,
+        isInspectorCollapsed,
+        setIsInspectorCollapsed,
         availablePlaylists,
         mediaList,
         refreshPlaylistsAndMedia,
