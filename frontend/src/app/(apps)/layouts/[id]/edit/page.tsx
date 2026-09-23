@@ -29,6 +29,29 @@ function EditorContent() {
   const areBothCollapsed = isLayersCollapsed && isPlaylistCollapsed;
   const currentSidebarWidth = areBothCollapsed ? 36 : leftSidebarWidth;
 
+  const [playlistHeight, setPlaylistHeight] = React.useState<number>(260);
+  const [isDraggingVertical, setIsDraggingVertical] = React.useState(false);
+
+  const handleVerticalResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDraggingVertical(true);
+    const startY = e.clientY;
+    const startH = playlistHeight;
+
+    const onMouseMove = (ev: MouseEvent) => {
+      // Moving up increases playlistHeight, moving down decreases playlistHeight
+      const delta = startY - ev.clientY;
+      setPlaylistHeight(Math.min(600, Math.max(120, startH + delta)));
+    };
+    const onMouseUp = () => {
+      setIsDraggingVertical(false);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
   const handleSidebarResizeMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsDraggingSidebar(true);
@@ -115,10 +138,43 @@ function EditorContent() {
             transition: isDraggingSidebar ? 'none' : 'width 0.2s ease',
           }}
         >
-          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <LayersPanel />
           </div>
-          <LayerBlockList />
+
+          {/* Horizontal drag separator between Layers and Alokasi Playlist (when playlist is not collapsed) */}
+          {!isPlaylistCollapsed && (
+            <div
+              onMouseDown={handleVerticalResizeMouseDown}
+              style={{
+                height: '5px',
+                cursor: 'row-resize',
+                backgroundColor: isDraggingVertical ? 'var(--primary-400)' : 'var(--border-subtle)',
+                position: 'relative',
+                zIndex: 10,
+                flexShrink: 0,
+                transition: 'background 0.15s',
+              }}
+              title="Tarik atas/bawah untuk mengubah tinggi Alokasi Playlist"
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-400)'; }}
+              onMouseLeave={(e) => { if (!isDraggingVertical) e.currentTarget.style.backgroundColor = 'var(--border-subtle)'; }}
+            />
+          )}
+
+          {/* Bottom container: Alokasi Playlist with adjustable height */}
+          <div
+            style={{
+              height: isPlaylistCollapsed ? 'auto' : `${playlistHeight}px`,
+              maxHeight: isPlaylistCollapsed ? 'none' : '70%',
+              minHeight: isPlaylistCollapsed ? 'auto' : '120px',
+              display: 'flex',
+              flexDirection: 'column',
+              flexShrink: 0,
+              overflow: 'hidden',
+            }}
+          >
+            <LayerBlockList />
+          </div>
 
           {/* Unified continuous resize handle on the right edge (only when not both collapsed) */}
           {!areBothCollapsed && (

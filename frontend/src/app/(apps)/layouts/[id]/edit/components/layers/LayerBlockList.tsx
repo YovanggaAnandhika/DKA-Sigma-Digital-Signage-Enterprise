@@ -17,10 +17,9 @@ export default function LayerBlockList() {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        borderTop: '1px solid var(--border-subtle)',
         backgroundColor: 'var(--bg-surface)',
         width: collapsed ? '36px' : '100%',
-        maxHeight: '340px',
+        height: '100%',
         overflow: 'hidden',
         transition: 'width 0.2s ease',
         flexShrink: 0,
@@ -99,7 +98,7 @@ export default function LayerBlockList() {
               Pilih layer/zona di atas untuk mengatur alokasi playlist.
             </div>
           ) : (
-        <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+        <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
           {(selectedZone.blocksList || []).length > 0 ? (
             (selectedZone.blocksList || []).map((block, index) => {
               const isMediaBlock = !!block.mediaItemId;
