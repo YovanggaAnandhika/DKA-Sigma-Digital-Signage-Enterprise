@@ -55,10 +55,10 @@ export const api = {
   updateLayout: studioModule.updateLayout,
   deleteLayout: studioModule.deleteLayout,
 
-  // Studio — Zones
-  createZone: studioModule.createZone,
-  updateZone: studioModule.updateZone,
-  deleteZone: studioModule.deleteZone,
+  // Studio — Layers
+  createLayer: studioModule.createLayer,
+  updateLayer: studioModule.updateLayer,
+  deleteLayer: studioModule.deleteLayer,
   addPlaylistBlock: studioModule.addPlaylistBlock,
   updatePlaylistBlock: studioModule.updatePlaylistBlock,
   removePlaylistBlock: studioModule.removePlaylistBlock,

@@ -73,12 +73,15 @@ export default function InspectorPanel() {
   }
 
   // Helper to update specific block in state & API
-  const handleUpdateBlock = async (updates: { durationSeconds?: number; startTimeSeconds?: number; isMuted?: boolean }) => {
+  const handleUpdateBlock = async (updates: { durationSeconds?: number; startTimeSeconds?: number; isMuted?: boolean; volumeLevel?: number }) => {
     if (!selectedBlock || !blockZone) return;
 
-    if (updates.isMuted !== undefined && !selectedBlock.id.startsWith('temp-')) {
+    if ((updates.isMuted !== undefined || updates.volumeLevel !== undefined) && !selectedBlock.id.startsWith('temp-')) {
       try {
-        await updatePlaylistBlock(selectedBlock.id, { isMuted: updates.isMuted });
+        await updatePlaylistBlock(selectedBlock.id, { 
+          isMuted: updates.isMuted !== undefined ? updates.isMuted : selectedBlock.isMuted,
+          volumeLevel: updates.volumeLevel !== undefined ? updates.volumeLevel : selectedBlock.volumeLevel
+        });
       } catch (err: any) {
         console.error('Failed to update block audio:', err);
       }
@@ -366,7 +369,7 @@ export default function InspectorPanel() {
                 <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
                   Pengaturan Audio Track
                 </span>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {isBlockMuted ? <VolumeX size={16} color="var(--accent-rose)" /> : <Volume2 size={16} color="#10b981" />}
                     <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>
@@ -388,6 +391,25 @@ export default function InspectorPanel() {
                   >
                     {isBlockMuted ? 'Unmute' : 'Mute'}
                   </button>
+                </div>
+                
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                      VOLUME LEVEL
+                    </label>
+                    <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {selectedBlock.volumeLevel ?? 100}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={selectedBlock.volumeLevel ?? 100}
+                    onChange={(e) => handleUpdateBlock({ volumeLevel: Number(e.target.value) })}
+                    style={{ width: '100%', cursor: 'pointer' }}
+                  />
                 </div>
               </div>
 

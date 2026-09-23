@@ -54,7 +54,7 @@ export default function TimelineTrackBlock({ layer, block, color }: TimelineTrac
               } else {
                 newOverrides.push({
                   id: `override-${b.id}`,
-                  zonePlaylistId: b.id,
+                  layerPlaylistId: b.id,
                   playlistItemId: b.id,
                   isMuted: nextMuted,
                 });

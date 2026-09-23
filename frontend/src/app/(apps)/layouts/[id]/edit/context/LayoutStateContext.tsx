@@ -166,6 +166,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
               durationSeconds: b.durationSeconds,
               transitionType: b.transitionType,
               isMuted: blockMuted !== undefined ? blockMuted : false,
+              volumeLevel: b.volumeLevel !== undefined ? b.volumeLevel : 100,
             });
           }
         }
@@ -194,6 +195,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
             durationSeconds: b.durationSeconds ?? 10,
             transitionType: b.transitionType || 'none',
             orderIndex: b.orderIndex ?? b.position ?? 0,
+            volumeLevel: b.volumeLevel ?? prevBlock?.volumeLevel ?? 100,
             isMuted: b.isMuted ?? b.is_muted ?? prevBlock?.isMuted ?? false,
             itemOverridesList: prevBlock?.itemOverridesList || (b.itemOverridesList || []).map((o: any) => ({
               id: o.id,

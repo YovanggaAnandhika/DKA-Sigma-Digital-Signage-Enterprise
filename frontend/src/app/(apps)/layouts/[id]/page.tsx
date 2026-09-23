@@ -6,7 +6,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { api, Layout, Playlist, MediaItem } from '@/lib/services';
 import { ArrowLeft, Edit, RefreshCw } from 'lucide-react';
-import LayoutZoneList from './components/LayoutZoneList';
+import LayoutLayerList from './components/LayoutLayerList';
 
 // Dynamically import LayoutLivePreview since it relies on heavy DOM / video rendering
 const LayoutLivePreview = dynamic(() => import('./components/LayoutLivePreview'), {
@@ -22,7 +22,7 @@ export default function ViewLayoutPage() {
   const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
   const [globalMuted, setGlobalMuted] = useState(false);
-  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export default function ViewLayoutPage() {
           ...layoutData,
           canvasWidth: layoutData.canvasWidth || 1920,
           canvasHeight: layoutData.canvasHeight || 1080,
-          zonesList: (layoutData.zonesList || []).map((z: any) => ({
+          layersList: (layoutData.layersList || []).map((z: any) => ({
             ...z,
             id: z.id,
             layout_id: z.layoutId || z.layout_id,
@@ -72,8 +72,8 @@ export default function ViewLayoutPage() {
         setLayout(sanitizedLayout);
         setPlaylists((playlistsRes as any).data || []);
         setMediaList((mediaRes as any).data || []);
-        if (sanitizedLayout.zonesList?.length > 0) {
-          setSelectedZoneId(sanitizedLayout.zonesList[0].id);
+        if (sanitizedLayout.layersList?.length > 0) {
+          setSelectedLayerId(sanitizedLayout.layersList[0].id);
         }
       } catch (err: any) {
         alert(err.message || 'Gagal memuat layout');
@@ -108,7 +108,7 @@ export default function ViewLayoutPage() {
   }, []);
 
   // Helper: resolve first media item for a zone
-  const resolveZoneMedia = (zone: Layout['zonesList'][number]) => {
+  const resolveZoneMedia = (zone: Layout['layersList'][number]) => {
     const blocks = zone.blocksList || [];
     for (const block of blocks) {
       if (block.mediaItemId) {
@@ -152,7 +152,7 @@ export default function ViewLayoutPage() {
               {layout.name}
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Resolusi: {layout.canvasWidth} × {layout.canvasHeight} px ({layout.orientation}) &bull; {layout.zonesList?.length || 0} Zona Kotak
+              Resolusi: {layout.canvasWidth} × {layout.canvasHeight} px ({layout.orientation}) &bull; {layout.layersList?.length || 0} Lapisan Kotak
             </p>
           </div>
         </div>
@@ -173,8 +173,8 @@ export default function ViewLayoutPage() {
           togglePlayPause={togglePlayPause}
           globalMuted={globalMuted}
           toggleMute={toggleMute}
-          selectedZoneId={selectedZoneId}
-          setSelectedZoneId={setSelectedZoneId}
+          selectedLayerId={selectedLayerId}
+          setSelectedLayerId={setSelectedLayerId}
           resolveZoneMedia={resolveZoneMedia}
           videoRefs={videoRefs}
           zColors={zColors}
@@ -182,10 +182,10 @@ export default function ViewLayoutPage() {
         />
 
         {/* RIGHT: Zones Panel */}
-        <LayoutZoneList
+        <LayoutLayerList
           layout={layout}
-          selectedZoneId={selectedZoneId}
-          setSelectedZoneId={setSelectedZoneId}
+          selectedLayerId={selectedLayerId}
+          setSelectedLayerId={setSelectedLayerId}
           resolveZoneMedia={resolveZoneMedia}
           zColors={zColors}
           playlists={playlists}
