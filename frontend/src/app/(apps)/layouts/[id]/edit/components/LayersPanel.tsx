@@ -6,20 +6,19 @@ import { useLayoutEditor } from '../context/LayoutEditorContext';
 import LayerItemCard from './layers/LayerItemCard';
 
 export default function LayersPanel() {
-  const { zones, handleAddZone, selectedZoneId, setSelectedZoneId } = useLayoutEditor();
+  const { zones, handleAddZone, selectedZoneId, setSelectedZoneId, leftSidebarWidth, setLeftSidebarWidth } = useLayoutEditor();
   const [collapsed, setCollapsed] = useState(false);
-  const [panelWidth, setPanelWidth] = useState(240);
   const [isDraggingResize, setIsDraggingResize] = useState(false);
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsDraggingResize(true);
     const startX = e.clientX;
-    const startW = panelWidth;
+    const startW = leftSidebarWidth;
 
     const onMouseMove = (ev: MouseEvent) => {
       const delta = ev.clientX - startX;
-      setPanelWidth(Math.min(500, Math.max(160, startW + delta)));
+      setLeftSidebarWidth(Math.min(500, Math.max(180, startW + delta)));
     };
     const onMouseUp = () => {
       setIsDraggingResize(false);
@@ -33,7 +32,7 @@ export default function LayersPanel() {
   return (
     <div
       style={{
-        width: collapsed ? '36px' : `${panelWidth}px`,
+        width: collapsed ? '36px' : `${leftSidebarWidth}px`,
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: 'var(--bg-surface)',
@@ -42,6 +41,7 @@ export default function LayersPanel() {
         transition: isDraggingResize ? 'none' : 'width 0.2s ease',
         overflow: 'hidden',
         flexShrink: 0,
+        height: '100%',
         position: 'relative',
       }}
     >

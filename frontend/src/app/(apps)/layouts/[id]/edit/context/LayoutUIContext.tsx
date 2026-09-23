@@ -20,6 +20,8 @@ interface LayoutUIContextType {
   showToast: (message: string, type?: 'success' | 'error') => void;
   bufferedRanges: { start: number; end: number }[];
   reportBuffer: (ranges: { start: number; end: number }[]) => void;
+  leftSidebarWidth: number;
+  setLeftSidebarWidth: React.Dispatch<React.SetStateAction<number>>;
   availablePlaylists: Playlist[];
   mediaList: MediaItem[];
   refreshPlaylistsAndMedia: () => Promise<void>;
@@ -36,6 +38,7 @@ export function LayoutUIProvider({ children }: { children: ReactNode }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [bufferedRanges, setBufferedRanges] = useState<{ start: number; end: number }[]>([]);
+  const [leftSidebarWidth, setLeftSidebarWidth] = useState<number>(240);
   const [availablePlaylists, setAvailablePlaylists] = useState<Playlist[]>([]);
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
 
@@ -98,6 +101,8 @@ export function LayoutUIProvider({ children }: { children: ReactNode }) {
         showToast,
         bufferedRanges,
         reportBuffer,
+        leftSidebarWidth,
+        setLeftSidebarWidth,
         availablePlaylists,
         mediaList,
         refreshPlaylistsAndMedia,
