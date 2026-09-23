@@ -78,12 +78,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Pure gRPC Server listening on {}", grpc_addr);
 
     // Hardware Services
-    use grpc::hardware::{DeviceServiceImpl, DisplayGroupServiceImpl};
+    use grpc::hardware::device::service::DeviceServiceImpl;
+    use grpc::hardware::display_group::service::DisplayGroupServiceImpl;
     use grpc::proto::hardware::v1::device::device_service_server::DeviceServiceServer;
     use grpc::proto::hardware::v1::display_group::display_group_service_server::DisplayGroupServiceServer;
 
     // IAM Services
-    use grpc::iam::{PermissionServiceImpl, RoleServiceImpl, RoleGroupServiceImpl, UserServiceImpl};
+    use grpc::iam::permission::service::PermissionServiceImpl;
+    use grpc::iam::role::service::RoleServiceImpl;
+    use grpc::iam::role_group::service::RoleGroupServiceImpl;
+    use grpc::iam::user::service::UserServiceImpl;
     use grpc::proto::iam::v1::permission::permission_service_server::PermissionServiceServer;
     use grpc::proto::iam::v1::role::role_service_server::RoleServiceServer;
     use grpc::proto::iam::v1::role_group::role_group_service_server::RoleGroupServiceServer;
@@ -101,7 +105,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use grpc::proto::studio::v1::schedule::schedule_service_server::ScheduleServiceServer;
 
     // Distribution Services
-    use grpc::distribution::{ManifestServiceImpl, StreamServiceImpl, CanaryServiceImpl};
+    use grpc::distribution::manifest::service::ManifestServiceImpl;
+    use grpc::distribution::stream::service::StreamServiceImpl;
+    use grpc::distribution::canary::service::CanaryServiceImpl;
     use grpc::proto::distribution::v1::manifest::manifest_service_server::ManifestServiceServer;
     use grpc::proto::distribution::v1::stream::stream_service_server::StreamServiceServer;
     use grpc::proto::distribution::v1::canary::canary_service_server::CanaryServiceServer;
