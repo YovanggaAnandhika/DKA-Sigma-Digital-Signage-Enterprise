@@ -86,17 +86,16 @@ impl LayerRepository {
         Ok(result.rows_affected() > 0)
     }
 
-    pub async fn add_playlist_block(
-        pool: &DbPool,
-        layer_id: Uuid,
-        playlist_id: Uuid,
-        start_time_seconds: i32,
-        duration_seconds: i32,
-    ) -> Result<LayerBlockEntity, sqlx::Error> {
+    
+    
+    
+    
+    
+    pub async fn create_block(pool: &DbPool, dto: super::model::CreateLayerBlockDto) -> Result<LayerBlockEntity, sqlx::Error> {
         let max_order: (Option<i32>,) = sqlx::query_as(
             "SELECT MAX(order_index) FROM layer_blocks WHERE layer_id = "
         )
-        .bind(layer_id)
+        .bind(dto.layer_id)
         .fetch_one(pool)
         .await?;
 
@@ -105,15 +104,16 @@ impl LayerRepository {
         let block = sqlx::query_as::<_, LayerBlockEntity>(
             r#"
             INSERT INTO layer_blocks (
-                layer_id, playlist_id, start_time_seconds, duration_seconds, order_index
-            ) VALUES (, , , , )
+                layer_id, playlist_id, media_item_id, start_time_seconds, duration_seconds, order_index
+            ) VALUES (, , , , , )
             RETURNING *
             "#
         )
-        .bind(layer_id)
-        .bind(playlist_id)
-        .bind(start_time_seconds)
-        .bind(duration_seconds)
+        .bind(dto.layer_id)
+        .bind(dto.playlist_id)
+        .bind(dto.media_item_id)
+        .bind(dto.start_time_seconds)
+        .bind(dto.duration_seconds)
         .bind(next_order)
         .fetch_one(pool)
         .await?;
@@ -121,51 +121,7 @@ impl LayerRepository {
         Ok(block)
     }
 
-    pub async fn add_media_block(
-        pool: &DbPool,
-        layer_id: Uuid,
-        media_item_id: Uuid,
-        start_time_seconds: i32,
-        duration_seconds: i32,
-    ) -> Result<LayerBlockEntity, sqlx::Error> {
-        let max_order: (Option<i32>,) = sqlx::query_as(
-            "SELECT MAX(order_index) FROM layer_blocks WHERE layer_id = "
-        )
-        .bind(layer_id)
-        .fetch_one(pool)
-        .await?;
-
-        let next_order = max_order.0.unwrap_or(0) + 1;
-
-        let block = sqlx::query_as::<_, LayerBlockEntity>(
-            r#"
-            INSERT INTO layer_blocks (
-                layer_id, media_item_id, start_time_seconds, duration_seconds, order_index
-            ) VALUES (, , , , )
-            RETURNING *
-            "#
-        )
-        .bind(layer_id)
-        .bind(media_item_id)
-        .bind(start_time_seconds)
-        .bind(duration_seconds)
-        .bind(next_order)
-        .fetch_one(pool)
-        .await?;
-
-        Ok(block)
-    }
-
-    pub async fn update_playlist_block(
-        pool: &DbPool,
-        id: Uuid,
-        start_time_seconds: Option<i32>,
-        duration_seconds: Option<i32>,
-        transition_type: Option<String>,
-        order_index: Option<i32>,
-        is_muted: Option<bool>,
-        volume_level: Option<i32>,
-    ) -> Result<LayerBlockEntity, sqlx::Error> {
+    pub async fn update_block(pool: &DbPool, id: Uuid, dto: super::model::UpdateLayerBlockDto) -> Result<LayerBlockEntity, sqlx::Error> {
         let block = sqlx::query_as::<_, LayerBlockEntity>(
             r#"
             UPDATE layer_blocks
@@ -181,28 +137,27 @@ impl LayerRepository {
             "#
         )
         .bind(id)
-        .bind(start_time_seconds)
-        .bind(duration_seconds)
-        .bind(transition_type)
-        .bind(order_index)
-        .bind(is_muted)
-        .bind(volume_level)
+        .bind(dto.start_time_seconds)
+        .bind(dto.duration_seconds)
+        .bind(dto.transition_type)
+        .bind(dto.order_index)
+        .bind(dto.is_muted)
+        .bind(dto.volume_level)
         .fetch_one(pool)
         .await?;
 
         Ok(block)
     }
 
-    pub async fn remove_playlist_block(pool: &DbPool, block_id: Uuid) -> Result<bool, sqlx::Error> {
+    pub async fn delete_block(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
         let result = sqlx::query("DELETE FROM layer_blocks WHERE id = ")
-            .bind(block_id)
+            .bind(id)
             .execute(pool)
             .await?;
 
         Ok(result.rows_affected() > 0)
     }
-
-    pub async fn set_playlist_item_override(
+pub async fn set_playlist_item_override(
         pool: &DbPool,
         layer_playlist_id: Uuid,
         playlist_item_id: Uuid,

@@ -83,3 +83,22 @@ pub struct UpdateLayerDto {
     pub z_index: Option<i32>,
     pub background_color: Option<String>,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct CreateLayerBlockDto {
+    pub layer_id: Uuid,
+    pub playlist_id: Option<Uuid>,
+    pub media_item_id: Option<Uuid>,
+    pub start_time_seconds: i32,
+    pub duration_seconds: i32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateLayerBlockDto {
+    pub start_time_seconds: Option<i32>,
+    pub duration_seconds: Option<i32>,
+    pub transition_type: Option<String>,
+    pub order_index: Option<i32>,
+    pub is_muted: Option<bool>,
+    pub volume_level: Option<i32>,
+}

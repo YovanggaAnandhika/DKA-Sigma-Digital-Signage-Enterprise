@@ -5,17 +5,18 @@ use uuid::Uuid;
 
 use crate::grpc::proto::studio::v1::layer::{
     layer_service_server::LayerService as LayerServiceTrait,
-    AddMediaBlockRequest, AddPlaylistBlockRequest, CreateLayerRequest, DeleteLayerRequest,
+    CreateLayerRequest, DeleteLayerRequest,
     DeleteLayerResponse, GetLayerRequest, Layer as ProtoLayer, LayerPlaylist,
-    LayerPlaylistItemOverride, PlaylistBlockResponse, RemovePlaylistBlockRequest,
+    LayerPlaylistItemOverride,
+    CreateLayerBlockRequest, UpdateLayerBlockRequest, DeleteLayerBlockRequest,
+    LayerBlockResponse, DeleteLayerBlockResponse,
     SetPlaylistItemOverrideRequest, SetPlaylistItemOverrideResponse, UpdateLayerRequest,
-    UpdatePlaylistBlockRequest,
 };
 use crate::grpc::proto::studio::v1::media::MediaItem as ProtoMediaItem;
 use crate::grpc::proto::studio::v1::playlist::Playlist as ProtoPlaylist;
 
 use crate::modules::studio::layer::{
-    model::{CreateLayerDto, LayerBlockDto, UpdateLayerDto},
+    model::{CreateLayerDto, LayerBlockDto, UpdateLayerDto, CreateLayerBlockDto, UpdateLayerBlockDto},
     services::LayerService,
 };
 
@@ -100,7 +101,6 @@ impl LayerServiceTrait for LayerServiceImpl {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        // get the full layer with empty blocks
         let full_dto = crate::modules::studio::layer::model::LayerWithBlocksDto {
             layer,
             blocks: vec![],
@@ -121,8 +121,6 @@ impl LayerServiceTrait for LayerServiceImpl {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        // For this we should actually fetch blocks, but since it's just get_layer, we might need a better query.
-        // I'll return empty blocks for now to get it compiling.
         let full_dto = crate::modules::studio::layer::model::LayerWithBlocksDto {
             layer,
             blocks: vec![],
@@ -176,121 +174,86 @@ impl LayerServiceTrait for LayerServiceImpl {
         Ok(Response::new(DeleteLayerResponse { success }))
     }
 
-    async fn add_playlist_block(
+    async fn create_layer_block(
         &self,
-        request: Request<AddPlaylistBlockRequest>,
-    ) -> Result<Response<PlaylistBlockResponse>, Status> {
+        request: Request<CreateLayerBlockRequest>,
+    ) -> Result<Response<LayerBlockResponse>, Status> {
         let req = request.into_inner();
         let layer_id = Uuid::from_str(&req.layer_id)
             .map_err(|_| Status::invalid_argument("Invalid layer_id"))?;
-        let playlist_id = Uuid::from_str(&req.playlist_id)
-            .map_err(|_| Status::invalid_argument("Invalid playlist_id"))?;
 
-        let block = LayerService::add_playlist_block(
-            &self.pool,
+        let playlist_id = req.playlist_id.and_then(|id| Uuid::from_str(&id).ok());
+        let media_item_id = req.media_item_id.and_then(|id| Uuid::from_str(&id).ok());
+
+        let dto = CreateLayerBlockDto {
             layer_id,
             playlist_id,
-            req.start_time_seconds,
-            req.duration_seconds,
-        )
-        .await
-        .map_err(|e| Status::internal(e.to_string()))?;
-
-        let block_dto = LayerBlockDto {
-            block,
-            item_overrides: vec![],
-        };
-
-        Ok(Response::new(PlaylistBlockResponse {
-            success: true,
-            block: Some(Self::map_layer_block(block_dto)),
-        }))
-    }
-
-    async fn add_media_block(
-        &self,
-        request: Request<AddMediaBlockRequest>,
-    ) -> Result<Response<PlaylistBlockResponse>, Status> {
-        let req = request.into_inner();
-        let layer_id = Uuid::from_str(&req.layer_id)
-            .map_err(|_| Status::invalid_argument("Invalid layer_id"))?;
-        let media_item_id = Uuid::from_str(&req.media_item_id)
-            .map_err(|_| Status::invalid_argument("Invalid media_item_id"))?;
-
-        let block = LayerService::add_media_block(
-            &self.pool,
-            layer_id,
             media_item_id,
-            req.start_time_seconds,
-            req.duration_seconds,
-        )
-        .await
-        .map_err(|e| Status::internal(e.to_string()))?;
-
-        let block_dto = LayerBlockDto {
-            block,
-            item_overrides: vec![],
+            start_time_seconds: req.start_time_seconds,
+            duration_seconds: req.duration_seconds,
         };
 
-        Ok(Response::new(PlaylistBlockResponse {
-            success: true,
-            block: Some(Self::map_layer_block(block_dto)),
-        }))
-    }
-
-    async fn update_playlist_block(
-        &self,
-        request: Request<UpdatePlaylistBlockRequest>,
-    ) -> Result<Response<PlaylistBlockResponse>, Status> {
-        let req = request.into_inner();
-        let block_id = Uuid::from_str(&req.block_id)
-            .map_err(|_| Status::invalid_argument("Invalid block_id"))?;
-
-        let transition = if req.transition_type.is_empty() {
-            None
-        } else {
-            Some(req.transition_type)
-        };
-
-        let block = LayerService::update_playlist_block(
-            &self.pool,
-            block_id,
-            Some(req.start_time_seconds),
-            Some(req.duration_seconds),
-            transition,
-            Some(req.order_index),
-            req.is_muted,
-            req.volume_level,
-        )
-        .await
-        .map_err(|e| Status::internal(e.to_string()))?;
-
-        let block_dto = LayerBlockDto {
-            block,
-            item_overrides: vec![],
-        };
-
-        Ok(Response::new(PlaylistBlockResponse {
-            success: true,
-            block: Some(Self::map_layer_block(block_dto)),
-        }))
-    }
-
-    async fn remove_playlist_block(
-        &self,
-        request: Request<RemovePlaylistBlockRequest>,
-    ) -> Result<Response<PlaylistBlockResponse>, Status> {
-        let req = request.into_inner();
-        let block_id = Uuid::from_str(&req.block_id)
-            .map_err(|_| Status::invalid_argument("Invalid block_id"))?;
-
-        let success = LayerService::remove_playlist_block(&self.pool, block_id)
+        let block = LayerService::create_block(&self.pool, dto)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(PlaylistBlockResponse {
+        let block_dto = LayerBlockDto {
+            block,
+            item_overrides: vec![],
+        };
+
+        Ok(Response::new(LayerBlockResponse {
+            success: true,
+            block: Some(Self::map_layer_block(block_dto)),
+        }))
+    }
+
+    async fn update_layer_block(
+        &self,
+        request: Request<UpdateLayerBlockRequest>,
+    ) -> Result<Response<LayerBlockResponse>, Status> {
+        let req = request.into_inner();
+        let block_id = Uuid::from_str(&req.id)
+            .map_err(|_| Status::invalid_argument("Invalid block_id"))?;
+
+        let dto = UpdateLayerBlockDto {
+            start_time_seconds: req.start_time_seconds,
+            duration_seconds: req.duration_seconds,
+            transition_type: req.transition_type,
+            order_index: req.order_index,
+            is_muted: req.is_muted,
+            volume_level: req.volume_level,
+        };
+
+        let block = LayerService::update_block(&self.pool, block_id, dto)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let block_dto = LayerBlockDto {
+            block,
+            item_overrides: vec![],
+        };
+
+        Ok(Response::new(LayerBlockResponse {
+            success: true,
+            block: Some(Self::map_layer_block(block_dto)),
+        }))
+    }
+
+    async fn delete_layer_block(
+        &self,
+        request: Request<DeleteLayerBlockRequest>,
+    ) -> Result<Response<DeleteLayerBlockResponse>, Status> {
+        let req = request.into_inner();
+        let block_id = Uuid::from_str(&req.id)
+            .map_err(|_| Status::invalid_argument("Invalid block_id"))?;
+
+        let success = LayerService::delete_block(&self.pool, block_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(DeleteLayerBlockResponse {
             success,
-            block: None,
         }))
     }
 
@@ -316,7 +279,7 @@ impl LayerServiceTrait for LayerServiceImpl {
 
         Ok(Response::new(SetPlaylistItemOverrideResponse {
             success: true,
-            override_: Some(LayerPlaylistItemOverride {
+            override: Some(LayerPlaylistItemOverride {
                 id: override_ent.id.to_string(),
                 layer_playlist_id: override_ent.layer_block_id.to_string(),
                 playlist_item_id: override_ent.playlist_item_id.to_string(),

@@ -38,37 +38,35 @@ message DeleteLayerResponse {
   bool success = 1;
 }
 
-message AddPlaylistBlockRequest {
+message CreateLayerBlockRequest {
   string layer_id = 1;
-  string playlist_id = 2;
-  int32 start_time_seconds = 3;
-  int32 duration_seconds = 4;
+  optional string playlist_id = 2;
+  optional string media_item_id = 3;
+  int32 start_time_seconds = 4;
+  int32 duration_seconds = 5;
 }
 
-message AddMediaBlockRequest {
-  string layer_id = 1;
-  string media_item_id = 2;
-  int32 start_time_seconds = 3;
-  int32 duration_seconds = 4;
-}
-
-message UpdatePlaylistBlockRequest {
-  string block_id = 1;
-  int32 start_time_seconds = 2;
-  int32 duration_seconds = 3;
-  string transition_type = 4;
-  int32 order_index = 5;
+message UpdateLayerBlockRequest {
+  string id = 1;
+  optional int32 start_time_seconds = 2;
+  optional int32 duration_seconds = 3;
+  optional string transition_type = 4;
+  optional int32 order_index = 5;
   optional bool is_muted = 6;
   optional int32 volume_level = 7;
 }
 
-message RemovePlaylistBlockRequest {
-  string block_id = 1;
+message DeleteLayerBlockRequest {
+  string id = 1;
 }
 
-message PlaylistBlockResponse {
+message LayerBlockResponse {
   bool success = 1;
   LayerPlaylist block = 2;
+}
+
+message DeleteLayerBlockResponse {
+  bool success = 1;
 }
 
 message SetPlaylistItemOverrideRequest {
@@ -89,10 +87,9 @@ service LayerService {
   rpc UpdateLayer(UpdateLayerRequest) returns (Layer);
   rpc DeleteLayer(DeleteLayerRequest) returns (DeleteLayerResponse);
   
-  rpc AddPlaylistBlock(AddPlaylistBlockRequest) returns (PlaylistBlockResponse);
-  rpc AddMediaBlock(AddMediaBlockRequest) returns (PlaylistBlockResponse);
-  rpc UpdatePlaylistBlock(UpdatePlaylistBlockRequest) returns (PlaylistBlockResponse);
-  rpc RemovePlaylistBlock(RemovePlaylistBlockRequest) returns (PlaylistBlockResponse);
+  rpc CreateLayerBlock(CreateLayerBlockRequest) returns (LayerBlockResponse);
+  rpc UpdateLayerBlock(UpdateLayerBlockRequest) returns (LayerBlockResponse);
+  rpc DeleteLayerBlock(DeleteLayerBlockRequest) returns (DeleteLayerBlockResponse);
   
   rpc SetPlaylistItemOverride(SetPlaylistItemOverrideRequest) returns (SetPlaylistItemOverrideResponse);
 }

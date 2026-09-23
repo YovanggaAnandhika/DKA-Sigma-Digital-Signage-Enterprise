@@ -35,69 +35,26 @@ impl LayerService {
         Ok(success)
     }
 
-    pub async fn add_playlist_block(
-        pool: &DbPool,
-        layer_id: Uuid,
-        playlist_id: Uuid,
-        start_time_seconds: i32,
-        duration_seconds: i32,
-    ) -> Result<LayerBlockEntity, AppError> {
-        let block = LayerRepository::add_playlist_block(
-            pool,
-            layer_id,
-            playlist_id,
-            start_time_seconds,
-            duration_seconds,
-        ).await?;
+    
+    
+    
+    
+    
+    pub async fn create_block(pool: &DbPool, dto: super::model::CreateLayerBlockDto) -> Result<LayerBlockEntity, AppError> {
+        let block = LayerRepository::create_block(pool, dto).await?;
         Ok(block)
     }
 
-    pub async fn add_media_block(
-        pool: &DbPool,
-        layer_id: Uuid,
-        media_item_id: Uuid,
-        start_time_seconds: i32,
-        duration_seconds: i32,
-    ) -> Result<LayerBlockEntity, AppError> {
-        let block = LayerRepository::add_media_block(
-            pool,
-            layer_id,
-            media_item_id,
-            start_time_seconds,
-            duration_seconds,
-        ).await?;
+    pub async fn update_block(pool: &DbPool, id: Uuid, dto: super::model::UpdateLayerBlockDto) -> Result<LayerBlockEntity, AppError> {
+        let block = LayerRepository::update_block(pool, id, dto).await?;
         Ok(block)
     }
 
-    pub async fn update_playlist_block(
-        pool: &DbPool,
-        id: Uuid,
-        start_time_seconds: Option<i32>,
-        duration_seconds: Option<i32>,
-        transition_type: Option<String>,
-        order_index: Option<i32>,
-        is_muted: Option<bool>,
-        volume_level: Option<i32>,
-    ) -> Result<LayerBlockEntity, AppError> {
-        let block = LayerRepository::update_playlist_block(
-            pool,
-            id,
-            start_time_seconds,
-            duration_seconds,
-            transition_type,
-            order_index,
-            is_muted,
-            volume_level,
-        ).await?;
-        Ok(block)
-    }
-
-    pub async fn remove_playlist_block(pool: &DbPool, block_id: Uuid) -> Result<bool, AppError> {
-        let success = LayerRepository::remove_playlist_block(pool, block_id).await?;
+    pub async fn delete_block(pool: &DbPool, id: Uuid) -> Result<bool, AppError> {
+        let success = LayerRepository::delete_block(pool, id).await?;
         Ok(success)
     }
-
-    pub async fn set_playlist_item_override(
+pub async fn set_playlist_item_override(
         pool: &DbPool,
         layer_playlist_id: Uuid,
         playlist_item_id: Uuid,
