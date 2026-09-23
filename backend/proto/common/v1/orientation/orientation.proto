@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package signage.common.v1.orientation;
+
+import "common/v1/orientation/orientation.common.proto";
+
+message ListOrientationsRequest {}
+
+message ListOrientationsResponse {
+  repeated Orientation items = 1;
+}
+
+service OrientationService {
+  rpc ListOrientations(ListOrientationsRequest) returns (ListOrientationsResponse);
+}

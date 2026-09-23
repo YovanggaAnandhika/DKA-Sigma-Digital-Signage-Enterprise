@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package signage.common.v1.orientation;
+
+message Orientation {
+  string id = 1;
+  string name = 2;
+  string value = 3;
+}

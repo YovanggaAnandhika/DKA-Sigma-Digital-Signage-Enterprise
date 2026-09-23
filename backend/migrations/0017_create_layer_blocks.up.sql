@@ -1,6 +1,6 @@
-CREATE TABLE IF NOT EXISTS zone_blocks (
+CREATE TABLE IF NOT EXISTS layer_blocks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    zone_id UUID NOT NULL REFERENCES zones(id) ON DELETE CASCADE,
+    layer_id UUID NOT NULL REFERENCES layers(id) ON DELETE CASCADE,
     playlist_id UUID REFERENCES playlists(id) ON DELETE CASCADE,
     media_item_id UUID REFERENCES media_items(id) ON DELETE CASCADE,
     start_time_seconds INT NOT NULL DEFAULT 0,
@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS zone_blocks (
     transition_type VARCHAR(50),
     order_index INT NOT NULL DEFAULT 0,
     is_muted BOOLEAN NOT NULL DEFAULT false,
+    volume_level INT NOT NULL DEFAULT 100,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_block_content CHECK (
         (playlist_id IS NOT NULL AND media_item_id IS NULL) OR 
@@ -15,7 +16,7 @@ CREATE TABLE IF NOT EXISTS zone_blocks (
     )
 );
 
-CREATE INDEX IF NOT EXISTS idx_zb_zone ON zone_blocks(zone_id);
-CREATE INDEX IF NOT EXISTS idx_zb_playlist ON zone_blocks(playlist_id);
-CREATE INDEX IF NOT EXISTS idx_zb_media ON zone_blocks(media_item_id);
-CREATE INDEX IF NOT EXISTS idx_zb_order ON zone_blocks(zone_id, order_index);
+CREATE INDEX IF NOT EXISTS idx_lb_layer ON layer_blocks(layer_id);
+CREATE INDEX IF NOT EXISTS idx_lb_playlist ON layer_blocks(playlist_id);
+CREATE INDEX IF NOT EXISTS idx_lb_media ON layer_blocks(media_item_id);
+CREATE INDEX IF NOT EXISTS idx_lb_order ON layer_blocks(layer_id, order_index);

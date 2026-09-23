@@ -1,7 +1,7 @@
-CREATE TABLE IF NOT EXISTS zones (
+CREATE TABLE IF NOT EXISTS layers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     layout_id UUID NOT NULL REFERENCES layouts(id) ON DELETE CASCADE,
-    name VARCHAR(100) NOT NULL DEFAULT 'Zone',
+    name VARCHAR(100) NOT NULL DEFAULT 'Layer',
     x INT NOT NULL DEFAULT 0,
     y INT NOT NULL DEFAULT 0,
     width INT NOT NULL,
@@ -12,4 +12,4 @@ CREATE TABLE IF NOT EXISTS zones (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_zones_layout ON zones(layout_id);
+CREATE INDEX IF NOT EXISTS idx_layers_layout ON layers(layout_id);
