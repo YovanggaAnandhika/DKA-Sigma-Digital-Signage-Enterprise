@@ -6,6 +6,7 @@ import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest }
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    console.log("[GetMedia] Request body:", body);
     const token = getTokenFromRequest(req);
     const client = new MediaServiceClient(getGrpcHost(), getGrpcCredentials());
     
@@ -14,11 +15,15 @@ export async function POST(req: NextRequest) {
 
     return new Promise<NextResponse>((resolve) => {
       client.getMedia(request, getGrpcMetadata(token), (error, response) => {
-        if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
+        if (error) {
+           console.error("[GetMedia] gRPC error:", error);
+           resolve(NextResponse.json({ error: error.message }, { status: 500 }));
+        }
         else resolve(NextResponse.json(response.toObject()));
       });
     });
   } catch (error) {
+    console.error("[GetMedia] Catch error:", error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
