@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS layer_blocks (
     is_muted BOOLEAN NOT NULL DEFAULT false,
     volume_level INT NOT NULL DEFAULT 100,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_block_content CHECK (
         (playlist_id IS NOT NULL AND media_item_id IS NULL) OR 
         (playlist_id IS NULL AND media_item_id IS NOT NULL)
