@@ -29,33 +29,35 @@ export default function MediaPickerModal() {
     if (!media) return;
     
     // Calculate the start time of the new block by summing all previous block durations
-    const currentBlocks = targetZone.blocks || [];
+    const currentBlocks = targetZone.blocksList || [];
     let start_time_seconds = 0;
     for (const b of currentBlocks) {
-      start_time_seconds += (b.duration_seconds || 10);
+      start_time_seconds += (b.durationSeconds || 10);
     }
     
-    const duration_seconds = media.duration_seconds > 0 ? media.duration_seconds : 10;
+    const duration_seconds = media.durationSeconds > 0 ? media.durationSeconds : 10;
 
-    const newBlock = {
+    const newBlock: any = {
       id: 'temp-' + Date.now(),
-      zone_id: targetZone.id,
-      playlist_id: '',
-      media_item_id: mediaId,
-      media_item: media,
-      start_time_seconds,
-      duration_seconds,
-      transition_type: 'none',
-      order_index: currentBlocks.length
+      zoneId: targetZone.id,
+      playlistId: '',
+      mediaItemId: mediaId,
+      mediaItem: media,
+      startTimeSeconds: start_time_seconds,
+      durationSeconds: duration_seconds,
+      transitionType: 'none',
+      orderIndex: currentBlocks.length,
+      itemOverridesList: [],
+      createdAt: new Date().toISOString(),
     };
     // Append block
-    updateSelectedZone('blocks', [...currentBlocks, newBlock]);
+    updateSelectedZone('blocksList', [...currentBlocks, newBlock]);
     handleClose();
   };
 
   const filteredMedia = mediaList.filter(m => 
     m.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    m.original_filename.toLowerCase().includes(searchQuery.toLowerCase())
+    m.originalFilename.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -118,8 +120,8 @@ export default function MediaPickerModal() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             {/* Media Cards */}
             {filteredMedia.map(media => {
-              const isSelected = targetZone.blocks?.some(b => b.media_item_id === media.id) || false;
-              const isVideo = media.media_type === 2;
+              const isSelected = targetZone.blocksList?.some(b => b.mediaItemId === media.id) || false;
+              const isVideo = media.mediaType === 2;
 
               return (
                 <div 
@@ -147,8 +149,8 @@ export default function MediaPickerModal() {
                     width: '64px', height: '48px', borderRadius: '6px', backgroundColor: '#0f172a', 
                     display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0
                   }}>
-                    {media.public_url && !isVideo ? (
-                      <img src={media.public_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {media.publicUrl && !isVideo ? (
+                      <img src={media.publicUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : isVideo ? (
                       <Film size={16} color="var(--accent-amber)" />
                     ) : (
@@ -166,7 +168,7 @@ export default function MediaPickerModal() {
                       </span>
                       {isVideo && (
                         <span style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                          <Clock size={10} /> {media.duration_seconds || 0}s
+                          <Clock size={10} /> {media.durationSeconds || 0}s
                         </span>
                       )}
                     </div>

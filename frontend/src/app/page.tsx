@@ -43,7 +43,7 @@ export default function DashboardPage() {
   }, [loadData]);
 
   const totalDevices = devices.length;
-  const onlineDevices = devices.filter((d) => d.is_online).length;
+  const onlineDevices = devices.filter((d) => d.isOnline).length;
 
   const insights: InsightItem[] = [
     {
@@ -291,7 +291,7 @@ export default function DashboardPage() {
                             fontWeight: 700,
                           }}
                         >
-                          {d.pairing_code}
+                          {d.pairingCode}
                         </span>
                       </td>
                       <td>
@@ -301,16 +301,16 @@ export default function DashboardPage() {
                             borderRadius: '9999px',
                             fontSize: '0.6875rem',
                             fontWeight: 700,
-                            backgroundColor: d.is_online ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
-                            color: d.is_online ? 'var(--accent-emerald)' : 'var(--accent-rose)',
-                            border: d.is_online ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
+                            backgroundColor: d.isOnline ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
+                            color: d.isOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
+                            border: d.isOnline ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
                           }}
                         >
-                          {d.is_online ? 'ONLINE' : 'OFFLINE'}
+                          {d.isOnline ? 'ONLINE' : 'OFFLINE'}
                         </span>
                       </td>
                       <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                        {d.ip_address || '127.0.0.1'}
+                        {d.ipAddress || '127.0.0.1'}
                       </td>
                     </tr>
                   ))

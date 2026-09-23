@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     
     const request = new RemoveScheduleEventRequest();
     if (body.id) request.setId(body.id);
-    if (body.schedule_id) request.setScheduleId(body.schedule_id);
+    if (body.scheduleId) request.setScheduleId(body.scheduleId);
 
     return new Promise<NextResponse>((resolve) => {
       client.removeScheduleEvent(request, getGrpcMetadata(token), (error: any, response: any) => {

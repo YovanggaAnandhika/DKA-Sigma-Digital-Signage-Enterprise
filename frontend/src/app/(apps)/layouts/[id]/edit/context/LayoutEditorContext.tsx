@@ -171,7 +171,7 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
         // Automatically sync zone durations if assigned playlist duration grew or changed
         setZones((prev) =>
           prev.map((z) => {
-            if (!z.blocks || z.blocks.length === 0) return z;
+            if (!z.blocksList || z.blocksList.length === 0) return z;
             return z;
           })
         );
@@ -199,15 +199,41 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
         setAvailablePlaylists(loadedPlaylists);
         setMediaList((mediaRes as any).data || []);
         
-        const sanitizedZones = (data.zones || []).map((z: any) => {
+        const rawZones = data.zonesList || [];
+        const sanitizedZones = rawZones.map((z: any) => {
+          const rawBlocks = z.blocksList || [];
+          const blocks = rawBlocks.map((b: any) => ({
+            ...b,
+            id: b.id,
+            zoneId: b.zoneId || b.zone_id,
+            playlistId: b.playlistId || '',
+            mediaItemId: b.mediaItemId || '',
+            playlist: b.playlist,
+            mediaItem: b.mediaItem,
+            startTimeSeconds: b.startTimeSeconds ?? 0,
+            durationSeconds: b.durationSeconds ?? 10,
+            transitionType: b.transitionType || 'none',
+            orderIndex: b.orderIndex ?? b.position ?? 0,
+            itemOverridesList: (b.itemOverridesList || []).map((o: any) => ({
+              id: o.id,
+              zonePlaylistId: o.zonePlaylistId || o.zone_playlist_id,
+              playlistItemId: o.playlistItemId,
+              isMuted: o.isMuted ?? false,
+            })),
+          }));
+
           return {
             ...z,
+            id: z.id,
+            layoutId: z.layoutId || params.id,
+            name: z.name,
             x: Number(z.x) || 0,
             y: Number(z.y) || 0,
             width: Number(z.width) || 200,
             height: Number(z.height) || 200,
-            z_index: Number(z.z_index) || 1,
-            blocks: z.blocks || [],
+            zIndex: Number(z.zIndex) || 1,
+            backgroundColor: z.backgroundColor || '',
+            blocksList: blocks,
           };
         });
         
@@ -281,7 +307,7 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
     setZones((prev) =>
       prev.map((z) => ({
         ...z,
-        blocks: (z.blocks || []).filter((b) => b.id !== blockId),
+        blocksList: (z.blocksList || []).filter((b) => b.id !== blockId),
       }))
     );
   };
@@ -320,18 +346,19 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
         const y = Math.round(Number(z.y) || 0);
         const width = Math.round(Number(z.width) || 200);
         const height = Math.round(Number(z.height) || 200);
-        const z_index = Math.round(Number(z.z_index) || 1);
+        const z_index = Math.round(Number(z.zIndex) || 1);
 
         let realZoneId = z.id;
         if (z.id.startsWith('z-')) {
           const newZ = await api.createZone({
-            layout_id: params.id,
+            layoutId: params.id,
             name: z.name,
             x,
             y,
             width,
             height,
-            z_index,
+            zIndex: z_index,
+            backgroundColor: z.backgroundColor,
           });
           realZoneId = newZ.id;
         } else {
@@ -341,24 +368,24 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
             y,
             width,
             height,
-            z_index,
-            background_color: z.background_color,
+            zIndex: z_index,
+            backgroundColor: z.backgroundColor,
           });
         }
 
         // 3.5. Save blocks for this zone
-        for (const b of (z.blocks || [])) {
+        for (const b of (z.blocksList || [])) {
           if (b.id.startsWith('temp-')) {
-            if (b.media_item_id) {
-              await api.addMediaBlock(realZoneId, b.media_item_id, b.start_time_seconds, b.duration_seconds);
+            if (b.mediaItemId) {
+              await api.addMediaBlock(realZoneId, b.mediaItemId, b.startTimeSeconds, b.durationSeconds);
             } else {
-              await api.addPlaylistBlock(realZoneId, b.playlist_id, b.start_time_seconds, b.duration_seconds);
+              await api.addPlaylistBlock(realZoneId, b.playlistId, b.startTimeSeconds, b.durationSeconds);
             }
           } else {
             await api.updatePlaylistBlock(b.id, { 
-              start_time_seconds: b.start_time_seconds, 
-              duration_seconds: b.duration_seconds,
-              transition_type: b.transition_type
+              startTimeSeconds: b.startTimeSeconds, 
+              durationSeconds: b.durationSeconds,
+              transitionType: b.transitionType
             });
           }
         }
@@ -370,24 +397,44 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
       setLayoutName(data.name);
       // Capture current zones BEFORE overwriting so we can restore local item_overrides (mute state)
       const prevZones = zones;
-      const sanitizedZones = (data.zones || []).map((z: any) => {
+      const rawZones = data.zonesList || [];
+      const sanitizedZones = rawZones.map((z: any) => {
         const prevZone = prevZones.find((pz) => pz.id === z.id);
-        const blocks = (z.blocks || []).map((b: any) => {
-          // Restore local item_overrides (e.g. mute toggles) that aren't persisted to backend yet
-          const prevBlock = prevZone?.blocks?.find((pb) => pb.id === b.id);
+        const rawBlocks = z.blocksList || [];
+        const blocks = rawBlocks.map((b: any) => {
+          const prevBlock = prevZone?.blocksList?.find((pb) => pb.id === b.id);
           return {
             ...b,
-            item_overrides: prevBlock?.item_overrides || b.item_overrides || [],
+            id: b.id,
+            zoneId: b.zoneId || b.zone_id,
+            playlistId: b.playlistId || '',
+            mediaItemId: b.mediaItemId || '',
+            playlist: b.playlist,
+            mediaItem: b.mediaItem,
+            startTimeSeconds: b.startTimeSeconds ?? 0,
+            durationSeconds: b.durationSeconds ?? 10,
+            transitionType: b.transitionType || 'none',
+            orderIndex: b.orderIndex ?? b.position ?? 0,
+            itemOverridesList: prevBlock?.itemOverridesList || (b.itemOverridesList || []).map((o: any) => ({
+              id: o.id,
+              zonePlaylistId: o.zonePlaylistId || o.zone_playlist_id,
+              playlistItemId: o.playlistItemId,
+              isMuted: o.isMuted ?? false,
+            })),
           };
         });
         return {
           ...z,
+          id: z.id,
+          layoutId: z.layoutId || params.id,
+          name: z.name,
           x: Number(z.x) || 0,
           y: Number(z.y) || 0,
           width: Number(z.width) || 200,
           height: Number(z.height) || 200,
-          z_index: Number(z.z_index) || 1,
-          blocks,
+          zIndex: Number(z.zIndex) || 1,
+          backgroundColor: z.backgroundColor || '',
+          blocksList: blocks,
         };
       });
       setZones(sanitizedZones);
@@ -404,14 +451,17 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
     if (!layout) return;
     const newZone: Zone = {
       id: `z-${Date.now()}`,
-      layout_id: layout.id,
+      layoutId: layout.id,
       name: `Kotak Zona ${zones.length + 1}`,
       x: 100,
       y: 100,
-      width: Math.round(layout.canvas_width * 0.4),
-      height: Math.round(layout.canvas_height * 0.4),
-      z_index: zones.length + 1,
-      blocks: [],
+      width: Math.round(layout.canvasWidth * 0.4),
+      height: Math.round(layout.canvasHeight * 0.4),
+      zIndex: zones.length + 1,
+      blocksList: [],
+      backgroundColor: '#1e293b',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     setZones([...zones, newZone]);
     setSelectedZoneId(newZone.id);
@@ -431,8 +481,8 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
   const updateSelectedZone = (field: keyof Zone, value: any) => {
     if (!selectedZoneId) return;
 
-    if (field === 'blocks') {
-      const currentBlocks = zones.find(z => z.id === selectedZoneId)?.blocks || [];
+    if (field === 'blocksList') {
+      const currentBlocks = zones.find(z => z.id === selectedZoneId)?.blocksList || [];
       const newBlocks = (value || []) as any[];
       const newBlockIds = newBlocks.map(b => b.id);
       const removedBlocks = currentBlocks.filter(b => !newBlockIds.includes(b.id) && !b.id.startsWith('temp-'));
@@ -459,8 +509,8 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
   };
 
   const maxContentEnd = zones.reduce((max, z) => {
-    const zoneMax = (z.blocks || []).reduce((bMax, b) => {
-      const bEnd = (b.start_time_seconds + b.duration_seconds) * pxPerSecond;
+    const zoneMax = (z.blocksList || []).reduce((bMax, b) => {
+      const bEnd = (b.startTimeSeconds + b.durationSeconds) * pxPerSecond;
       return Math.max(bMax, bEnd);
     }, 0);
     return Math.max(max, zoneMax);
@@ -514,8 +564,8 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
 
   const isZoneActive = (zone: Zone, currentPos = playheadPosition) => {
     const currentSec = currentPos / pxPerSecond;
-    return (zone.blocks || []).some(b => 
-      currentSec >= b.start_time_seconds && currentSec < b.start_time_seconds + b.duration_seconds
+    return (zone.blocksList || []).some(b => 
+      currentSec >= b.startTimeSeconds && currentSec < b.startTimeSeconds + b.durationSeconds
     );
   };
 
@@ -529,9 +579,9 @@ export function LayoutEditorProvider({ children }: { children: ReactNode }) {
   const zoomFit = () => setZoomLevel(1.0);
 
 
-  const scale = layout ? (BASE_CANVAS_PX * zoomLevel) / layout.canvas_width : 1;
+  const scale = layout ? (BASE_CANVAS_PX * zoomLevel) / layout.canvasWidth : 1;
   const canvasDisplayWidth = BASE_CANVAS_PX * zoomLevel;
-  const previewHeight = layout ? layout.canvas_height * scale : 1;
+  const previewHeight = layout ? layout.canvasHeight * scale : 1;
 
   const contextValue: LayoutEditorContextType = {
     layout,

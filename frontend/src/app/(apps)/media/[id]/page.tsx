@@ -45,8 +45,8 @@ export default function ViewMediaPage() {
   }, [params.id, router]);
 
   const handleCopyUrl = () => {
-    if (!media?.public_url) return;
-    navigator.clipboard.writeText(media.public_url);
+    if (!media?.publicUrl) return;
+    navigator.clipboard.writeText(media.publicUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -72,7 +72,7 @@ export default function ViewMediaPage() {
               {media.name}
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px', fontFamily: 'monospace' }}>
-              File: {media.original_filename}
+              File: {media.originalFilename}
             </p>
           </div>
         </div>
@@ -98,12 +98,12 @@ export default function ViewMediaPage() {
                 fontWeight: 700,
                 padding: '3px 8px',
                 borderRadius: '6px',
-                backgroundColor: media.media_type === 2 ? 'rgba(6, 182, 212, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                color: media.media_type === 2 ? 'var(--accent-cyan)' : 'var(--accent-emerald)',
-                border: `1px solid ${media.media_type === 2 ? 'rgba(6, 182, 212, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
+                backgroundColor: media.mediaType === 2 ? 'rgba(6, 182, 212, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                color: media.mediaType === 2 ? 'var(--accent-cyan)' : 'var(--accent-emerald)',
+                border: `1px solid ${media.mediaType === 2 ? 'rgba(6, 182, 212, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
               }}
             >
-              {media.media_type === 2 ? '🎬 Video MP4' : media.media_type === 3 ? '🌐 Web URL' : '🖼️ Gambar'}
+              {media.mediaType === 2 ? '🎬 Video MP4' : media.mediaType === 3 ? '🌐 Web URL' : '🖼️ Gambar'}
             </span>
           </div>
 
@@ -119,7 +119,7 @@ export default function ViewMediaPage() {
               <span>{copied ? 'Tersalin!' : 'Salin URL'}</span>
             </button>
             <a
-              href={media.public_url}
+              href={media.publicUrl}
               target="_blank"
               rel="noreferrer"
               className="btn btn-outline"
@@ -158,18 +158,18 @@ export default function ViewMediaPage() {
                 Pratinjau Visual Tidak Dapat Dimuat
               </div>
               <p style={{ color: '#94a3b8', fontSize: '0.8125rem', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-                {media.public_url.startsWith('blob:')
+                {media.publicUrl.startsWith('blob:')
                   ? 'Tautan ini sebelumnya tersimpan sebagai memori sementara (blob:) dan telah kedaluwarsa setelah refresh. Silakan unggah berkas baru agar tersimpan permanen di server.'
-                  : `Berkas pada alamat "${media.public_url}" tidak dapat diakses atau tidak ditemukan.`}
+                  : `Berkas pada alamat "${media.publicUrl}" tidak dapat diakses atau tidak ditemukan.`}
               </p>
               <Link href="/media/create" className="btn btn-primary" style={{ fontSize: '0.8125rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                 <UploadCloud size={16} />
                 <span>Unggah Media Baru</span>
               </Link>
             </div>
-          ) : media.media_type === 2 ? (
+          ) : media.mediaType === 2 ? (
             <video
-              src={media.public_url}
+              src={media.publicUrl}
               controls
               autoPlay
               muted
@@ -177,15 +177,15 @@ export default function ViewMediaPage() {
               onError={() => setMediaLoadError(true)}
               style={{ maxWidth: '100%', maxHeight: '500px', objectFit: 'contain' }}
             />
-          ) : media.media_type === 3 ? (
+          ) : media.mediaType === 3 ? (
             <iframe
-              src={media.public_url}
+              src={media.publicUrl}
               title={media.name}
               style={{ width: '100%', height: '460px', border: 'none' }}
             />
           ) : (
             <img
-              src={media.public_url}
+              src={media.publicUrl}
               alt={media.name}
               onError={() => setMediaLoadError(true)}
               style={{ maxWidth: '100%', maxHeight: '500px', objectFit: 'contain' }}
@@ -199,10 +199,10 @@ export default function ViewMediaPage() {
         <div className="card-elevated" style={{ padding: '18px' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>TIPE & FORMAT</div>
           <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '6px' }}>
-            {media.mime_type || 'video/mp4'}
+            {media.mimeType || 'video/mp4'}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Durasi: {media.duration_seconds > 0 ? `${media.duration_seconds} detik` : 'Statis'}
+            Durasi: {media.durationSeconds > 0 ? `${media.durationSeconds} detik` : 'Statis'}
           </div>
         </div>
 
@@ -219,10 +219,10 @@ export default function ViewMediaPage() {
         <div className="card-elevated" style={{ padding: '18px' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>UKURAN FILE</div>
           <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '6px' }}>
-            {(media.file_size_bytes / (1024 * 1024)).toFixed(2)} MB
+            {(media.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {media.file_size_bytes.toLocaleString()} bytes
+            {media.fileSizeBytes.toLocaleString()} bytes
           </div>
         </div>
       </div>
@@ -249,7 +249,7 @@ export default function ViewMediaPage() {
                 wordBreak: 'break-all',
               }}
             >
-              {media.sha256_hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}
+              {media.sha256Hash || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}
             </div>
           </div>
 
@@ -269,7 +269,7 @@ export default function ViewMediaPage() {
                 wordBreak: 'break-all',
               }}
             >
-              {media.public_url}
+              {media.publicUrl}
             </div>
           </div>
         </div>

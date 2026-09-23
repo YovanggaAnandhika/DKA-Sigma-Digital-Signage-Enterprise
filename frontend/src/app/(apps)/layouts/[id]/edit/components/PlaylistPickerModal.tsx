@@ -29,25 +29,28 @@ export default function PlaylistPickerModal() {
     const pl = availablePlaylists.find(p => p.id === plId);
     
     // Calculate the start time of the new block by summing all previous block durations
-    const currentBlocks = targetZone.blocks || [];
+    const currentBlocks = targetZone.blocksList || [];
     let start_time_seconds = 0;
     for (const b of currentBlocks) {
-      start_time_seconds += (b.duration_seconds || 10);
+      start_time_seconds += (b.durationSeconds || 10);
     }
     
-    const duration_seconds = pl?.total_duration_seconds || 10;
+    const duration_seconds = pl?.totalDurationSeconds || 10;
 
-    const newBlock = {
+    const newBlock: any = {
       id: 'temp-' + Date.now(),
-      zone_id: targetZone.id,
-      playlist_id: plId,
-      start_time_seconds,
-      duration_seconds,
-      transition_type: 'none',
-      order_index: currentBlocks.length
+      zoneId: targetZone.id,
+      playlistId: plId,
+      mediaItemId: '',
+      startTimeSeconds: start_time_seconds,
+      durationSeconds: duration_seconds,
+      transitionType: 'none',
+      orderIndex: currentBlocks.length,
+      itemOverridesList: [],
+      createdAt: new Date().toISOString(),
     };
     // Append block
-    updateSelectedZone('blocks', [...currentBlocks, newBlock]);
+    updateSelectedZone('blocksList', [...currentBlocks, newBlock]);
     handleClose();
   };
 
@@ -118,10 +121,10 @@ export default function PlaylistPickerModal() {
 
             {/* Playlist Cards */}
             {filteredPlaylists.map(pl => {
-              const isSelected = targetZone.blocks?.some(b => b.playlist_id === pl.id) || false;
-              const firstItem = pl.items?.[0];
-              const firstMedia = firstItem ? mediaList.find(m => m.id === firstItem.media_item_id) : null;
-              const isVideo = firstMedia?.media_type === 2;
+              const isSelected = targetZone.blocksList?.some(b => b.playlistId === pl.id) || false;
+              const firstItem = pl.itemsList?.[0];
+              const firstMedia = firstItem ? mediaList.find(m => m.id === firstItem.mediaItemId) : null;
+              const isVideo = firstMedia?.mediaType === 2;
 
               return (
                 <div 
@@ -149,8 +152,8 @@ export default function PlaylistPickerModal() {
                     width: '64px', height: '48px', borderRadius: '6px', backgroundColor: '#0f172a', 
                     display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0
                   }}>
-                    {firstMedia?.public_url && !isVideo ? (
-                      <img src={firstMedia.public_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {firstMedia?.publicUrl && !isVideo ? (
+                      <img src={firstMedia.publicUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : isVideo ? (
                       <Film size={16} color="var(--accent-amber)" />
                     ) : (
@@ -163,10 +166,10 @@ export default function PlaylistPickerModal() {
                     </h4>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                       <span style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                        <Film size={10} /> {pl.items?.length || 0}
+                        <Film size={10} /> {pl.itemsList?.length || 0}
                       </span>
                       <span style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                        <Clock size={10} /> {pl.total_duration_seconds || 0}s
+                        <Clock size={10} /> {pl.totalDurationSeconds || 0}s
                       </span>
                     </div>
                   </div>

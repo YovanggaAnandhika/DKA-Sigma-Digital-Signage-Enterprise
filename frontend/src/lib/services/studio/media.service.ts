@@ -17,15 +17,15 @@ export function getMediaStreamUrl(filename: string): string {
  *    (backend stores files as {timestamp}_{sanitized_name}, not original_filename)
  */
 export function getMediaDisplayUrl(item: MediaItem): string {
-  if (item.public_url && item.public_url.startsWith('/api/assets/')) {
-    return item.public_url;
+  if (item.publicUrl && item.publicUrl.startsWith('/api/assets/')) {
+    return item.publicUrl;
   }
-  if (item.public_url && item.public_url.startsWith('http')) {
-    return item.public_url;
+  if (item.publicUrl && item.publicUrl.startsWith('http')) {
+    return item.publicUrl;
   }
   // Use file_path basename — this is the actual stored filename on backend
   // e.g. file_path = "/storage/media/1724490720000_vidssave.com_Hi-Tech_Intro_720P.mp4"
-  const storedFilename = item.file_path?.split('/').pop() || '';
+  const storedFilename = item.filePath?.split('/').pop() || '';
   if (storedFilename) return getMediaStreamUrl(storedFilename);
   return '';
 }
@@ -40,9 +40,11 @@ export async function getMedia(params?: { search?: string; page?: number; limit?
   };
 
   const result = await invokeApi<any>('/api/grpc/media/ListMedia', payload);
+  const data: MediaItem[] = result.itemsList || [];
+
   return {
-    data: result.items || [],
-    total: result.pagination?.total_items || result.items?.length || 0
+    data,
+    total: result.pagination?.totalItems ?? data.length
   };
 }
 
@@ -53,8 +55,12 @@ export async function getMediaItem(id: string): Promise<MediaItem> {
   return m as MediaItem;
 }
 
-export async function createMedia(data: { name: string; original_filename: string; file_path: string; public_url: string; file_size_bytes: number; mime_type: string; sha256_hash: string; media_type: number; width?: number; height?: number; duration_seconds?: number }): Promise<MediaItem> {
-  const result = await invokeApi<any>('/api/grpc/media/CreateMedia', data);
+export async function createMedia(data: { name: string; originalFilename: string; filePath: string; publicUrl: string; fileSizeBytes: number; mimeType: string; sha256Hash: string; mediaType: number; width?: number; height?: number; durationSeconds?: number }): Promise<MediaItem> {
+  const result = await invokeApi<any>('/api/grpc/media/CreateMedia', {
+    ...data,
+    durationSeconds: data.durationSeconds,
+    duration_seconds: data.durationSeconds,
+  });
   const mediaId = result.media_id || result.mediaId;
   if (!mediaId) throw new Error('Gagal mendapatkan ID media setelah pembuatan');
   return getMediaItem(mediaId);
@@ -75,17 +81,17 @@ export interface UploadChunkResult {
   upload_id: string;
   chunk_index: number;
   is_completed: boolean;
-  file_path: string;
-  public_url: string;
-  sha256_hash: string;
-  file_size_bytes: number;
+  filePath: string;
+  publicUrl: string;
+  sha256Hash: string;
+  fileSizeBytes: number;
   error_message: string;
 }
 
 export async function uploadMediaChunk(data: {
   upload_id: string;
-  original_filename: string;
-  mime_type: string;
+  originalFilename: string;
+  mimeType: string;
   chunk_index: number;
   total_chunks: number;
   chunk_data: Uint8Array;
@@ -101,8 +107,8 @@ export async function uploadMediaChunk(data: {
 
   const payload = {
     uploadId: data.upload_id,
-    originalFilename: data.original_filename,
-    mimeType: data.mime_type,
+    originalFilename: data.originalFilename,
+    mimeType: data.mimeType,
     chunkIndex: data.chunk_index,
     totalChunks: data.total_chunks,
     chunkData: chunkDataB64,
@@ -115,10 +121,10 @@ export async function uploadMediaChunk(data: {
     upload_id: result.upload_id || result.uploadId || '',
     chunk_index: result.chunk_index ?? result.chunkIndex ?? 0,
     is_completed: result.is_completed ?? result.isCompleted ?? false,
-    file_path: result.file_path || result.filePath || '',
-    public_url: result.public_url || result.publicUrl || '',
-    sha256_hash: result.sha256_hash || result.sha256Hash || '',
-    file_size_bytes: result.file_size_bytes ?? result.fileSizeBytes ?? 0,
+    filePath: result.filePath || result.filePath || '',
+    publicUrl: result.publicUrl || result.publicUrl || '',
+    sha256Hash: result.sha256Hash || result.sha256Hash || '',
+    fileSizeBytes: result.fileSizeBytes ?? result.fileSizeBytes ?? 0,
     error_message: result.error_message || result.errorMessage || ''
   };
 }
@@ -126,7 +132,7 @@ export async function uploadMediaChunk(data: {
 export async function uploadFileViaGrpc(
   file: File,
   onProgress?: (percent: number) => void
-): Promise<{ public_url: string; sha256_hash: string; file_path: string; file_size_bytes: number }> {
+): Promise<{ publicUrl: string; sha256Hash: string; filePath: string; fileSizeBytes: number }> {
   const CHUNK_SIZE = 512 * 1024; // 512 KB per chunk
   const totalBytes = file.size;
   const totalChunks = Math.max(1, Math.ceil(totalBytes / CHUNK_SIZE));
@@ -143,8 +149,8 @@ export async function uploadFileViaGrpc(
 
     lastResult = await uploadMediaChunk({
       upload_id: uploadId,
-      original_filename: file.name,
-      mime_type: file.type || 'application/octet-stream',
+      originalFilename: file.name,
+      mimeType: file.type || 'application/octet-stream',
       chunk_index: chunkIndex,
       total_chunks: totalChunks,
       chunk_data: chunkData,
@@ -166,14 +172,14 @@ export async function uploadFileViaGrpc(
   }
 
   return {
-    public_url: lastResult.public_url,
-    sha256_hash: lastResult.sha256_hash,
-    file_path: lastResult.file_path,
-    file_size_bytes: lastResult.file_size_bytes,
+    publicUrl: lastResult.publicUrl,
+    sha256Hash: lastResult.sha256Hash,
+    filePath: lastResult.filePath,
+    fileSizeBytes: lastResult.fileSizeBytes,
   };
 }
 
-export async function getMediaFile(filename: string): Promise<{ success: boolean; filename: string; mime_type: string; file_data: Uint8Array }> {
+export async function getMediaFile(filename: string): Promise<{ success: boolean; filename: string; mimeType: string; file_data: Uint8Array }> {
   const result = await invokeApi<any>('/api/grpc/media/GetMediaFile', { filename });
 
   // Convert base64 back to Uint8Array (field is now snake_case after normalization)
@@ -187,7 +193,7 @@ export async function getMediaFile(filename: string): Promise<{ success: boolean
   return {
     success: result.success,
     filename: result.filename,
-    mime_type: result.mime_type || result.mimeType || '',
+    mimeType: result.mimeType || result.mimeType || '',
     file_data: bytes,
   };
 }

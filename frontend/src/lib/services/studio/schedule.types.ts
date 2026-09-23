@@ -1,19 +1,20 @@
 export interface ScheduleEvent {
   id: string;
-  schedule_id: string;
-  layout_id: string;
-  layout_name: string;
-  start_time: string;
-  end_time: string;
-  days_of_week: string;
-  created_at: string;
+  scheduleId: string;
+  layoutId: string;
+  layoutName: string;
+  startTime: string;
+  endTime: string;
+  daysOfWeek: string;
+  createdAt: string;
 }
 
 export interface Schedule {
   id: string;
   name: string;
-  description?: string;
-  created_at: string;
-  updated_at: string;
-  events?: ScheduleEvent[];
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+  eventsList: ScheduleEvent[];
 }
+

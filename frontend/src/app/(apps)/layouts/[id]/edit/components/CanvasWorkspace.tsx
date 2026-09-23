@@ -166,7 +166,7 @@ export default function CanvasWorkspace() {
           <MousePointer2 size={14} /> Workspace
         </span>
         <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '4px 10px', borderRadius: '6px', backgroundColor: '#10b981', color: '#fff', boxShadow: '0 1px 3px rgba(16,185,129,0.3)', pointerEvents: 'auto' }}>
-          {layout.canvas_width} × {layout.canvas_height} px
+          {layout.canvasWidth} × {layout.canvasHeight} px
         </span>
 
         {/* Spacer */}
@@ -251,8 +251,8 @@ export default function CanvasWorkspace() {
 
           // Find active block
           const currentSec = playheadPosition / (pxPerSecond || 20);
-          const activeBlock = (z.blocks || []).find(b => 
-            currentSec >= b.start_time_seconds && currentSec < b.start_time_seconds + b.duration_seconds
+          const activeBlock = (z.blocksList || []).find(b => 
+            currentSec >= b.startTimeSeconds && currentSec < b.startTimeSeconds + b.durationSeconds
           );
 
           let activeMedia: any = null;
@@ -261,51 +261,51 @@ export default function CanvasWorkspace() {
           let absoluteStartSec = 0;
 
           if (activeBlock) {
-            if (activeBlock.media_item_id) {
-              activeMedia = mediaList.find((m) => m.id === activeBlock.media_item_id);
-              const blockLocalSec = currentSec - activeBlock.start_time_seconds;
-              absoluteStartSec = activeBlock.start_time_seconds;
-              const d = activeMedia?.duration_seconds || 10;
+            if (activeBlock.mediaItemId) {
+              activeMedia = mediaList.find((m) => m.id === activeBlock.mediaItemId);
+              const blockLocalSec = currentSec - activeBlock.startTimeSeconds;
+              absoluteStartSec = activeBlock.startTimeSeconds;
+              const d = activeMedia?.durationSeconds || 10;
               itemOffsetSec = d > 0 ? blockLocalSec % d : blockLocalSec;
             } else {
-              const assignedPl = availablePlaylists.find((p) => p.id === activeBlock.playlist_id);
-              const items = assignedPl?.items || [];
+              const assignedPl = availablePlaylists.find((p) => p.id === activeBlock.playlistId);
+              const items = assignedPl?.itemsList || [];
 
               if (items.length > 0) {
                 currentItem = items[0];
-                const blockLocalSec = currentSec - activeBlock.start_time_seconds;
-                const totalDur = items.reduce((sum, it) => sum + (it.duration_seconds || 10), 0);
+                const blockLocalSec = currentSec - activeBlock.startTimeSeconds;
+                const totalDur = items.reduce((sum, it) => sum + (it.durationSeconds || 10), 0);
 
                   if (items.length > 1 && totalDur > 0) {
                   const loopSec = blockLocalSec % totalDur;
                   let acc = 0;
                   for (const it of items) {
-                    const d = it.duration_seconds || 10;
+                    const d = it.durationSeconds || 10;
                     if (loopSec >= acc && loopSec < acc + d) {
                       currentItem = it;
                       itemOffsetSec = loopSec - acc;
-                      absoluteStartSec = activeBlock.start_time_seconds + Math.floor(blockLocalSec / totalDur) * totalDur + acc;
+                      absoluteStartSec = activeBlock.startTimeSeconds + Math.floor(blockLocalSec / totalDur) * totalDur + acc;
                       break;
                     }
                     acc += d;
                   }
                 } else if (items.length === 1) {
-                  const d = currentItem.duration_seconds || 10;
+                  const d = currentItem.durationSeconds || 10;
                   itemOffsetSec = d > 0 ? blockLocalSec % d : blockLocalSec;
-                  absoluteStartSec = activeBlock.start_time_seconds + Math.floor(blockLocalSec / d) * d;
+                  absoluteStartSec = activeBlock.startTimeSeconds + Math.floor(blockLocalSec / d) * d;
                 }
-                activeMedia = mediaList.find((m) => m.id === currentItem.media_item_id);
+                activeMedia = mediaList.find((m) => m.id === currentItem.mediaItemId);
               }
             }
           }
           // Resolve mute state: check item_overrides first (per-block toggle in timeline)
           let isCurrentItemMuted = false;
           if (activeBlock) {
-            const overrideItemId = activeBlock.media_item_id ? activeBlock.id : currentItem?.id;
-            const override = (activeBlock.item_overrides || []).find(
-              (o: any) => o.playlist_item_id === overrideItemId
+            const overrideItemId = activeBlock.mediaItemId ? activeBlock.id : currentItem?.id;
+            const override = (activeBlock.itemOverridesList || []).find(
+              (o: any) => o.playlistItemId === overrideItemId
             );
-            isCurrentItemMuted = override ? !!override.is_muted : !!(currentItem?.is_muted);
+            isCurrentItemMuted = override ? !!override.isMuted : !!(currentItem?.isMuted);
           }
 
 
@@ -387,7 +387,7 @@ export default function CanvasWorkspace() {
                 boxShadow: isSelected ? '0 0 0 1px rgba(56, 189, 248, 0.5), 0 4px 12px rgba(0,0,0,0.4)' : 'none',
                 opacity: hiddenZones.includes(z.id) ? 0 : (isSelected ? 1 : active ? 1 : 0.35),
                 pointerEvents: hiddenZones.includes(z.id) ? 'none' : 'auto',
-                zIndex: isSelected ? 999 : z.z_index || 1,
+                zIndex: isSelected ? 999 : z.zIndex || 1,
                 userSelect: 'none',
               }}
               resizeHandleStyles={{
@@ -417,10 +417,10 @@ export default function CanvasWorkspace() {
               >
                 {/* Visual Media Rendering */}
                 <div style={{ opacity: active ? 1 : 0, transition: 'opacity 0.2s', width: '100%', height: '100%', position: 'absolute', inset: 0 }}>
-                  {activeMedia?.public_url && (
-                    activeMedia.media_type === 2 ? (
+                  {activeMedia?.publicUrl && (
+                    activeMedia.mediaType === 2 ? (
                       <SynchronizedVideo
-                        src={activeMedia.public_url}
+                        src={activeMedia.publicUrl}
                         isPlaying={isPlaying}
                         active={active}
                         isMuted={isMuted || isCurrentItemMuted}
@@ -430,7 +430,7 @@ export default function CanvasWorkspace() {
                       />
                     ) : (
                       <img
-                        src={activeMedia.public_url}
+                        src={activeMedia.publicUrl}
                         alt={activeMedia.name || z.name}
                         style={{
                           position: 'absolute',
@@ -449,7 +449,7 @@ export default function CanvasWorkspace() {
                 </div>
 
                 {/* Non-intrusive metadata rendering */}
-                {activeMedia?.public_url ? (
+                {activeMedia?.publicUrl ? (
                   <>
                     {/* Unobtrusive minimal corner tag */}
                     <div
@@ -482,7 +482,7 @@ export default function CanvasWorkspace() {
                       >
                         {z.name}
                       </span>
-                      {(z.blocks && z.blocks.length > 0) && (
+                      {(z.blocksList && z.blocksList.length > 0) && (
                         <span
                           style={{
                             fontSize: '0.5625rem',
@@ -493,10 +493,10 @@ export default function CanvasWorkspace() {
                             paddingLeft: '4px',
                           }}
                         >
-                          🎬 {z.blocks[0].media_item_id ? 'Media' : (availablePlaylists.find(p => p.id === z.blocks[0].playlist_id)?.name || 'Playlist')}
+                          🎬 {z.blocksList[0].mediaItemId ? 'Media' : (availablePlaylists.find(p => p.id === z.blocksList[0].playlistId)?.name || 'Playlist')}
                         </span>
                       )}
-                      {activeMedia?.media_type === 2 && (
+                      {activeMedia?.mediaType === 2 && (
                         <span
                           style={{
                             fontSize: '0.5625rem',
@@ -537,7 +537,7 @@ export default function CanvasWorkspace() {
                     )}
                   </>
                 ) : (
-                  /* Fallback centered label for empty zones without media */
+                  /* Fallback centered label for empty zonesList without media */
                   <>
                     <div
                       style={{

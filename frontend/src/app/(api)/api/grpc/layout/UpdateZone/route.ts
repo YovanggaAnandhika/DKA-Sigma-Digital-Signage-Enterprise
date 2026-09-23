@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     const client = new LayoutServiceClient(getGrpcHost(), getGrpcCredentials());
     
     const request = new UpdateZoneRequest();
-    if(body.id) request.setId(body.id); if(body.name) request.setName(body.name); if(body.x !== undefined) request.setX(body.x); if(body.y !== undefined) request.setY(body.y); if(body.width !== undefined) request.setWidth(body.width); if(body.height !== undefined) request.setHeight(body.height); if(body.z_index !== undefined) request.setZIndex(body.z_index);
+    if(body.id) request.setId(body.id); if(body.name) request.setName(body.name); if(body.x !== undefined) request.setX(body.x); if(body.y !== undefined) request.setY(body.y); if(body.width !== undefined) request.setWidth(body.width); if(body.height !== undefined) request.setHeight(body.height); if(body.zIndex !== undefined) request.setZIndex(body.zIndex);
 
     return new Promise<NextResponse>((resolve) => {
       client.updateZone(request, getGrpcMetadata(token), (error: any, response: any) => {

@@ -32,8 +32,8 @@ export default function CreateLayoutPage() {
 
       const layout = await api.createLayout({
         name,
-        canvas_width: width,
-        canvas_height: height,
+        canvasWidth: width,
+        canvasHeight: height,
       });
 
       router.push(`/layouts/${layout.id}/edit`);

@@ -11,8 +11,8 @@ export async function POST(req: NextRequest) {
 
     const request = new SetPlaylistItemOverrideRequest();
     if (body.zone_playlist_id) request.setZonePlaylistId(body.zone_playlist_id);
-    if (body.playlist_item_id) request.setPlaylistItemId(body.playlist_item_id);
-    if (body.is_muted !== undefined) request.setIsMuted(body.is_muted);
+    if (body.playlistItemId) request.setPlaylistItemId(body.playlistItemId);
+    if (body.isMuted !== undefined) request.setIsMuted(body.isMuted);
 
     return new Promise<NextResponse>((resolve) => {
       client.setPlaylistItemOverride(request, getGrpcMetadata(token), (error: any, response: any) => {

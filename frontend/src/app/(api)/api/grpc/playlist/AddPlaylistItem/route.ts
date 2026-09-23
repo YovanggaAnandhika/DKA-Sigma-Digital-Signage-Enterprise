@@ -10,10 +10,10 @@ export async function POST(req: NextRequest) {
     const client = new PlaylistServiceClient(getGrpcHost(), getGrpcCredentials());
     
     const request = new AddPlaylistItemRequest();
-    if (body.playlist_id) request.setPlaylistId(body.playlist_id);
-    if (body.media_item_id) request.setMediaItemId(body.media_item_id);
-    if (body.duration_seconds !== undefined) request.setDurationSeconds(body.duration_seconds);
-    if (body.transition_type) request.setTransitionType(body.transition_type);
+    if (body.playlistId) request.setPlaylistId(body.playlistId);
+    if (body.mediaItemId) request.setMediaItemId(body.mediaItemId);
+    if (body.durationSeconds !== undefined) request.setDurationSeconds(body.durationSeconds);
+    if (body.transitionType) request.setTransitionType(body.transitionType);
     if (body.position !== undefined) request.setPosition(body.position);
 
     return new Promise<NextResponse>((resolve) => {

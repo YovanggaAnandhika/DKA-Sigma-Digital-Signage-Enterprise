@@ -11,16 +11,16 @@ export async function POST(req: NextRequest) {
     
     const request = new CreateMediaRequest();
     if (body.name) request.setName(body.name);
-    if (body.original_filename) request.setOriginalFilename(body.original_filename);
-    if (body.file_path) request.setFilePath(body.file_path);
-    if (body.public_url) request.setPublicUrl(body.public_url);
-    if (body.file_size_bytes) request.setFileSizeBytes(body.file_size_bytes);
-    if (body.mime_type) request.setMimeType(body.mime_type);
-    if (body.sha256_hash) request.setSha256Hash(body.sha256_hash);
-    if (body.media_type) request.setMediaType(body.media_type);
+    if (body.originalFilename) request.setOriginalFilename(body.originalFilename);
+    if (body.filePath) request.setFilePath(body.filePath);
+    if (body.publicUrl) request.setPublicUrl(body.publicUrl);
+    if (body.fileSizeBytes) request.setFileSizeBytes(body.fileSizeBytes);
+    if (body.mimeType) request.setMimeType(body.mimeType);
+    if (body.sha256Hash) request.setSha256Hash(body.sha256Hash);
+    if (body.mediaType) request.setMediaType(body.mediaType);
     if (body.width) request.setWidth(body.width);
     if (body.height) request.setHeight(body.height);
-    if (body.duration_seconds) request.setDurationSeconds(body.duration_seconds);
+    if (body.durationSeconds) request.setDurationSeconds(body.durationSeconds);
 
     return new Promise<NextResponse>((resolve) => {
       client.createMedia(request, getGrpcMetadata(token), (error, response) => {

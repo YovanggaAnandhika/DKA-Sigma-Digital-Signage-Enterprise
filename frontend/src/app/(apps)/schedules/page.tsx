@@ -123,7 +123,7 @@ export default function SchedulesPage() {
                       {s.name}
                     </td>
                     <td>{s.description || '-'}</td>
-                    <td>{s.events ? s.events.length : 0} Event(s)</td>
+                    <td>{s.eventsList ? s.eventsList.length : 0} Event(s)</td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                         <Link href={`/schedules/${s.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit">

@@ -42,7 +42,7 @@ export default function ViewPlaylistPage() {
     );
   }
 
-  const totalDuration = playlist.items?.reduce((acc, i) => acc + i.duration_seconds, 0) || 0;
+  const totalDuration = playlist.itemsList?.reduce((acc, i) => acc + i.durationSeconds, 0) || 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -56,7 +56,7 @@ export default function ViewPlaylistPage() {
               {playlist.name}
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              {playlist.description || 'Tidak ada deskripsi'} &bull; {playlist.items?.length || 0} Item Media ({totalDuration} detik total)
+              {playlist.description || 'Tidak ada deskripsi'} &bull; {playlist.itemsList?.length || 0} Item Media ({totalDuration} detik total)
             </p>
           </div>
         </div>
@@ -88,16 +88,16 @@ export default function ViewPlaylistPage() {
               </tr>
             </thead>
             <tbody>
-              {(!playlist.items || playlist.items.length === 0) ? (
+              {(!playlist.itemsList || playlist.itemsList.length === 0) ? (
                 <tr>
                   <td colSpan={5} style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
                     Belum ada item media dalam playlist ini. Klik &quot;Edit Susunan Item&quot; untuk menambahkan.
                   </td>
                 </tr>
               ) : (
-                playlist.items.map((item, idx) => {
-                  const matchedMedia = mediaList.find((m) => m.id === item.media_item_id);
-                  const isVideo = matchedMedia?.media_type === 2;
+                playlist.itemsList.map((item, idx) => {
+                  const matchedMedia = mediaList.find((m) => m.id === item.mediaItemId);
+                  const isVideo = matchedMedia?.mediaType === 2;
 
                   return (
                     <tr key={item.id}>
@@ -118,9 +118,9 @@ export default function ViewPlaylistPage() {
                               flexShrink: 0,
                             }}
                           >
-                            {matchedMedia?.public_url && !isVideo ? (
+                            {matchedMedia?.publicUrl && !isVideo ? (
                               <img
-                                src={matchedMedia.public_url}
+                                src={matchedMedia.publicUrl}
                                 alt={matchedMedia.name}
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                 onError={(e) => {
@@ -135,23 +135,23 @@ export default function ViewPlaylistPage() {
                           </div>
                           <div>
                             <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                              {matchedMedia?.name || item.media_name || `Media ${item.media_item_id.substring(0, 8)}...`}
+                              {matchedMedia?.name || item.mediaItem?.name || `Media ${item.mediaItemId.substring(0, 8)}...`}
                             </div>
                             <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                              ID: {item.media_item_id.substring(0, 16)}...
+                              ID: {item.mediaItemId.substring(0, 16)}...
                             </div>
                           </div>
                         </div>
                       </td>
                       <td>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--accent-amber)', fontWeight: 600 }}>
-                          <Clock size={12} /> {item.duration_seconds} detik
+                          <Clock size={12} /> {item.durationSeconds} detik
                         </span>
                       </td>
                       <td style={{ textTransform: 'uppercase', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {item.transition_type || 'Fade'}
+                        {item.transitionType || 'Fade'}
                       </td>
-                      <td>Index ke-{item.order_index}</td>
+                      <td>Index ke-{item.position}</td>
                     </tr>
                   );
                 })

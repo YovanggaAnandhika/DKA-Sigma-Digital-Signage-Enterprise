@@ -25,8 +25,9 @@ export async function getPlaylist(id: string): Promise<Playlist> {
 
 export async function createPlaylist(data: { name: string; description?: string; is_shuffle?: boolean }): Promise<Playlist> {
   const result = await invokeApi<any>('/api/grpc/playlist/CreatePlaylist', data);
-  if (!result.playlistId) throw new Error('CreatePlaylist: tidak ada ID yang dikembalikan');
-  return getPlaylist(result.playlistId);
+  const playlistId = result.playlistId || result.id;
+  if (!playlistId) throw new Error('CreatePlaylist: tidak ada ID yang dikembalikan');
+  return getPlaylist(playlistId);
 }
 
 export async function updatePlaylist(id: string, data: { name?: string; description?: string; is_shuffle?: boolean }): Promise<Playlist> {
@@ -39,21 +40,27 @@ export async function deletePlaylist(id: string): Promise<boolean> {
   return true;
 }
 
-export async function addPlaylistItem(data: { playlist_id: string; media_item_id: string; duration_seconds: number; transition_type?: string; position?: number }): Promise<Playlist> {
-  await invokeApi<any>('/api/grpc/playlist/AddPlaylistItem', data);
-  return getPlaylist(data.playlist_id);
+export async function addPlaylistItem(data: { playlistId: string; mediaItemId: string; durationSeconds: number; transitionType?: string; position?: number }): Promise<Playlist> {
+  await invokeApi<any>('/api/grpc/playlist/AddPlaylistItem', {
+    playlistId: data.playlistId,
+    mediaItemId: data.mediaItemId,
+    durationSeconds: data.durationSeconds,
+    transitionType: data.transitionType,
+    position: data.position,
+  });
+  return getPlaylist(data.playlistId);
 }
 
-export async function removePlaylistItem(item_id: string, playlist_id: string): Promise<Playlist> {
+export async function removePlaylistItem(item_id: string, playlistId: string): Promise<Playlist> {
   await invokeApi<any>('/api/grpc/playlist/RemovePlaylistItem', { id: item_id });
-  return getPlaylist(playlist_id);
+  return getPlaylist(playlistId);
 }
 
-export async function updatePlaylistItem(id: string, data: { duration_seconds?: number; transition_type?: string; position?: number; is_muted?: boolean }): Promise<void> {
+export async function updatePlaylistItem(id: string, data: { durationSeconds?: number; transitionType?: string; position?: number; isMuted?: boolean }): Promise<void> {
   await invokeApi<any>('/api/grpc/playlist/UpdatePlaylistItem', { id, ...data });
 }
 
-export async function reorderPlaylistItems(playlist_id: string, item_ids_in_order: string[]): Promise<Playlist> {
-  await invokeApi<any>('/api/grpc/playlist/ReorderPlaylistItems', { playlist_id, item_ids_in_order });
-  return getPlaylist(playlist_id);
+export async function reorderPlaylistItems(playlistId: string, item_ids_in_order: string[]): Promise<Playlist> {
+  await invokeApi<any>('/api/grpc/playlist/ReorderPlaylistItems', { playlistId, item_ids_in_order });
+  return getPlaylist(playlistId);
 }

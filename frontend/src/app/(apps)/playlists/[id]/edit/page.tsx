@@ -23,14 +23,14 @@ export default function EditPlaylistPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    is_shuffle: false,
+    isShuffle: false,
   });
 
   // Form new item data
   const [newItem, setNewItem] = useState({
-    media_item_id: '',
-    duration_seconds: 10,
-    transition_type: 'fade',
+    mediaItemId: '',
+    durationSeconds: 10,
+    transitionType: 'fade',
   });
 
   const fetchPlaylistAndMedia = useCallback(async () => {
@@ -45,15 +45,15 @@ export default function EditPlaylistPage() {
       setFormData({
         name: plData.name,
         description: plData.description || '',
-        is_shuffle: plData.is_shuffle,
+        isShuffle: plData.isShuffle,
       });
       if (mediaRes.data && mediaRes.data.length > 0) {
         const firstMedia = mediaRes.data[0];
         setNewItem((prev) => ({
           ...prev,
-          media_item_id: firstMedia.id,
-          duration_seconds: firstMedia.duration_seconds && firstMedia.duration_seconds > 0
-            ? firstMedia.duration_seconds
+          mediaItemId: firstMedia.id,
+          durationSeconds: firstMedia.durationSeconds && firstMedia.durationSeconds > 0
+            ? firstMedia.durationSeconds
             : 10,
         }));
       }
@@ -73,7 +73,7 @@ export default function EditPlaylistPage() {
     if (typeof window !== 'undefined') {
       try {
         const ch = new BroadcastChannel('dkasigma_studio_events');
-        ch.postMessage({ type: 'playlist_updated', playlist_id: params.id });
+        ch.postMessage({ type: 'playlist_updated', playlistId: params.id });
         ch.close();
       } catch (e) {}
       try {
@@ -100,17 +100,17 @@ export default function EditPlaylistPage() {
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newItem.media_item_id) {
+    if (!newItem.mediaItemId) {
       alert('Pilih media terlebih dahulu');
       return;
     }
     try {
       setAddingItem(true);
       const updated = await api.addPlaylistItem({
-        playlist_id: params.id,
-        media_item_id: newItem.media_item_id,
-        duration_seconds: Number(newItem.duration_seconds) || 10,
-        transition_type: newItem.transition_type,
+        playlistId: params.id,
+        mediaItemId: newItem.mediaItemId,
+        durationSeconds: Number(newItem.durationSeconds) || 10,
+        transitionType: newItem.transitionType,
       });
       setPlaylist(updated);
       setShowAddModal(false);
@@ -156,12 +156,12 @@ export default function EditPlaylistPage() {
       return;
     }
 
-    const newItems = [...(playlist!.items || [])];
+    const newItems = [...(playlist!.itemsList || [])];
     const [dragged] = newItems.splice(draggedItemIdx, 1);
     newItems.splice(idx, 0, dragged);
     
     // Optimistic UI update
-    setPlaylist({ ...playlist!, items: newItems });
+    setPlaylist({ ...playlist!, itemsList: newItems });
     setDragOverIdx(null);
     setDraggedItemIdx(null);
 
@@ -184,7 +184,7 @@ export default function EditPlaylistPage() {
     );
   }
 
-  const totalDuration = playlist.items?.reduce((acc, i) => acc + (i.duration_seconds || 0), 0) || 0;
+  const totalDuration = playlist.itemsList?.reduce((acc, i) => acc + (i.durationSeconds || 0), 0) || 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -256,8 +256,8 @@ export default function EditPlaylistPage() {
                 <input
                   type="checkbox"
                   id="is_shuffle"
-                  checked={formData.is_shuffle}
-                  onChange={(e) => setFormData({ ...formData, is_shuffle: e.target.checked })}
+                  checked={formData.isShuffle}
+                  onChange={(e) => setFormData({ ...formData, isShuffle: e.target.checked })}
                   style={{ width: '16px', height: '16px', cursor: 'pointer' }}
                 />
                 <label htmlFor="is_shuffle" style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }}>
@@ -278,7 +278,7 @@ export default function EditPlaylistPage() {
           <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
               <span style={{ color: 'var(--text-muted)' }}>Total Item Media:</span>
-              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{playlist.items?.length || 0} media</span>
+              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{playlist.itemsList?.length || 0} media</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
               <span style={{ color: 'var(--text-muted)' }}>Total Durasi 1 Putaran:</span>
@@ -292,7 +292,7 @@ export default function EditPlaylistPage() {
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <h2 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Urutan Rotasi Media ({playlist.items?.length || 0})
+                Urutan Rotasi Media ({playlist.itemsList?.length || 0})
               </h2>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                 Media akan diputar berurutan dari atas ke bawah sesuai durasi masing-masing.
@@ -319,7 +319,7 @@ export default function EditPlaylistPage() {
                 </tr>
               </thead>
               <tbody>
-                {(!playlist.items || playlist.items.length === 0) ? (
+                {(!playlist.itemsList || playlist.itemsList.length === 0) ? (
                   <tr>
                     <td colSpan={5} style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
                       <div style={{ marginBottom: '12px' }}>
@@ -337,9 +337,9 @@ export default function EditPlaylistPage() {
                     </td>
                   </tr>
                 ) : (
-                  playlist.items.map((item, idx) => {
-                    const matchedMedia = mediaList.find(m => m.id === item.media_item_id);
-                    const isVideo = matchedMedia?.media_type === 2;
+                  playlist.itemsList.map((item, idx) => {
+                    const matchedMedia = mediaList.find(m => m.id === item.mediaItemId);
+                    const isVideo = matchedMedia?.mediaType === 2;
 
                     return (
                       <tr 
@@ -373,17 +373,17 @@ export default function EditPlaylistPage() {
                                 flexShrink: 0,
                               }}
                             >
-                              {matchedMedia?.public_url && !isVideo ? (
+                              {matchedMedia?.publicUrl && !isVideo ? (
                                 <img
-                                  src={matchedMedia.public_url}
+                                  src={matchedMedia.publicUrl}
                                   alt={matchedMedia.name}
                                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                   onError={(e) => {
                                     (e.target as HTMLElement).style.display = 'none';
                                   }}
                                 />
-                              ) : isVideo && matchedMedia?.public_url ? (
-                                <video src={matchedMedia.public_url} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : isVideo && matchedMedia?.publicUrl ? (
+                                <video src={matchedMedia.publicUrl} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : isVideo ? (
                                 <Film size={18} color="var(--accent-amber)" />
                               ) : (
@@ -392,17 +392,17 @@ export default function EditPlaylistPage() {
                             </div>
                             <div>
                               <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                                {matchedMedia?.name || item.media_name || `Media ${item.media_item_id.substring(0, 8)}...`}
+                                {matchedMedia?.name || item.mediaItem?.name || `Media ${item.mediaItemId.substring(0, 8)}...`}
                               </div>
                               <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                                ID: {item.media_item_id.substring(0, 16)}...
+                                ID: {item.mediaItemId.substring(0, 16)}...
                               </div>
                             </div>
                           </div>
                         </td>
                         <td>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600, color: 'var(--accent-amber)' }}>
-                            <Clock size={13} /> {item.duration_seconds} detik
+                            <Clock size={13} /> {item.durationSeconds} detik
                           </span>
                         </td>
                         <td>
@@ -417,7 +417,7 @@ export default function EditPlaylistPage() {
                               border: '1px solid var(--border-subtle)',
                             }}
                           >
-                            {item.transition_type || 'Fade'}
+                            {item.transitionType || 'Fade'}
                           </span>
                         </td>
                         <td style={{ textAlign: 'right' }}>
@@ -492,16 +492,16 @@ export default function EditPlaylistPage() {
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '16px' }}>
                     {mediaList.map((m) => {
-                      const isSelected = m.id === newItem.media_item_id;
-                      const isVideo = m.media_type === 2;
+                      const isSelected = m.id === newItem.mediaItemId;
+                      const isVideo = m.mediaType === 2;
                       return (
                         <div
                           key={m.id}
                           onClick={() => {
                             setNewItem({
                               ...newItem,
-                              media_item_id: m.id,
-                              duration_seconds: m.duration_seconds > 0 ? m.duration_seconds : 10,
+                              mediaItemId: m.id,
+                              durationSeconds: m.durationSeconds > 0 ? m.durationSeconds : 10,
                             });
                           }}
                           style={{
@@ -517,10 +517,10 @@ export default function EditPlaylistPage() {
                           }}
                         >
                           <div style={{ width: '100%', aspectRatio: '16/9', backgroundColor: '#0f172a', position: 'relative' }}>
-                            {m.public_url && !isVideo ? (
-                              <img src={m.public_url} alt={m.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            ) : isVideo && m.public_url ? (
-                              <video src={m.public_url} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            {m.publicUrl && !isVideo ? (
+                              <img src={m.publicUrl} alt={m.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : isVideo && m.publicUrl ? (
+                              <video src={m.publicUrl} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : isVideo ? (
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                                 <Film size={32} color="var(--accent-amber)" opacity={0.8} />
@@ -538,9 +538,9 @@ export default function EditPlaylistPage() {
                             </div>
 
                             {/* Duration Badge */}
-                            {m.duration_seconds > 0 && (
+                            {m.durationSeconds > 0 && (
                               <div style={{ position: 'absolute', bottom: '8px', right: '8px', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(15,23,42,0.8)', color: '#fff', fontSize: '0.625rem', fontWeight: 600, backdropFilter: 'blur(4px)' }}>
-                                {m.duration_seconds}s
+                                {m.durationSeconds}s
                               </div>
                             )}
                           </div>
@@ -566,7 +566,7 @@ export default function EditPlaylistPage() {
                   <h4 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>Media Terpilih</h4>
                   
                   {(() => {
-                    const selMedia = mediaList.find((m) => m.id === newItem.media_item_id);
+                    const selMedia = mediaList.find((m) => m.id === newItem.mediaItemId);
                     if (!selMedia) return (
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>
                         <ImageIcon size={40} style={{ opacity: 0.2, marginBottom: '12px' }} />
@@ -574,16 +574,16 @@ export default function EditPlaylistPage() {
                       </div>
                     );
 
-                    const isVideo = selMedia.media_type === 2;
+                    const isVideo = selMedia.mediaType === 2;
 
                     return (
                       <div style={{ flex: 1 }}>
                         {/* Selected Preview */}
                         <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#0f172a', marginBottom: '16px', position: 'relative' }}>
-                          {selMedia.public_url && !isVideo ? (
-                            <img src={selMedia.public_url} alt={selMedia.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : isVideo && selMedia.public_url ? (
-                            <video src={selMedia.public_url} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          {selMedia.publicUrl && !isVideo ? (
+                            <img src={selMedia.publicUrl} alt={selMedia.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : isVideo && selMedia.publicUrl ? (
+                            <video src={selMedia.publicUrl} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : isVideo ? (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                               <Film size={40} color="var(--accent-amber)" />
@@ -599,7 +599,7 @@ export default function EditPlaylistPage() {
                           {selMedia.name}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '24px' }}>
-                          {selMedia.width} × {selMedia.height} px • {selMedia.mime_type}
+                          {selMedia.width} × {selMedia.height} px • {selMedia.mimeType}
                         </div>
 
                         {/* Form Inputs */}
@@ -613,13 +613,13 @@ export default function EditPlaylistPage() {
                               min={1}
                               max={3600}
                               required
-                              value={newItem.duration_seconds}
-                              onChange={(e) => setNewItem({ ...newItem, duration_seconds: Number(e.target.value) })}
+                              value={newItem.durationSeconds}
+                              onChange={(e) => setNewItem({ ...newItem, durationSeconds: Number(e.target.value) })}
                               className="form-input"
                             />
-                            {isVideo && selMedia.duration_seconds > 0 && (
+                            {isVideo && selMedia.durationSeconds > 0 && (
                               <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                ✅ Durasi video asli: <strong>{selMedia.duration_seconds} detik</strong>
+                                ✅ Durasi video asli: <strong>{selMedia.durationSeconds} detik</strong>
                               </p>
                             )}
                           </div>
@@ -630,8 +630,8 @@ export default function EditPlaylistPage() {
                             </label>
                             <select
                               className="form-input"
-                              value={newItem.transition_type}
-                              onChange={(e) => setNewItem({ ...newItem, transition_type: e.target.value })}
+                              value={newItem.transitionType}
+                              onChange={(e) => setNewItem({ ...newItem, transitionType: e.target.value })}
                             >
                               <option value="fade">Fade Smooth</option>
                               <option value="slide_left">Slide Left</option>
@@ -655,7 +655,7 @@ export default function EditPlaylistPage() {
                     </button>
                     <button
                       type="submit"
-                      disabled={addingItem || mediaList.length === 0 || !newItem.media_item_id}
+                      disabled={addingItem || mediaList.length === 0 || !newItem.mediaItemId}
                       className="btn btn-primary"
                       style={{ flex: 2, display: 'flex', justifyContent: 'center' }}
                     >

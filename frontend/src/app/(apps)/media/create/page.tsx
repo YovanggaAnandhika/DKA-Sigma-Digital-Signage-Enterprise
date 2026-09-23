@@ -22,14 +22,14 @@ export default function CreateMediaPage() {
   // Form data state
   const [formData, setFormData] = useState({
     name: '',
-    original_filename: '',
-    public_url: '',
-    media_type: 1, // 1: Image, 2: Video, 3: Web
-    mime_type: 'image/jpeg',
-    file_size_bytes: 0,
+    originalFilename: '',
+    publicUrl: '',
+    mediaType: 1, // 1: Image, 2: Video, 3: Web
+    mimeType: 'image/jpeg',
+    fileSizeBytes: 0,
     width: 1920,
     height: 1080,
-    duration_seconds: 10,
+    durationSeconds: 10,
   });
 
   const handleFile = async (file: File) => {
@@ -49,11 +49,11 @@ export default function CreateMediaPage() {
     setFormData((prev) => ({
       ...prev,
       name: cleanName,
-      original_filename: file.name,
-      media_type: mediaType,
-      mime_type: file.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
-      file_size_bytes: file.size,
-      public_url: objectUrl, // Used for local display & player preview
+      originalFilename: file.name,
+      mediaType: mediaType,
+      mimeType: file.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
+      fileSizeBytes: file.size,
+      publicUrl: objectUrl, // Used for local display & player preview
     }));
 
     // Detect pixel dimensions and duration
@@ -65,7 +65,7 @@ export default function CreateMediaPage() {
           ...prev,
           width: video.videoWidth || 1920,
           height: video.videoHeight || 1080,
-          duration_seconds: Math.round(video.duration) || 10,
+          durationSeconds: Math.round(video.duration) || 10,
         }));
       };
       video.src = objectUrl;
@@ -76,7 +76,7 @@ export default function CreateMediaPage() {
           ...prev,
           width: img.naturalWidth || 1920,
           height: img.naturalHeight || 1080,
-          duration_seconds: 10,
+          durationSeconds: 10,
         }));
       };
       img.src = objectUrl;
@@ -123,9 +123,9 @@ export default function CreateMediaPage() {
     setFormData((prev) => ({
       ...prev,
       name: '',
-      original_filename: '',
-      public_url: '',
-      file_size_bytes: 0,
+      originalFilename: '',
+      publicUrl: '',
+      fileSizeBytes: 0,
     }));
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -147,10 +147,10 @@ export default function CreateMediaPage() {
         .padEnd(64, '0')
         .substring(0, 64);
 
-      let savedPublicUrl = formData.public_url;
-      let savedFilename = formData.original_filename || `${formData.name.toLowerCase().replace(/\s+/g, '_')}.${formData.media_type === 2 ? 'mp4' : 'jpg'}`;
+      let savedPublicUrl = formData.publicUrl;
+      let savedFilename = formData.originalFilename || `${formData.name.toLowerCase().replace(/\s+/g, '_')}.${formData.mediaType === 2 ? 'mp4' : 'jpg'}`;
       let finalSha256 = fileSha256 || fallbackHash;
-      let finalFileSize = formData.file_size_bytes || selectedFile?.size || 0;
+      let finalFileSize = formData.fileSizeBytes || selectedFile?.size || 0;
       let finalFilePath = `/storage/media/${savedFilename}`;
 
       // Upload file directly to backend Rust via gRPC in binary chunks
@@ -159,24 +159,24 @@ export default function CreateMediaPage() {
           setUploadProgress(percent);
         });
 
-        savedPublicUrl = uploadResult.public_url; // /api/assets/{filename}
-        finalSha256 = uploadResult.sha256_hash;
-        finalFileSize = uploadResult.file_size_bytes;
-        finalFilePath = uploadResult.file_path;
+        savedPublicUrl = uploadResult.publicUrl; // /api/assets/{filename}
+        finalSha256 = uploadResult.sha256Hash;
+        finalFileSize = uploadResult.fileSizeBytes;
+        finalFilePath = uploadResult.filePath;
       }
 
       const res = await api.createMedia({
         name: formData.name,
-        original_filename: savedFilename,
-        file_path: finalFilePath,
-        public_url: savedPublicUrl,
-        file_size_bytes: finalFileSize,
-        mime_type: formData.mime_type,
-        sha256_hash: finalSha256,
-        media_type: Number(formData.media_type),
+        originalFilename: savedFilename,
+        filePath: finalFilePath,
+        publicUrl: savedPublicUrl,
+        fileSizeBytes: finalFileSize,
+        mimeType: formData.mimeType,
+        sha256Hash: finalSha256,
+        mediaType: Number(formData.mediaType),
         width: Number(formData.width),
         height: Number(formData.height),
-        duration_seconds: Number(formData.duration_seconds),
+        durationSeconds: Number(formData.durationSeconds),
       });
 
       alert('Media berhasil diunggah via gRPC chunks dan disimpan ke backend!');
@@ -363,7 +363,7 @@ export default function CreateMediaPage() {
                       boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
                     }}
                   >
-                    {formData.media_type === 2 ? (
+                    {formData.mediaType === 2 ? (
                       <video src={previewUrl!} style={{ width: '100%', height: '100%', objectFit: 'contain' }} muted />
                     ) : (
                       <img src={previewUrl!} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -373,14 +373,14 @@ export default function CreateMediaPage() {
                   {/* Detected File Details */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, overflow: 'hidden' }}>
                     <div style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {formData.original_filename}
+                      {formData.originalFilename}
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                      <span>Ukuran: <strong>{formatBytes(formData.file_size_bytes)}</strong></span>
+                      <span>Ukuran: <strong>{formatBytes(formData.fileSizeBytes)}</strong></span>
                       <span>Resolusi: <strong>{formData.width} × {formData.height} px</strong></span>
-                      <span>Format: <strong>{formData.mime_type}</strong></span>
-                      {formData.media_type === 2 && (
-                        <span>Durasi: <strong style={{ color: 'var(--accent-amber)' }}>{formData.duration_seconds} detik</strong></span>
+                      <span>Format: <strong>{formData.mimeType}</strong></span>
+                      {formData.mediaType === 2 && (
+                        <span>Durasi: <strong style={{ color: 'var(--accent-amber)' }}>{formData.durationSeconds} detik</strong></span>
                       )}
                     </div>
                     {fileSha256 && (
@@ -423,8 +423,8 @@ export default function CreateMediaPage() {
               <input
                 type="url"
                 required
-                value={formData.public_url}
-                onChange={(e) => setFormData({ ...formData, public_url: e.target.value })}
+                value={formData.publicUrl}
+                onChange={(e) => setFormData({ ...formData, publicUrl: e.target.value })}
                 placeholder="https://example.com/stream/promo.mp4"
                 className="form-input"
               />
@@ -437,8 +437,8 @@ export default function CreateMediaPage() {
                 Tipe Media
               </label>
               <select
-                value={formData.media_type}
-                onChange={(e) => setFormData({ ...formData, media_type: Number(e.target.value) })}
+                value={formData.mediaType}
+                onChange={(e) => setFormData({ ...formData, mediaType: Number(e.target.value) })}
                 className="form-input"
               >
                 <option value={1}>🖼️ Gambar Statis (JPG / PNG / WebP)</option>
@@ -456,8 +456,8 @@ export default function CreateMediaPage() {
                 min={1}
                 max={3600}
                 required
-                value={formData.duration_seconds}
-                onChange={(e) => setFormData({ ...formData, duration_seconds: Number(e.target.value) })}
+                value={formData.durationSeconds}
+                onChange={(e) => setFormData({ ...formData, durationSeconds: Number(e.target.value) })}
                 className="form-input"
               />
             </div>

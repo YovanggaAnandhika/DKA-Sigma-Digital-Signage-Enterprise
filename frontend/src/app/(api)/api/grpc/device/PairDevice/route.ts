@@ -11,9 +11,9 @@ export async function POST(req: NextRequest) {
     
     const request = new PairDeviceRequest();
     
-        if(body.pairing_code) request.setPairingCode(body.pairing_code);
-        if(body.device_name) request.setDeviceName(body.device_name);
-        if(body.default_layout_id) request.setDefaultLayoutId(body.default_layout_id);
+        if(body.pairingCode) request.setPairingCode(body.pairingCode);
+        if(body.deviceName) request.setDeviceName(body.deviceName);
+        if(body.defaultLayoutId) request.setDefaultLayoutId(body.defaultLayoutId);
         if(body.canary_group_id) request.setCanaryGroupId(body.canary_group_id);
 
     return new Promise<NextResponse>((resolve) => {

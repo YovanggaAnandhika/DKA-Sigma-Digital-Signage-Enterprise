@@ -139,11 +139,11 @@ export default function PlaylistsPage() {
                           border: '1px solid rgba(245, 158, 11, 0.3)',
                         }}
                       >
-                        {pl.items?.length || 0} Item Media
+                        {(pl.itemsList || pl.itemsList)?.length || 0} Item Media
                       </span>
                     </td>
                     <td>
-                      {pl.is_shuffle ? (
+                      {(pl.isShuffle ?? pl.isShuffle) ? (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--accent-cyan)' }}>
                           <Shuffle size={12} /> Acak (Shuffle)
                         </span>
@@ -152,7 +152,7 @@ export default function PlaylistsPage() {
                       )}
                     </td>
                     <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {pl.created_at ? new Date(pl.created_at).toLocaleDateString('id-ID') : '-'}
+                      {(pl.createdAt || pl.createdAt) ? new Date(pl.createdAt || pl.createdAt || '').toLocaleDateString('id-ID') : '-'}
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>

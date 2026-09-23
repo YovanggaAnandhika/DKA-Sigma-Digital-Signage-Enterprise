@@ -10,11 +10,11 @@ export async function POST(req: NextRequest) {
     const client = new LayoutServiceClient(getGrpcHost(), getGrpcCredentials());
     const request = new UpdatePlaylistBlockRequest();
     if (body.id) request.setBlockId(body.id);
-    if (body.start_time_seconds !== undefined) request.setStartTimeSeconds(body.start_time_seconds);
-    if (body.duration_seconds !== undefined) request.setDurationSeconds(body.duration_seconds);
-    if (body.transition_type) request.setTransitionType(body.transition_type);
-    if (body.order_index !== undefined) request.setOrderIndex(body.order_index);
-    if (body.is_muted !== undefined) request.setIsMuted(body.is_muted);
+    if (body.startTimeSeconds !== undefined) request.setStartTimeSeconds(body.startTimeSeconds);
+    if (body.durationSeconds !== undefined) request.setDurationSeconds(body.durationSeconds);
+    if (body.transitionType) request.setTransitionType(body.transitionType);
+    if (body.position !== undefined) request.setOrderIndex(body.position);
+    if (body.isMuted !== undefined) request.setIsMuted(body.isMuted);
     return new Promise<NextResponse>((resolve) => {
       client.updatePlaylistBlock(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));

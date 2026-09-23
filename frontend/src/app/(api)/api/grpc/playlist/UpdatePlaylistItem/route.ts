@@ -11,10 +11,10 @@ export async function POST(req: NextRequest) {
     
     const request = new UpdatePlaylistItemRequest();
     if (body.id) request.setId(body.id);
-    if (body.duration_seconds !== undefined) request.setDurationSeconds(body.duration_seconds);
-    if (body.transition_type) request.setTransitionType(body.transition_type);
+    if (body.durationSeconds !== undefined) request.setDurationSeconds(body.durationSeconds);
+    if (body.transitionType) request.setTransitionType(body.transitionType);
     if (body.position !== undefined) request.setPosition(body.position);
-    if (body.is_muted !== undefined) request.setIsMuted(body.is_muted);
+    if (body.isMuted !== undefined) request.setIsMuted(body.isMuted);
 
     return new Promise<NextResponse>((resolve) => {
       client.updatePlaylistItem(request, getGrpcMetadata(token), (error: any, response: any) => {

@@ -66,20 +66,20 @@ export default function TimelineEditor() {
     e.stopPropagation();
     try {
       if (isMediaBlock) {
-        // Media block: use updatePlaylistBlock with is_muted (no playlist_item_id exists)
-        await updatePlaylistBlock(zonePlaylistId, { is_muted: !currentMuted });
+        // Media block: use updatePlaylistBlock with isMuted (no playlist_item_id exists)
+        await updatePlaylistBlock(zonePlaylistId, { isMuted: !currentMuted });
         // UI update only happens after API succeeds
         setZones(prev => prev.map(z => ({
           ...z,
-          blocks: z.blocks.map(b => {
+          blocksList: z.blocksList.map(b => {
             if (b.id === zonePlaylistId) {
               const newOverrides = [{
                 id: `override-${b.id}`,
-                zone_playlist_id: b.id,
-                playlist_item_id: b.id,
-                is_muted: !currentMuted,
+                zonePlaylistId: b.id,
+                playlistItemId: b.id,
+                isMuted: !currentMuted,
               }];
-              return { ...b, item_overrides: newOverrides };
+              return { ...b, itemOverridesList: newOverrides };
             }
             return b;
           })
@@ -89,16 +89,16 @@ export default function TimelineEditor() {
         // UI update only happens after API succeeds
         setZones(prev => prev.map(z => ({
           ...z,
-          blocks: z.blocks.map(b => {
+          blocksList: z.blocksList.map(b => {
             if (b.id === zonePlaylistId) {
-              const existingOverrideIdx = (b.item_overrides || []).findIndex(o => o.playlist_item_id === item.id);
-              const newOverrides = [...(b.item_overrides || [])];
+              const existingOverrideIdx = (b.itemOverridesList || []).findIndex(o => o.playlistItemId === item.id);
+              const newOverrides = [...(b.itemOverridesList || [])];
               if (existingOverrideIdx >= 0) {
                 newOverrides[existingOverrideIdx] = override;
               } else {
                 newOverrides.push(override);
               }
-              return { ...b, item_overrides: newOverrides };
+              return { ...b, itemOverridesList: newOverrides };
             }
             return b;
           })
@@ -548,20 +548,20 @@ export default function TimelineEditor() {
               
               return (
                 <div key={z.id} style={{ height: '36px', borderBottom: '1px solid var(--border-subtle)', position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  {(z.blocks || []).map((block, bIdx) => {
-                    const isMediaBlock = !!block.media_item_id;
-                    const assignedPl = availablePlaylists.find((p) => p.id === block.playlist_id);
+                  {(z.blocksList || []).map((block, bIdx) => {
+                    const isMediaBlock = !!block.mediaItemId;
+                    const assignedPl = availablePlaylists.find((p) => p.id === block.playlistId);
                     
                     let itemsToRender: any[] = [];
                     if (isMediaBlock) {
                       itemsToRender = [{
                         id: block.id,
-                        media_item_id: block.media_item_id,
-                        duration_seconds: block.duration_seconds,
-                        is_muted: false
+                        mediaItemId: block.mediaItemId,
+                        durationSeconds: block.durationSeconds,
+                        isMuted: false
                       }];
                     } else {
-                      itemsToRender = assignedPl?.items || [];
+                      itemsToRender = assignedPl?.itemsList || [];
                     }
                     const blockActive = active && isZoneActive(z, playheadPosition); // Simplified
 
@@ -571,8 +571,8 @@ export default function TimelineEditor() {
                         bounds="parent"
                         dragAxis="x"
                         enableResizing={{ right: true, left: true, top: false, bottom: false, topRight: false, topLeft: false, bottomRight: false, bottomLeft: false }}
-                        size={{ width: Math.max(20, block.duration_seconds * pxPerSecond), height: 24 }}
-                        position={{ x: block.start_time_seconds * pxPerSecond, y: 6 }}
+                        size={{ width: Math.max(20, block.durationSeconds * pxPerSecond), height: 24 }}
+                        position={{ x: block.startTimeSeconds * pxPerSecond, y: 6 }}
                         onDragStart={() => {
                           if (selectedZoneId !== z.id) setSelectedZoneId(z.id);
                         }}
@@ -582,7 +582,7 @@ export default function TimelineEditor() {
                             if (zone.id !== z.id) return zone;
                             return {
                               ...zone,
-                              blocks: (zone.blocks || []).map(b => b.id === block.id ? { ...b, start_time_seconds: newStartSec } : b)
+                              blocksList: (zone.blocksList || []).map(b => b.id === block.id ? { ...b, startTimeSeconds: newStartSec } : b)
                             };
                           }));
                         }}
@@ -594,10 +594,10 @@ export default function TimelineEditor() {
                             if (zone.id !== z.id) return zone;
                             return {
                               ...zone,
-                              blocks: (zone.blocks || []).map(b => b.id === block.id ? {
+                              blocksList: (zone.blocksList || []).map(b => b.id === block.id ? {
                                 ...b,
-                                duration_seconds: newDurSec,
-                                start_time_seconds: newStartSec
+                                durationSeconds: newDurSec,
+                                startTimeSeconds: newStartSec
                               } : b)
                             };
                           }));
@@ -625,12 +625,12 @@ export default function TimelineEditor() {
                           }}
                         >
                           {itemsToRender.length > 0 ? itemsToRender.map((it, itemIdx) => {
-                            const itDur = it.duration_seconds || 10;
+                            const itDur = it.durationSeconds || 10;
                             const itWidthPx = isMediaBlock ? '100%' : `${itDur * pxPerSecond}px`;
-                            const m = mediaList.find((media) => media.id === it.media_item_id);
-                            const isVid = m?.media_type === 2;
-                            const override = block.item_overrides?.find(o => o.playlist_item_id === (isMediaBlock ? block.id : it.id));
-                            const isBlockMuted = override ? override.is_muted : !!it.is_muted;
+                            const m = mediaList.find((media) => media.id === it.mediaItemId);
+                            const isVid = m?.mediaType === 2;
+                            const override = block.itemOverridesList?.find(o => o.playlistItemId === (isMediaBlock ? block.id : it.id));
+                            const isBlockMuted = override ? override.isMuted : !!it.isMuted;
 
                             return (
                               <div
@@ -648,9 +648,9 @@ export default function TimelineEditor() {
                                 }}
                                 title={`${m?.name || `Item ${itemIdx + 1}`} (${itDur}s)`}
                               >
-                                {m?.public_url && !isVid ? (
+                                {m?.publicUrl && !isVid ? (
                                   <img
-                                    src={m.public_url}
+                                    src={m.publicUrl}
                                     alt=""
                                     style={{ width: '16px', height: '16px', borderRadius: '2px', objectFit: 'cover', flexShrink: 0 }}
                                   />

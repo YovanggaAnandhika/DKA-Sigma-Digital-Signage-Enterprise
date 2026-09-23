@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     const client = new PlaylistServiceClient(getGrpcHost(), getGrpcCredentials());
     
     const request = new ReorderPlaylistItemsRequest();
-    if (body.playlist_id) request.setPlaylistId(body.playlist_id);
+    if (body.playlistId) request.setPlaylistId(body.playlistId);
     if (body.item_ids_in_order) request.setItemIdsInOrderList(body.item_ids_in_order);
 
     return new Promise<NextResponse>((resolve) => {

@@ -13,12 +13,12 @@ export async function POST(req: NextRequest) {
     
         if(body.id) request.setId(body.id);
         if(body.name) request.setName(body.name);
-        if(body.display_group_id) request.setDisplayGroupId(body.display_group_id);
+        if(body.displayGroupId) request.setDisplayGroupId(body.displayGroupId);
         if(body.screen_width !== undefined) request.setScreenWidth(body.screen_width);
         if(body.screen_height !== undefined) request.setScreenHeight(body.screen_height);
         if(body.orientation !== undefined) request.setOrientation(body.orientation);
         if(body.timezone) request.setTimezone(body.timezone);
-        if(body.schedule_id) request.setScheduleId(body.schedule_id);
+        if(body.scheduleId) request.setScheduleId(body.scheduleId);
 
     return new Promise<NextResponse>((resolve) => {
       client.updateDevice(request, getGrpcMetadata(token), (error: any, response: any) => {

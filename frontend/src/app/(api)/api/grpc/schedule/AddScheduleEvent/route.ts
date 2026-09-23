@@ -10,9 +10,9 @@ export async function POST(req: NextRequest) {
     const client = new ScheduleServiceClient(getGrpcHost(), getGrpcCredentials());
     
     const request = new AddScheduleEventRequest();
-    if (body.schedule_id) request.setScheduleId(body.schedule_id);
+    if (body.scheduleId) request.setScheduleId(body.scheduleId);
     if (body.layout_id) request.setLayoutId(body.layout_id);
-    if (body.start_time) request.setStartTime(body.start_time);
+    if (body.startTime) request.setStartTime(body.startTime);
     if (body.end_time) request.setEndTime(body.end_time);
     if (body.days_of_week) request.setDaysOfWeek(body.days_of_week);
 

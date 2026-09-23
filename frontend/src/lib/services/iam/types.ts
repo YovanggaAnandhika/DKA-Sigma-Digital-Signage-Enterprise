@@ -7,14 +7,16 @@ export interface UserSession {
   expiresAt: number;
 }
 
+
 export interface Role {
   id: string;
   name: string;
   slug: string;
   description: string;
-  permissions: string[];
-  created_at?: string;
-  updated_at?: string;
+  isSystem: boolean;
+  permissionsList: Permission[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Permission {
@@ -28,9 +30,12 @@ export interface Permission {
 export interface User {
   id: string;
   email: string;
-  full_name: string;
-  role_id?: string;
-  is_active: boolean;
-  created_at?: string;
-  updated_at?: string;
+  fullName: string;
+  isActive: boolean;
+  rolesList: Role[];
+  roleGroupsList: any[];
+  effectivePermissionsList: string[];
+  createdAt: string;
+  updatedAt: string;
 }
+

@@ -22,9 +22,9 @@ export default function EditSchedulePage() {
   // Event state
   const [newEvent, setNewEvent] = useState({
     layout_id: '',
-    start_time: '08:00:00',
-    end_time: '18:00:00',
-    days_of_week: '1,2,3,4,5,6,7',
+    startTime: '08:00:00',
+    endTime: '18:00:00',
+    daysOfWeek: '1,2,3,4,5,6,7',
   });
   const [addingEvent, setAddingEvent] = useState(false);
 
@@ -75,11 +75,11 @@ export default function EditSchedulePage() {
     try {
       setAddingEvent(true);
       await api.addScheduleEvent({
-        schedule_id: params.id,
+        scheduleId: params.id,
         layout_id: newEvent.layout_id,
-        start_time: newEvent.start_time,
-        end_time: newEvent.end_time,
-        days_of_week: newEvent.days_of_week,
+        startTime: newEvent.startTime,
+        endTime: newEvent.endTime,
+        daysOfWeek: newEvent.daysOfWeek,
       });
       setNewEvent({ ...newEvent, layout_id: '' });
       fetchSchedule(); // Refresh
@@ -175,17 +175,17 @@ export default function EditSchedulePage() {
           <h3 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '16px' }}>Daftar Event (Timeline)</h3>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-            {(!schedule.events || schedule.events.length === 0) ? (
+            {(!schedule.eventsList || schedule.eventsList.length === 0) ? (
               <div style={{ padding: '20px', textAlign: 'center', backgroundColor: 'var(--bg-surface)', borderRadius: '8px', color: 'var(--text-muted)' }}>
                 Belum ada event tayang di jadwal ini.
               </div>
             ) : (
-              schedule.events.map(ev => (
+              schedule.eventsList.map(ev => (
                 <div key={ev.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
                   <div>
-                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{ev.layout_name}</div>
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{ev.layoutName}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      {ev.start_time} - {ev.end_time} &bull; {daysLabel(ev.days_of_week)}
+                      {ev.startTime} - {ev.endTime} &bull; {daysLabel(ev.daysOfWeek)}
                     </div>
                   </div>
                   <button onClick={() => handleRemoveEvent(ev.id)} className="btn btn-danger" style={{ padding: '6px' }} title="Hapus Event">
@@ -224,8 +224,8 @@ export default function EditSchedulePage() {
                   type="time"
                   step="1"
                   required
-                  value={newEvent.start_time}
-                  onChange={(e) => setNewEvent({ ...newEvent, start_time: e.target.value })}
+                  value={newEvent.startTime}
+                  onChange={(e) => setNewEvent({ ...newEvent, startTime: e.target.value })}
                   className="form-input"
                 />
               </div>
@@ -237,8 +237,8 @@ export default function EditSchedulePage() {
                   type="time"
                   step="1"
                   required
-                  value={newEvent.end_time}
-                  onChange={(e) => setNewEvent({ ...newEvent, end_time: e.target.value })}
+                  value={newEvent.endTime}
+                  onChange={(e) => setNewEvent({ ...newEvent, endTime: e.target.value })}
                   className="form-input"
                 />
               </div>
@@ -249,8 +249,8 @@ export default function EditSchedulePage() {
                 Hari Tayang
               </label>
               <select
-                value={newEvent.days_of_week}
-                onChange={(e) => setNewEvent({ ...newEvent, days_of_week: e.target.value })}
+                value={newEvent.daysOfWeek}
+                onChange={(e) => setNewEvent({ ...newEvent, daysOfWeek: e.target.value })}
                 className="form-select"
               >
                 <option value="1,2,3,4,5,6,7">Setiap Hari (Senin-Minggu)</option>

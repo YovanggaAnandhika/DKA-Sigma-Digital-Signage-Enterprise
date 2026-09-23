@@ -8,9 +8,9 @@ import { useLayoutEditor } from '../context/LayoutEditorContext';
 export default function InspectorPanel() {
   const { layoutName, setLayoutName, zones, selectedZoneId, handleDeleteZone, updateSelectedZone, availablePlaylists, mediaList, setPickerZoneId, isLayoutMetaExpanded, setIsLayoutMetaExpanded } = useLayoutEditor();
   const selectedZone = zones.find((z) => z.id === selectedZoneId);
-  const firstBlock = selectedZone?.blocks?.[0];
+  const firstBlock = selectedZone?.blocksList?.[0];
   const selectedPlaylist = firstBlock 
-    ? availablePlaylists.find(p => p.id === firstBlock.playlist_id) 
+    ? availablePlaylists.find(p => p.id === firstBlock.playlistId) 
     : null;
 
   return (
@@ -144,8 +144,8 @@ export default function InspectorPanel() {
               </label>
               <input
                 type="number"
-                value={selectedZone.z_index || 1}
-                onChange={(e) => updateSelectedZone('z_index', Number(e.target.value))}
+                value={selectedZone.zIndex || 1}
+                onChange={(e) => updateSelectedZone('zIndex', Number(e.target.value))}
                 className="form-input"
                 style={{ fontSize: '0.8125rem', padding: '8px 12px' }}
               />

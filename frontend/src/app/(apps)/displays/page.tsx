@@ -137,11 +137,11 @@ export default function DisplaysPage() {
                           fontWeight: 700,
                         }}
                       >
-                        {d.pairing_code}
+                        {d.pairingCode}
                       </span>
                     </td>
                     <td style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                      {d.display_group_id ? 'Tergabung' : '-'}
+                      {d.displayGroupId ? 'Tergabung' : '-'}
                     </td>
                     <td>
                       <span
@@ -150,18 +150,18 @@ export default function DisplaysPage() {
                           borderRadius: '9999px',
                           fontSize: '0.6875rem',
                           fontWeight: 700,
-                          backgroundColor: d.is_online ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
-                          color: d.is_online ? 'var(--accent-emerald)' : 'var(--accent-rose)',
-                          border: d.is_online ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
+                          backgroundColor: d.isOnline ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
+                          color: d.isOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
+                          border: d.isOnline ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
                         }}
                       >
-                        {d.is_online ? 'ONLINE' : 'OFFLINE'}
+                        {d.isOnline ? 'ONLINE' : 'OFFLINE'}
                       </span>
                     </td>
                     <td>
-                      {d.resolution} ({d.orientation})
+                      {d.screenWidth + "x" + d.screenHeight} ({d.orientation})
                     </td>
-                    <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{d.ip_address || '127.0.0.1'}</td>
+                    <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{d.ipAddress || '127.0.0.1'}</td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                         <Link href={`/displays/${d.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Lihat Detail">

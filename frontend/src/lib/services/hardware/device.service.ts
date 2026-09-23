@@ -7,9 +7,10 @@ export async function getDevices(params?: { search?: string; page?: number; limi
     pagination: { page: params?.page || 1, limit: params?.limit || 25 },
     status: params?.status
   });
+  const data: Device[] = result.itemsList || [];
   return {
-    data: result.itemsList || [],
-    total: result.pagination?.totalItems || result.itemsList?.length || 0
+    data,
+    total: result.pagination?.totalItems ?? data.length
   };
 }
 
@@ -20,8 +21,15 @@ export async function getDevice(id: string): Promise<Device> {
   return d as Device;
 }
 
-export async function pairDevice(data: { pairing_code: string; device_name: string; default_layout_id?: string; canary_group_id?: string; }): Promise<Device> {
-  const result = await invokeApi<any>('/api/grpc/device/PairDevice', data);
+export async function pairDevice(data: { pairingCode: string; deviceName: string; defaultLayoutId?: string; canaryGroupId?: string; }): Promise<Device> {
+  const result = await invokeApi<any>('/api/grpc/device/PairDevice', {
+    pairingCode: data.pairingCode,
+    deviceName: data.deviceName,
+    default_layout_id: data.defaultLayoutId,
+    defaultLayoutId: data.defaultLayoutId,
+    canary_group_id: data.canaryGroupId,
+    canaryGroupId: data.canaryGroupId,
+  });
   const d = result.device || result;
   if (!d || !d.id) throw new Error('Gagal pair device');
   return d as Device;
@@ -36,3 +44,4 @@ export async function deleteDevice(id: string): Promise<boolean> {
   await invokeApi<any>('/api/grpc/device/DeleteDevice', { id });
   return true;
 }
+

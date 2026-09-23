@@ -126,7 +126,7 @@ export default function LayoutsPage() {
                       </Link>
                     </td>
                     <td style={{ fontFamily: 'monospace' }}>
-                      {l.canvas_width} × {l.canvas_height} px
+                      {l.canvasWidth ?? l.canvasWidth} × {l.canvasHeight ?? l.canvasHeight} px
                     </td>
                     <td style={{ textTransform: 'capitalize' }}>
                       <span
@@ -153,11 +153,11 @@ export default function LayoutsPage() {
                           border: '1px solid rgba(59, 130, 246, 0.3)',
                         }}
                       >
-                        {l.zones?.length || 0} Zona Kotak
+                        {(l.zonesList || l.zonesList)?.length || 0} Zona Kotak
                       </span>
                     </td>
                     <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {l.created_at ? new Date(l.created_at).toLocaleDateString('id-ID') : '-'}
+                      {(l.createdAt || l.createdAt) ? new Date(l.createdAt || l.createdAt || '').toLocaleDateString('id-ID') : '-'}
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>

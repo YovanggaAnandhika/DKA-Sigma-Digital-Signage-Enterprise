@@ -18,7 +18,7 @@ export default function EditDisplayGroupPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    default_layout_id: '',
+    defaultLayoutId: '',
     schedule_id: '',
   });
 
@@ -42,7 +42,7 @@ export default function EditDisplayGroupPage() {
         setFormData({
           name: found.name,
           description: found.description || '',
-          default_layout_id: found.default_layout_id || '',
+          defaultLayoutId: found.default_layout_id || '',
           schedule_id: found.schedule_id || '',
         });
       } catch (err: any) {
@@ -62,7 +62,7 @@ export default function EditDisplayGroupPage() {
       await api.updateDisplayGroup(params.id, {
         name: formData.name,
         description: formData.description,
-        default_layout_id: formData.default_layout_id,
+        default_layout_id: formData.defaultLayoutId,
         schedule_id: formData.schedule_id,
       });
       router.push('/groups');
@@ -131,8 +131,8 @@ export default function EditDisplayGroupPage() {
                 Layout Default (Fallback)
               </label>
               <select
-                value={formData.default_layout_id}
-                onChange={(e) => setFormData({ ...formData, default_layout_id: e.target.value })}
+                value={formData.defaultLayoutId}
+                onChange={(e) => setFormData({ ...formData, defaultLayoutId: e.target.value })}
                 className="form-select"
               >
                 <option value="">-- Pilih Layout --</option>

@@ -80,16 +80,16 @@ export default function ViewRolePage() {
       {/* Permissions Matrix Panel */}
       <div className="card-elevated" style={{ padding: '24px' }}>
         <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>
-          Daftar Hak Akses (Permissions) Terpasang ({role.permissions?.length || 0})
+          Daftar Hak Akses (Permissions) Terpasang ({role.permissionsList?.length || 0})
         </h3>
 
-        {(!role.permissions || role.permissions.length === 0) ? (
+        {(!role.permissionsList || role.permissionsList.length === 0) ? (
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
             Belum ada permission dialokasikan pada role ini.
           </p>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
-            {role.permissions.map((permCode, idx) => (
+            {role.permissionsList.map((perm: any, idx) => (
               <div
                 key={idx}
                 style={{
@@ -104,7 +104,7 @@ export default function ViewRolePage() {
               >
                 <Key size={14} style={{ color: 'var(--primary-400)', flexShrink: 0 }} />
                 <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
-                  {permCode}
+                  {typeof perm === 'string' ? perm : (perm.code || perm.name || perm.id)}
                 </span>
               </div>
             ))}

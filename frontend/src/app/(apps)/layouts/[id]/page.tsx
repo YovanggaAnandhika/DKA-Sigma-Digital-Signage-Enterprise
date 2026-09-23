@@ -27,11 +27,46 @@ export default function ViewLayoutPage() {
           api.getPlaylists({ limit: 100 }).catch(() => ({ data: [] })),
           api.getMedia({ limit: 100 }).catch(() => ({ data: [] })),
         ]);
-        setLayout(layoutData);
+        const sanitizedLayout: Layout = {
+          ...layoutData,
+          canvasWidth: layoutData.canvasWidth || layoutData.canvasWidth || 1920,
+          canvasHeight: layoutData.canvasHeight || layoutData.canvasHeight || 1080,
+          zonesList: (layoutData.zonesList || layoutData.zonesList || []).map((z: any) => ({
+            ...z,
+            id: z.id,
+            layout_id: z.layoutId || z.layout_id,
+            x: Number(z.x) || 0,
+            y: Number(z.y) || 0,
+            width: Number(z.width) || 200,
+            height: Number(z.height) || 200,
+            zIndex: Number(z.zIndex ?? z.zIndex) || 1,
+            blocksList: (z.blocksList || z.blocksList || []).map((b: any) => ({
+              ...b,
+              id: b.id,
+              zone_id: b.zoneId || b.zone_id,
+              playlistId: b.playlistId || b.playlistId || '',
+              mediaItemId: b.mediaItemId || b.mediaItemId || '',
+              playlist: b.playlist,
+              mediaItem: b.mediaItem || b.mediaItem,
+              startTimeSeconds: b.startTimeSeconds ?? b.startTimeSeconds ?? 0,
+              durationSeconds: b.durationSeconds ?? b.durationSeconds ?? 10,
+              transitionType: b.transitionType || b.transitionType || 'none',
+              position: b.orderIndex ?? b.position ?? 0,
+              itemOverridesList: (b.itemOverridesList || b.itemOverridesList || []).map((o: any) => ({
+                id: o.id,
+                zone_playlist_id: o.zonePlaylistId || o.zone_playlist_id,
+                playlistItemId: o.playlistItemId || o.playlistItemId,
+                isMuted: o.isMuted ?? o.isMuted ?? false,
+              })),
+            })),
+          })),
+        };
+
+        setLayout(sanitizedLayout);
         setPlaylists((playlistsRes as any).data || []);
         setMediaList((mediaRes as any).data || []);
-        if (layoutData.zones?.length > 0) {
-          setSelectedZoneId(layoutData.zones[0].id);
+        if (sanitizedLayout.zonesList?.length > 0) {
+          setSelectedZoneId(sanitizedLayout.zonesList[0].id);
         }
       } catch (err: any) {
         alert(err.message || 'Gagal memuat layout');
@@ -66,22 +101,23 @@ export default function ViewLayoutPage() {
   }, []);
 
   // Helper: resolve first media item for a zone
-  const resolveZoneMedia = (zone: Layout['zones'][number]) => {
-    const blocks = zone.blocks || [];
+  const resolveZoneMedia = (zone: Layout['zonesList'][number]) => {
+    const blocks = zone.blocksList || [];
     for (const block of blocks) {
       // Direct media block — use nested object OR fallback to mediaList lookup
-      if (block.media_item_id) {
-        const m = (block.media_item as MediaItem) || mediaList.find((m) => m.id === block.media_item_id);
+      if (block.mediaItemId) {
+        const m = (block.mediaItem as MediaItem) || mediaList.find((m) => m.id === block.mediaItemId);
         if (m) return { media: m, playlistName: null };
       }
       // Playlist block
-      if (block.playlist_id) {
+      if (block.playlistId) {
         const pl = (block.playlist as Playlist) ||
-          playlists.find((p) => p.id === block.playlist_id);
-        if (pl?.items?.length) {
-          const firstItem = pl.items[0];
-          const m = (pl.items[0] as any).media_item || mediaList.find((m) => m.id === firstItem.media_item_id);
-          if (m) return { media: m as MediaItem, playlistName: pl.name };
+          playlists.find((p) => p.id === block.playlistId);
+        const plItems = pl?.itemsList || pl?.itemsList || [];
+        if (plItems.length) {
+          const firstItem = plItems[0];
+          const m = (firstItem as any).mediaItem || (firstItem as any).mediaItem || mediaList.find((m) => m.id === (firstItem.mediaItemId || firstItem.mediaItemId));
+          if (m) return { media: m as MediaItem, playlistName: pl?.name || '' };
         }
       }
     }
@@ -97,10 +133,10 @@ export default function ViewLayoutPage() {
     );
   }
 
-  const scale = 540 / layout.canvas_width;
-  const previewHeight = layout.canvas_height * scale;
+  const scale = 540 / layout.canvasWidth;
+  const previewHeight = layout.canvasHeight * scale;
   const zColors = ['#2563eb', '#06b6d4', '#10b981', '#f59e0b', '#ec4899'];
-  const selectedZone = layout.zones?.find((z) => z.id === selectedZoneId);
+  const selectedZone = layout.zonesList?.find((z) => z.id === selectedZoneId);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -115,7 +151,7 @@ export default function ViewLayoutPage() {
               {layout.name}
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Resolusi: {layout.canvas_width} × {layout.canvas_height} px ({layout.orientation}) &bull; {layout.zones?.length || 0} Zona Kotak
+              Resolusi: {layout.canvasWidth} × {layout.canvasHeight} px ({layout.orientation}) &bull; {layout.zonesList?.length || 0} Zona Kotak
             </p>
           </div>
         </div>
@@ -184,7 +220,7 @@ export default function ViewLayoutPage() {
             <div
               style={{
                 width: '100%',
-                aspectRatio: `${layout.canvas_width} / ${layout.canvas_height}`,
+                aspectRatio: `${layout.canvasWidth} / ${layout.canvasHeight}`,
                 backgroundColor: '#000000',
                 border: '2px solid var(--border-subtle)',
                 borderRadius: '8px',
@@ -193,16 +229,16 @@ export default function ViewLayoutPage() {
                 boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
               }}
             >
-              {layout.zones?.map((z, idx) => {
+              {layout.zonesList?.map((z, idx) => {
                 const color = zColors[idx % zColors.length];
                 const resolved = resolveZoneMedia(z);
-                const isVideo = resolved?.media.media_type === 2;
+                const isVideo = resolved?.media.mediaType === 2;
                 const isSelected = z.id === selectedZoneId;
-                const hasBlocks = z.blocks && z.blocks.length > 0;
+                const hasBlocks = z.blocksList && z.blocksList.length > 0;
                 const assignedPlName = (() => {
-                  for (const block of (z.blocks || [])) {
-                    if (block.playlist_id) {
-                      const pl = block.playlist as Playlist || playlists.find(p => p.id === block.playlist_id);
+                  for (const block of (z.blocksList || [])) {
+                    if (block.playlistId) {
+                      const pl = block.playlist as Playlist || playlists.find(p => p.id === block.playlistId);
                       if (pl) return pl.name;
                     }
                   }
@@ -215,27 +251,27 @@ export default function ViewLayoutPage() {
                     onClick={() => setSelectedZoneId(z.id)}
                     style={{
                       position: 'absolute',
-                      left: `${((Number(z.x) || 0) / layout.canvas_width) * 100}%`,
-                      top: `${((Number(z.y) || 0) / layout.canvas_height) * 100}%`,
-                      width: `${((Number(z.width) || 200) / layout.canvas_width) * 100}%`,
-                      height: `${((Number(z.height) || 200) / layout.canvas_height) * 100}%`,
+                      left: `${((Number(z.x) || 0) / layout.canvasWidth) * 100}%`,
+                      top: `${((Number(z.y) || 0) / layout.canvasHeight) * 100}%`,
+                      width: `${((Number(z.width) || 200) / layout.canvasWidth) * 100}%`,
+                      height: `${((Number(z.height) || 200) / layout.canvasHeight) * 100}%`,
                       backgroundColor: resolved ? 'transparent' : `${color}22`,
                       border: `2px solid ${isSelected ? '#fff' : color}`,
                       boxSizing: 'border-box',
                       overflow: 'hidden',
-                      zIndex: z.z_index || 1,
+                      zIndex: z.zIndex || 1,
                       cursor: 'pointer',
                       transition: 'border-color 0.2s',
                     }}
                   >
-                    {resolved?.media.public_url && (
+                    {resolved?.media.publicUrl && (
                       isVideo ? (
                         <video
                           ref={(el) => {
                             if (el) videoRefs.current.set(z.id, el);
                             else videoRefs.current.delete(z.id);
                           }}
-                          src={resolved.media.public_url}
+                          src={resolved.media.publicUrl}
                           autoPlay={isPlaying}
                           muted={globalMuted}
                           loop
@@ -244,7 +280,7 @@ export default function ViewLayoutPage() {
                         />
                       ) : (
                         <img
-                          src={resolved.media.public_url}
+                          src={resolved.media.publicUrl}
                           alt={resolved.media.name}
                           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }}
                           onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
@@ -294,23 +330,23 @@ export default function ViewLayoutPage() {
             <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Layers size={15} color="var(--primary-400)" />
               <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-                Daftar Zona ({layout.zones?.length || 0})
+                Daftar Zona ({layout.zonesList?.length || 0})
               </h3>
             </div>
 
             <div style={{ padding: '8px' }}>
-              {(!layout.zones || layout.zones.length === 0) ? (
+              {(!layout.zonesList || layout.zonesList.length === 0) ? (
                 <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
                   Belum ada zona di layout ini.
                 </div>
               ) : (
-                layout.zones.map((z, idx) => {
+                layout.zonesList.map((z, idx) => {
                   const color = zColors[idx % zColors.length];
                   const resolved = resolveZoneMedia(z);
-                  const isVideo = resolved?.media.media_type === 2;
+                  const isVideo = resolved?.media.mediaType === 2;
                   const isSelected = z.id === selectedZoneId;
-                  const hasBlocks = z.blocks && z.blocks.length > 0;
-                  const blockCount = z.blocks?.length || 0;
+                  const hasBlocks = z.blocksList && z.blocksList.length > 0;
+                  const blockCount = z.blocksList?.length || 0;
 
                   return (
                     <div
@@ -331,11 +367,11 @@ export default function ViewLayoutPage() {
                     >
                       {/* Thumbnail */}
                       <div style={{ width: '52px', height: '36px', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#0f172a', border: `1px solid ${color}44`, flexShrink: 0, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {resolved?.media.public_url ? (
+                        {resolved?.media.publicUrl ? (
                           isVideo ? (
-                            <video src={resolved.media.public_url} muted loop playsInline autoPlay style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <video src={resolved.media.publicUrl} muted loop playsInline autoPlay style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : (
-                            <img src={resolved.media.public_url} alt={resolved.media.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={resolved.media.publicUrl} alt={resolved.media.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           )
                         ) : (
                           <Layers size={16} color={color} />
@@ -348,7 +384,7 @@ export default function ViewLayoutPage() {
                           {z.name}
                         </div>
                         <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', gap: '8px' }}>
-                          <span>Layer #{z.z_index}</span>
+                          <span>Layer #{z.zIndex}</span>
                           <span style={{ color }}>{blockCount} blok</span>
                         </div>
                       </div>
@@ -366,7 +402,7 @@ export default function ViewLayoutPage() {
 
           {/* Selected Zone Detail */}
           {selectedZone && (() => {
-            const color = zColors[(layout.zones?.findIndex(z => z.id === selectedZone.id) || 0) % zColors.length];
+            const color = zColors[(layout.zonesList?.findIndex(z => z.id === selectedZone.id) || 0) % zColors.length];
             return (
               <div className="card-elevated" style={{ overflow: 'hidden' }}>
                 <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '8px', borderTop: `3px solid ${color}` }}>
@@ -395,19 +431,19 @@ export default function ViewLayoutPage() {
                   {/* Blocks / Playlists */}
                   <div>
                     <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                      Blok Media ({selectedZone.blocks?.length || 0})
+                      Blok Media ({selectedZone.blocksList?.length || 0})
                     </div>
-                    {(!selectedZone.blocks || selectedZone.blocks.length === 0) ? (
+                    {(!selectedZone.blocksList || selectedZone.blocksList.length === 0) ? (
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', padding: '10px', backgroundColor: 'var(--bg-base)', borderRadius: '6px', textAlign: 'center' }}>
                         Belum ada blok media
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        {selectedZone.blocks.map((block, bi) => {
-                          const pl = block.playlist as Playlist || playlists.find(p => p.id === block.playlist_id);
-                          const directMedia = block.media_item as MediaItem || mediaList.find(m => m.id === block.media_item_id);
+                        {selectedZone.blocksList.map((block, bi) => {
+                          const pl = block.playlist as Playlist || playlists.find(p => p.id === block.playlistId);
+                          const directMedia = block.mediaItem as MediaItem || mediaList.find(m => m.id === block.mediaItemId);
                           const label = pl ? pl.name : directMedia ? directMedia.name : 'Unknown';
-                          const isPlDef = !block.playlist_id && !block.media_item_id;
+                          const isPlDef = !block.playlistId && !block.mediaItemId;
 
                           return (
                             <div key={block.id} style={{ padding: '8px 10px', backgroundColor: 'var(--bg-base)', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -418,7 +454,7 @@ export default function ViewLayoutPage() {
                                 </div>
                                 <div style={{ fontSize: '0.625rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
                                   <Clock size={9} />
-                                  {block.start_time_seconds}s – {block.start_time_seconds + block.duration_seconds}s
+                                  {block.startTimeSeconds}s – {block.startTimeSeconds + block.durationSeconds}s
                                 </div>
                               </div>
                             </div>

@@ -150,7 +150,7 @@ export default function MediaPage() {
                     <div style={{ height: '140px', backgroundColor: '#0f172a', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {(() => {
                         const displayUrl = getMediaDisplayUrl(m);
-                        return m.media_type === 2 && displayUrl ? (
+                        return m.mediaType === 2 && displayUrl ? (
                           <video
                             src={displayUrl}
                             autoPlay
@@ -159,9 +159,9 @@ export default function MediaPage() {
                             playsInline
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
-                        ) : m.media_type === 2 ? (
+                        ) : m.mediaType === 2 ? (
                           <Film size={32} color="var(--accent-cyan)" />
-                        ) : m.media_type === 3 ? (
+                        ) : m.mediaType === 3 ? (
                           <Globe size={32} color="var(--accent-amber)" />
                         ) : displayUrl ? (
                           <img
@@ -177,14 +177,14 @@ export default function MediaPage() {
                       
                       {/* Badge Tipe */}
                       <div style={{ position: 'absolute', top: '8px', left: '8px', backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', padding: '4px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', color: '#fff', fontSize: '0.6875rem', fontWeight: 600 }}>
-                        {m.media_type === 2 ? <Film size={12} color="#22d3ee" /> : m.media_type === 3 ? <Globe size={12} color="#fbbf24" /> : <ImageIcon size={12} color="#34d399" />}
-                        {m.media_type === 2 ? 'Video' : m.media_type === 3 ? 'Web' : 'Gambar'}
+                        {m.mediaType === 2 ? <Film size={12} color="#22d3ee" /> : m.mediaType === 3 ? <Globe size={12} color="#fbbf24" /> : <ImageIcon size={12} color="#34d399" />}
+                        {m.mediaType === 2 ? 'Video' : m.mediaType === 3 ? 'Web' : 'Gambar'}
                       </div>
                       
                       {/* Badge Durasi (Video Only) */}
-                      {m.media_type === 2 && m.duration_seconds > 0 && (
+                      {m.mediaType === 2 && m.durationSeconds > 0 && (
                         <div style={{ position: 'absolute', bottom: '8px', right: '8px', backgroundColor: 'rgba(0,0,0,0.7)', padding: '2px 6px', borderRadius: '4px', color: '#fff', fontSize: '0.6875rem', fontFamily: 'monospace' }}>
-                          {m.duration_seconds}s
+                          {m.durationSeconds}s
                         </div>
                       )}
                     </div>
@@ -195,7 +195,7 @@ export default function MediaPage() {
                         {m.name}
                       </h3>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
-                        <span>{(m.file_size_bytes / (1024 * 1024)).toFixed(1)} MB</span>
+                        <span>{(m.fileSizeBytes / (1024 * 1024)).toFixed(1)} MB</span>
                         <span>{m.width}×{m.height}</span>
                       </div>
                     </div>
@@ -228,11 +228,11 @@ export default function MediaPage() {
             <div style={{ height: '180px', backgroundColor: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {(() => {
                 const displayUrl = getMediaDisplayUrl(selectedMedia);
-                return selectedMedia.media_type === 2 && displayUrl ? (
+                return selectedMedia.mediaType === 2 && displayUrl ? (
                   <video src={displayUrl} autoPlay loop muted playsInline controls style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                ) : selectedMedia.media_type === 2 ? (
+                ) : selectedMedia.mediaType === 2 ? (
                   <Film size={48} color="var(--accent-cyan)" />
-                ) : selectedMedia.media_type === 3 ? (
+                ) : selectedMedia.mediaType === 3 ? (
                   <Globe size={48} color="var(--accent-amber)" />
                 ) : displayUrl ? (
                   <img src={displayUrl} alt={selectedMedia.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -245,17 +245,17 @@ export default function MediaPage() {
             <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px 0', wordBreak: 'break-word' }}>{selectedMedia.name}</h4>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace', wordBreak: 'break-all' }}>{selectedMedia.original_filename}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace', wordBreak: 'break-all' }}>{selectedMedia.originalFilename}</div>
               </div>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', fontSize: '0.8125rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Tipe Konten</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{getMediaTypeBadge(selectedMedia.media_type)}</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{getMediaTypeBadge(selectedMedia.mediaType)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Ukuran File</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{(selectedMedia.file_size_bytes / (1024 * 1024)).toFixed(1)} MB</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{(selectedMedia.fileSizeBytes / (1024 * 1024)).toFixed(1)} MB</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Dimensi</span>
@@ -263,12 +263,12 @@ export default function MediaPage() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Durasi</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{selectedMedia.duration_seconds > 0 ? `${selectedMedia.duration_seconds} detik` : 'Statis'}</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{selectedMedia.durationSeconds > 0 ? `${selectedMedia.durationSeconds} detik` : 'Statis'}</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Checksum SHA-256</span>
                   <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'monospace', wordBreak: 'break-all', fontSize: '0.6875rem' }}>
-                    {selectedMedia.sha256_hash || '-'}
+                    {selectedMedia.sha256Hash || '-'}
                   </span>
                 </div>
               </div>

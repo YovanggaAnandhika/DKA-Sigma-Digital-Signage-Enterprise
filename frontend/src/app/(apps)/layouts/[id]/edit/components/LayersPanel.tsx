@@ -111,15 +111,15 @@ export default function LayersPanel() {
               Belum ada layer. Klik &ldquo;Baru&rdquo; untuk menambahkan.
             </div>
           ) : (
-            [...zones].sort((a, b) => (b.z_index || 0) - (a.z_index || 0)).map((z) => {
+            [...zones].sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0)).map((z) => {
               const isSelected = z.id === selectedZoneId;
-              const hasBlocks = z.blocks && z.blocks.length > 0;
-              const firstBlock = hasBlocks ? z.blocks[0] : null;
-              const assignedPl = firstBlock ? availablePlaylists.find(p => p.id === firstBlock.playlist_id) : null;
-              const playlistName = hasBlocks ? `${z.blocks.length} Blok Playlist` : null;
-              const firstItem = assignedPl?.items?.[0];
-              const layerMedia = firstItem ? mediaList.find(m => m.id === firstItem.media_item_id) : null;
-              const isVideo = layerMedia?.media_type === 2;
+              const hasBlocks = z.blocksList && z.blocksList.length > 0;
+              const firstBlock = hasBlocks ? z.blocksList[0] : null;
+              const assignedPl = firstBlock ? availablePlaylists.find(p => p.id === firstBlock.playlistId) : null;
+              const playlistName = hasBlocks ? `${z.blocksList.length} Blok Playlist` : null;
+              const firstItem = assignedPl?.itemsList?.[0];
+              const layerMedia = firstItem ? mediaList.find(m => m.id === firstItem.mediaItemId) : null;
+              const isVideo = layerMedia?.mediaType === 2;
 
               return (
                 <div
@@ -151,9 +151,9 @@ export default function LayersPanel() {
                       border: `1px solid ${isSelected ? 'var(--primary-500)' : 'var(--border-subtle)'}`,
                     }}
                   >
-                    {layerMedia?.public_url && !isVideo ? (
+                    {layerMedia?.publicUrl && !isVideo ? (
                       <img
-                        src={layerMedia.public_url}
+                        src={layerMedia.publicUrl}
                         alt={layerMedia.name}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
@@ -223,9 +223,9 @@ export default function LayersPanel() {
               <ListMusic size={14} /> ALOKASI PLAYLIST
             </label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {(selectedZone.blocks && selectedZone.blocks.length > 0) && (
+              {(selectedZone.blocksList && selectedZone.blocksList.length > 0) && (
                 <Link
-                  href={`/playlists/${selectedZone.blocks[0].playlist_id}`}
+                  href={`/playlists/${selectedZone.blocksList[0].playlistId}`}
                   target="_blank"
                   onClick={(e) => e.stopPropagation()}
                   style={{ fontSize: '0.6875rem', color: 'var(--primary-500)', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}
@@ -239,25 +239,25 @@ export default function LayersPanel() {
           
           {isPlaylistExpanded && (
             <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
-              {(selectedZone.blocks || []).length > 0 ? (
-                (selectedZone.blocks || []).map((block, index) => {
-                  const isMediaBlock = !!block.media_item_id;
+              {(selectedZone.blocksList || []).length > 0 ? (
+                (selectedZone.blocksList || []).map((block, index) => {
+                  const isMediaBlock = !!block.mediaItemId;
                   let name = 'Loading...';
                   let detail1 = '';
                   let detail2 = '';
                   let icon = <ListMusic size={14} />;
 
                   if (isMediaBlock) {
-                    const m = mediaList.find(m => m.id === block.media_item_id);
+                    const m = mediaList.find(m => m.id === block.mediaItemId);
                     name = m?.name || 'Media';
-                    detail1 = m?.media_type === 2 ? 'Video' : 'Image';
-                    detail2 = `${block.duration_seconds}s`;
+                    detail1 = m?.mediaType === 2 ? 'Video' : 'Image';
+                    detail2 = `${block.durationSeconds}s`;
                     icon = <Film size={14} />;
                   } else {
-                    const pl = availablePlaylists.find(p => p.id === block.playlist_id);
+                    const pl = availablePlaylists.find(p => p.id === block.playlistId);
                     name = pl?.name || 'Playlist';
-                    detail1 = `${pl?.items?.length || 0} Media`;
-                    detail2 = `${pl?.total_duration_seconds || 0}s`;
+                    detail1 = `${pl?.itemsList?.length || 0} Media`;
+                    detail2 = `${pl?.totalDurationSeconds || 0}s`;
                   }
 
                   return (
@@ -277,8 +277,8 @@ export default function LayersPanel() {
                       <button
                         onClick={() => {
                           if (window.confirm('Hapus blok playlist ini dari zona?')) {
-                            const newBlocks = (selectedZone.blocks || []).filter(b => b.id !== block.id);
-                            updateSelectedZone('blocks', newBlocks);
+                            const newBlocks = (selectedZone.blocksList || []).filter(b => b.id !== block.id);
+                            updateSelectedZone('blocksList', newBlocks);
                           }
                         }}
                         style={{ padding: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '4px' }}

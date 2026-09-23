@@ -17,8 +17,8 @@ export async function POST(req: NextRequest) {
         if(body.y !== undefined) request.setY(body.y);
         if(body.width !== undefined) request.setWidth(body.width);
         if(body.height !== undefined) request.setHeight(body.height);
-        if(body.z_index !== undefined) request.setZIndex(body.z_index);
-        if(body.background_color) request.setBackgroundColor(body.background_color);
+        if(body.zIndex !== undefined) request.setZIndex(body.zIndex);
+        if(body.backgroundColor) request.setBackgroundColor(body.backgroundColor);
       
 
     return new Promise<NextResponse>((resolve) => {

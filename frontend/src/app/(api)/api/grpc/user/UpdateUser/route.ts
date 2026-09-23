@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     const client = new UserServiceClient(getGrpcHost(), getGrpcCredentials());
     
     const request = new UpdateUserRequest();
-    if(body.id) request.setId(body.id); if(body.full_name) request.setFullName(body.full_name); if(body.role_id) request.setRoleIdsList([body.role_id]); if(body.is_active !== undefined) request.setIsActive(body.is_active);
+    if(body.id) request.setId(body.id); if(body.full_name) request.setFullName(body.full_name); if(body.role_id) request.setRoleIdsList([body.role_id]); if(body.isActive !== undefined) request.setIsActive(body.isActive);
 
     return new Promise<NextResponse>((resolve) => {
       client.updateUser(request, getGrpcMetadata(token), (error: any, response: any) => {

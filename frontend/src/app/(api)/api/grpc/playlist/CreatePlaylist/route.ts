@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const request = new CreatePlaylistRequest();
     if (body.name) request.setName(body.name);
     if (body.description !== undefined) request.setDescription(body.description);
-    if (body.is_shuffle !== undefined) request.setIsShuffle(body.is_shuffle);
+    if (body.isShuffle !== undefined) request.setIsShuffle(body.isShuffle);
 
     return new Promise<NextResponse>((resolve) => {
       client.createPlaylist(request, getGrpcMetadata(token), (error: any, response: any) => {

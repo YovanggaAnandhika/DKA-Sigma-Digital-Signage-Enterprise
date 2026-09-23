@@ -10,9 +10,9 @@ export default function CreateDisplayPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    pairing_code: '',
-    device_name: '',
-    default_layout_id: '',
+    pairingCode: '',
+    deviceName: '',
+    defaultLayoutId: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -20,9 +20,9 @@ export default function CreateDisplayPage() {
     try {
       setLoading(true);
       await api.pairDevice({
-        pairing_code: formData.pairing_code.toUpperCase(),
-        device_name: formData.device_name,
-        default_layout_id: formData.default_layout_id || undefined,
+        pairingCode: formData.pairingCode.toUpperCase(),
+        deviceName: formData.deviceName,
+        defaultLayoutId: formData.defaultLayoutId || undefined,
       });
       router.push('/displays');
     } catch (err: any) {
@@ -64,8 +64,8 @@ export default function CreateDisplayPage() {
               type="text"
               required
               maxLength={10}
-              value={formData.pairing_code}
-              onChange={(e) => setFormData({ ...formData, pairing_code: e.target.value.toUpperCase() })}
+              value={formData.pairingCode}
+              onChange={(e) => setFormData({ ...formData, pairingCode: e.target.value.toUpperCase() })}
               placeholder="Contoh: XR8-992"
               className="form-input"
               style={{ fontFamily: 'monospace', fontSize: '1.1rem', letterSpacing: '0.1em' }}
@@ -79,8 +79,8 @@ export default function CreateDisplayPage() {
             <input
               type="text"
               required
-              value={formData.device_name}
-              onChange={(e) => setFormData({ ...formData, device_name: e.target.value })}
+              value={formData.deviceName}
+              onChange={(e) => setFormData({ ...formData, deviceName: e.target.value })}
               placeholder="Contoh: Layar Kasir 01 (Grand Indonesia)"
               className="form-input"
             />
@@ -92,8 +92,8 @@ export default function CreateDisplayPage() {
             </label>
             <input
               type="text"
-              value={formData.default_layout_id}
-              onChange={(e) => setFormData({ ...formData, default_layout_id: e.target.value })}
+              value={formData.defaultLayoutId}
+              onChange={(e) => setFormData({ ...formData, defaultLayoutId: e.target.value })}
               placeholder="UUID layout dari halaman Desain Layout"
               className="form-input"
             />

@@ -12,7 +12,7 @@ export default function CreatePlaylistPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    is_shuffle: false,
+    isShuffle: false,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,8 +77,8 @@ export default function CreatePlaylistPage() {
             <input
               type="checkbox"
               id="is_shuffle"
-              checked={formData.is_shuffle}
-              onChange={(e) => setFormData({ ...formData, is_shuffle: e.target.checked })}
+              checked={formData.isShuffle}
+              onChange={(e) => setFormData({ ...formData, isShuffle: e.target.checked })}
               style={{ width: '16px', height: '16px', cursor: 'pointer' }}
             />
             <label htmlFor="is_shuffle" style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--text-primary)', cursor: 'pointer' }}>

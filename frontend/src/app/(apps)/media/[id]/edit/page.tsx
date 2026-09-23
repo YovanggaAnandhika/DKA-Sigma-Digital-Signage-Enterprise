@@ -14,7 +14,7 @@ export default function EditMediaPage() {
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    thumbnail_url: '',
+    thumbnailUrl: '',
   });
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export default function EditMediaPage() {
         setMedia(data);
         setFormData({
           name: data.name,
-          thumbnail_url: data.thumbnail_url || '',
+          thumbnailUrl: data.thumbnailUrl || '',
         });
       } catch (err: any) {
         alert(err.message || 'Gagal memuat media');
@@ -96,8 +96,8 @@ export default function EditMediaPage() {
             </label>
             <input
               type="text"
-              value={formData.thumbnail_url}
-              onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
+              value={formData.thumbnailUrl}
+              onChange={(e) => setFormData({ ...formData, thumbnailUrl: e.target.value })}
               placeholder="http://localhost:80/thumbs/preview.jpg"
               className="form-input"
             />

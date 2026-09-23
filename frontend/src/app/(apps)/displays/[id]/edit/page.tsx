@@ -20,7 +20,7 @@ export default function EditDisplayPage() {
     resolution: '1920x1080',
     orientation: 'landscape',
     timezone: 'Asia/Jakarta',
-    display_group_id: '',
+    displayGroupId: '',
     schedule_id: '',
   });
 
@@ -38,11 +38,11 @@ export default function EditDisplayPage() {
         setSchedules(schedulesData.data);
         setFormData({
           name: data.name,
-          resolution: data.resolution || '1920x1080',
-          orientation: data.orientation || 'landscape',
+          resolution: data.screenWidth && data.screenHeight ? `${data.screenWidth}x${data.screenHeight}` : '1920x1080',
+          orientation: String(data.orientation) === '2' ? 'portrait' : 'landscape',
           timezone: data.timezone || 'Asia/Jakarta',
-          display_group_id: data.display_group_id || '',
-          schedule_id: data.schedule_id || '',
+          displayGroupId: data.displayGroupId || '',
+          schedule_id: data.scheduleId || '',
         });
       } catch (err: any) {
         alert(err.message || 'Gagal memuat display');
@@ -58,7 +58,7 @@ export default function EditDisplayPage() {
     e.preventDefault();
     try {
       setSaving(true);
-      const [sw, sh] = formData.resolution.split('x').map(Number);
+      const [sw, sh] = (formData.resolution || '1920x1080').split('x').map(Number);
       const orientationVal = formData.orientation === 'portrait' ? 2 : 1;
       await api.updateDevice(params.id, {
         name: formData.name,
@@ -66,7 +66,7 @@ export default function EditDisplayPage() {
         screen_height: sh || 1080,
         orientation: orientationVal,
         timezone: formData.timezone,
-        display_group_id: formData.display_group_id,
+        display_group_id: formData.displayGroupId,
         schedule_id: formData.schedule_id,
       });
       router.push(`/displays/${params.id}`);
@@ -171,8 +171,8 @@ export default function EditDisplayPage() {
                 Grup Layar (Display Group)
               </label>
               <select
-                value={formData.display_group_id}
-                onChange={(e) => setFormData({ ...formData, display_group_id: e.target.value })}
+                value={formData.displayGroupId}
+                onChange={(e) => setFormData({ ...formData, displayGroupId: e.target.value })}
                 className="form-select"
               >
                 <option value="">-- Tidak Tergabung --</option>

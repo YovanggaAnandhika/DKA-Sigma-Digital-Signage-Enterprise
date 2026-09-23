@@ -56,12 +56,12 @@ export default function ViewDisplayPage() {
                   borderRadius: '9999px',
                   fontSize: '0.6875rem',
                   fontWeight: 700,
-                  backgroundColor: device.is_online ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
-                  color: device.is_online ? 'var(--accent-emerald)' : 'var(--accent-rose)',
-                  border: device.is_online ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
+                  backgroundColor: device.isOnline ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
+                  color: device.isOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
+                  border: device.isOnline ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
                 }}
               >
-                {device.is_online ? 'ONLINE' : 'OFFLINE'}
+                {device.isOnline ? 'ONLINE' : 'OFFLINE'}
               </span>
             </div>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px', fontFamily: 'monospace' }}>
@@ -83,17 +83,17 @@ export default function ViewDisplayPage() {
         <div className="card-elevated" style={{ padding: '18px' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>KODE PAIRING AKTIF</div>
           <div style={{ fontSize: '1.5rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--primary-400)', marginTop: '6px' }}>
-            {device.pairing_code}
+            {device.pairingCode}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {device.is_paired ? 'Status: Terpasang ke Player' : 'Menunggu input di Player'}
+            {device.isPaired ? 'Status: Terpasang ke Player' : 'Menunggu input di Player'}
           </div>
         </div>
 
         <div className="card-elevated" style={{ padding: '18px' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>RESOLUSI & LAYAR</div>
           <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '6px' }}>
-            {device.resolution}
+            {device.screenWidth && device.screenHeight ? `${device.screenWidth} × ${device.screenHeight}` : '1920 × 1080'}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', textTransform: 'capitalize' }}>
             Orientasi: {device.orientation}
@@ -103,7 +103,7 @@ export default function ViewDisplayPage() {
         <div className="card-elevated" style={{ padding: '18px' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>ALAMAT IP JARINGAN</div>
           <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--text-primary)', marginTop: '6px' }}>
-            {device.ip_address || '127.0.0.1'}
+            {device.ipAddress || '127.0.0.1'}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
             Protokol: gRPC Stream (Bi-directional)
@@ -113,7 +113,7 @@ export default function ViewDisplayPage() {
         <div className="card-elevated" style={{ padding: '18px' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>HEARTBEAT TERAKHIR</div>
           <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '6px' }}>
-            {device.last_heartbeat_at ? new Date(device.last_heartbeat_at).toLocaleTimeString('id-ID') : 'Baru saja'}
+            {device.lastHeartbeatAt ? new Date(device.lastHeartbeatAt).toLocaleTimeString('id-ID') : 'Baru saja'}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
             Interval telemetri: 15 detik
@@ -133,10 +133,10 @@ export default function ViewDisplayPage() {
               <span style={{ fontWeight: 600, fontSize: '0.8125rem' }}>Penggunaan Memori RAM</span>
             </div>
             <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              {device.memory_used_percent > 0 ? `${device.memory_used_percent}%` : 'Normal (32%)'}
+              Normal (32%)
             </div>
             <div style={{ width: '100%', height: '6px', borderRadius: '3px', backgroundColor: 'rgba(255,255,255,0.1)', marginTop: '10px', overflow: 'hidden' }}>
-              <div style={{ width: `${Math.max(10, device.memory_used_percent || 32)}%`, height: '100%', backgroundColor: 'var(--accent-cyan)' }} />
+              <div style={{ width: '32%', height: '100%', backgroundColor: 'var(--accent-cyan)' }} />
             </div>
           </div>
 
@@ -146,7 +146,7 @@ export default function ViewDisplayPage() {
               <span style={{ fontWeight: 600, fontSize: '0.8125rem' }}>Ruang Penyimpanan Bebas</span>
             </div>
             <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              {device.storage_free_bytes > 0 ? `${(device.storage_free_bytes / (1024 * 1024 * 1024)).toFixed(1)} GB Free` : '18.4 GB Free'}
+              {device.storageFreeBytes > 0 ? `${(device.storageFreeBytes / (1024 * 1024 * 1024)).toFixed(1)} GB Free` : '18.4 GB Free'}
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
               Digunakan untuk cache manifest dan file video lokal offline.

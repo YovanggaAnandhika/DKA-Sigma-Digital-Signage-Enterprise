@@ -11,8 +11,8 @@ export async function POST(req: NextRequest) {
     const request = new AddMediaBlockRequest();
     if (body.zone_id) request.setZoneId(body.zone_id);
     if (body.media_id) request.setMediaItemId(body.media_id);
-    if (body.start_time_seconds !== undefined) request.setStartTimeSeconds(body.start_time_seconds);
-    if (body.duration_seconds !== undefined) request.setDurationSeconds(body.duration_seconds);
+    if (body.startTimeSeconds !== undefined) request.setStartTimeSeconds(body.startTimeSeconds);
+    if (body.durationSeconds !== undefined) request.setDurationSeconds(body.durationSeconds);
     return new Promise<NextResponse>((resolve) => {
       client.addMediaBlock(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));

@@ -152,11 +152,11 @@ export default function RolesPage() {
                           border: '1px solid rgba(59, 130, 246, 0.3)',
                         }}
                       >
-                        {r.permissions?.length || 0} Permissions
+                        {r.permissionsList?.length || 0} Permissions
                       </span>
                     </td>
                     <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {r.created_at ? new Date(r.created_at).toLocaleDateString('id-ID') : '-'}
+                      {r.createdAt ? new Date(r.createdAt).toLocaleDateString('id-ID') : '-'}
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>

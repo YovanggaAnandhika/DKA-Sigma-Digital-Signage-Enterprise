@@ -19,11 +19,11 @@ export async function getLayout(id: string): Promise<Layout> {
   return l as Layout;
 }
 
-export async function createLayout(data: { name: string; description?: string; canvas_width: number; canvas_height: number; background_color?: string }): Promise<Layout> {
+export async function createLayout(data: { name: string; description?: string; canvasWidth: number; canvasHeight: number; background_color?: string }): Promise<Layout> {
   const payload = {
     ...data,
-    width: data.canvas_width,
-    height: data.canvas_height
+    width: data.canvasWidth,
+    height: data.canvasHeight
   };
   const result = await invokeApi<any>('/api/grpc/layout/CreateLayout', payload);
   const l = result.layout || result;
@@ -31,11 +31,11 @@ export async function createLayout(data: { name: string; description?: string; c
   return l as Layout;
 }
 
-export async function updateLayout(id: string, data: { name?: string; description?: string; canvas_width?: number; canvas_height?: number; background_color?: string }): Promise<Layout> {
+export async function updateLayout(id: string, data: { name?: string; description?: string; canvasWidth?: number; canvasHeight?: number; background_color?: string }): Promise<Layout> {
   const payload = {
     ...data,
-    width: data.canvas_width,
-    height: data.canvas_height
+    width: data.canvasWidth,
+    height: data.canvasHeight
   };
   const result = await invokeApi<any>('/api/grpc/layout/UpdateLayout', { id, ...payload });
   const l = result.layout || result;
@@ -48,15 +48,27 @@ export async function deleteLayout(id: string): Promise<boolean> {
   return true;
 }
 
-export async function createZone(data: { layout_id: string; name: string; x: number; y: number; width: number; height: number; z_index: number; background_color?: string }): Promise<Layout> {
-  await invokeApi<any>('/api/grpc/layout/CreateZone', data);
-  return getLayout(data.layout_id);
+export async function createZone(data: { layoutId?: string; layout_id?: string; name: string; x: number; y: number; width: number; height: number; zIndex: number; backgroundColor?: string; background_color?: string }): Promise<any> {
+  const result = await invokeApi<any>('/api/grpc/layout/CreateZone', {
+    ...data,
+    layout_id: data.layoutId || data.layout_id,
+    layoutId: data.layoutId || data.layout_id,
+    backgroundColor: data.backgroundColor || data.background_color,
+  });
+  return result.zone || result;
 }
 
-export async function updateZone(id: string, data: { name?: string; x?: number; y?: number; width?: number; height?: number; z_index?: number; background_color?: string; layout_id?: string }): Promise<Layout | any> {
-  const res = await invokeApi<any>('/api/grpc/layout/UpdateZone', { id, ...data });
-  if (data.layout_id) {
-    return getLayout(data.layout_id);
+export async function updateZone(id: string, data: { name?: string; x?: number; y?: number; width?: number; height?: number; zIndex?: number; z_index?: number; backgroundColor?: string; background_color?: string; layoutId?: string; layout_id?: string }): Promise<Layout | any> {
+  const payload = {
+    ...data,
+    zIndex: data.zIndex ?? data.z_index,
+    backgroundColor: data.backgroundColor || data.background_color,
+    background_color: data.backgroundColor || data.background_color,
+  };
+  const res = await invokeApi<any>('/api/grpc/layout/UpdateZone', { id, ...payload });
+  const targetLayoutId = data.layoutId || data.layout_id;
+  if (targetLayoutId) {
+    return getLayout(targetLayoutId);
   }
   return res;
 }
@@ -66,20 +78,30 @@ export async function deleteZone(id: string, layout_id: string): Promise<Layout>
   return getLayout(layout_id);
 }
 
-export async function addPlaylistBlock(zone_id: string, playlist_id: string, start_time_seconds: number, duration_seconds: number): Promise<any> {
-  return await invokeApi<any>('/api/grpc/layout/AddPlaylistBlock', { zone_id, playlist_id, start_time_seconds, duration_seconds });
+export async function addPlaylistBlock(zone_id: string, playlistId: string, startTimeSeconds: number, durationSeconds: number): Promise<any> {
+  return await invokeApi<any>('/api/grpc/layout/AddPlaylistBlock', { zone_id, playlistId, startTimeSeconds, durationSeconds });
 }
 
-export async function updatePlaylistBlock(id: string, data: { start_time_seconds?: number; duration_seconds?: number; transition_type?: string; is_muted?: boolean; }): Promise<any> {
-  return await invokeApi<any>('/api/grpc/layout/UpdatePlaylistBlock', { id, ...data });
+export async function updatePlaylistBlock(id: string, data: { startTimeSeconds?: number; durationSeconds?: number; transitionType?: string; transition_type?: string; isMuted?: boolean; position?: number; }): Promise<any> {
+  return await invokeApi<any>('/api/grpc/layout/UpdatePlaylistBlock', {
+    id,
+    ...data,
+    transitionType: data.transitionType || data.transition_type,
+  });
 }
 
-export async function addMediaBlock(zone_id: string, media_id: string, start_time_seconds: number, duration_seconds: number): Promise<any> {
-  return await invokeApi<any>('/api/grpc/layout/AddMediaBlock', { zone_id, media_id, start_time_seconds, duration_seconds });
+export async function addMediaBlock(zone_id: string, media_id: string, startTimeSeconds: number, durationSeconds: number): Promise<any> {
+  return await invokeApi<any>('/api/grpc/layout/AddMediaBlock', { zone_id, media_id, startTimeSeconds, durationSeconds });
 }
 
-export async function setPlaylistItemOverride(zone_playlist_id: string, playlist_item_id: string, is_muted: boolean): Promise<any> {
-  return await invokeApi<any>('/api/grpc/layout/SetPlaylistItemOverride', { zone_playlist_id, playlist_item_id, is_muted });
+export async function setPlaylistItemOverride(zonePlaylistId: string, playlistItemId: string, isMuted: boolean): Promise<any> {
+  return await invokeApi<any>('/api/grpc/layout/SetPlaylistItemOverride', {
+    zonePlaylistId,
+    zone_playlistId: zonePlaylistId,
+    zone_playlist_id: zonePlaylistId,
+    playlistItemId,
+    isMuted
+  });
 }
 
 export async function removePlaylistBlock(id: string): Promise<any> {
