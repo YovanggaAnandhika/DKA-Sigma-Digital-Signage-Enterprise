@@ -4,21 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, MediaItem } from '@/lib/services';
-import {
-  ArrowLeft,
-  Edit,
-  FolderOpen,
-  RefreshCw,
-  Film,
-  Image as ImageIcon,
-  ShieldCheck,
-  HardDrive,
-  Copy,
-  Check,
-  ExternalLink,
-  AlertTriangle,
-  UploadCloud,
-} from 'lucide-react';
+import { ArrowLeft, Edit, RefreshCw } from 'lucide-react';
+import MediaVisualPreview from './components/MediaVisualPreview';
+import MediaPropertiesGrid from './components/MediaPropertiesGrid';
 
 export default function ViewMediaPage() {
   const params = useParams() as { id: string };
@@ -86,146 +74,16 @@ export default function ViewMediaPage() {
       </div>
 
       {/* Visual Media Preview Card */}
-      <div className="card-elevated" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Pratinjau Visual (Media Preview)
-            </span>
-            <span
-              style={{
-                fontSize: '0.6875rem',
-                fontWeight: 700,
-                padding: '3px 8px',
-                borderRadius: '6px',
-                backgroundColor: media.mediaType === 2 ? 'rgba(6, 182, 212, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                color: media.mediaType === 2 ? 'var(--accent-cyan)' : 'var(--accent-emerald)',
-                border: `1px solid ${media.mediaType === 2 ? 'rgba(6, 182, 212, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
-              }}
-            >
-              {media.mediaType === 2 ? '🎬 Video MP4' : media.mediaType === 3 ? '🌐 Web URL' : '🖼️ Gambar'}
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              type="button"
-              onClick={handleCopyUrl}
-              className="btn btn-outline"
-              style={{ fontSize: '0.75rem', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
-              title="Salin URL Aset"
-            >
-              {copied ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
-              <span>{copied ? 'Tersalin!' : 'Salin URL'}</span>
-            </button>
-            <a
-              href={media.publicUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="btn btn-outline"
-              style={{ fontSize: '0.75rem', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
-              title="Buka Berkas Asli di Tab Baru"
-            >
-              <ExternalLink size={14} />
-              <span>Buka Asli</span>
-            </a>
-          </div>
-        </div>
-
-        {/* Visual Viewport Box */}
-        <div
-          style={{
-            position: 'relative',
-            width: '100%',
-            minHeight: '340px',
-            maxHeight: '520px',
-            backgroundColor: '#0a0f1d',
-            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)',
-            backgroundSize: '20px 20px',
-            borderRadius: '12px',
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '1px solid var(--border-subtle)',
-            boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)',
-          }}
-        >
-          {mediaLoadError ? (
-            <div style={{ textAlign: 'center', padding: '32px 20px', maxWidth: '480px' }}>
-              <AlertTriangle size={40} color="var(--accent-amber)" style={{ margin: '0 auto 12px auto' }} />
-              <div style={{ fontWeight: 700, color: '#f8fafc', fontSize: '1rem', marginBottom: '8px' }}>
-                Pratinjau Visual Tidak Dapat Dimuat
-              </div>
-              <p style={{ color: '#94a3b8', fontSize: '0.8125rem', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-                {media.publicUrl.startsWith('blob:')
-                  ? 'Tautan ini sebelumnya tersimpan sebagai memori sementara (blob:) dan telah kedaluwarsa setelah refresh. Silakan unggah berkas baru agar tersimpan permanen di server.'
-                  : `Berkas pada alamat "${media.publicUrl}" tidak dapat diakses atau tidak ditemukan.`}
-              </p>
-              <Link href="/media/create" className="btn btn-primary" style={{ fontSize: '0.8125rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                <UploadCloud size={16} />
-                <span>Unggah Media Baru</span>
-              </Link>
-            </div>
-          ) : media.mediaType === 2 ? (
-            <video
-              src={media.publicUrl}
-              controls
-              autoPlay
-              muted
-              loop
-              onError={() => setMediaLoadError(true)}
-              style={{ maxWidth: '100%', maxHeight: '500px', objectFit: 'contain' }}
-            />
-          ) : media.mediaType === 3 ? (
-            <iframe
-              src={media.publicUrl}
-              title={media.name}
-              style={{ width: '100%', height: '460px', border: 'none' }}
-            />
-          ) : (
-            <img
-              src={media.publicUrl}
-              alt={media.name}
-              onError={() => setMediaLoadError(true)}
-              style={{ maxWidth: '100%', maxHeight: '500px', objectFit: 'contain' }}
-            />
-          )}
-        </div>
-      </div>
+      <MediaVisualPreview
+        media={media}
+        copied={copied}
+        handleCopyUrl={handleCopyUrl}
+        mediaLoadError={mediaLoadError}
+        setMediaLoadError={setMediaLoadError}
+      />
 
       {/* Asset Properties Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-        <div className="card-elevated" style={{ padding: '18px' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>TIPE & FORMAT</div>
-          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '6px' }}>
-            {media.mimeType || 'video/mp4'}
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Durasi: {media.durationSeconds > 0 ? `${media.durationSeconds} detik` : 'Statis'}
-          </div>
-        </div>
-
-        <div className="card-elevated" style={{ padding: '18px' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>DIMENSI PIXEL</div>
-          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '6px' }}>
-            {media.width} × {media.height} px
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Rasio: {(media.width / (media.height || 1)).toFixed(2)}:1
-          </div>
-        </div>
-
-        <div className="card-elevated" style={{ padding: '18px' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>UKURAN FILE</div>
-          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '6px' }}>
-            {(media.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {media.fileSizeBytes.toLocaleString()} bytes
-          </div>
-        </div>
-      </div>
+      <MediaPropertiesGrid media={media} />
 
       {/* Checksum & Storage Details */}
       <div className="card-elevated" style={{ padding: '24px' }}>
