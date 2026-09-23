@@ -220,7 +220,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         };
       });
       setLayers(sanitizedLayers);
-      showToast('Template layout dan seluruh posisi zona berhasil disimpan!');
+      showToast('Template layout dan seluruh posisi layer berhasil disimpan!');
     } catch (err: any) {
       showToast(err.message || 'Gagal menyimpan layout', 'error');
     } finally {

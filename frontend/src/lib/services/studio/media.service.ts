@@ -61,7 +61,7 @@ export async function createMedia(data: { name: string; originalFilename: string
     durationSeconds: data.durationSeconds,
     duration_seconds: data.durationSeconds,
   });
-  const mediaId = result.media_id || result.mediaId;
+  const mediaId = result.id || result.media_id || result.mediaId;
   if (!mediaId) throw new Error('Gagal mendapatkan ID media setelah pembuatan');
   return getMediaItem(mediaId);
 }

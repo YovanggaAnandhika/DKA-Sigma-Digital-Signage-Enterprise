@@ -62,7 +62,7 @@ export default function LayoutsPage() {
               Studio Desain Layout
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Manajemen tata letak canvas multi-zona layar retail terhubung ke backend gRPC.
+              Manajemen tata letak canvas multi-layer layar retail terhubung ke backend gRPC.
             </p>
           </div>
         </div>
@@ -105,7 +105,7 @@ export default function LayoutsPage() {
                 <th>Nama Template Layout</th>
                 <th>Dimensi Canvas</th>
                 <th>Orientasi</th>
-                <th>Jumlah Zona Layar</th>
+                <th>Jumlah Layer Layar</th>
                 <th>Dibuat Pada</th>
                 <th style={{ textAlign: 'right' }}>Aksi</th>
               </tr>

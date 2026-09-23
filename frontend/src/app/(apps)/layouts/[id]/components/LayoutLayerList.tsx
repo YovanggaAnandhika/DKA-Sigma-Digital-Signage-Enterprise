@@ -32,14 +32,14 @@ export default function LayoutLayerList({
         <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Layers size={15} color="var(--primary-400)" />
           <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-            Daftar Zona ({layout.layersList?.length || 0})
+            Daftar Layer ({layout.layersList?.length || 0})
           </h3>
         </div>
 
         <div style={{ padding: '8px' }}>
           {(!layout.layersList || layout.layersList.length === 0) ? (
             <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
-              Belum ada zona di layout ini.
+              Belum ada layer di layout ini.
             </div>
           ) : (
             layout.layersList.map((z, idx) => {

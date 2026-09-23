@@ -58,7 +58,7 @@ export default function DashboardStats({
       <div className="card-elevated" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-            Layout Multi-Zona
+            Layout Multi-Layer
           </span>
           <div
             style={{

@@ -55,7 +55,7 @@ export default function LayerBlockList() {
       >
         {!collapsed && (
           <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-600)', display: 'flex', alignItems: 'center', gap: '6px', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-            <LayoutGrid size={13} style={{ flexShrink: 0 }} /> KONTEN ZONA
+            <LayoutGrid size={13} style={{ flexShrink: 0 }} /> KONTEN LAYER
           </label>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
@@ -71,7 +71,7 @@ export default function LayerBlockList() {
           )}
           <button
             onClick={() => setCollapsed(prev => !prev)}
-            title={collapsed ? 'Tampilkan Konten Zona' : 'Sembunyikan Konten Zona'}
+            title={collapsed ? 'Tampilkan Konten Layer' : 'Sembunyikan Konten Layer'}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -98,7 +98,7 @@ export default function LayerBlockList() {
       {collapsed && (
         <div 
           onClick={() => setCollapsed(false)}
-          title="Klik untuk membuka Konten Zona"
+          title="Klik untuk membuka Konten Layer"
           style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '10px', cursor: 'pointer', color: 'var(--primary-600)' }}
         >
           <LayoutGrid size={16} />
@@ -110,7 +110,7 @@ export default function LayerBlockList() {
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {!selectedZone ? (
             <div style={{ padding: '20px 14px', fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-              Pilih layer/zona di atas untuk mengatur kontennya.
+              Pilih layer/layer di atas untuk mengatur kontennya.
             </div>
           ) : (
         <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
@@ -172,7 +172,7 @@ export default function LayerBlockList() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (window.confirm('Hapus blok playlist ini dari zona?')) {
+                      if (window.confirm('Hapus blok playlist ini dari layer?')) {
                         const newBlocks = (selectedZone.blocksList || []).filter(b => b.id !== block.id);
                         updateSelectedLayer('blocksList', newBlocks);
                         if (selectedBlockId === block.id) {
@@ -203,7 +203,7 @@ export default function LayerBlockList() {
               style={{ flex: 1, padding: '6px 8px', fontSize: '0.6875rem', fontWeight: 600, backgroundColor: 'var(--bg-surface-elevated)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
               onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-50)'; e.currentTarget.style.borderColor = 'var(--primary-300)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
-              title="Tambah Playlist ke Zona Ini"
+              title="Tambah Playlist ke Layer Ini"
             >
               <ListMusic size={13} /> + Playlist
             </button>
@@ -212,7 +212,7 @@ export default function LayerBlockList() {
               style={{ flex: 1, padding: '6px 8px', fontSize: '0.6875rem', fontWeight: 600, backgroundColor: 'var(--bg-surface-elevated)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
               onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-50)'; e.currentTarget.style.borderColor = 'var(--primary-300)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
-              title="Tambah Media Langsung ke Zona Ini"
+              title="Tambah Media Langsung ke Layer Ini"
             >
               <Film size={13} /> + Media
             </button>

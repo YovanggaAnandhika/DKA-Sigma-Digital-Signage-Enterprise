@@ -108,7 +108,7 @@ export default function InspectorPanel() {
   // Helper to delete block
   const handleDeleteBlock = () => {
     if (!selectedBlock || !blockZone) return;
-    if (window.confirm('Hapus item ini dari alokasi zona?')) {
+    if (window.confirm('Hapus item ini dari alokasi layer?')) {
       const newBlocks = (blockZone.blocksList || []).filter((b) => b.id !== selectedBlock.id);
       if (blockZone.id === selectedLayerId) {
         updateSelectedLayer('blocksList', newBlocks);
@@ -183,7 +183,7 @@ export default function InspectorPanel() {
   }
 
   // Determine what title to show in the single inspector header
-  let headerTitle = 'Properti Zona';
+  let headerTitle = 'Properti Layer';
   let headerIcon = <Settings size={14} />;
 
   if (inspectorTarget === 'block' && selectedBlock) {
@@ -330,7 +330,7 @@ export default function InspectorPanel() {
                   style={{ fontSize: '0.75rem', padding: '6px 10px', backgroundColor: 'var(--bg-base)', color: 'var(--text-primary)' }}
                 />
                 <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
-                  Dialokasikan pada layer: <strong style={{ color: 'var(--text-primary)' }}>{blockZone?.name || 'Zona'}</strong>
+                  Dialokasikan pada layer: <strong style={{ color: 'var(--text-primary)' }}>{blockZone?.name || 'Layer'}</strong>
                 </span>
               </div>
 
@@ -426,11 +426,11 @@ export default function InspectorPanel() {
                   className="btn btn-secondary btn-sm"
                   style={{ flex: 1, fontSize: '0.6875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', height: '28px' }}
                 >
-                  <Layers size={13} /> Edit Zona
+                  <Layers size={13} /> Edit Layer
                 </button>
                 <button
                   onClick={handleDeleteBlock}
-                  title="Hapus Item dari Alokasi Zona"
+                  title="Hapus Item dari Alokasi Layer"
                   style={{
                     width: '28px',
                     height: '28px',
@@ -463,7 +463,7 @@ export default function InspectorPanel() {
               </span>
               <button
                 onClick={() => handleDeleteLayer(selectedZone.id)}
-                title="Hapus Zona Ini"
+                title="Hapus Layer Ini"
                 style={{
                   width: '26px',
                   height: '26px',
@@ -487,7 +487,7 @@ export default function InspectorPanel() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  NAMA KOTAK / ZONA
+                  NAMA KOTAK / LAYER
                 </label>
                 <input
                   type="text"
@@ -568,7 +568,7 @@ export default function InspectorPanel() {
               {/* Quick block allocation button inside layer */}
               <div style={{ marginTop: '8px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
                 <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                  TAMBAH KONTEN KE ZONA INI
+                  TAMBAH KONTEN KE LAYER INI
                 </span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
@@ -759,7 +759,7 @@ export default function InspectorPanel() {
             <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'var(--bg-base)', border: '1px dashed var(--border-subtle)', textAlign: 'center', marginTop: '8px' }}>
               <MousePointer2 size={20} style={{ opacity: 0.5, margin: '0 auto 6px auto', color: 'var(--text-secondary)' }} />
               <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', display: 'block' }}>
-                Klik suatu <strong>Zona</strong> di canvas, item di <strong>Konten Zona</strong>, atau blok di <strong>Timeline</strong> untuk langsung beralih melihat dan mengedit propertinya di panel ini.
+                Klik suatu <strong>Layer</strong> di canvas, item di <strong>Konten Layer</strong>, atau blok di <strong>Timeline</strong> untuk langsung beralih melihat dan mengedit propertinya di panel ini.
               </span>
             </div>
           </div>

@@ -6,7 +6,7 @@ import { Zap, Monitor, CheckCircle2 } from 'lucide-react';
 const SLIDES = [
   {
     title: 'Kelola Konten Layar Digital Tanpa Batas.',
-    description: 'Atur playlist, zona, dan jadwal tampilan dari satu dashboard terpusat yang dirancang untuk skala enterprise.',
+    description: 'Atur playlist, layer, dan jadwal tampilan dari satu dashboard terpusat yang dirancang untuk skala enterprise.',
     icon: <Zap size={24} color="#34d399" />,
   },
   {
@@ -15,8 +15,8 @@ const SLIDES = [
     icon: <Monitor size={24} color="#60a5fa" />,
   },
   {
-    title: 'Multi-Zona. Multi-Layout. Satu Platform.',
-    description: 'Buat tata letak layar kompleks dengan zona bertumpuk, transisi, dan jadwal per-zona yang fleksibel.',
+    title: 'Multi-Layer. Multi-Layout. Satu Platform.',
+    description: 'Buat tata letak layar kompleks dengan layer bertumpuk, transisi, dan jadwal per-layer yang fleksibel.',
     icon: <CheckCircle2 size={24} color="#c084fc" />,
   },
 ];

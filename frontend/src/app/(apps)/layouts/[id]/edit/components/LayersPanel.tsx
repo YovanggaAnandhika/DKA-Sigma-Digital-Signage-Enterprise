@@ -48,7 +48,7 @@ export default function LayersPanel() {
         {!collapsed && (
           <button
             onClick={handleAddLayer}
-            title="Tambah Layer / Zona Baru"
+            title="Tambah Layer / Layer Baru"
             style={{
               display: 'flex',
               alignItems: 'center',

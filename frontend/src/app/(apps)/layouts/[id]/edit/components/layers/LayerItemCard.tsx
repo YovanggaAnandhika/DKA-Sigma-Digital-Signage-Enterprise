@@ -110,7 +110,7 @@ export default function LayerItemCard({ z }: LayerItemCardProps) {
             marginTop: '2px',
             cursor: 'pointer',
           }}
-          title="Klik untuk ubah konten zona"
+          title="Klik untuk ubah konten layer"
           onMouseEnter={(e) => {
             e.currentTarget.style.filter = 'brightness(0.95)';
           }}

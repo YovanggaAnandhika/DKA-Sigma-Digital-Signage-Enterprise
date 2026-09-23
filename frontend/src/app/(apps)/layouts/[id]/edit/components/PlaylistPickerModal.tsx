@@ -126,7 +126,7 @@ export default function PlaylistPickerModal() {
         <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-surface)' }}>
           <h2 style={{ fontSize: '1.0625rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <PlayCircle size={20} color="var(--primary-500)" />
-            Pilih Playlist untuk Zona
+            Pilih Playlist untuk Layer
             <span style={{ color: 'var(--primary-400)', backgroundColor: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8125rem' }}>
               {targetZone.name}
             </span>

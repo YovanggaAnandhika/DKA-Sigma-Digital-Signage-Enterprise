@@ -71,7 +71,7 @@ export default function SimulatorPage() {
               Live Player Screen Simulator
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Simulasi visual pemutaran multi-zona layout dan perputaran playlist pada perangkat Android retail
+              Simulasi visual pemutaran multi-layer layout dan perputaran playlist pada perangkat Android retail
             </p>
           </div>
         </div>

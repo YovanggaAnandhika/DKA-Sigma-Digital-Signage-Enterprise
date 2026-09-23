@@ -61,7 +61,7 @@ export default function PlaylistsPage() {
               Daftar Putar (Playlists)
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Atur urutan dan durasi penayangan video & gambar promosi di setiap zona layar.
+              Atur urutan dan durasi penayangan video & gambar promosi di setiap layer layar.
             </p>
           </div>
         </div>
