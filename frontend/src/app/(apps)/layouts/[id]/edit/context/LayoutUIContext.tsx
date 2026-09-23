@@ -1,0 +1,117 @@
+'use client';
+
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { api, Playlist, MediaItem } from '@/lib/services';
+
+interface LayoutUIContextType {
+  pickerZoneId: string | null;
+  setPickerZoneId: React.Dispatch<React.SetStateAction<string | null>>;
+  mediaPickerZoneId: string | null;
+  setMediaPickerZoneId: React.Dispatch<React.SetStateAction<string | null>>;
+  hiddenZones: string[];
+  toggleZoneVisibility: (zoneId: string) => void;
+  isTimelineExpanded: boolean;
+  setIsTimelineExpanded: React.Dispatch<React.SetStateAction<boolean>>;
+  isLayoutMetaExpanded: boolean;
+  setIsLayoutMetaExpanded: React.Dispatch<React.SetStateAction<boolean>>;
+  isFullscreen: boolean;
+  toggleFullscreen: () => void;
+  toast: { message: string; type: 'success' | 'error' } | null;
+  showToast: (message: string, type?: 'success' | 'error') => void;
+  bufferedRanges: { start: number; end: number }[];
+  reportBuffer: (ranges: { start: number; end: number }[]) => void;
+  availablePlaylists: Playlist[];
+  mediaList: MediaItem[];
+  refreshPlaylistsAndMedia: () => Promise<void>;
+}
+
+const LayoutUIContext = createContext<LayoutUIContextType | undefined>(undefined);
+
+export function LayoutUIProvider({ children }: { children: ReactNode }) {
+  const [pickerZoneId, setPickerZoneId] = useState<string | null>(null);
+  const [mediaPickerZoneId, setMediaPickerZoneId] = useState<string | null>(null);
+  const [hiddenZones, setHiddenZones] = useState<string[]>([]);
+  const [isTimelineExpanded, setIsTimelineExpanded] = useState(true);
+  const [isLayoutMetaExpanded, setIsLayoutMetaExpanded] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [bufferedRanges, setBufferedRanges] = useState<{ start: number; end: number }[]>([]);
+  const [availablePlaylists, setAvailablePlaylists] = useState<Playlist[]>([]);
+  const [mediaList, setMediaList] = useState<MediaItem[]>([]);
+
+  const refreshPlaylistsAndMedia = useCallback(async () => {
+    try {
+      const [playlistsRes, mediaRes] = await Promise.all([
+        api.getPlaylists({ limit: 100 }).catch(() => ({ data: [] })),
+        api.getMedia({ limit: 100 }).catch(() => ({ data: [] })),
+      ]);
+      setAvailablePlaylists((playlistsRes as any).data || []);
+      setMediaList((mediaRes as any).data || []);
+    } catch {
+      // Graceful catch
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshPlaylistsAndMedia();
+  }, [refreshPlaylistsAndMedia]);
+
+  const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  const toggleZoneVisibility = (zoneId: string) => {
+    setHiddenZones((prev) => (prev.includes(zoneId) ? prev.filter((id) => id !== zoneId) : [...prev, zoneId]));
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen().catch(() => {});
+      setIsFullscreen(false);
+    }
+  };
+
+  const reportBuffer = useCallback((ranges: { start: number; end: number }[]) => {
+    setBufferedRanges(ranges);
+  }, []);
+
+  return (
+    <LayoutUIContext.Provider
+      value={{
+        pickerZoneId,
+        setPickerZoneId,
+        mediaPickerZoneId,
+        setMediaPickerZoneId,
+        hiddenZones,
+        toggleZoneVisibility,
+        isTimelineExpanded,
+        setIsTimelineExpanded,
+        isLayoutMetaExpanded,
+        setIsLayoutMetaExpanded,
+        isFullscreen,
+        toggleFullscreen,
+        toast,
+        showToast,
+        bufferedRanges,
+        reportBuffer,
+        availablePlaylists,
+        mediaList,
+        refreshPlaylistsAndMedia,
+      }}
+    >
+      {children}
+    </LayoutUIContext.Provider>
+  );
+}
+
+export function useLayoutUI() {
+  const context = useContext(LayoutUIContext);
+  if (!context) {
+    throw new Error('useLayoutUI must be used within a LayoutUIProvider');
+  }
+  return context;
+}
