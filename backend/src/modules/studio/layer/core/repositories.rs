@@ -157,29 +157,5 @@ impl LayerRepository {
 
         Ok(result.rows_affected() > 0)
     }
-pub async fn set_playlist_item_override(
-        pool: &DbPool,
-        layer_playlist_id: Uuid,
-        playlist_item_id: Uuid,
-        is_muted: bool,
-        volume_level: Option<i32>,
-    ) -> Result<LayerPlaylistItemOverrideEntity, sqlx::Error> {
-        let override_ent = sqlx::query_as::<_, LayerPlaylistItemOverrideEntity>(
-            r#"
-            INSERT INTO layer_playlist_item_overrides (layer_block_id, playlist_item_id, is_muted, volume_level)
-            VALUES (, , , COALESCE(, 100))
-            ON CONFLICT (layer_block_id, playlist_item_id)
-            DO UPDATE SET is_muted = , volume_level = COALESCE(, layer_playlist_item_overrides.volume_level), updated_at = CURRENT_TIMESTAMP
-            RETURNING *
-            "#,
-        )
-        .bind(layer_playlist_id)
-        .bind(playlist_item_id)
-        .bind(is_muted)
-        .bind(volume_level)
-        .fetch_one(pool)
-        .await?;
 
-        Ok(override_ent)
-    }
 }

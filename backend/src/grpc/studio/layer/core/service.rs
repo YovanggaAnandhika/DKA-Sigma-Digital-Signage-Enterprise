@@ -129,6 +129,19 @@ impl LayerServiceTrait for LayerServiceImpl {
         Ok(Response::new(Self::map_layer_with_blocks(full_dto)))
     }
 
+    
+    async fn list_layers(
+        &self,
+        request: Request<crate::grpc::proto::studio::v1::layer::ListLayersRequest>,
+    ) -> Result<Response<crate::grpc::proto::studio::v1::layer::ListLayersResponse>, Status> {
+        Ok(Response::new(crate::grpc::proto::studio::v1::layer::ListLayersResponse {
+            layers: vec![],
+            total: 0,
+            page: 1,
+            limit: 10,
+        }))
+    }
+
     async fn update_layer(
         &self,
         request: Request<UpdateLayerRequest>,
@@ -174,118 +187,7 @@ impl LayerServiceTrait for LayerServiceImpl {
         Ok(Response::new(DeleteLayerResponse { success }))
     }
 
-    async fn create_layer_block(
-        &self,
-        request: Request<CreateLayerBlockRequest>,
-    ) -> Result<Response<LayerBlockResponse>, Status> {
-        let req = request.into_inner();
-        let layer_id = Uuid::from_str(&req.layer_id)
-            .map_err(|_| Status::invalid_argument("Invalid layer_id"))?;
+    
 
-        let playlist_id = req.playlist_id.and_then(|id| Uuid::from_str(&id).ok());
-        let media_item_id = req.media_item_id.and_then(|id| Uuid::from_str(&id).ok());
-
-        let dto = CreateLayerBlockDto {
-            layer_id,
-            playlist_id,
-            media_item_id,
-            start_time_seconds: req.start_time_seconds,
-            duration_seconds: req.duration_seconds,
-        };
-
-        let block = LayerService::create_block(&self.pool, dto)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        let block_dto = LayerBlockDto {
-            block,
-            item_overrides: vec![],
-        };
-
-        Ok(Response::new(LayerBlockResponse {
-            success: true,
-            block: Some(Self::map_layer_block(block_dto)),
-        }))
-    }
-
-    async fn update_layer_block(
-        &self,
-        request: Request<UpdateLayerBlockRequest>,
-    ) -> Result<Response<LayerBlockResponse>, Status> {
-        let req = request.into_inner();
-        let block_id = Uuid::from_str(&req.id)
-            .map_err(|_| Status::invalid_argument("Invalid block_id"))?;
-
-        let dto = UpdateLayerBlockDto {
-            start_time_seconds: req.start_time_seconds,
-            duration_seconds: req.duration_seconds,
-            transition_type: req.transition_type,
-            order_index: req.order_index,
-            is_muted: req.is_muted,
-            volume_level: req.volume_level,
-        };
-
-        let block = LayerService::update_block(&self.pool, block_id, dto)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        let block_dto = LayerBlockDto {
-            block,
-            item_overrides: vec![],
-        };
-
-        Ok(Response::new(LayerBlockResponse {
-            success: true,
-            block: Some(Self::map_layer_block(block_dto)),
-        }))
-    }
-
-    async fn delete_layer_block(
-        &self,
-        request: Request<DeleteLayerBlockRequest>,
-    ) -> Result<Response<DeleteLayerBlockResponse>, Status> {
-        let req = request.into_inner();
-        let block_id = Uuid::from_str(&req.id)
-            .map_err(|_| Status::invalid_argument("Invalid block_id"))?;
-
-        let success = LayerService::delete_block(&self.pool, block_id)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        Ok(Response::new(DeleteLayerBlockResponse {
-            success,
-        }))
-    }
-
-    async fn set_playlist_item_override(
-        &self,
-        request: Request<SetPlaylistItemOverrideRequest>,
-    ) -> Result<Response<SetPlaylistItemOverrideResponse>, Status> {
-        let req = request.into_inner();
-        let layer_playlist_id = Uuid::from_str(&req.layer_playlist_id)
-            .map_err(|_| Status::invalid_argument("Invalid layer_playlist_id"))?;
-        let playlist_item_id = Uuid::from_str(&req.playlist_item_id)
-            .map_err(|_| Status::invalid_argument("Invalid playlist_item_id"))?;
-
-        let override_ent = LayerService::set_playlist_item_override(
-            &self.pool,
-            layer_playlist_id,
-            playlist_item_id,
-            req.is_muted,
-            req.volume_level,
-        )
-        .await
-        .map_err(|e| Status::internal(e.to_string()))?;
-
-        Ok(Response::new(SetPlaylistItemOverrideResponse {
-            success: true,
-            r#override: Some(LayerPlaylistItemOverride {
-                id: override_ent.id.to_string(),
-                layer_playlist_id: override_ent.layer_block_id.to_string(),
-                playlist_item_id: override_ent.playlist_item_id.to_string(),
-                is_muted: override_ent.is_muted.unwrap_or(false),
-                volume_level: override_ent.volume_level.unwrap_or(100),
-            }),
-        }))
-    }
+    
 }

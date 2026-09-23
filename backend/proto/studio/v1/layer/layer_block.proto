@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package signage.studio.v1.layer;
+
+import "studio/v1/layer/layer.common.proto";
+
+message CreateLayerBlockRequest {
+  string layer_id = 1;
+  optional string playlist_id = 2;
+  optional string media_item_id = 3;
+  int32 start_time_seconds = 4;
+  int32 duration_seconds = 5;
+}
+
+message GetLayerBlockRequest {
+  string id = 1;
+}
+
+message ListLayerBlocksRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  optional string layer_id = 3;
+}
+
+message ListLayerBlocksResponse {
+  repeated LayerPlaylist blocks = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+}
+
+message UpdateLayerBlockRequest {
+  string id = 1;
+  optional int32 start_time_seconds = 2;
+  optional int32 duration_seconds = 3;
+  optional string transition_type = 4;
+  optional int32 order_index = 5;
+  optional bool is_muted = 6;
+  optional int32 volume_level = 7;
+}
+
+message DeleteLayerBlockRequest {
+  string id = 1;
+}
+
+message DeleteLayerBlockResponse {
+  bool success = 1;
+}
+
+service LayerBlockService {
+  rpc CreateLayerBlock(CreateLayerBlockRequest) returns (LayerPlaylist);
+  rpc GetLayerBlock(GetLayerBlockRequest) returns (LayerPlaylist);
+  rpc ListLayerBlocks(ListLayerBlocksRequest) returns (ListLayerBlocksResponse);
+  rpc UpdateLayerBlock(UpdateLayerBlockRequest) returns (LayerPlaylist);
+  rpc DeleteLayerBlock(DeleteLayerBlockRequest) returns (DeleteLayerBlockResponse);
+}

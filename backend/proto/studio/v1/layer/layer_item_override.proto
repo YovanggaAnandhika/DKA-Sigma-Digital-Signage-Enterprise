@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package signage.studio.v1.layer;
+
+import "studio/v1/layer/layer.common.proto";
+
+message CreateLayerItemOverrideRequest {
+  string layer_playlist_id = 1;
+  string playlist_item_id = 2;
+  bool is_muted = 3;
+  optional int32 volume_level = 4;
+}
+
+message GetLayerItemOverrideRequest {
+  string id = 1;
+}
+
+message ListLayerItemOverridesRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  optional string layer_playlist_id = 3;
+}
+
+message ListLayerItemOverridesResponse {
+  repeated LayerPlaylistItemOverride overrides = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+}
+
+message UpdateLayerItemOverrideRequest {
+  string id = 1;
+  optional bool is_muted = 2;
+  optional int32 volume_level = 3;
+}
+
+message DeleteLayerItemOverrideRequest {
+  string id = 1;
+}
+
+message DeleteLayerItemOverrideResponse {
+  bool success = 1;
+}
+
+service LayerItemOverrideService {
+  rpc CreateLayerItemOverride(CreateLayerItemOverrideRequest) returns (LayerPlaylistItemOverride);
+  rpc GetLayerItemOverride(GetLayerItemOverrideRequest) returns (LayerPlaylistItemOverride);
+  rpc ListLayerItemOverrides(ListLayerItemOverridesRequest) returns (ListLayerItemOverridesResponse);
+  rpc UpdateLayerItemOverride(UpdateLayerItemOverrideRequest) returns (LayerPlaylistItemOverride);
+  rpc DeleteLayerItemOverride(DeleteLayerItemOverrideRequest) returns (DeleteLayerItemOverrideResponse);
+}

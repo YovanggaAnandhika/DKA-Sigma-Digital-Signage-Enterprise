@@ -19,6 +19,20 @@ message GetLayerRequest {
   string id = 1;
 }
 
+message ListLayersRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  optional string search = 3;
+  optional string layout_id = 4;
+}
+
+message ListLayersResponse {
+  repeated Layer layers = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+}
+
 message UpdateLayerRequest {
   string id = 1;
   string name = 2;
@@ -38,58 +52,10 @@ message DeleteLayerResponse {
   bool success = 1;
 }
 
-message CreateLayerBlockRequest {
-  string layer_id = 1;
-  optional string playlist_id = 2;
-  optional string media_item_id = 3;
-  int32 start_time_seconds = 4;
-  int32 duration_seconds = 5;
-}
-
-message UpdateLayerBlockRequest {
-  string id = 1;
-  optional int32 start_time_seconds = 2;
-  optional int32 duration_seconds = 3;
-  optional string transition_type = 4;
-  optional int32 order_index = 5;
-  optional bool is_muted = 6;
-  optional int32 volume_level = 7;
-}
-
-message DeleteLayerBlockRequest {
-  string id = 1;
-}
-
-message LayerBlockResponse {
-  bool success = 1;
-  LayerPlaylist block = 2;
-}
-
-message DeleteLayerBlockResponse {
-  bool success = 1;
-}
-
-message SetPlaylistItemOverrideRequest {
-  string layer_playlist_id = 1;
-  string playlist_item_id = 2;
-  bool is_muted = 3;
-  optional int32 volume_level = 4;
-}
-
-message SetPlaylistItemOverrideResponse {
-  bool success = 1;
-  LayerPlaylistItemOverride override = 2;
-}
-
 service LayerService {
   rpc CreateLayer(CreateLayerRequest) returns (Layer);
   rpc GetLayer(GetLayerRequest) returns (Layer);
+  rpc ListLayers(ListLayersRequest) returns (ListLayersResponse);
   rpc UpdateLayer(UpdateLayerRequest) returns (Layer);
   rpc DeleteLayer(DeleteLayerRequest) returns (DeleteLayerResponse);
-  
-  rpc CreateLayerBlock(CreateLayerBlockRequest) returns (LayerBlockResponse);
-  rpc UpdateLayerBlock(UpdateLayerBlockRequest) returns (LayerBlockResponse);
-  rpc DeleteLayerBlock(DeleteLayerBlockRequest) returns (DeleteLayerBlockResponse);
-  
-  rpc SetPlaylistItemOverride(SetPlaylistItemOverrideRequest) returns (SetPlaylistItemOverrideResponse);
 }
