@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package signage.studio.v1.visual_filter;
+
+import "common/v1/types.proto";
+
+message VisualFilter {
+  string id = 1;
+  string name = 2;
+  int32 brightness = 3;
+  int32 contrast = 4;
+  int32 saturation = 5;
+  int32 hue_rotate = 6;
+  int32 blur_px = 7;
+  string created_at = 8;
+  string updated_at = 9;
+}
+
+message ListVisualFiltersRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  optional string search = 3;
+}
+
+message ListVisualFiltersResponse {
+  repeated VisualFilter filters = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+}
+
+message GetVisualFilterRequest {
+  string id = 1;
+}
+
+message CreateVisualFilterRequest {
+  string name = 1;
+  int32 brightness = 2;
+  int32 contrast = 3;
+  int32 saturation = 4;
+  int32 hue_rotate = 5;
+  int32 blur_px = 6;
+}
+
+message UpdateVisualFilterRequest {
+  string id = 1;
+  optional string name = 2;
+  optional int32 brightness = 3;
+  optional int32 contrast = 4;
+  optional int32 saturation = 5;
+  optional int32 hue_rotate = 6;
+  optional int32 blur_px = 7;
+}
+
+message DeleteVisualFilterRequest {
+  string id = 1;
+}
+
+message DeleteVisualFilterResponse {
+  bool success = 1;
+}

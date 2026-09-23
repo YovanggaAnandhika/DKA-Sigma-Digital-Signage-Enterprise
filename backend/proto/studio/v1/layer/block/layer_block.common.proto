@@ -6,6 +6,8 @@ import "common/v1/types.proto";
 import "studio/v1/playlist/playlist.common.proto";
 import "studio/v1/media/media.common.proto";
 import "studio/v1/layer/item_override/layer_item_override.common.proto";
+import "studio/v1/transition/transition.common.proto";
+import "studio/v1/visual_filter/visual_filter.common.proto";
 
 message LayerPlaylist {
   string id = 1;
@@ -14,7 +16,10 @@ message LayerPlaylist {
   signage.studio.v1.playlist.Playlist playlist = 4;
   int32 start_time_seconds = 5;
   int32 duration_seconds = 6;
-  string transition_type = 7;
+  int32 trim_start_seconds = 15;
+  optional int32 trim_end_seconds = 16;
+  optional string transition_id = 7;
+  optional string visual_filter_id = 17;
   int32 order_index = 8;
   repeated LayerPlaylistItemOverride item_overrides = 9;
   string created_at = 10;
@@ -22,6 +27,10 @@ message LayerPlaylist {
   signage.studio.v1.media.MediaItem media_item = 12;
   bool is_muted = 13;
   int32 volume_level = 14;
+  
+  // Computed fields (populated in backend based on relations)
+  optional signage.studio.v1.transition.Transition transition = 18;
+  optional signage.studio.v1.visual_filter.VisualFilter visual_filter = 19;
 }
 
 
@@ -31,6 +40,10 @@ message CreateLayerBlockRequest {
   optional string media_item_id = 3;
   int32 start_time_seconds = 4;
   int32 duration_seconds = 5;
+  optional int32 trim_start_seconds = 6;
+  optional int32 trim_end_seconds = 7;
+  optional string transition_id = 8;
+  optional string visual_filter_id = 9;
 }
 
 message GetLayerBlockRequest {
@@ -54,7 +67,10 @@ message UpdateLayerBlockRequest {
   string id = 1;
   optional int32 start_time_seconds = 2;
   optional int32 duration_seconds = 3;
-  optional string transition_type = 4;
+  optional int32 trim_start_seconds = 8;
+  optional int32 trim_end_seconds = 9;
+  optional string transition_id = 4;
+  optional string visual_filter_id = 10;
   optional int32 order_index = 5;
   optional bool is_muted = 6;
   optional int32 volume_level = 7;

@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package signage.studio.v1.transition;
+
+import "common/v1/types.proto";
+
+message Transition {
+  string id = 1;
+  string name = 2;
+  string css_class = 3;
+  int32 duration_ms = 4;
+  string created_at = 5;
+  string updated_at = 6;
+}
+
+message ListTransitionsRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  optional string search = 3;
+}
+
+message ListTransitionsResponse {
+  repeated Transition transitions = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+}
+
+message GetTransitionRequest {
+  string id = 1;
+}
+
+message CreateTransitionRequest {
+  string name = 1;
+  string css_class = 2;
+  int32 duration_ms = 3;
+}
+
+message UpdateTransitionRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string css_class = 3;
+  optional int32 duration_ms = 4;
+}
+
+message DeleteTransitionRequest {
+  string id = 1;
+}
+
+message DeleteTransitionResponse {
+  bool success = 1;
+}

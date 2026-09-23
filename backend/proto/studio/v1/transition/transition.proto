@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package signage.studio.v1.transition;
+
+import "studio/v1/transition/transition.common.proto";
+
+service TransitionService {
+  rpc ListTransitions(ListTransitionsRequest) returns (ListTransitionsResponse);
+  rpc GetTransition(GetTransitionRequest) returns (Transition);
+  rpc CreateTransition(CreateTransitionRequest) returns (Transition);
+  rpc UpdateTransition(UpdateTransitionRequest) returns (Transition);
+  rpc DeleteTransition(DeleteTransitionRequest) returns (DeleteTransitionResponse);
+}
