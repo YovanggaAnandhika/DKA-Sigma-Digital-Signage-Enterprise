@@ -1,9 +1,24 @@
 use sqlx::PgPool;
-use tracing::info;
+use tracing::{info, warn};
 use uuid::Uuid;
 
+use crate::modules::iam::permission::model::CreatePermissionDto;
+use crate::modules::iam::permission::services::PermissionService;
+use crate::modules::iam::role::model::CreateRoleDto;
+use crate::modules::iam::role::services::RoleService;
+use crate::modules::iam::user::model::CreateUserDto;
+use crate::modules::iam::user::services::UserService;
+use crate::modules::distribution::canary::model::CreateCanaryGroupDto;
+use crate::modules::distribution::canary::services::CanaryService;
+use crate::modules::studio::layout::model::CreateLayoutDto;
+use crate::modules::studio::layout::services::LayoutService;
+use crate::modules::studio::layer::layer::model::CreateLayerDto;
+use crate::modules::studio::layer::layer::services::LayerService;
+use crate::modules::hardware::device::model::{RegisterDeviceDto, PairDeviceDto, UpdateDeviceDto};
+use crate::modules::hardware::device::services::DeviceService;
+
 pub async fn seed_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
-    info!("Starting database seeding...");
+    info!("Starting database seeding via Domain Services...");
 
     // 1. Seed Permissions
     let permissions = vec![
@@ -23,167 +38,133 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Erro
     ];
 
     info!("Seeding permissions...");
-    for (code, name, desc, module) in &permissions {
-        sqlx::query(
-            r#"
-            INSERT INTO permissions (code, name, description, module)
-            VALUES ($1, $2, $3, $4)
-            ON CONFLICT (code) DO UPDATE 
-            SET name = EXCLUDED.name, description = EXCLUDED.description, module = EXCLUDED.module
-            "#
-        )
-        .bind(code)
-        .bind(name)
-        .bind(desc)
-        .bind(module)
-        .execute(pool)
-        .await?;
+    let mut perm_ids = Vec::new();
+    for (code, name, desc, module) in permissions {
+        let perm = PermissionService::create_permission(pool, CreatePermissionDto {
+            code: code.to_string(),
+            name: name.to_string(),
+            description: Some(desc.to_string()),
+            module: module.to_string(),
+        }).await?;
+        perm_ids.push(perm.id);
     }
 
     // 2. Seed System Roles
     info!("Seeding roles...");
-    let superadmin_role_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001")?;
-    let content_manager_role_id = Uuid::parse_str("00000000-0000-0000-0000-000000000002")?;
-    let device_operator_role_id = Uuid::parse_str("00000000-0000-0000-0000-000000000003")?;
+    let superadmin = RoleService::create_role(pool, CreateRoleDto {
+        name: "Super Administrator".to_string(),
+        slug: "superadmin".to_string(),
+        description: Some("Full platform access to all signage operations and settings".to_string()),
+        permission_ids: Some(perm_ids),
+    }).await?;
 
-    sqlx::query(
-        r#"
-        INSERT INTO roles (id, name, slug, description, is_system)
-        VALUES 
-            ($1, 'Super Administrator', 'superadmin', 'Full platform access to all signage operations and settings', TRUE),
-            ($2, 'Content Manager', 'content-manager', 'Can design layouts, manage media, and configure playlists', FALSE),
-            ($3, 'Device Operator', 'device-operator', 'Can view device fleet telemetry and pair displays', FALSE)
-        ON CONFLICT (slug) DO UPDATE 
-        SET name = EXCLUDED.name, description = EXCLUDED.description
-        "#
-    )
-    .bind(superadmin_role_id)
-    .bind(content_manager_role_id)
-    .bind(device_operator_role_id)
-    .execute(pool)
-    .await?;
+    let _content_manager = RoleService::create_role(pool, CreateRoleDto {
+        name: "Content Manager".to_string(),
+        slug: "content-manager".to_string(),
+        description: Some("Can design layouts, manage media, and configure playlists".to_string()),
+        permission_ids: None,
+    }).await?;
 
-    // Link Superadmin with all permissions
-    info!("Assigning all permissions to Superadmin role...");
-    sqlx::query(
-        r#"
-        INSERT INTO role_permissions (role_id, permission_id)
-        SELECT $1, id FROM permissions
-        ON CONFLICT (role_id, permission_id) DO NOTHING
-        "#
-    )
-    .bind(superadmin_role_id)
-    .execute(pool)
-    .await?;
+    let _device_operator = RoleService::create_role(pool, CreateRoleDto {
+        name: "Device Operator".to_string(),
+        slug: "device-operator".to_string(),
+        description: Some("Can view device fleet telemetry and pair displays".to_string()),
+        permission_ids: None,
+    }).await?;
 
     // 3. Seed Default Superadmin User
     info!("Seeding default administrator user...");
-    let admin_user_id = Uuid::parse_str("00000000-0000-0000-0000-000000000100")?;
-
-    use argon2::{
-        password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
-        Argon2,
-    };
-    let salt = SaltString::generate(&mut OsRng);
-    let password_hash = Argon2::default()
-        .hash_password(b"superadmin", &salt)
-        .map_err(|e| format!("Hashing failed: {}", e))?
-        .to_string();
-
-    sqlx::query(
-        r#"
-        INSERT INTO users (id, email, password_hash, full_name, is_active)
-        VALUES ($1, 'superadmin@dkasigma.io', $2, 'Master Signage Admin', TRUE)
-        ON CONFLICT (email) DO UPDATE
-        SET password_hash = EXCLUDED.password_hash, full_name = EXCLUDED.full_name, is_active = TRUE
-        "#
-    )
-    .bind(admin_user_id)
-    .bind(&password_hash)
-    .execute(pool)
-    .await?;
-
-    // Assign Superadmin role to admin user
-    sqlx::query(
-        r#"
-        INSERT INTO user_roles (user_id, role_id)
-        VALUES ($1, $2)
-        ON CONFLICT (user_id, role_id) DO NOTHING
-        "#
-    )
-    .bind(admin_user_id)
-    .bind(superadmin_role_id)
-    .execute(pool)
-    .await?;
+    let _admin = UserService::create_user(pool, CreateUserDto {
+        email: "superadmin@dkasigma.io".to_string(),
+        password: "superadmin".to_string(),
+        full_name: "Master Signage Admin".to_string(),
+        role_ids: Some(vec![superadmin.id]),
+        role_group_ids: None,
+    }).await?;
 
     // 4. Seed Canary Groups
     info!("Seeding canary rollout groups...");
-    let canary_id = Uuid::parse_str("00000000-0000-0000-0000-000000000200")?;
-    sqlx::query(
-        r#"
-        INSERT INTO canary_groups (id, name, description, rollout_percentage, is_active)
-        VALUES ($1, 'Beta Fleet - 10%', 'Early preview group receiving newly approved layouts', 10, TRUE)
-        ON CONFLICT (id) DO NOTHING
-        "#
-    )
-    .bind(canary_id)
-    .execute(pool)
-    .await?;
+    let _canary = CanaryService::create_canary_group(pool, CreateCanaryGroupDto {
+        name: "Beta Fleet - 10%".to_string(),
+        description: Some("Early preview group receiving newly approved layouts".to_string()),
+        rollout_percentage: Some(10),
+        is_active: Some(true),
+        target_layout_id: None,
+    }).await?;
 
-    // 5. Seed Demonstration Layout & Zones
-    info!("Seeding demonstration layout & zones...");
-    let layout_id = Uuid::parse_str("00000000-0000-0000-0000-000000000300")?;
-    sqlx::query(
-        r#"
-        INSERT INTO layouts (id, name, description, canvas_width, canvas_height, orientation, background_color)
-        VALUES ($1, 'Corporate HQ Main Lobby', 'Default 1080p Landscape Layout with 2 display zones', 1920, 1080, 'landscape', '#020617')
-        ON CONFLICT (id) DO NOTHING
-        "#
-    )
-    .bind(layout_id)
-    .execute(pool)
-    .await?;
+    // Fetch Landscape orientation ID
+    let landscape_id_row: (Uuid,) = sqlx::query_as("SELECT id FROM orientations WHERE value = 'landscape'")
+        .fetch_one(pool)
+        .await?;
+    let portrait_id_row: (Uuid,) = sqlx::query_as("SELECT id FROM orientations WHERE value = 'portrait'")
+        .fetch_one(pool)
+        .await?;
 
-    let zone1_id = Uuid::parse_str("00000000-0000-0000-0000-000000000301")?;
-    let zone2_id = Uuid::parse_str("00000000-0000-0000-0000-000000000302")?;
-    sqlx::query(
-        r#"
-        INSERT INTO zones (id, layout_id, name, x, y, width, height, z_index, background_color)
-        VALUES 
-            ($1, $2, 'Main Promo Stage', 0, 0, 1344, 1080, 1, '#000000'),
-            ($3, $2, 'Sidebar Widget Stream', 1344, 0, 576, 1080, 2, '#0f172a')
-        ON CONFLICT (id) DO NOTHING
-        "#
-    )
-    .bind(zone1_id)
-    .bind(layout_id)
-    .bind(zone2_id)
-    .execute(pool)
-    .await?;
+    // 5. Seed Demonstration Layout & Layers
+    info!("Seeding demonstration layout & layers...");
+    let layout = LayoutService::create_layout(pool, CreateLayoutDto {
+        name: "Corporate HQ Main Lobby".to_string(),
+        description: Some("Default 1080p Landscape Layout with 2 display layers".to_string()),
+        canvas_width: Some(1920),
+        canvas_height: Some(1080),
+        orientation_id: landscape_id_row.0,
+        background_color: Some("#020617".to_string()),
+        background_image_url: None,
+    }).await?;
+
+    let _layer1 = LayerService::create_layer(pool, CreateLayerDto {
+        layout_id: layout.id,
+        name: Some("Main Promo Stage".to_string()),
+        x: 0,
+        y: 0,
+        width: 1344,
+        height: 1080,
+        z_index: Some(1),
+        background_color: Some("#000000".to_string()),
+    }).await?;
+
+    let _layer2 = LayerService::create_layer(pool, CreateLayerDto {
+        layout_id: layout.id,
+        name: Some("Sidebar Widget Stream".to_string()),
+        x: 1344,
+        y: 0,
+        width: 576,
+        height: 1080,
+        z_index: Some(2),
+        background_color: Some("#0f172a".to_string()),
+    }).await?;
 
     // 6. Seed Demonstration Displays
     info!("Seeding demo devices...");
-    let device1_id = Uuid::parse_str("00000000-0000-0000-0000-000000000401")?;
-    let device2_id = Uuid::parse_str("00000000-0000-0000-0000-000000000402")?;
+    let dev1 = DeviceService::register_device(pool, RegisterDeviceDto {
+        mac_address: Some("00:1A:2B:3C:4D:5E".to_string()),
+        app_version: Some("v1.0.0".to_string()),
+        android_version: Some("Android 11".to_string()),
+        screen_width: Some(1920),
+        screen_height: Some(1080),
+        orientation: Some("landscape".to_string()),
+    }).await?;
 
-    sqlx::query(
-        r#"
-        INSERT INTO devices (
-            id, name, pairing_code, is_paired, screen_width, screen_height, 
-            orientation, ip_address, is_online, current_layout_id
-        )
-        VALUES 
-            ($1, 'Lobby Main Totem', 'XR8-992', TRUE, 1920, 1080, 'landscape', '172.29.0.50', TRUE, $3),
-            ($2, 'Elevator Bank Display A', 'DKA-404', FALSE, 1080, 1920, 'portrait', '172.29.0.51', FALSE, NULL)
-        ON CONFLICT (pairing_code) DO NOTHING
-        "#
-    )
-    .bind(device1_id)
-    .bind(device2_id)
-    .bind(layout_id)
-    .execute(pool)
-    .await?;
+    // Pair and update dev1
+    let dev1_paired = DeviceService::pair_device(pool, PairDeviceDto {
+        pairing_code: dev1.pairing_code.clone(),
+        device_name: "Lobby Main Totem".to_string(),
+        store_location: None,
+        default_layout_id: Some(layout.id),
+        canary_group_id: None,
+    }).await?;
+    
+    // Simulate it being online via direct update if needed, but pairing makes it essentially active.
+    
+    let _dev2 = DeviceService::register_device(pool, RegisterDeviceDto {
+        mac_address: Some("AA:BB:CC:DD:EE:FF".to_string()),
+        app_version: Some("v1.0.0".to_string()),
+        android_version: Some("Android 10".to_string()),
+        screen_width: Some(1080),
+        screen_height: Some(1920),
+        orientation: Some("portrait".to_string()),
+    }).await?;
 
-    info!("Database seeding completed successfully!");
+    info!("Database seeding via Services completed successfully!");
     Ok(())
 }

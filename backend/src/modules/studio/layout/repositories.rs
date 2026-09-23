@@ -15,7 +15,7 @@ impl LayoutRepository {
                 name, description, canvas_width, canvas_height, orientation_id,
                 background_color, background_image_url
             )
-            VALUES (, , , , , , )
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
             "#,
         )
@@ -33,7 +33,7 @@ impl LayoutRepository {
     }
 
     pub async fn find_by_id(pool: &DbPool, id: Uuid) -> Result<Option<LayoutEntity>, sqlx::Error> {
-        let layout = sqlx::query_as::<_, LayoutEntity>("SELECT * FROM layouts WHERE id = ")
+        let layout = sqlx::query_as::<_, LayoutEntity>("SELECT * FROM layouts WHERE id = $1")
             .bind(id)
             .fetch_optional(pool)
             .await?;
@@ -60,15 +60,15 @@ impl LayoutRepository {
             r#"
             UPDATE layouts
             SET 
-                name = COALESCE(, name),
-                description = COALESCE(, description),
-                canvas_width = COALESCE(, canvas_width),
-                canvas_height = COALESCE(, canvas_height),
-                orientation_id = COALESCE(, orientation_id),
-                background_color = COALESCE(, background_color),
-                background_image_url = COALESCE(, background_image_url),
+                name = COALESCE($2, name),
+                description = COALESCE($3, description),
+                canvas_width = COALESCE($4, canvas_width),
+                canvas_height = COALESCE($5, canvas_height),
+                orientation_id = COALESCE($6, orientation_id),
+                background_color = COALESCE($7, background_color),
+                background_image_url = COALESCE($8, background_image_url),
                 updated_at = NOW()
-            WHERE id = 
+            WHERE id = $1
             RETURNING *
             "#,
         )
@@ -87,7 +87,7 @@ impl LayoutRepository {
     }
 
     pub async fn delete(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM layouts WHERE id = ")
+        let result = sqlx::query("DELETE FROM layouts WHERE id = $1")
             .bind(id)
             .execute(pool)
             .await?;
@@ -100,7 +100,7 @@ impl LayoutRepository {
         layout_id: Uuid,
     ) -> Result<Vec<LayerWithBlocksDto>, sqlx::Error> {
         let layers = sqlx::query_as::<_, LayerEntity>(
-            "SELECT * FROM layers WHERE layout_id =  ORDER BY z_index ASC",
+            "SELECT * FROM layers WHERE layout_id = $1 ORDER BY z_index ASC",
         )
         .bind(layout_id)
         .fetch_all(pool)
@@ -109,7 +109,7 @@ impl LayoutRepository {
         let mut result = Vec::new();
         for layer in layers {
             let blocks = sqlx::query_as::<_, LayerBlockEntity>(
-                "SELECT * FROM layer_blocks WHERE layer_id =  ORDER BY order_index ASC",
+                "SELECT * FROM layer_blocks WHERE layer_id = $1 ORDER BY order_index ASC",
             )
             .bind(layer.id)
             .fetch_all(pool)
@@ -118,7 +118,7 @@ impl LayoutRepository {
             let mut block_dtos = Vec::new();
             for block in blocks {
                 let overrides = sqlx::query_as::<_, LayerPlaylistItemOverrideEntity>(
-                    "SELECT * FROM layer_playlist_item_overrides WHERE layer_block_id = ",
+                    "SELECT * FROM layer_playlist_item_overrides WHERE layer_block_id = $1",
                 )
                 .bind(block.id)
                 .fetch_all(pool)
