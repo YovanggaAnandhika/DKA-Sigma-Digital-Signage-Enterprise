@@ -18,7 +18,6 @@ export async function POST(req: NextRequest) {
     if (body.totalFileSizeBytes !== undefined) request.setTotalFileSize(body.totalFileSizeBytes);
 
     if (body.chunkData) {
-      // Decode base64 from JSON back to Uint8Array
       const binaryString = atob(body.chunkData);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
@@ -29,11 +28,15 @@ export async function POST(req: NextRequest) {
 
     return new Promise<NextResponse>((resolve) => {
       client.uploadMediaChunk(request, getGrpcMetadata(token), (error, response) => {
-        if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
+        if (error) {
+           console.error("[UploadMediaChunk] gRPC error:", error);
+           resolve(NextResponse.json({ error: error.message }, { status: 500 }));
+        }
         else resolve(NextResponse.json(response.toObject()));
       });
     });
   } catch (error) {
+    console.error("[UploadMediaChunk] Catch error:", error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
