@@ -29,24 +29,28 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
   const leftPx = (block.startTimeSeconds || 0) * (pxPerSecond || 20);
   const widthPx = (block.durationSeconds || 10) * (pxPerSecond || 20);
 
-  const handleToggleItemMute = async (e: React.MouseEvent, item: PlaylistItem, zonePlaylistId: string, currentMuted: boolean, isMedia: boolean = false) => {
+  const handleToggleItemMute = async (e: React.MouseEvent, item: PlaylistItem, zonePlaylistId: string, currentMuted: boolean, isBlock: boolean = false) => {
     e.stopPropagation();
     try {
-      if (isMedia) {
+      if (isBlock) {
         await updatePlaylistBlock(zonePlaylistId, { isMuted: !currentMuted });
         setZones((prev) =>
           prev.map((z) => ({
             ...z,
             blocksList: z.blocksList.map((b) => {
               if (b.id === zonePlaylistId) {
-                const newOverrides = [
-                  {
+                const existingOverrideIdx = (b.itemOverridesList || []).findIndex((o) => o.playlistItemId === b.id);
+                const newOverrides = [...(b.itemOverridesList || [])];
+                if (existingOverrideIdx >= 0) {
+                  newOverrides[existingOverrideIdx] = { ...newOverrides[existingOverrideIdx], isMuted: !currentMuted };
+                } else {
+                  newOverrides.push({
                     id: `override-${b.id}`,
                     zonePlaylistId: b.id,
                     playlistItemId: b.id,
                     isMuted: !currentMuted,
-                  },
-                ];
+                  });
+                }
                 return { ...b, itemOverridesList: newOverrides };
               }
               return b;
@@ -147,7 +151,7 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
           <button
             onClick={(e) => {
               const currentMuted = block.itemOverridesList?.find((o) => o.playlistItemId === block.id)?.isMuted || false;
-              handleToggleItemMute(e, { id: block.id } as any, block.id, currentMuted, isMediaBlock);
+              handleToggleItemMute(e, { id: block.id } as any, block.id, currentMuted, true);
             }}
             style={{
               background: 'none',
