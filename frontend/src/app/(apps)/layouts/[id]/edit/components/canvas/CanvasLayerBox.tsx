@@ -101,6 +101,20 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
     isCurrentItemMuted = isBlockMuted || isItemMuted;
   }
   const isEffectiveMuted = isMuted || isCurrentItemMuted;
+  
+  let currentVolumeLevel = 100;
+  if (activeBlock) {
+    const itemOverride = (activeBlock.itemOverridesList || []).find(
+      (o: any) => o.playlistItemId === currentItem?.id
+    );
+    if (itemOverride && itemOverride.volumeLevel !== undefined) {
+       currentVolumeLevel = itemOverride.volumeLevel;
+    } else if (currentItem?.volumeLevel !== undefined) {
+       currentVolumeLevel = currentItem.volumeLevel;
+    } else if (activeBlock.volumeLevel !== undefined) {
+       currentVolumeLevel = activeBlock.volumeLevel;
+    }
+  }
 
   return (
     <Rnd
@@ -208,6 +222,7 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
                 isPlaying={isPlaying}
                 active={active}
                 isMuted={isEffectiveMuted}
+                volumeLevel={currentVolumeLevel}
                 targetTimeSec={itemOffsetSec}
                 onBufferUpdate={reportBuffer}
                 timelineStartSec={absoluteStartSec}

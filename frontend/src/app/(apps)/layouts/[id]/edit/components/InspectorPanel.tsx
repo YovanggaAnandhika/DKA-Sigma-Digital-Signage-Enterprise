@@ -24,6 +24,34 @@ import {
 import { updatePlaylistBlock } from '@/lib/services/studio/layout.service';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 
+
+function VolumeSlider({ 
+  initialVolume, 
+  onCommit 
+}: { 
+  initialVolume: number; 
+  onCommit: (val: number) => void; 
+}) {
+  const [localVol, setLocalVol] = React.useState(initialVolume);
+
+  React.useEffect(() => {
+    setLocalVol(initialVolume);
+  }, [initialVolume]);
+
+  return (
+    <input
+      type="range"
+      min="0"
+      max="100"
+      value={localVol}
+      onChange={(e) => setLocalVol(Number(e.target.value))}
+      onMouseUp={() => onCommit(localVol)}
+      onTouchEnd={() => onCommit(localVol)}
+      style={{ width: '100%', cursor: 'pointer' }}
+    />
+  );
+}
+
 export default function InspectorPanel() {
   const {
     layout,
@@ -402,13 +430,9 @@ export default function InspectorPanel() {
                       {selectedBlock.volumeLevel ?? 100}%
                     </span>
                   </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={selectedBlock.volumeLevel ?? 100}
-                    onChange={(e) => handleUpdateBlock({ volumeLevel: Number(e.target.value) })}
-                    style={{ width: '100%', cursor: 'pointer' }}
+                  <VolumeSlider 
+                    initialVolume={selectedBlock.volumeLevel ?? 100} 
+                    onCommit={(val) => handleUpdateBlock({ volumeLevel: val })} 
                   />
                 </div>
               </div>

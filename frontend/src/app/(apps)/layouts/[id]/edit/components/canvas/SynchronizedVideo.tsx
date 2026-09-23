@@ -7,6 +7,7 @@ export interface SynchronizedVideoProps {
   isPlaying: boolean;
   active: boolean;
   isMuted: boolean;
+  volumeLevel?: number;
   targetTimeSec: number;
   onBufferUpdate?: (ranges: { start: number; end: number }[]) => void;
   timelineStartSec?: number;
@@ -17,6 +18,7 @@ export default function SynchronizedVideo({
   isPlaying,
   active,
   isMuted,
+  volumeLevel = 100,
   targetTimeSec,
   onBufferUpdate,
   timelineStartSec = 0,
@@ -27,9 +29,9 @@ export default function SynchronizedVideo({
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.muted = isMuted;
-      videoRef.current.volume = isMuted ? 0 : 1;
+      videoRef.current.volume = isMuted ? 0 : (volumeLevel / 100);
     }
-  }, [isMuted]);
+  }, [isMuted, volumeLevel]);
 
   const prevTargetTime = useRef(targetTimeSec);
 
@@ -54,7 +56,7 @@ export default function SynchronizedVideo({
       }
       if (video.paused) {
         video.muted = isMuted;
-        video.volume = isMuted ? 0 : 1;
+        video.volume = isMuted ? 0 : (volumeLevel / 100);
         const playPromise = video.play();
         if (playPromise !== undefined) {
           playPromise.catch((err) => {
@@ -72,7 +74,7 @@ export default function SynchronizedVideo({
         video.currentTime = safeTarget;
       }
     }
-  }, [isPlaying, active, targetTimeSec, isMuted]);
+  }, [isPlaying, active, targetTimeSec, isMuted, volumeLevel]);
 
   // When metadata loads or src updates, position properly
   const handleLoadedMetadata = () => {
@@ -84,7 +86,7 @@ export default function SynchronizedVideo({
         : targetTimeSec;
     video.currentTime = safeTarget;
     video.muted = isMuted;
-    video.volume = isMuted ? 0 : 1;
+    video.volume = isMuted ? 0 : (volumeLevel / 100);
     if (isPlaying && active && video.paused) {
       video.play().catch(() => {});
     }
