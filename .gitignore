@@ -71,3 +71,4 @@ yarn-error.log*
 .pnp.js
 bun.lockb
 # Note: bun.lock (text) is tracked.
+backend/uploads/
