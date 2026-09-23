@@ -3,9 +3,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { api, MediaItem } from '@/lib/services';
-import { getMediaDisplayUrl } from '@/lib/services/studio/media.service';
 import { Pagination } from '@/components/ui/Pagination';
-import { FolderOpen, Plus, Search, RefreshCw, Edit, Trash2, Eye, Film, Image as ImageIcon, Globe } from 'lucide-react';
+import { FolderOpen, Plus, RefreshCw } from 'lucide-react';
+import MediaGalleryGrid from './components/MediaGalleryGrid';
+import MediaDetailsSidebar from './components/MediaDetailsSidebar';
+import MediaFilterBar from './components/MediaFilterBar';
 
 export default function MediaPage() {
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
@@ -41,28 +43,6 @@ export default function MediaPage() {
     } catch (err: any) {
       alert(err.message || 'Gagal menghapus media');
     }
-  };
-
-  const getMediaTypeBadge = (type: number) => {
-    if (type === 2) {
-      return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--accent-cyan)', fontWeight: 600, fontSize: '0.75rem' }}>
-          <Film size={13} /> Video (MP4)
-        </span>
-      );
-    }
-    if (type === 3) {
-      return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--accent-amber)', fontWeight: 600, fontSize: '0.75rem' }}>
-          <Globe size={13} /> Web Halaman
-        </span>
-      );
-    }
-    return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--accent-emerald)', fontWeight: 600, fontSize: '0.75rem' }}>
-        <ImageIcon size={13} /> Gambar (Static)
-      </span>
-    );
   };
 
   return (
@@ -102,108 +82,19 @@ export default function MediaPage() {
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="card-elevated" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Cari aset berdasarkan nama file atau tipe..."
-            className="form-input"
-            style={{ paddingLeft: '36px' }}
-          />
-        </div>
-      </div>
+      <MediaFilterBar search={search} setSearch={setSearch} setPage={setPage} />
 
       {/* Main Content Area: Grid Gallery + Sidebar */}
       <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
         
         {/* Gallery Grid */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
-            {mediaItems.length === 0 ? (
-              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px', color: 'var(--text-muted)', backgroundColor: 'var(--bg-surface)', borderRadius: '12px', border: '1px dashed var(--border-subtle)' }}>
-                {loading ? 'Memuat aset media dari backend gRPC...' : 'Belum ada aset media tersimpan.'}
-              </div>
-            ) : (
-              mediaItems.map((m) => {
-                const isSelected = selectedMedia?.id === m.id;
-                return (
-                  <div
-                    key={m.id}
-                    onClick={() => setSelectedMedia(m)}
-                    className="card-elevated"
-                    style={{
-                      cursor: 'pointer',
-                      overflow: 'hidden',
-                      transition: 'all 0.2s ease',
-                      border: isSelected ? '2px solid var(--primary-500)' : '2px solid transparent',
-                      transform: isSelected ? 'translateY(-2px)' : 'none',
-                      boxShadow: isSelected ? '0 10px 15px -3px rgba(14, 165, 233, 0.2)' : undefined,
-                    }}
-                  >
-                    {/* Thumbnail Area */}
-                    <div style={{ height: '140px', backgroundColor: '#0f172a', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {(() => {
-                        const displayUrl = getMediaDisplayUrl(m);
-                        return m.mediaType === 2 && displayUrl ? (
-                          <video
-                            src={displayUrl}
-                            autoPlay
-                            muted
-                            loop
-                            playsInline
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
-                        ) : m.mediaType === 2 ? (
-                          <Film size={32} color="var(--accent-cyan)" />
-                        ) : m.mediaType === 3 ? (
-                          <Globe size={32} color="var(--accent-amber)" />
-                        ) : displayUrl ? (
-                          <img
-                            src={displayUrl}
-                            alt={m.name}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          />
-                        ) : (
-                          <ImageIcon size={32} color="var(--accent-emerald)" />
-                        );
-                      })()}
-                      
-                      {/* Badge Tipe */}
-                      <div style={{ position: 'absolute', top: '8px', left: '8px', backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', padding: '4px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', color: '#fff', fontSize: '0.6875rem', fontWeight: 600 }}>
-                        {m.mediaType === 2 ? <Film size={12} color="#22d3ee" /> : m.mediaType === 3 ? <Globe size={12} color="#fbbf24" /> : <ImageIcon size={12} color="#34d399" />}
-                        {m.mediaType === 2 ? 'Video' : m.mediaType === 3 ? 'Web' : 'Gambar'}
-                      </div>
-                      
-                      {/* Badge Durasi (Video Only) */}
-                      {m.mediaType === 2 && m.durationSeconds > 0 && (
-                        <div style={{ position: 'absolute', bottom: '8px', right: '8px', backgroundColor: 'rgba(0,0,0,0.7)', padding: '2px 6px', borderRadius: '4px', color: '#fff', fontSize: '0.6875rem', fontFamily: 'monospace' }}>
-                          {m.durationSeconds}s
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Info Area */}
-                    <div style={{ padding: '12px' }}>
-                      <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {m.name}
-                      </h3>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
-                        <span>{(m.fileSizeBytes / (1024 * 1024)).toFixed(1)} MB</span>
-                        <span>{m.width}×{m.height}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+          <MediaGalleryGrid
+            mediaItems={mediaItems}
+            loading={loading}
+            selectedMedia={selectedMedia}
+            setSelectedMedia={setSelectedMedia}
+          />
           
           <Pagination
             page={page}
@@ -219,75 +110,11 @@ export default function MediaPage() {
 
         {/* Right Sidebar (Details Panel) */}
         {selectedMedia && (
-          <div className="card-elevated" style={{ width: '320px', flexShrink: 0, position: 'sticky', top: '24px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-surface-elevated)' }}>
-              <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Detail File</h3>
-              <button onClick={() => setSelectedMedia(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }} title="Tutup Panel">✕</button>
-            </div>
-            
-            <div style={{ height: '180px', backgroundColor: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {(() => {
-                const displayUrl = getMediaDisplayUrl(selectedMedia);
-                return selectedMedia.mediaType === 2 && displayUrl ? (
-                  <video src={displayUrl} autoPlay loop muted playsInline controls style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                ) : selectedMedia.mediaType === 2 ? (
-                  <Film size={48} color="var(--accent-cyan)" />
-                ) : selectedMedia.mediaType === 3 ? (
-                  <Globe size={48} color="var(--accent-amber)" />
-                ) : displayUrl ? (
-                  <img src={displayUrl} alt={selectedMedia.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                ) : (
-                  <ImageIcon size={48} color="var(--accent-emerald)" />
-                );
-              })()}
-            </div>
-            
-            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px 0', wordBreak: 'break-word' }}>{selectedMedia.name}</h4>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace', wordBreak: 'break-all' }}>{selectedMedia.originalFilename}</div>
-              </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', fontSize: '0.8125rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Tipe Konten</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{getMediaTypeBadge(selectedMedia.mediaType)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Ukuran File</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{(selectedMedia.fileSizeBytes / (1024 * 1024)).toFixed(1)} MB</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Dimensi</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'monospace' }}>{selectedMedia.width} × {selectedMedia.height} px</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Durasi</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{selectedMedia.durationSeconds > 0 ? `${selectedMedia.durationSeconds} detik` : 'Statis'}</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Checksum SHA-256</span>
-                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'monospace', wordBreak: 'break-all', fontSize: '0.6875rem' }}>
-                    {selectedMedia.sha256Hash || '-'}
-                  </span>
-                </div>
-              </div>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-                <Link href={`/media/${selectedMedia.id}`} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
-                  <Eye size={16} /> Pratinjau Penuh
-                </Link>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <Link href={`/media/${selectedMedia.id}/edit`} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>
-                    <Edit size={16} /> Edit
-                  </Link>
-                  <button onClick={() => { handleDelete(selectedMedia.id, selectedMedia.name); setSelectedMedia(null); }} className="btn btn-danger" style={{ flex: 1, justifyContent: 'center' }}>
-                    <Trash2 size={16} /> Hapus
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <MediaDetailsSidebar
+            selectedMedia={selectedMedia}
+            setSelectedMedia={setSelectedMedia}
+            handleDelete={handleDelete}
+          />
         )}
       </div>
     </div>
