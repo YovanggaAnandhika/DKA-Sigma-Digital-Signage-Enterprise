@@ -3,8 +3,8 @@
 import React from 'react';
 import { Rnd } from 'react-rnd';
 import { Film, Image as ImageIcon, Volume2, VolumeX } from 'lucide-react';
-import { setPlaylistItemOverride, updatePlaylistBlock } from '@/lib/services/studio/layout.service';
-import { PlaylistItem, ZonePlaylist } from '@/lib/services/studio/types';
+import { updatePlaylistBlock } from '@/lib/services/studio/layout.service';
+import { ZonePlaylist } from '@/lib/services/studio/types';
 import { useLayoutState, Zone } from '../../context/LayoutStateContext';
 import { useLayoutPlayback } from '../../context/LayoutPlaybackContext';
 import { useLayoutUI } from '../../context/LayoutUIContext';
@@ -29,60 +29,34 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
   const leftPx = (block.startTimeSeconds || 0) * (pxPerSecond || 20);
   const widthPx = (block.durationSeconds || 10) * (pxPerSecond || 20);
 
-  const handleToggleItemMute = async (e: React.MouseEvent, item: PlaylistItem, zonePlaylistId: string, currentMuted: boolean, isBlock: boolean = false) => {
+  const handleToggleBlockMute = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    const currentMuted = block.itemOverridesList?.find((o) => o.playlistItemId === block.id)?.isMuted || false;
     try {
-      if (isBlock) {
-        await updatePlaylistBlock(zonePlaylistId, { isMuted: !currentMuted });
-        setZones((prev) =>
-          prev.map((z) => ({
-            ...z,
-            blocksList: z.blocksList.map((b) => {
-              if (b.id === zonePlaylistId) {
-                const existingOverrideIdx = (b.itemOverridesList || []).findIndex((o) => o.playlistItemId === b.id);
-                const newOverrides = [...(b.itemOverridesList || [])];
-                if (existingOverrideIdx >= 0) {
-                  newOverrides[existingOverrideIdx] = { ...newOverrides[existingOverrideIdx], isMuted: !currentMuted };
-                } else {
-                  newOverrides.push({
-                    id: `override-${b.id}`,
-                    zonePlaylistId: b.id,
-                    playlistItemId: b.id,
-                    isMuted: !currentMuted,
-                  });
-                }
-                return { ...b, itemOverridesList: newOverrides };
+      await updatePlaylistBlock(block.id, { isMuted: !currentMuted });
+      setZones((prev) =>
+        prev.map((z) => ({
+          ...z,
+          blocksList: z.blocksList.map((b) => {
+            if (b.id === block.id) {
+              const existingOverrideIdx = (b.itemOverridesList || []).findIndex((o) => o.playlistItemId === b.id);
+              const newOverrides = [...(b.itemOverridesList || [])];
+              if (existingOverrideIdx >= 0) {
+                newOverrides[existingOverrideIdx] = { ...newOverrides[existingOverrideIdx], isMuted: !currentMuted };
+              } else {
+                newOverrides.push({
+                  id: `override-${b.id}`,
+                  zonePlaylistId: b.id,
+                  playlistItemId: b.id,
+                  isMuted: !currentMuted,
+                });
               }
-              return b;
-            }),
-          }))
-        );
-      } else {
-        await setPlaylistItemOverride(zonePlaylistId, item.id, !currentMuted);
-        setZones((prev) =>
-          prev.map((z) => ({
-            ...z,
-            blocksList: z.blocksList.map((b) => {
-              if (b.id === zonePlaylistId) {
-                const existingOverrideIdx = (b.itemOverridesList || []).findIndex((o) => o.playlistItemId === item.id);
-                const newOverrides = [...(b.itemOverridesList || [])];
-                if (existingOverrideIdx >= 0) {
-                  newOverrides[existingOverrideIdx] = { ...newOverrides[existingOverrideIdx], isMuted: !currentMuted };
-                } else {
-                  newOverrides.push({
-                    id: `override-${Date.now()}`,
-                    zonePlaylistId: b.id,
-                    playlistItemId: item.id,
-                    isMuted: !currentMuted,
-                  });
-                }
-                return { ...b, itemOverridesList: newOverrides };
-              }
-              return b;
-            }),
-          }))
-        );
-      }
+              return { ...b, itemOverridesList: newOverrides };
+            }
+            return b;
+          }),
+        }))
+      );
       showToast('Audio status updated');
     } catch (err: any) {
       showToast(err.message || 'Gagal mengubah audio status', 'error');
@@ -149,10 +123,7 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
           {isMediaBlock ? <Film size={12} /> : <ImageIcon size={12} />}
           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
           <button
-            onClick={(e) => {
-              const currentMuted = block.itemOverridesList?.find((o) => o.playlistItemId === block.id)?.isMuted || false;
-              handleToggleItemMute(e, { id: block.id } as any, block.id, currentMuted, true);
-            }}
+            onClick={handleToggleBlockMute}
             style={{
               background: 'none',
               border: 'none',
@@ -174,38 +145,6 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
           {block.durationSeconds}s
         </span>
       </div>
-
-      {/* Item mute override list if playlist */}
-      {!isMediaBlock && playlist && playlist.itemsList && playlist.itemsList.length > 0 && (
-        <div style={{ display: 'flex', gap: '4px', marginTop: '2px', overflowX: 'auto' }}>
-          {playlist.itemsList.map((it) => {
-            const override = block.itemOverridesList?.find((o) => o.playlistItemId === it.id);
-            const isMuted = override ? override.isMuted : !!it.isMuted;
-            return (
-              <button
-                key={it.id}
-                onClick={(e) => handleToggleItemMute(e, it, block.id, isMuted, false)}
-                style={{
-                  padding: '1px 4px',
-                  borderRadius: '3px',
-                  backgroundColor: 'rgba(0,0,0,0.25)',
-                  color: isMuted ? '#f43f5e' : '#ffffff',
-                  border: 'none',
-                  fontSize: '0.5625rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '2px',
-                }}
-                title={isMuted ? `Unmute ${it.mediaItem?.name}` : `Mute ${it.mediaItem?.name}`}
-              >
-                {isMuted ? <VolumeX size={8} /> : <Volume2 size={8} />}
-                <span>{it.mediaItem?.name || 'Item'}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
     </Rnd>
   );
 }
