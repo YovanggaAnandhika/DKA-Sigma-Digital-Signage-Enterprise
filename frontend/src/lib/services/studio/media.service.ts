@@ -146,14 +146,25 @@ export async function finalizeUpload(uploadId: string, originalFilename: string,
   };
 }
 
+export async function cancelUpload(uploadId: string): Promise<boolean> {
+  const result = await invokeApi<any>('/api/grpc/media/CancelUpload', { uploadId });
+  return result.success;
+}
+
 export async function uploadFileViaGrpc(
   file: File,
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
+  signal?: AbortSignal
 ): Promise<{ publicUrl: string; sha256Hash: string; filePath: string; fileSizeBytes: number }> {
   const CHUNK_SIZE = 512 * 1024; // 512 KB per chunk
   const totalBytes = file.size;
   const totalChunks = Math.max(1, Math.ceil(totalBytes / CHUNK_SIZE));
   const uploadId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `up_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+  if (signal?.aborted) {
+    await cancelUpload(uploadId);
+    throw new Error('Upload dibatalkan oleh pengguna');
+  }
 
   let completedChunks = 0;
   const MAX_CONCURRENCY = 5; // IDM-like parallel connections
@@ -163,6 +174,11 @@ export async function uploadFileViaGrpc(
   
   // Helper to process a single chunk
   const processChunk = async (chunkIndex: number) => {
+    if (signal?.aborted) {
+      await cancelUpload(uploadId);
+      throw new Error('Upload dibatalkan oleh pengguna');
+    }
+
     const start = chunkIndex * CHUNK_SIZE;
     const end = Math.min(start + CHUNK_SIZE, totalBytes);
     const slice = file.slice(start, end);

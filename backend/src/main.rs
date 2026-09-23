@@ -116,6 +116,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting Pure gRPC Digital Signage Platform Backend...");
     info!("Configuration loaded. Host: {}, gRPC Port: {}", config.host, config.grpc_port);
 
+    let upload_dir = env::var("UPLOAD_DIR").unwrap_or_else(|_| "./uploads".to_string());
+    tokio::fs::create_dir_all(&upload_dir).await.ok();
+    let cleanup_upload_dir = upload_dir.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(3600)); // Every hour
+        loop {
+            interval.tick().await;
+            if let Ok(mut entries) = tokio::fs::read_dir(&cleanup_upload_dir).await {
+                while let Ok(Some(entry)) = entries.next_entry().await {
+                    let file_name = entry.file_name().into_string().unwrap_or_default();
+                    if file_name.starts_with(".part_") {
+                        if let Ok(metadata) = entry.metadata().await {
+                            if let Ok(modified) = metadata.modified() {
+                                if let Ok(duration) = modified.elapsed() {
+                                    if duration.as_secs() > 86400 { // 24 hours
+                                        let _ = tokio::fs::remove_file(entry.path()).await;
+                                        tracing::info!("Garbage collected orphan upload: {}", file_name);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+
     let grpc_addr: SocketAddr = format!("{}:{}", config.host, config.grpc_port).parse()?;
     info!("Pure gRPC Server listening on {}", grpc_addr);
 

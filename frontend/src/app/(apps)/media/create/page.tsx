@@ -15,6 +15,7 @@ export default function CreateMediaPage() {
   const [mode, setMode] = useState<'upload' | 'url'>('upload');
   const [loading, setLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // File state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -143,6 +144,9 @@ export default function CreateMediaPage() {
     try {
       setLoading(true);
       setUploadProgress(0);
+      
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
 
       const fallbackHash = Array.from(new TextEncoder().encode(formData.name + Date.now()))
         .map((b) => b.toString(16).padStart(2, '0'))
@@ -158,9 +162,13 @@ export default function CreateMediaPage() {
 
       // Upload file directly to backend Rust via gRPC in binary chunks
       if (mode === 'upload' && selectedFile) {
-        const uploadResult = await api.uploadFileViaGrpc(selectedFile, (percent) => {
-          setUploadProgress(percent);
-        });
+        const uploadResult = await api.uploadFileViaGrpc(
+          selectedFile, 
+          (percent) => {
+            setUploadProgress(percent);
+          },
+          abortControllerRef.current.signal
+        );
 
         savedPublicUrl = uploadResult.publicUrl; // /api/assets/{filename}
         finalSha256 = uploadResult.sha256Hash;
@@ -189,11 +197,23 @@ export default function CreateMediaPage() {
         router.push('/media');
       }
     } catch (err: any) {
-      alert(err.message || 'Gagal menyimpan media');
+      if (err.message?.includes('dibatalkan')) {
+        alert('Upload dibatalkan.');
+      } else {
+        alert(err.message || 'Gagal menyimpan media');
+      }
     } finally {
       setLoading(false);
       setUploadProgress(null);
+      abortControllerRef.current = null;
     }
+  };
+
+  const handleCancel = () => {
+    if (loading && abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    router.push('/media');
   };
 
   return (
@@ -293,6 +313,7 @@ export default function CreateMediaPage() {
           uploadProgress={uploadProgress}
           loading={loading}
           selectedFile={selectedFile}
+          onCancel={handleCancel}
         />
       </form>
     </div>

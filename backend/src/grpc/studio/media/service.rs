@@ -17,7 +17,7 @@ use crate::grpc::proto::studio::v1::media::{
     UploadMediaChunkRequest, UploadMediaChunkResponse,
     GetMediaFileRequest, GetMediaFileResponse,
     StreamMediaFileRequest, StreamMediaFileResponse,
-    FinalizeUploadRequest,
+    FinalizeUploadRequest, CancelUploadRequest, CancelUploadResponse,
 };
 
 pub struct MediaServiceImpl {
@@ -264,6 +264,24 @@ impl MediaServiceTrait for MediaServiceImpl {
             file_size_bytes,
             error_message: String::new(),
         }))
+    }
+
+    async fn cancel_upload(
+        &self,
+        request: Request<CancelUploadRequest>,
+    ) -> Result<Response<CancelUploadResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_media")?;
+        let req = request.into_inner();
+
+        let upload_dir = std::env::var("UPLOAD_DIR").unwrap_or_else(|_| "./uploads".to_string());
+        let temp_filename = format!(".part_{}", req.upload_id);
+        let temp_path = std::path::Path::new(&upload_dir).join(&temp_filename);
+
+        if temp_path.exists() {
+            let _ = tokio::fs::remove_file(&temp_path).await;
+        }
+
+        Ok(Response::new(CancelUploadResponse { success: true }))
     }
 
     async fn get_media_file(

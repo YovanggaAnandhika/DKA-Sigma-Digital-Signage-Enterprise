@@ -126,3 +126,11 @@ message FinalizeUploadRequest {
   string upload_id = 1;
   string original_filename = 2;
 }
+
+message CancelUploadRequest {
+  string upload_id = 1;
+}
+
+message CancelUploadResponse {
+  bool success = 1;
+}

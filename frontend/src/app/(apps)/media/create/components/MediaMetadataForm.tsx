@@ -18,6 +18,7 @@ interface MediaMetadataFormProps {
   uploadProgress: number | null;
   loading: boolean;
   selectedFile: File | null;
+  onCancel: () => void;
 }
 
 export default function MediaMetadataForm({
@@ -27,6 +28,7 @@ export default function MediaMetadataForm({
   uploadProgress,
   loading,
   selectedFile,
+  onCancel,
 }: MediaMetadataFormProps) {
   return (
     <div className="card-elevated" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -141,9 +143,9 @@ export default function MediaMetadataForm({
       )}
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
-        <Link href="/media" className="btn btn-secondary">
+        <button type="button" onClick={onCancel} className="btn btn-secondary">
           Batal
-        </Link>
+        </button>
         <button
           type="submit"
           disabled={loading || (mode === 'upload' && !selectedFile && !formData.name)}
