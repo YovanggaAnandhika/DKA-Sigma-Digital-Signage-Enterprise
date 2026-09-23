@@ -29,11 +29,15 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
   const leftPx = (block.startTimeSeconds || 0) * (pxPerSecond || 20);
   const widthPx = (block.durationSeconds || 10) * (pxPerSecond || 20);
 
+  const isBlockMuted = block.isMuted !== undefined
+    ? !!block.isMuted
+    : !!block.itemOverridesList?.find((o) => o.playlistItemId === block.id)?.isMuted;
+
   const handleToggleBlockMute = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const currentMuted = block.itemOverridesList?.find((o) => o.playlistItemId === block.id)?.isMuted || false;
+    const nextMuted = !isBlockMuted;
     try {
-      await updatePlaylistBlock(block.id, { isMuted: !currentMuted });
+      await updatePlaylistBlock(block.id, { isMuted: nextMuted });
       setZones((prev) =>
         prev.map((z) => ({
           ...z,
@@ -42,16 +46,16 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
               const existingOverrideIdx = (b.itemOverridesList || []).findIndex((o) => o.playlistItemId === b.id);
               const newOverrides = [...(b.itemOverridesList || [])];
               if (existingOverrideIdx >= 0) {
-                newOverrides[existingOverrideIdx] = { ...newOverrides[existingOverrideIdx], isMuted: !currentMuted };
+                newOverrides[existingOverrideIdx] = { ...newOverrides[existingOverrideIdx], isMuted: nextMuted };
               } else {
                 newOverrides.push({
                   id: `override-${b.id}`,
                   zonePlaylistId: b.id,
                   playlistItemId: b.id,
-                  isMuted: !currentMuted,
+                  isMuted: nextMuted,
                 });
               }
-              return { ...b, itemOverridesList: newOverrides };
+              return { ...b, isMuted: nextMuted, itemOverridesList: newOverrides };
             }
             return b;
           }),
@@ -127,7 +131,7 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
             style={{
               background: 'none',
               border: 'none',
-              color: block.itemOverridesList?.find((o) => o.playlistItemId === block.id)?.isMuted ? '#f43f5e' : '#ffffff',
+              color: isBlockMuted ? '#f43f5e' : '#ffffff',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -136,9 +140,9 @@ export default function TimelineTrackBlock({ zone, block, color }: TimelineTrack
               borderRadius: '4px',
               backgroundColor: 'rgba(0,0,0,0.2)',
             }}
-            title={block.itemOverridesList?.find((o) => o.playlistItemId === block.id)?.isMuted ? 'Unmute Block' : 'Mute Block'}
+            title={isBlockMuted ? 'Unmute Block' : 'Mute Block'}
           >
-            {block.itemOverridesList?.find((o) => o.playlistItemId === block.id)?.isMuted ? <VolumeX size={10} /> : <Volume2 size={10} />}
+            {isBlockMuted ? <VolumeX size={10} /> : <Volume2 size={10} />}
           </button>
         </div>
         <span style={{ fontSize: '0.625rem', opacity: 0.9, fontFamily: 'monospace' }}>

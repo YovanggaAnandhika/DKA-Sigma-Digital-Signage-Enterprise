@@ -63,6 +63,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
             durationSeconds: b.durationSeconds ?? 10,
             transitionType: b.transitionType || 'none',
             orderIndex: b.orderIndex ?? b.position ?? 0,
+            isMuted: b.isMuted ?? b.is_muted ?? false,
             itemOverridesList: (b.itemOverridesList || []).map((o: any) => ({
               id: o.id,
               zonePlaylistId: o.zonePlaylistId || o.zone_playlist_id,
@@ -159,10 +160,12 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
               await api.addPlaylistBlock(realZoneId, b.playlistId, b.startTimeSeconds, b.durationSeconds);
             }
           } else {
+            const blockMuted = b.isMuted ?? b.itemOverridesList?.find((o: any) => o.playlistItemId === b.id)?.isMuted;
             await api.updatePlaylistBlock(b.id, {
               startTimeSeconds: b.startTimeSeconds,
               durationSeconds: b.durationSeconds,
               transitionType: b.transitionType,
+              isMuted: blockMuted !== undefined ? blockMuted : false,
             });
           }
         }
@@ -191,6 +194,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
             durationSeconds: b.durationSeconds ?? 10,
             transitionType: b.transitionType || 'none',
             orderIndex: b.orderIndex ?? b.position ?? 0,
+            isMuted: b.isMuted ?? b.is_muted ?? prevBlock?.isMuted ?? false,
             itemOverridesList: prevBlock?.itemOverridesList || (b.itemOverridesList || []).map((o: any) => ({
               id: o.id,
               zonePlaylistId: o.zonePlaylistId || o.zone_playlist_id,

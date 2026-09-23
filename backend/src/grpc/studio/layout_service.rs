@@ -70,6 +70,7 @@ impl LayoutServiceImpl {
                 duration_seconds: b.block.duration_seconds,
                 transition_type: b.block.transition_type.unwrap_or_default(),
                 order_index: b.block.order_index,
+                is_muted: b.block.is_muted,
                 created_at: b.block.created_at.to_rfc3339(),
                 item_overrides: b.item_overrides.into_iter().map(|o| crate::grpc::proto::studio::v1::layout::ZonePlaylistItemOverride {
                     id: o.id.to_string(),
@@ -369,6 +370,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
                 duration_seconds: block.duration_seconds,
                 transition_type: block.transition_type.unwrap_or_default(),
                 order_index: block.order_index,
+                is_muted: block.is_muted,
                 created_at: block.created_at.to_rfc3339(),
                 item_overrides: vec![],
             }),
@@ -409,6 +411,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
                 duration_seconds: block.duration_seconds,
                 transition_type: block.transition_type.unwrap_or_default(),
                 order_index: block.order_index,
+                is_muted: block.is_muted,
                 created_at: block.created_at.to_rfc3339(),
                 item_overrides: vec![],
             }),
@@ -449,7 +452,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
                 duration_seconds: block.duration_seconds,
                 transition_type: block.transition_type.unwrap_or_default(),
                 order_index: block.order_index,
-
+                is_muted: block.is_muted,
                 created_at: block.created_at.to_rfc3339(),
                 item_overrides: vec![],
             }),

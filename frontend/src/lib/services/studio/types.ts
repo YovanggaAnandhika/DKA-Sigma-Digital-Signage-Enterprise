@@ -39,6 +39,7 @@ export interface ZonePlaylist {
   transitionType: string;
   orderIndex: number;
   itemOverridesList: ZonePlaylistItemOverride[];
+  isMuted?: boolean;
   createdAt: string;
 }
 
