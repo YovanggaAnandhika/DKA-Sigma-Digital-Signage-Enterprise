@@ -3,14 +3,25 @@
 import React from 'react';
 import { RefreshCw, CheckCircle, XCircle } from 'lucide-react';
 import { LayoutEditorProvider, useLayoutEditor } from './context/LayoutEditorContext';
-import TopToolbar from './components/TopToolbar';
-import LayersPanel from './components/LayersPanel';
-import CanvasWorkspace from './components/CanvasWorkspace';
-import TimelineEditor from './components/TimelineEditor';
-import InspectorPanel from './components/InspectorPanel';
-import LayerBlockList from './components/layers/LayerBlockList';
-import PlaylistPickerModal from './components/PlaylistPickerModal';
-import MediaPickerModal from './components/MediaPickerModal';
+
+import dynamic from 'next/dynamic';
+import { 
+  TopToolbarPlaceholder, 
+  LayersPanelPlaceholder, 
+  CanvasWorkspacePlaceholder, 
+  TimelineEditorPlaceholder, 
+  InspectorPanelPlaceholder, 
+  LayerBlockListPlaceholder 
+} from './components/placeholders';
+
+const TopToolbar = dynamic(() => import('./components/TopToolbar'), { ssr: false, loading: () => <TopToolbarPlaceholder /> });
+const LayersPanel = dynamic(() => import('./components/LayersPanel'), { ssr: false, loading: () => <LayersPanelPlaceholder /> });
+const CanvasWorkspace = dynamic(() => import('./components/CanvasWorkspace'), { ssr: false, loading: () => <CanvasWorkspacePlaceholder /> });
+const TimelineEditor = dynamic(() => import('./components/TimelineEditor'), { ssr: false, loading: () => <TimelineEditorPlaceholder /> });
+const InspectorPanel = dynamic(() => import('./components/InspectorPanel'), { ssr: false, loading: () => <InspectorPanelPlaceholder /> });
+const LayerBlockList = dynamic(() => import('./components/layers/LayerBlockList'), { ssr: false, loading: () => <LayerBlockListPlaceholder /> });
+const PlaylistPickerModal = dynamic(() => import('./components/PlaylistPickerModal'), { ssr: false });
+const MediaPickerModal = dynamic(() => import('./components/MediaPickerModal'), { ssr: false });
 
 function EditorContent() {
   const {
@@ -113,9 +124,36 @@ function EditorContent() {
 
   if (loading || !layout) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
-        <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 12px auto' }} />
-        <span>Memuat Canvas Designer...</span>
+      <div 
+        style={{ 
+          display: 'flex', 
+          flex: 1,
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          minHeight: '100%', 
+          backgroundColor: 'var(--bg-surface-elevated)',
+        }}
+      >
+        <div style={{ position: 'relative', width: '80px', height: '80px', marginBottom: '24px' }}>
+          <div 
+            className="absolute inset-0 border-4 border-primary/20 rounded-full"
+            style={{ borderColor: 'rgba(14, 165, 233, 0.2)' }}
+          ></div>
+          <div 
+            className="absolute inset-0 border-4 border-primary rounded-full animate-spin border-t-transparent"
+            style={{ borderColor: 'var(--primary-500)', borderTopColor: 'transparent' }}
+          ></div>
+          <div className="absolute inset-0 flex items-center justify-center text-primary animate-pulse">
+            <RefreshCw size={28} />
+          </div>
+        </div>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-strong)', marginBottom: '8px' }}>
+          Mempersiapkan Designer
+        </h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }} className="animate-pulse">
+          Memuat kanvas dan modul editor...
+        </p>
       </div>
     );
   }
