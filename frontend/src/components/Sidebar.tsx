@@ -37,29 +37,29 @@ const navGroups: NavGroup[] = [
     heading: 'UTAMA',
     items: [
       { name: 'Ringkasan', desc: 'Ikhtisar & Metrik Layar', href: '/', icon: LayoutDashboard },
-      { name: 'Live Monitor', desc: 'Status Streaming & Telemetri', href: '/simulator', icon: Activity, badge: 'Live' },
+      { name: 'Live Monitor', desc: 'Status Streaming & Telemetri', href: '/distribution/simulator', icon: Activity, badge: 'Live' },
     ],
   },
   {
     heading: 'OPERASI & PERANGKAT',
     items: [
-      { name: 'Layar Retail', desc: 'Manajemen & Pairing Player', href: '/displays', icon: Tv },
-      { name: 'Grup Layar', desc: 'Pengelompokan Layar', href: '/groups', icon: MonitorPlay },
+      { name: 'Layar Retail', desc: 'Manajemen & Pairing Player', href: '/hardware/displays', icon: Tv },
+      { name: 'Grup Layar', desc: 'Pengelompokan Layar', href: '/hardware/groups', icon: MonitorPlay },
     ],
   },
   {
     heading: 'STUDIO & KONTEN',
     items: [
-      { name: 'Penjadwalan', desc: 'Jadwal Putar & Prioritas', href: '/schedules', icon: CalendarDays },
-      { name: 'Desain Layout', desc: 'Canvas Multi-Zona & Tata Letak', href: '/layouts', icon: Palette },
-      { name: 'Daftar Putar', desc: 'Urutan & Durasi Media', href: '/playlists', icon: ListMusic },
-      { name: 'Pustaka Media', desc: 'Aset Gambar & Video Promosi', href: '/media', icon: FolderOpen },
+      { name: 'Penjadwalan', desc: 'Jadwal Putar & Prioritas', href: '/studio/schedules', icon: CalendarDays },
+      { name: 'Desain Layout', desc: 'Canvas Multi-Zona & Tata Letak', href: '/studio/layouts', icon: Palette },
+      { name: 'Daftar Putar', desc: 'Urutan & Durasi Media', href: '/studio/playlists', icon: ListMusic },
+      { name: 'Pustaka Media', desc: 'Aset Gambar & Video Promosi', href: '/studio/media', icon: FolderOpen },
     ],
   },
   {
     heading: 'SISTEM & AKSES',
     items: [
-      { name: 'Hak Akses & Role', desc: 'RBAC & Manajemen Pengguna', href: '/roles', icon: ShieldCheck },
+      { name: 'Hak Akses & Role', desc: 'RBAC & Manajemen Pengguna', href: '/iam/roles', icon: ShieldCheck },
     ],
   },
 ];

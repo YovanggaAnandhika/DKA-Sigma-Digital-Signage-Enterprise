@@ -8,9 +8,9 @@ import type { Device } from '@/lib/services/hardware';
 import type { Layout, MediaItem, Playlist } from '@/lib/services/studio';
 import { InsightCard, InsightItem } from '@/components/InsightCard';
 import { Tv, RefreshCw } from 'lucide-react';
-import DashboardStats from './components/DashboardStats';
-import DashboardDeviceList from './components/DashboardDeviceList';
-import DashboardServiceStatus from './components/DashboardServiceStatus';
+import DashboardStats from '../components/DashboardStats';
+import DashboardDeviceList from '../components/DashboardDeviceList';
+import DashboardServiceStatus from '../components/DashboardServiceStatus';
 
 // Load the chart dynamically to save initial bundle size
 const TimelineChart = dynamic(() => import('@/components/charts/TimelineChart').then((mod) => mod.TimelineChart), {

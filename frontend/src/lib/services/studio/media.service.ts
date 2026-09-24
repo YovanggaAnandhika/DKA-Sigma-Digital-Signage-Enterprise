@@ -7,7 +7,7 @@ import { MediaItem } from './types';
  * Uses the filename (file_path basename or public_url path) as identifier.
  */
 export function getMediaStreamUrl(filename: string): string {
-  return `/api/grpc/media/StreamMediaFile?filename=${encodeURIComponent(filename)}`;
+  return `/api/grpc/studio/media/StreamMediaFile?filename=${encodeURIComponent(filename)}`;
 }
 
 /**
@@ -39,7 +39,7 @@ export async function getMedia(params?: { search?: string; page?: number; limit?
     }
   };
 
-  const result = await invokeApi<any>('/api/grpc/media/ListMedia', payload);
+  const result = await invokeApi<any>('/api/grpc/studio/media/ListMedia', payload);
   const data: MediaItem[] = result.itemsList || [];
 
   return {
@@ -49,14 +49,14 @@ export async function getMedia(params?: { search?: string; page?: number; limit?
 }
 
 export async function getMediaItem(id: string): Promise<MediaItem> {
-  const result = await invokeApi<any>('/api/grpc/media/GetMedia', { id });
+  const result = await invokeApi<any>('/api/grpc/studio/media/GetMedia', { id });
   const m = result.media || result;
   if (!m || !m.id) throw new Error(`Media ID ${id} tidak ditemukan`);
   return m as MediaItem;
 }
 
 export async function createMedia(data: { name: string; originalFilename: string; filePath: string; publicUrl: string; fileSizeBytes: number; mimeType: string; sha256Hash: string; mediaType: number; width?: number; height?: number; durationSeconds?: number }): Promise<MediaItem> {
-  const result = await invokeApi<any>('/api/grpc/media/CreateMedia', {
+  const result = await invokeApi<any>('/api/grpc/studio/media/CreateMedia', {
     ...data,
     durationSeconds: data.durationSeconds,
     duration_seconds: data.durationSeconds,
@@ -67,12 +67,12 @@ export async function createMedia(data: { name: string; originalFilename: string
 }
 
 export async function updateMedia(id: string, data: { name?: string; thumbnail_url?: string }): Promise<MediaItem> {
-  await invokeApi<any>('/api/grpc/media/UpdateMedia', { id, ...data });
+  await invokeApi<any>('/api/grpc/studio/media/UpdateMedia', { id, ...data });
   return getMediaItem(id);
 }
 
 export async function deleteMedia(id: string): Promise<boolean> {
-  await invokeApi<any>('/api/grpc/media/DeleteMedia', { id });
+  await invokeApi<any>('/api/grpc/studio/media/DeleteMedia', { id });
   return true;
 }
 
@@ -117,7 +117,7 @@ export async function uploadMediaChunk(data: {
     chunkOffset: data.chunk_offset
   };
 
-  const result = await invokeApi<any>('/api/grpc/media/UploadMediaChunk', payload);
+  const result = await invokeApi<any>('/api/grpc/studio/media/UploadMediaChunk', payload);
   return {
     success: result.success,
     upload_id: result.upload_id || result.uploadId || '',
@@ -132,7 +132,7 @@ export async function uploadMediaChunk(data: {
 }
 
 export async function finalizeUpload(uploadId: string, originalFilename: string, totalChunks: number): Promise<UploadChunkResult> {
-  const result = await invokeApi<any>('/api/grpc/media/FinalizeUpload', { uploadId, originalFilename, totalChunks });
+  const result = await invokeApi<any>('/api/grpc/studio/media/FinalizeUpload', { uploadId, originalFilename, totalChunks });
   return {
     success: result.success,
     upload_id: result.upload_id || result.uploadId || '',
@@ -147,7 +147,7 @@ export async function finalizeUpload(uploadId: string, originalFilename: string,
 }
 
 export async function cancelUpload(uploadId: string): Promise<boolean> {
-  const result = await invokeApi<any>('/api/grpc/media/CancelUpload', { uploadId });
+  const result = await invokeApi<any>('/api/grpc/studio/media/CancelUpload', { uploadId });
   return result.success;
 }
 
@@ -241,7 +241,7 @@ export async function uploadFileViaGrpc(
 }
 
 export async function getMediaFile(filename: string): Promise<{ success: boolean; filename: string; mimeType: string; file_data: Uint8Array }> {
-  const result = await invokeApi<any>('/api/grpc/media/GetMediaFile', { filename });
+  const result = await invokeApi<any>('/api/grpc/studio/media/GetMediaFile', { filename });
 
   // Convert base64 back to Uint8Array (field is now snake_case after normalization)
   const b64 = result.file_data || result.fileData || '';
