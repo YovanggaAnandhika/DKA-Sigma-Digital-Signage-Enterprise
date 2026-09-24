@@ -71,7 +71,7 @@ export default function LayoutsPage() {
           <button onClick={loadData} className="btn btn-secondary" title="Segarkan data">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
-          <Link href="/layouts/create" className="btn btn-primary">
+          <Link href="/studio/layouts/create" className="btn btn-primary">
             <Plus size={16} />
             <span>Buat Layout Baru</span>
           </Link>
@@ -121,7 +121,7 @@ export default function LayoutsPage() {
                 layouts.map((l) => (
                   <tr key={l.id}>
                     <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                      <Link href={`/layouts/${l.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <Link href={`/studio/layouts/${l.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                         {l.name}
                       </Link>
                     </td>
@@ -161,10 +161,10 @@ export default function LayoutsPage() {
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <Link href={`/layouts/${l.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Preview Canvas">
+                        <Link href={`/studio/layouts/${l.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Preview Canvas">
                           <Eye size={14} />
                         </Link>
-                        <Link href={`/layouts/${l.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit Canvas Designer">
+                        <Link href={`/studio/layouts/${l.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit Canvas Designer">
                           <Edit size={14} />
                         </Link>
                         <button

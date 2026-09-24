@@ -72,7 +72,7 @@ export default function SchedulesPage() {
           <button onClick={loadData} className="btn btn-secondary" title="Segarkan data">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
-          <Link href="/schedules/create" className="btn btn-primary">
+          <Link href="/studio/schedules/create" className="btn btn-primary">
             <Plus size={16} />
             <span>Tambah Jadwal</span>
           </Link>
@@ -126,7 +126,7 @@ export default function SchedulesPage() {
                     <td>{s.eventsList ? s.eventsList.length : 0} Event(s)</td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <Link href={`/schedules/${s.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit">
+                        <Link href={`/studio/schedules/${s.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit">
                           <Edit size={14} />
                         </Link>
                         <button

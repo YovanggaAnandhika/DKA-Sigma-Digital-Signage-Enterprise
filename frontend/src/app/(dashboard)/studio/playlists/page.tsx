@@ -70,7 +70,7 @@ export default function PlaylistsPage() {
           <button onClick={loadData} className="btn btn-secondary" title="Segarkan data">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
-          <Link href="/playlists/create" className="btn btn-primary">
+          <Link href="/studio/playlists/create" className="btn btn-primary">
             <Plus size={16} />
             <span>Buat Playlist Baru</span>
           </Link>
@@ -120,7 +120,7 @@ export default function PlaylistsPage() {
                 playlists.map((pl) => (
                   <tr key={pl.id}>
                     <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                      <Link href={`/playlists/${pl.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <Link href={`/studio/playlists/${pl.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                         {pl.name}
                       </Link>
                     </td>
@@ -156,10 +156,10 @@ export default function PlaylistsPage() {
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <Link href={`/playlists/${pl.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Detail Item">
+                        <Link href={`/studio/playlists/${pl.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Detail Item">
                           <Eye size={14} />
                         </Link>
-                        <Link href={`/playlists/${pl.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit Playlist">
+                        <Link href={`/studio/playlists/${pl.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit Playlist">
                           <Edit size={14} />
                         </Link>
                         <button

@@ -70,7 +70,7 @@ export default function ViewRolePage() {
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
-          <Link href={`/roles/${role.id}/edit`} className="btn btn-secondary">
+          <Link href={`/iam/roles/${role.id}/edit`} className="btn btn-secondary">
             <Edit size={14} />
             <span>Edit Izin Role</span>
           </Link>

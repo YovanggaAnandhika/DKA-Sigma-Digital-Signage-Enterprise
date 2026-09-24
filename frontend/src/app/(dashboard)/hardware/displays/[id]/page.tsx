@@ -71,7 +71,7 @@ export default function ViewDisplayPage() {
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
-          <Link href={`/displays/${device.id}/edit`} className="btn btn-secondary">
+          <Link href={`/hardware/displays/${device.id}/edit`} className="btn btn-secondary">
             <Edit size={14} />
             <span>Edit Konfigurasi</span>
           </Link>

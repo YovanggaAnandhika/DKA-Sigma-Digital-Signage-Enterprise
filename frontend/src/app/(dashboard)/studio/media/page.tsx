@@ -74,7 +74,7 @@ export default function MediaPage() {
           <button onClick={loadData} className="btn btn-secondary" title="Segarkan data">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
-          <Link href="/media/create" className="btn btn-primary">
+          <Link href="/studio/media/create" className="btn btn-primary">
             <Plus size={16} />
             <span>Unggah Media Baru</span>
           </Link>

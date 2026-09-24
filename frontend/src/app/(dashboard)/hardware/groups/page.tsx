@@ -72,7 +72,7 @@ export default function DisplayGroupsPage() {
           <button onClick={loadData} className="btn btn-secondary" title="Segarkan data">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
-          <Link href="/groups/create" className="btn btn-primary">
+          <Link href="/hardware/groups/create" className="btn btn-primary">
             <Plus size={16} />
             <span>Tambah Grup</span>
           </Link>
@@ -128,7 +128,7 @@ export default function DisplayGroupsPage() {
                     <td>{g.schedule_name || '-'}</td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <Link href={`/groups/${g.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit">
+                        <Link href={`/hardware/groups/${g.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit">
                           <Edit size={14} />
                         </Link>
                         <button

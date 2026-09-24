@@ -62,7 +62,7 @@ export default function ViewPlaylistPage() {
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
-          <Link href={`/playlists/${playlist.id}/edit`} className="btn btn-primary">
+          <Link href={`/studio/playlists/${playlist.id}/edit`} className="btn btn-primary">
             <Edit size={14} />
             <span>Edit Susunan Item</span>
           </Link>

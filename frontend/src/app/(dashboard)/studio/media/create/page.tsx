@@ -158,7 +158,7 @@ export default function CreateMediaPage() {
       let savedFilename = formData.originalFilename || `${formData.name.toLowerCase().replace(/\s+/g, '_')}.${formData.mediaType === 2 ? 'mp4' : 'jpg'}`;
       let finalSha256 = fileSha256 || fallbackHash;
       let finalFileSize = formData.fileSizeBytes || selectedFile?.size || 0;
-      let finalFilePath = `/storage/media/${savedFilename}`;
+      let finalFilePath = `/storage/studio/media/${savedFilename}`;
 
       // Upload file directly to backend Rust via gRPC in binary chunks
       if (mode === 'upload' && selectedFile) {
@@ -192,7 +192,7 @@ export default function CreateMediaPage() {
 
       alert('Media berhasil diunggah via gRPC chunks dan disimpan ke backend!');
       if (res && res.id) {
-        router.push(`/media/${res.id}`);
+        router.push(`/studio/media/${res.id}`);
       } else {
         router.push('/media');
       }

@@ -398,7 +398,7 @@ export default function InspectorPanel() {
                       Daftar Isi Playlist
                     </span>
                     <Link
-                      href={`/playlists/${playlist.id}`}
+                      href={`/studio/playlists/${playlist.id}`}
                       target="_blank"
                       style={{ fontSize: '0.6875rem', color: 'var(--primary-600)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 600 }}
                     >

@@ -42,7 +42,7 @@ export default function EditMediaPage() {
     try {
       setSaving(true);
       await api.updateMedia(params.id, formData);
-      router.push(`/media/${params.id}`);
+      router.push(`/studio/media/${params.id}`);
     } catch (err: any) {
       alert(err.message || 'Gagal memperbarui metadata media');
     } finally {
@@ -62,7 +62,7 @@ export default function EditMediaPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <Link href={`/media/${params.id}`} className="btn btn-outline" style={{ padding: '8px' }}>
+        <Link href={`/studio/media/${params.id}`} className="btn btn-outline" style={{ padding: '8px' }}>
           <ArrowLeft size={16} />
         </Link>
         <div>
@@ -104,7 +104,7 @@ export default function EditMediaPage() {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-            <Link href={`/media/${params.id}`} className="btn btn-secondary">
+            <Link href={`/studio/media/${params.id}`} className="btn btn-secondary">
               Batal
             </Link>
             <button type="submit" disabled={saving} className="btn btn-primary">

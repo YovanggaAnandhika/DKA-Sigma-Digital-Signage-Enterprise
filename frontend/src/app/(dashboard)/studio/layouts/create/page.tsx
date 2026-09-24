@@ -36,7 +36,7 @@ export default function CreateLayoutPage() {
         canvasHeight: height,
       });
 
-      router.push(`/layouts/${layout.id}/edit`);
+      router.push(`/studio/layouts/${layout.id}/edit`);
     } catch (err: any) {
       alert(err.message || 'Gagal membuat layout');
     } finally {

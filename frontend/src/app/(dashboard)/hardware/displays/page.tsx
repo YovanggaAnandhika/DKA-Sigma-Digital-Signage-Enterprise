@@ -71,7 +71,7 @@ export default function DisplaysPage() {
           <button onClick={loadData} className="btn btn-secondary" title="Segarkan data">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
-          <Link href="/displays/create" className="btn btn-primary">
+          <Link href="/hardware/displays/create" className="btn btn-primary">
             <Plus size={16} />
             <span>Tambah Layar Baru</span>
           </Link>
@@ -122,7 +122,7 @@ export default function DisplaysPage() {
                 devices.map((d) => (
                   <tr key={d.id}>
                     <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                      <Link href={`/displays/${d.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <Link href={`/hardware/displays/${d.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                         {d.name}
                       </Link>
                     </td>
@@ -164,10 +164,10 @@ export default function DisplaysPage() {
                     <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{d.ipAddress || '127.0.0.1'}</td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <Link href={`/displays/${d.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Lihat Detail">
+                        <Link href={`/hardware/displays/${d.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Lihat Detail">
                           <Eye size={14} />
                         </Link>
-                        <Link href={`/displays/${d.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit">
+                        <Link href={`/hardware/displays/${d.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit">
                           <Edit size={14} />
                         </Link>
                         <button

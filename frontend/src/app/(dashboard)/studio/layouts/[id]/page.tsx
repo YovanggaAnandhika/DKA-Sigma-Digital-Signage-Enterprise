@@ -157,7 +157,7 @@ export default function ViewLayoutPage() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <Link href={`/layouts/${layout.id}/edit`} className="btn btn-primary">
+          <Link href={`/studio/layouts/${layout.id}/edit`} className="btn btn-primary">
             <Edit size={14} />
             <span>Buka Canvas Designer</span>
           </Link>

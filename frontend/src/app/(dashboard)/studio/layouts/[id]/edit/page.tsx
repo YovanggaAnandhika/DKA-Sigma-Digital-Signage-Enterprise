@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useAppContext } from '@/components/AppContext';
 import { RefreshCw, CheckCircle, XCircle } from 'lucide-react';
 import { LayoutEditorProvider, useLayoutEditor } from './context/LayoutEditorContext';
 
@@ -342,6 +343,13 @@ function EditorContent() {
 }
 
 export default function EditLayoutCanvasPage() {
+  const { setFullscreen } = useAppContext();
+
+  useEffect(() => {
+    setFullscreen(true);
+    return () => setFullscreen(false);
+  }, [setFullscreen]);
+
   return (
     <LayoutEditorProvider>
       <EditorContent />

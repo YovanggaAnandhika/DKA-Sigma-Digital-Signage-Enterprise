@@ -61,7 +61,7 @@ export default function LayerBlockList() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
           {!collapsed && selectedZone?.blocksList && selectedZone.blocksList.length > 0 && selectedZone.blocksList[0].playlistId && (
             <Link
-              href={`/playlists/${selectedZone.blocksList[0].playlistId}`}
+              href={`/studio/playlists/${selectedZone.blocksList[0].playlistId}`}
               target="_blank"
               style={{ fontSize: '0.6875rem', color: 'var(--primary-500)', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}
               title="Buka Playlist"

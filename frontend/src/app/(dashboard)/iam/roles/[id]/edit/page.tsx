@@ -104,7 +104,7 @@ export default function EditRolePage() {
 
       setSuccess(true);
       setTimeout(() => {
-        router.push(`/roles/${roleId}`);
+        router.push(`/iam/roles/${roleId}`);
       }, 1000);
     } catch (err: any) {
       setError(err.message || 'Gagal memperbarui role ke gRPC backend.');
@@ -134,7 +134,7 @@ export default function EditRolePage() {
       {/* Header Breadcrumbs */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Link href={`/roles/${roleId}`} className="btn btn-outline" style={{ padding: '8px' }}>
+          <Link href={`/iam/roles/${roleId}`} className="btn btn-outline" style={{ padding: '8px' }}>
             <ArrowLeft size={16} />
           </Link>
           <div>
@@ -150,7 +150,7 @@ export default function EditRolePage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Link href={`/roles/${roleId}`} className="btn btn-outline">
+          <Link href={`/iam/roles/${roleId}`} className="btn btn-outline">
             Batal
           </Link>
           <button
@@ -242,7 +242,7 @@ export default function EditRolePage() {
           </span>
 
           <div style={{ display: 'flex', gap: '8px' }}>
-            <Link href={`/roles/${roleId}`} className="btn btn-outline">
+            <Link href={`/iam/roles/${roleId}`} className="btn btn-outline">
               Batal
             </Link>
             <button

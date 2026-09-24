@@ -66,7 +66,7 @@ export default function ViewMediaPage() {
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
-          <Link href={`/media/${media.id}/edit`} className="btn btn-secondary">
+          <Link href={`/studio/media/${media.id}/edit`} className="btn btn-secondary">
             <Edit size={14} />
             <span>Edit Metadata</span>
           </Link>

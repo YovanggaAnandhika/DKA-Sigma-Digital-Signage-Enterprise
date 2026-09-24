@@ -110,11 +110,11 @@ export default function MediaDetailsSidebar({
         </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-          <Link href={`/media/${selectedMedia.id}`} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+          <Link href={`/studio/media/${selectedMedia.id}`} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
             <Eye size={16} /> Pratinjau Penuh
           </Link>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <Link href={`/media/${selectedMedia.id}/edit`} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>
+            <Link href={`/studio/media/${selectedMedia.id}/edit`} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>
               <Edit size={16} /> Edit
             </Link>
             <button onClick={() => { handleDelete(selectedMedia.id, selectedMedia.name); setSelectedMedia(null); }} className="btn btn-danger" style={{ flex: 1, justifyContent: 'center' }}>

@@ -69,7 +69,7 @@ export default function EditDisplayPage() {
         display_group_id: formData.displayGroupId,
         schedule_id: formData.schedule_id,
       });
-      router.push(`/displays/${params.id}`);
+      router.push(`/hardware/displays/${params.id}`);
     } catch (err: any) {
       alert(err.message || 'Gagal memperbarui konfigurasi display');
     } finally {
@@ -89,7 +89,7 @@ export default function EditDisplayPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <Link href={`/displays/${params.id}`} className="btn btn-outline" style={{ padding: '8px' }}>
+        <Link href={`/hardware/displays/${params.id}`} className="btn btn-outline" style={{ padding: '8px' }}>
           <ArrowLeft size={16} />
         </Link>
         <div>
@@ -200,7 +200,7 @@ export default function EditDisplayPage() {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-            <Link href={`/displays/${params.id}`} className="btn btn-secondary">
+            <Link href={`/hardware/displays/${params.id}`} className="btn btn-secondary">
               Batal
             </Link>
             <button type="submit" disabled={saving} className="btn btn-primary">

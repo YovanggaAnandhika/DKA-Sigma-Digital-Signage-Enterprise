@@ -13,7 +13,7 @@ export default function TopToolbar() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', backgroundColor: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', zIndex: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <Link href={`/layouts/${params.id}`} className="btn btn-outline" style={{ width: '30px', height: '30px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Kembali ke Detail Layout">
+        <Link href={`/studio/layouts/${params.id}`} className="btn btn-outline" style={{ width: '30px', height: '30px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Kembali ke Detail Layout">
           <ArrowLeft size={15} />
         </Link>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>

@@ -199,7 +199,7 @@ export default function EditPlaylistPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Link href={`/playlists/${params.id}`} className="btn btn-outline" style={{ padding: '8px' }}>
+          <Link href={`/studio/playlists/${params.id}`} className="btn btn-outline" style={{ padding: '8px' }}>
             <ArrowLeft size={16} />
           </Link>
           <div>

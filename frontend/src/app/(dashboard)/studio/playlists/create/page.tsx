@@ -20,7 +20,7 @@ export default function CreatePlaylistPage() {
     try {
       setLoading(true);
       const pl = await api.createPlaylist(formData);
-      router.push(`/playlists/${pl.id}/edit`);
+      router.push(`/studio/playlists/${pl.id}/edit`);
     } catch (err: any) {
       alert(err.message || 'Gagal membuat playlist');
     } finally {

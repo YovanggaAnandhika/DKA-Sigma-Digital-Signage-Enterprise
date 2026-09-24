@@ -49,7 +49,7 @@ export default function DashboardDeviceList({
               devices.slice(0, 5).map((d) => (
                 <tr key={d.id}>
                   <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                    <Link href={`/displays/${d.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <Link href={`/hardware/displays/${d.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                       {d.name}
                     </Link>
                   </td>

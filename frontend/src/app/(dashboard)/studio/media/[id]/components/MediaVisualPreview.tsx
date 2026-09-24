@@ -97,7 +97,7 @@ export default function MediaVisualPreview({
                 ? 'Tautan ini sebelumnya tersimpan sebagai memori sementara (blob:) dan telah kedaluwarsa setelah refresh. Silakan unggah berkas baru agar tersimpan permanen di server.'
                 : `Berkas pada alamat "${media.publicUrl}" tidak dapat diakses atau tidak ditemukan.`}
             </p>
-            <Link href="/media/create" className="btn btn-primary" style={{ fontSize: '0.8125rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Link href="/studio/media/create" className="btn btn-primary" style={{ fontSize: '0.8125rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
               <UploadCloud size={16} />
               <span>Unggah Media Baru</span>
             </Link>

@@ -70,7 +70,7 @@ export default function RolesPage() {
           <button onClick={loadData} className="btn btn-secondary" title="Segarkan data">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
-          <Link href="/roles/create" className="btn btn-primary">
+          <Link href="/iam/roles/create" className="btn btn-primary">
             <Plus size={16} />
             <span>Tambah Role Baru</span>
           </Link>
@@ -120,7 +120,7 @@ export default function RolesPage() {
                 roles.map((r) => (
                   <tr key={r.id}>
                     <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                      <Link href={`/roles/${r.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <Link href={`/iam/roles/${r.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                         {r.name}
                       </Link>
                     </td>
@@ -160,10 +160,10 @@ export default function RolesPage() {
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <Link href={`/roles/${r.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Detail Role">
+                        <Link href={`/iam/roles/${r.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Detail Role">
                           <Eye size={14} />
                         </Link>
-                        <Link href={`/roles/${r.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit Role">
+                        <Link href={`/iam/roles/${r.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit Role">
                           <Edit size={14} />
                         </Link>
                         <button
