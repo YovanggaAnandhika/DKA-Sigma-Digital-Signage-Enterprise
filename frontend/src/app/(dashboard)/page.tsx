@@ -58,7 +58,7 @@ export default function DashboardPage() {
       id: 'ins-1',
       title: 'Konektivitas Display Player Optimal',
       category: 'Fleet Health',
-      description: `${onlineDevices} dari ${totalDevices} unit display Android player aktif mendengarkan stream gRPC bi-directional secara real-time.`,
+      description: `${onlineDevices} dari ${totalDevices} unit display Android player aktif mendengarkan pembaruan secara real-time.`,
       level: 'success',
     },
     {
@@ -95,14 +95,14 @@ export default function DashboardPage() {
             Ikhtisar Operasi Layar Retail
           </h1>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Pemantauan status display player, pustaka playlist, dan audit aktivitas gRPC secara real-time.
+            Pemantauan status display player, pustaka playlist, dan audit aktivitas secara real-time.
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
             onClick={loadData}
             className="btn btn-secondary"
-            title="Segarkan data langsung dari backend gRPC"
+            title="Segarkan data langsung dari backend"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             <span>Segarkan Data</span>
@@ -129,7 +129,7 @@ export default function DashboardPage() {
       {/* Activity Timeline Chart (RADIUS Graph) */}
       <TimelineChart
         title="Aktivitas Heartbeat & Penayangan Layar (24 Jam)"
-        description="Visualisasi beban lalu lintas event telemetri gRPC dari seluruh Android display player"
+        description="Visualisasi beban lalu lintas event telemetri dari seluruh Android display player"
         data={timelineData}
       />
 
@@ -138,7 +138,7 @@ export default function DashboardPage() {
         {/* Displays Fleet List Table */}
         <DashboardDeviceList devices={devices} loading={loading} />
 
-        {/* Quick Operations & gRPC Service Overview */}
+        {/* Quick Operations & Service Overview */}
         <DashboardServiceStatus />
       </div>
     </div>

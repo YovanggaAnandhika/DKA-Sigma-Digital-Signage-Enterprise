@@ -62,7 +62,7 @@ export default function LayoutsPage() {
               Studio Desain Layout
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Manajemen tata letak canvas multi-layer layar retail terhubung ke backend gRPC.
+              Manajemen tata letak canvas multi-layer layar retail.
             </p>
           </div>
         </div>
@@ -114,7 +114,7 @@ export default function LayoutsPage() {
               {layouts.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    {loading ? 'Memuat layout dari backend gRPC...' : 'Belum ada template layout tersimpan.'}
+                    {loading ? 'Memuat template layout...' : 'Belum ada template layout tersimpan.'}
                   </td>
                 </tr>
               ) : (

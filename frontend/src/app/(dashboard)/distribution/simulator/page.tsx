@@ -31,7 +31,7 @@ export default function SimulatorPage() {
         setPlaylists(pRes.data || []);
         setLayouts(lRes.data || []);
       } catch (err) {
-        // gRPC error handled gracefully
+        // error handled gracefully
       } finally {
         setLoading(false);
       }
@@ -99,7 +99,7 @@ export default function SimulatorPage() {
                 backgroundColor: '#10b981',
               }}
             />
-            <span>gRPC Stream Active</span>
+            <span>Stream Aktif</span>
           </div>
           <div
             style={{

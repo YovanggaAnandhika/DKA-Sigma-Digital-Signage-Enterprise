@@ -160,7 +160,7 @@ export default function CreateMediaPage() {
       let finalFileSize = formData.fileSizeBytes || selectedFile?.size || 0;
       let finalFilePath = `/storage/studio/media/${savedFilename}`;
 
-      // Upload file directly to backend Rust via gRPC in binary chunks
+      // Upload file directly to backend in binary chunks
       if (mode === 'upload' && selectedFile) {
         const uploadResult = await api.uploadFileViaGrpc(
           selectedFile, 
@@ -190,7 +190,7 @@ export default function CreateMediaPage() {
         durationSeconds: Number(formData.durationSeconds),
       });
 
-      alert('Media berhasil diunggah via gRPC chunks dan disimpan ke backend!');
+      alert('Media berhasil diunggah dan disimpan!');
       if (res && res.id) {
         router.push(`/studio/media/${res.id}`);
       } else {

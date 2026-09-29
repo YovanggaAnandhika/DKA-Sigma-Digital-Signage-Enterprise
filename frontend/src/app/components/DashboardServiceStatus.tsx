@@ -27,10 +27,10 @@ export default function DashboardServiceStatus() {
         >
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-              Envoy gRPC-Web Ingress
+              API Gateway
             </span>
             <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-              Port 8080 • HTTP/1.1 & HTTP/2 Bridging
+              Port 8080 • Koneksi Web
             </span>
           </div>
           <span
@@ -61,10 +61,10 @@ export default function DashboardServiceStatus() {
         >
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-              Rust Tonic gRPC Service
+              Layanan Backend
             </span>
             <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-              Port 50051 • Hardware, Studio, IAM Modules
+              Port 50051 • Modul Utama
             </span>
           </div>
           <span
@@ -95,10 +95,10 @@ export default function DashboardServiceStatus() {
         >
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-              PostgreSQL Database Pool
+              Layanan Database
             </span>
             <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-              Port 54321 • SQLx Migrations & RBAC Seeder
+              Port 54321 • Penyimpanan Data
             </span>
           </div>
           <span

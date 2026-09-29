@@ -62,7 +62,7 @@ export default function DisplaysPage() {
               Layar Retail (Player Fleet)
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Pusat registrasi dan pairing perangkat Android display player secara terpusat via gRPC.
+              Pusat registrasi dan pairing perangkat Android display player secara terpusat.
             </p>
           </div>
         </div>
@@ -115,7 +115,7 @@ export default function DisplaysPage() {
               {devices.length === 0 ? (
                 <tr>
                   <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    {loading ? 'Memuat daftar layar dari backend gRPC...' : 'Tidak ada perangkat ditemukan.'}
+                    {loading ? 'Memuat daftar layar...' : 'Tidak ada perangkat ditemukan.'}
                   </td>
                 </tr>
               ) : (

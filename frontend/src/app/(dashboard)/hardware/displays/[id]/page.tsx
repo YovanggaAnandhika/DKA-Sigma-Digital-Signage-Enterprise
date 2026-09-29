@@ -32,7 +32,7 @@ export default function ViewDisplayPage() {
     return (
       <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
         <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 12px auto' }} />
-        <span>Memuat data display dari database gRPC...</span>
+        <span>Memuat data display...</span>
       </div>
     );
   }
@@ -106,7 +106,7 @@ export default function ViewDisplayPage() {
             {device.ipAddress || '127.0.0.1'}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Protokol: gRPC Stream (Bi-directional)
+            Protokol: Stream (Bi-directional)
           </div>
         </div>
 

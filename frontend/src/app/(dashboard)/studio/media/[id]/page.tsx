@@ -43,7 +43,7 @@ export default function ViewMediaPage() {
     return (
       <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
         <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 12px auto' }} />
-        <span>Memuat data media dari database gRPC...</span>
+        <span>Memuat data media...</span>
       </div>
     );
   }

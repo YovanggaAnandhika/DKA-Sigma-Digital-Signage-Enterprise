@@ -129,7 +129,7 @@ export default function MediaMetadataForm({
             <span>
               {uploadProgress === 100 
                 ? 'Menyatukan file part & verifikasi SHA-256...' 
-                : 'Mengunggah berkas via gRPC chunks ke backend...'}
+                : 'Mengunggah berkas ke server...'}
             </span>
             <span>{uploadProgress}%</span>
           </div>

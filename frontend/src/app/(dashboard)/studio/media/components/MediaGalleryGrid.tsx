@@ -22,7 +22,7 @@ export default function MediaGalleryGrid({
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
       {mediaItems.length === 0 ? (
         <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px', color: 'var(--text-muted)', backgroundColor: 'var(--bg-surface)', borderRadius: '12px', border: '1px dashed var(--border-subtle)' }}>
-          {loading ? 'Memuat aset media dari backend gRPC...' : 'Belum ada aset media tersimpan.'}
+          {loading ? 'Memuat aset media...' : 'Belum ada aset media tersimpan.'}
         </div>
       ) : (
         mediaItems.map((m) => {

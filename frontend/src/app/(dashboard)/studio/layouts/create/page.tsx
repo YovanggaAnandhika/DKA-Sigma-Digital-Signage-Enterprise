@@ -97,7 +97,7 @@ export default function CreateLayoutPage() {
             </Link>
             <button type="submit" disabled={loading} className="btn btn-primary">
               <Save size={14} />
-              <span>{loading ? 'Menyimpan ke gRPC...' : 'Buka Visual Designer →'}</span>
+              <span>{loading ? 'Menyimpan ke server...' : 'Buka Visual Designer →'}</span>
             </button>
           </div>
         </form>

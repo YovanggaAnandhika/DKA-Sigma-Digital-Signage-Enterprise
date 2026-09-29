@@ -132,7 +132,7 @@ export default function ViewLayoutPage() {
     return (
       <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
         <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 12px auto' }} />
-        <span>Memuat data layout dari gRPC backend...</span>
+        <span>Memuat data layout...</span>
       </div>
     );
   }

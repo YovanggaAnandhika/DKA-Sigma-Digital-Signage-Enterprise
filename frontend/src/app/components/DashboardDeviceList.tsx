@@ -42,7 +42,7 @@ export default function DashboardDeviceList({
             {devices.length === 0 ? (
               <tr>
                 <td colSpan={4} style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
-                  {loading ? 'Memuat data dari gRPC backend...' : 'Belum ada display player terdaftar.'}
+                  {loading ? 'Memuat data dari backend...' : 'Belum ada display player terdaftar.'}
                 </td>
               </tr>
             ) : (

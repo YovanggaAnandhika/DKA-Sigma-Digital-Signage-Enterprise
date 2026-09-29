@@ -11,7 +11,7 @@ const SLIDES = [
   },
   {
     title: 'Real-Time Sync ke Semua Perangkat.',
-    description: 'Perubahan konten tersebar ke seluruh display dalam hitungan detik via gRPC streaming yang andal.',
+    description: 'Perubahan konten tersebar ke seluruh display dalam hitungan detik.',
     icon: <Monitor size={24} color="#60a5fa" />,
   },
   {

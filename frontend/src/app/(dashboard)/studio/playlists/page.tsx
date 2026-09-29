@@ -113,7 +113,7 @@ export default function PlaylistsPage() {
               {playlists.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    {loading ? 'Memuat playlist dari backend gRPC...' : 'Belum ada playlist tersimpan.'}
+                    {loading ? 'Memuat data playlist...' : 'Belum ada playlist tersimpan.'}
                   </td>
                 </tr>
               ) : (

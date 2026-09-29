@@ -19,7 +19,7 @@ export default function SimulatorInspector({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Layers size={16} style={{ color: 'var(--primary-400)' }} />
           <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-            Layout Database Aktif (Tonic gRPC)
+            Layout Database Aktif
           </h3>
         </div>
         <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>

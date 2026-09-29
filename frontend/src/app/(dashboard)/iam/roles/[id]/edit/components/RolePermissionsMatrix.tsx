@@ -29,7 +29,7 @@ export default function RolePermissionsMatrix({
               Matriks Hak Akses (Permissions)
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              Centang izin endpoint gRPC yang dialokasikan untuk role ini.
+              Centang izin akses yang dialokasikan untuk role ini.
             </p>
           </div>
         </div>
@@ -119,7 +119,7 @@ export default function RolePermissionsMatrix({
                           {perm.code}
                         </span>
                         <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                          {perm.name || perm.description || 'Akses gRPC'}
+                          {perm.name || perm.description || 'Akses Sistem'}
                         </span>
                       </div>
                     </div>

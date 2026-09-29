@@ -107,7 +107,7 @@ export default function EditRolePage() {
         router.push(`/iam/roles/${roleId}`);
       }, 1000);
     } catch (err: any) {
-      setError(err.message || 'Gagal memperbarui role ke gRPC backend.');
+      setError(err.message || 'Gagal memperbarui role.');
       setSaving(false);
     }
   };
@@ -144,7 +144,7 @@ export default function EditRolePage() {
               </h1>
             </div>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Sesuaikan wewenang, deskripsi peran, dan hak akses kontrol gRPC
+              Sesuaikan wewenang, deskripsi peran, dan hak akses kontrol
             </p>
           </div>
         </div>

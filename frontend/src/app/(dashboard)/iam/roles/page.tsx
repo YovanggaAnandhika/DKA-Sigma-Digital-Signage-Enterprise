@@ -61,7 +61,7 @@ export default function RolesPage() {
               Hak Akses & Role (RBAC)
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Manajemen peran dan izin sistem berbasis database PostgreSQL via gRPC.
+              Manajemen peran dan izin sistem.
             </p>
           </div>
         </div>
@@ -113,7 +113,7 @@ export default function RolesPage() {
               {roles.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    {loading ? 'Memuat role dari backend gRPC...' : 'Belum ada role tersimpan.'}
+                    {loading ? 'Memuat data role...' : 'Belum ada role tersimpan.'}
                   </td>
                 </tr>
               ) : (
