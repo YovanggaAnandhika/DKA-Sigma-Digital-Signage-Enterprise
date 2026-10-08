@@ -35,7 +35,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         }}
       >
         <Sparkles size={20} className="animate-spin" style={{ color: 'var(--primary-500)' }} />
-        <span>Memvalidasi sesi gRPC DKASigma...</span>
+        <span>Memvalidasi sesi pengguna...</span>
       </div>
     );
   }

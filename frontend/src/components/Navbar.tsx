@@ -95,7 +95,7 @@ export function Navbar() {
           }}
         >
           <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'currentColor' }} />
-          Backend gRPC: Online (Port 50051)
+          Sistem: Online
         </div>
       </div>
 

@@ -59,10 +59,10 @@ export default function LayoutsPage() {
           </div>
           <div>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-              Studio Desain Layout
+              Layout
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Manajemen tata letak canvas multi-layer layar retail.
+              Manajemen tata letak multi-layer dan zona layar promosi retail.
             </p>
           </div>
         </div>

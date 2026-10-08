@@ -58,7 +58,7 @@ export default function RolesPage() {
           </div>
           <div>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-              Hak Akses & Role (RBAC)
+              Hak Akses & Peran Pengguna
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
               Manajemen peran dan izin sistem.

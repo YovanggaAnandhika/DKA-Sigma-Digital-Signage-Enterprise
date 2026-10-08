@@ -7,15 +7,14 @@ import {
   LayoutDashboard,
   Tv,
   Palette,
-  ListMusic,
   FolderOpen,
   ShieldCheck,
   Zap,
-  Activity,
   ChevronRight,
   ChevronDown,
   MonitorPlay,
   CalendarDays,
+  Layers,
 } from 'lucide-react';
 import { useSidebar } from './SidebarProvider';
 
@@ -37,7 +36,6 @@ const navGroups: NavGroup[] = [
     heading: 'UTAMA',
     items: [
       { name: 'Ringkasan', desc: 'Ikhtisar & Metrik Layar', href: '/', icon: LayoutDashboard },
-      { name: 'Live Monitor', desc: 'Status Streaming & Telemetri', href: '/distribution/simulator', icon: Activity, badge: 'Live' },
     ],
   },
   {
@@ -51,15 +49,15 @@ const navGroups: NavGroup[] = [
     heading: 'STUDIO & KONTEN',
     items: [
       { name: 'Penjadwalan', desc: 'Jadwal Putar & Prioritas', href: '/studio/schedules', icon: CalendarDays },
-      { name: 'Desain Layout', desc: 'Canvas Multi-Zona & Tata Letak', href: '/studio/layouts', icon: Palette },
-      { name: 'Daftar Putar', desc: 'Urutan & Durasi Media', href: '/studio/playlists', icon: ListMusic },
+      { name: 'Layout', desc: 'Tata Letak Multi-Zona Layar', href: '/studio/layouts', icon: Palette },
+      { name: 'Komponen', desc: 'Widget, Daftar Putar & Konten Layar', href: '/studio/components', icon: Layers },
       { name: 'Pustaka Media', desc: 'Aset Gambar & Video Promosi', href: '/studio/media', icon: FolderOpen },
     ],
   },
   {
     heading: 'SISTEM & AKSES',
     items: [
-      { name: 'Hak Akses & Role', desc: 'RBAC & Manajemen Pengguna', href: '/iam/roles', icon: ShieldCheck },
+      { name: 'Hak Akses & Peran', desc: 'Pengaturan Akun & Akses Pengguna', href: '/iam/roles', icon: ShieldCheck },
     ],
   },
 ];

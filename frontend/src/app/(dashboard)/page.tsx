@@ -102,7 +102,7 @@ export default function DashboardPage() {
           <button
             onClick={loadData}
             className="btn btn-secondary"
-            title="Segarkan data langsung dari backend"
+            title="Segarkan data layar"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             <span>Segarkan Data</span>

@@ -55,15 +55,15 @@ export default function CreateRolePage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <Link href="/roles" className="btn btn-outline" style={{ padding: '8px' }}>
+        <Link href="/iam/roles" className="btn btn-outline" style={{ padding: '8px' }}>
           <ArrowLeft size={16} />
         </Link>
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-            Buat Role Baru (RBAC)
+            Buat Peran Baru
           </h1>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Tentukan nama role dan pilih izin sistem yang akan dialokasikan ke pengguna.
+            Tentukan nama peran dan pilih izin sistem yang akan dialokasikan ke pengguna.
           </p>
         </div>
       </div>
