@@ -26,7 +26,7 @@ export default function TickerPage() {
       } else {
         localStorage.setItem(TICKER_STORAGE_KEY, JSON.stringify(DEFAULT_TICKERS));
       }
-    } catch {}
+    } catch { }
   }, []);
 
   const handleDelete = (id: string, name: string) => {
@@ -35,7 +35,7 @@ export default function TickerPage() {
     setTickers(updated);
     try {
       localStorage.setItem(TICKER_STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
+    } catch { }
   };
 
   const filtered = tickers.filter(
