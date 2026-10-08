@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Images, Plus, Trash2, Edit3, Play, Pause, ChevronLeft, ChevronRight, Sparkles, Tag, Eye, Clock } from 'lucide-react';
+import Link from 'next/link';
+import { Images, Plus, Search, Eye, Trash2, X, Sparkles, Play, Pause, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { Pagination } from '@/components/ui/Pagination';
 
-interface PhotoItem {
+export interface PhotoItem {
   id: string;
   url: string;
   title: string;
@@ -11,24 +13,26 @@ interface PhotoItem {
   priceTag?: string;
 }
 
-interface PhotoAlbum {
+export interface PhotoAlbum {
   id: string;
   name: string;
   description: string;
   transitionEffect: 'ken-burns' | 'fade' | 'slide' | 'zoom';
   slideDurationSeconds: number;
   photos: PhotoItem[];
+  createdAt?: string;
 }
 
-const STORAGE_KEY = 'dka_signage_photo_albums';
+export const ALBUM_STORAGE_KEY = 'dka_signage_photo_albums';
 
-const DEFAULT_ALBUMS: PhotoAlbum[] = [
+export const DEFAULT_ALBUMS: PhotoAlbum[] = [
   {
     id: 'album-1',
     name: 'Promo Kuliner Nusantara',
     description: 'Slideshow menu andalan restoran untuk layar kasir dan display etalase.',
     transitionEffect: 'ken-burns',
     slideDurationSeconds: 4,
+    createdAt: '2026-10-08',
     photos: [
       {
         id: 'p-1',
@@ -59,6 +63,7 @@ const DEFAULT_ALBUMS: PhotoAlbum[] = [
     description: 'Promosi fashion dan perlengkapan liburan akhir pekan.',
     transitionEffect: 'fade',
     slideDurationSeconds: 5,
+    createdAt: '2026-10-08',
     photos: [
       {
         id: 'p-4',
@@ -80,19 +85,20 @@ const DEFAULT_ALBUMS: PhotoAlbum[] = [
 
 export default function PhotoAlbumManagerTab() {
   const [albums, setAlbums] = useState<PhotoAlbum[]>(DEFAULT_ALBUMS);
-  const [selectedAlbumId, setSelectedAlbumId] = useState<string>('album-1');
-  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [previewAlbum, setPreviewAlbum] = useState<PhotoAlbum | null>(null);
+  const [slideIdx, setSlideIdx] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
 
-  // Load from local storage
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(ALBUM_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setAlbums(parsed);
-          setSelectedAlbumId(parsed[0].id);
         }
       }
     } catch {}
@@ -101,428 +107,337 @@ export default function PhotoAlbumManagerTab() {
   const saveAlbums = (updated: PhotoAlbum[]) => {
     setAlbums(updated);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      localStorage.setItem(ALBUM_STORAGE_KEY, JSON.stringify(updated));
     } catch {}
   };
 
-  const activeAlbum = albums.find((a) => a.id === selectedAlbumId) || albums[0];
+  const handleDelete = (id: string, name: string) => {
+    if (!confirm(`Hapus album "${name}"?`)) return;
+    const updated = albums.filter((a) => a.id !== id);
+    saveAlbums(updated);
+  };
 
-  // Auto advance slides
+  // Slideshow timer in modal
   useEffect(() => {
-    if (!isPlaying || !activeAlbum || activeAlbum.photos.length <= 1) return;
+    if (!isPlaying || !previewAlbum || previewAlbum.photos.length <= 1) return;
+    const timer = setInterval(() => {
+      setSlideIdx((prev) => (prev + 1) % previewAlbum.photos.length);
+    }, (previewAlbum.slideDurationSeconds || 4) * 1000);
+    return () => clearInterval(timer);
+  }, [isPlaying, previewAlbum?.slideDurationSeconds, previewAlbum?.photos.length]);
 
-    const interval = setInterval(() => {
-      setCurrentSlideIndex((prev) => (prev + 1) % activeAlbum.photos.length);
-    }, (activeAlbum.slideDurationSeconds || 4) * 1000);
+  const filtered = albums.filter(
+    (a) =>
+      a.name.toLowerCase().includes(search.toLowerCase()) ||
+      a.description.toLowerCase().includes(search.toLowerCase())
+  );
 
-    return () => clearInterval(interval);
-  }, [isPlaying, activeAlbum?.slideDurationSeconds, activeAlbum?.photos.length]);
-
-  const currentPhoto = activeAlbum?.photos[currentSlideIndex] || activeAlbum?.photos[0];
-
-  const handleCreateAlbum = () => {
-    const name = prompt('Masukkan nama album promosi baru:', 'Album Promosi Baru');
-    if (!name) return;
-
-    const newAlbum: PhotoAlbum = {
-      id: `album-${Date.now()}`,
-      name,
-      description: 'Album foto baru untuk promosi layar.',
-      transitionEffect: 'ken-burns',
-      slideDurationSeconds: 4,
-      photos: [
-        {
-          id: `p-${Date.now()}`,
-          url: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&auto=format&fit=crop&q=80',
-          title: 'Hidangan Andalan',
-          promoBadge: 'PROMO SPESIAL',
-          priceTag: 'Rp 35.000',
-        },
-      ],
-    };
-
-    const updated = [...albums, newAlbum];
-    saveAlbums(updated);
-    setSelectedAlbumId(newAlbum.id);
-    setCurrentSlideIndex(0);
-  };
-
-  const handleAddPhoto = () => {
-    const title = prompt('Nama/Judul Foto Promosi:', 'Menu Spesial');
-    if (!title) return;
-    const url = prompt('URL Gambar (JPG/PNG/WebP):', 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=1200&auto=format&fit=crop&q=80');
-    if (!url) return;
-    const promoBadge = prompt('Badge Promosi (opsional):', 'PROMO DISKON 15%') || undefined;
-    const priceTag = prompt('Label Harga (opsional):', 'Rp 29.000') || undefined;
-
-    const newPhoto: PhotoItem = {
-      id: `p-${Date.now()}`,
-      url,
-      title,
-      promoBadge,
-      priceTag,
-    };
-
-    const updated = albums.map((a) => {
-      if (a.id === activeAlbum.id) {
-        return { ...a, photos: [...a.photos, newPhoto] };
-      }
-      return a;
-    });
-
-    saveAlbums(updated);
-  };
-
-  const handleDeletePhoto = (photoId: string) => {
-    if (activeAlbum.photos.length <= 1) {
-      alert('Minimal harus ada 1 foto di dalam album.');
-      return;
-    }
-    const updated = albums.map((a) => {
-      if (a.id === activeAlbum.id) {
-        return { ...a, photos: a.photos.filter((p) => p.id !== photoId) };
-      }
-      return a;
-    });
-    saveAlbums(updated);
-    setCurrentSlideIndex(0);
-  };
-
-  const handleDeleteAlbum = (albumId: string) => {
-    if (albums.length <= 1) {
-      alert('Minimal harus ada 1 album.');
-      return;
-    }
-    if (!confirm('Hapus album promosi ini?')) return;
-    const updated = albums.filter((a) => a.id !== albumId);
-    saveAlbums(updated);
-    setSelectedAlbumId(updated[0].id);
-    setCurrentSlideIndex(0);
-  };
+  const paginated = filtered.slice((page - 1) * limit, page * limit);
+  const currentPhoto = previewAlbum ? previewAlbum.photos[slideIdx] : null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Header */}
+      {/* Action & Filter Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-            Komponen Galeri & Album Foto Promosi
+            Daftar Album Foto Promosi
           </h2>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Kelola slideshow album foto dengan transisi visual halus (Ken Burns / Pan & Zoom) dan label harga promosi.
+            Kelola slideshow foto promosi produk, katalog menu, dan album promosi dengan efek transisi Ken Burns.
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button onClick={handleCreateAlbum} className="btn btn-primary">
-            <Plus size={16} />
-            <span>Buat Album Baru</span>
-          </button>
+        <Link href="/studio/components/album/create" className="btn btn-primary">
+          <Plus size={16} />
+          <span>Tambah Album Foto Baru</span>
+        </Link>
+      </div>
+
+      {/* Search Input */}
+      <div className="card-elevated" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Cari album foto berdasarkan nama atau deskripsi..."
+            className="form-input"
+            style={{ paddingLeft: '36px' }}
+          />
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 360px) 1fr', gap: '24px' }}>
-        {/* Left: Album List & Settings */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Albums Accordion / Selector */}
-          <div className="card-elevated" style={{ padding: '16px' }}>
-            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Daftar Album Foto
-            </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
-              {albums.map((alb) => (
-                <div
-                  key={alb.id}
-                  onClick={() => {
-                    setSelectedAlbumId(alb.id);
-                    setCurrentSlideIndex(0);
-                  }}
-                  style={{
-                    padding: '12px 14px',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    cursor: 'pointer',
-                    backgroundColor: alb.id === selectedAlbumId ? 'rgba(37, 99, 235, 0.15)' : 'var(--bg-surface-elevated)',
-                    border: `1px solid ${alb.id === selectedAlbumId ? 'var(--primary-500)' : 'var(--border-subtle)'}`,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Images size={18} style={{ color: alb.id === selectedAlbumId ? 'var(--primary-400)' : 'var(--text-muted)' }} />
-                    <div>
-                      <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>{alb.name}</div>
-                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                        {alb.photos.length} Foto • {alb.slideDurationSeconds}s per slide
+      {/* Main Table */}
+      <div className="card-elevated" style={{ overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Nama Album</th>
+                <th>Deskripsi & Tema</th>
+                <th>Jumlah Foto</th>
+                <th>Efek Transisi</th>
+                <th>Durasi Slide</th>
+                <th style={{ textAlign: 'right' }}>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginated.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                    Belum ada album foto tersimpan. Klik "Tambah Album Foto Baru" untuk membuat.
+                  </td>
+                </tr>
+              ) : (
+                paginated.map((album) => (
+                  <tr key={album.id}>
+                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Images size={18} style={{ color: 'var(--primary-400)', flexShrink: 0 }} />
+                        <span>{album.name}</span>
                       </div>
-                    </div>
-                  </div>
-                  {albums.length > 1 && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteAlbum(alb.id);
-                      }}
-                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-                      title="Hapus Album"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Album Settings */}
-          {activeAlbum && (
-            <div className="card-elevated" style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Pengaturan Transisi Album
-              </h3>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Efek Transisi Slideshow
-                </label>
-                <select
-                  value={activeAlbum.transitionEffect}
-                  onChange={(e) => {
-                    const val = e.target.value as any;
-                    saveAlbums(albums.map((a) => (a.id === activeAlbum.id ? { ...a, transitionEffect: val } : a)));
-                  }}
-                  className="form-input"
-                >
-                  <option value="ken-burns">Ken Burns (Pan & Zoom Lambat - Rekomendasi)</option>
-                  <option value="fade">Halus (Cross-Fade)</option>
-                  <option value="slide">Geser Horizontal (Slide)</option>
-                  <option value="zoom">Zoom Pulse</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Durasi Per Foto (Detik)
-                </label>
-                <input
-                  type="number"
-                  min={2}
-                  max={60}
-                  value={activeAlbum.slideDurationSeconds}
-                  onChange={(e) => {
-                    const dur = Math.max(2, Number(e.target.value));
-                    saveAlbums(albums.map((a) => (a.id === activeAlbum.id ? { ...a, slideDurationSeconds: dur } : a)));
-                  }}
-                  className="form-input"
-                />
-              </div>
-
-              {/* Photo thumbnails list */}
-              <div style={{ marginTop: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                    Foto di Album Ini ({activeAlbum.photos.length})
-                  </span>
-                  <button onClick={handleAddPhoto} className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: '0.6875rem' }}>
-                    <Plus size={12} />
-                    <span>Tambah Foto</span>
-                  </button>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {activeAlbum.photos.map((p, idx) => (
-                    <div
-                      key={p.id}
-                      onClick={() => setCurrentSlideIndex(idx)}
-                      style={{
-                        padding: '8px',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        backgroundColor: idx === currentSlideIndex ? 'rgba(37, 99, 235, 0.1)' : 'var(--bg-surface-elevated)',
-                        border: `1px solid ${idx === currentSlideIndex ? 'var(--primary-500)' : 'var(--border-subtle)'}`,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <img src={p.url} alt={p.title} style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '4px' }} />
-                        <div>
-                          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>{p.title}</div>
-                          {p.priceTag && <div style={{ fontSize: '0.65rem', color: 'var(--accent-emerald)', fontWeight: 700 }}>{p.priceTag}</div>}
-                        </div>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeletePhoto(p.id);
+                    </td>
+                    <td style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', maxWidth: '300px' }}>
+                      {album.description || '-'}
+                    </td>
+                    <td>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                          fontSize: '0.6875rem',
+                          fontWeight: 700,
+                          backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                          color: 'var(--accent-amber)',
+                          border: '1px solid rgba(245, 158, 11, 0.3)',
                         }}
-                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-                        title="Hapus Foto"
                       >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+                        {album.photos.length} Foto
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          color: album.transitionEffect === 'ken-burns' ? 'var(--primary-400)' : 'var(--text-secondary)',
+                          textTransform: 'capitalize',
+                        }}
+                      >
+                        {album.transitionEffect === 'ken-burns' ? '✨ Ken Burns' : album.transitionEffect}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        {album.slideDurationSeconds} Detik / Foto
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <button
+                          onClick={() => {
+                            setPreviewAlbum(album);
+                            setSlideIdx(0);
+                            setIsPlaying(true);
+                          }}
+                          className="btn btn-outline"
+                          style={{ padding: '5px 8px' }}
+                          title="Putar Slideshow"
+                        >
+                          <Eye size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(album.id, album.name)}
+                          className="btn btn-danger"
+                          style={{ padding: '5px 8px' }}
+                          title="Hapus Album"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
 
-        {/* Right: Simulated 16:9 Screen Display */}
-        <div className="card-elevated" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Simulasi Penayangan Album: {activeAlbum?.name}
-              </span>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                (Foto {currentSlideIndex + 1} dari {activeAlbum?.photos.length})
-              </span>
-            </div>
+        <Pagination
+          page={page}
+          limit={limit}
+          total={filtered.length}
+          onPageChange={(newPage) => setPage(newPage)}
+          onLimitChange={(newLimit) => {
+            setLimit(newLimit);
+            setPage(1);
+          }}
+        />
+      </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button
-                type="button"
-                onClick={() => setCurrentSlideIndex((prev) => (prev - 1 + activeAlbum.photos.length) % activeAlbum.photos.length)}
-                className="btn btn-secondary"
-                style={{ padding: '6px 10px' }}
-                title="Foto Sebelumnya"
-              >
-                <ChevronLeft size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsPlaying(!isPlaying)}
-                className="btn btn-secondary"
-                style={{ padding: '6px 10px' }}
-              >
-                {isPlaying ? <Pause size={14} /> : <Play size={14} />}
-                <span style={{ fontSize: '0.75rem' }}>{isPlaying ? 'Jeda' : 'Putar'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setCurrentSlideIndex((prev) => (prev + 1) % activeAlbum.photos.length)}
-                className="btn btn-secondary"
-                style={{ padding: '6px 10px' }}
-                title="Foto Berikutnya"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-
-          {/* 16:9 Display Frame with Animation */}
+      {/* Slideshow Modal Preview */}
+      {previewAlbum && currentPhoto && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            backdropFilter: 'blur(6px)',
+          }}
+          onClick={() => setPreviewAlbum(null)}
+        >
           <div
+            className="card-elevated"
             style={{
-              position: 'relative',
               width: '100%',
-              height: '460px',
-              borderRadius: '12px',
+              maxWidth: '860px',
+              backgroundColor: '#000',
+              borderRadius: '16px',
               overflow: 'hidden',
-              backgroundColor: '#0a0a0a',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-              border: '2px solid var(--border-subtle)',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            {currentPhoto && (
-              <>
-                <img
-                  key={currentPhoto.id}
-                  src={currentPhoto.url}
-                  alt={currentPhoto.title}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    animation: activeAlbum?.transitionEffect === 'ken-burns' ? 'kenBurns 6s ease-in-out infinite alternate' : 'none',
-                    transition: 'all 0.5s ease-in-out',
-                  }}
-                />
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '14px 20px',
+                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
+                color: '#fff',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Images size={18} style={{ color: '#60a5fa' }} />
+                <span style={{ fontWeight: 800, fontSize: '0.9375rem' }}>
+                  {previewAlbum.name} ({slideIdx + 1}/{previewAlbum.photos.length})
+                </span>
+              </div>
 
-                {/* Promotional Overlay Badge */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={() => setSlideIdx((prev) => (prev - 1 + previewAlbum.photos.length) % previewAlbum.photos.length)}
+                  className="btn btn-secondary"
+                  style={{ padding: '4px 8px' }}
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <button
+                  onClick={() => setIsPlaying(!isPlaying)}
+                  className="btn btn-secondary"
+                  style={{ padding: '4px 8px' }}
+                >
+                  {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+                </button>
+                <button
+                  onClick={() => setSlideIdx((prev) => (prev + 1) % previewAlbum.photos.length)}
+                  className="btn btn-secondary"
+                  style={{ padding: '4px 8px' }}
+                >
+                  <ChevronRight size={14} />
+                </button>
+                <button
+                  onClick={() => setPreviewAlbum(null)}
+                  style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '4px', marginLeft: '8px' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Slideshow 16:9 Screen */}
+            <div style={{ position: 'relative', width: '100%', height: '480px', overflow: 'hidden' }}>
+              <img
+                key={currentPhoto.id}
+                src={currentPhoto.url}
+                alt={currentPhoto.title}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  animation: previewAlbum.transitionEffect === 'ken-burns' ? 'kenBurnsModal 6s ease-in-out infinite alternate' : 'none',
+                  transition: 'opacity 0.4s ease',
+                }}
+              />
+
+              {/* Promotional Badge */}
+              {currentPhoto.promoBadge && (
                 <div
                   style={{
                     position: 'absolute',
                     top: '20px',
                     left: '20px',
+                    padding: '6px 14px',
+                    backgroundColor: 'rgba(239, 68, 68, 0.95)',
+                    color: '#fff',
+                    fontWeight: 800,
+                    fontSize: '0.75rem',
+                    letterSpacing: '0.05em',
+                    borderRadius: '6px',
+                    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)',
                     display: 'flex',
-                    flexDirection: 'column',
+                    alignItems: 'center',
                     gap: '6px',
-                    zIndex: 10,
                   }}
                 >
-                  {currentPhoto.promoBadge && (
-                    <div
-                      style={{
-                        padding: '6px 14px',
-                        backgroundColor: 'rgba(239, 68, 68, 0.9)',
-                        color: '#fff',
-                        fontWeight: 800,
-                        fontSize: '0.8125rem',
-                        letterSpacing: '0.05em',
-                        borderRadius: '6px',
-                        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)',
-                        textTransform: 'uppercase',
-                        alignSelf: 'flex-start',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <Sparkles size={14} />
-                      <span>{currentPhoto.promoBadge}</span>
-                    </div>
-                  )}
+                  <Sparkles size={12} />
+                  <span>{currentPhoto.promoBadge}</span>
                 </div>
+              )}
 
-                {/* Bottom Title & Price Gradient Ribbon */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    padding: '30px 24px 20px',
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 60%, transparent 100%)',
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    justifyContent: 'space-between',
-                    zIndex: 10,
-                  }}
-                >
-                  <div>
-                    <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.6)' }}>
-                      {currentPhoto.title}
-                    </h3>
-                    <p style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.7)', marginTop: '2px' }}>
-                      Koleksi Pilihan {activeAlbum?.name}
-                    </p>
+              {/* Bottom Ribbon */}
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  padding: '24px 24px 16px',
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)',
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  justifyContent: 'space-between',
+                  color: '#fff',
+                }}
+              >
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>{currentPhoto.title}</h3>
+                </div>
+                {currentPhoto.priceTag && (
+                  <div
+                    style={{
+                      padding: '6px 14px',
+                      backgroundColor: 'rgba(16, 185, 129, 0.95)',
+                      color: '#fff',
+                      borderRadius: '8px',
+                      fontSize: '1.125rem',
+                      fontWeight: 900,
+                    }}
+                  >
+                    {currentPhoto.priceTag}
                   </div>
-
-                  {currentPhoto.priceTag && (
-                    <div
-                      style={{
-                        padding: '8px 18px',
-                        backgroundColor: 'rgba(16, 185, 129, 0.95)',
-                        color: '#fff',
-                        borderRadius: '8px',
-                        fontSize: '1.25rem',
-                        fontWeight: 900,
-                        boxShadow: '0 4px 16px rgba(16, 185, 129, 0.4)',
-                      }}
-                    >
-                      {currentPhoto.priceTag}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
+                )}
+              </div>
+            </div>
           </div>
 
           <style jsx>{`
-            @keyframes kenBurns {
+            @keyframes kenBurnsModal {
               0% {
                 transform: scale(1) translate(0, 0);
               }
@@ -532,7 +447,7 @@ export default function PhotoAlbumManagerTab() {
             }
           `}</style>
         </div>
-      </div>
+      )}
     </div>
   );
 }

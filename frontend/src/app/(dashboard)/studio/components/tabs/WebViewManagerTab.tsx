@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Globe, RefreshCw, ExternalLink, Play, Pause, ZoomIn, Shield, Check, Plus, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { Globe, Plus, Search, RefreshCw, Eye, Trash2, ExternalLink, X, Shield, Clock } from 'lucide-react';
+import { Pagination } from '@/components/ui/Pagination';
 
-interface WebViewConfig {
+export interface WebViewConfig {
   id: string;
   name: string;
   url: string;
@@ -11,11 +13,12 @@ interface WebViewConfig {
   zoomScale: number;
   bypassCache: boolean;
   orientation: 'landscape' | 'portrait';
+  createdAt?: string;
 }
 
-const STORAGE_KEY = 'dka_signage_webviews';
+export const WEBVIEW_STORAGE_KEY = 'dka_signage_webviews';
 
-const DEFAULT_CONFIGS: WebViewConfig[] = [
+export const DEFAULT_WEBVIEWS: WebViewConfig[] = [
   {
     id: 'wv-1',
     name: 'Katalog Menu & Promo Kafe',
@@ -24,6 +27,7 @@ const DEFAULT_CONFIGS: WebViewConfig[] = [
     zoomScale: 100,
     bypassCache: true,
     orientation: 'landscape',
+    createdAt: '2026-10-08',
   },
   {
     id: 'wv-2',
@@ -33,404 +37,270 @@ const DEFAULT_CONFIGS: WebViewConfig[] = [
     zoomScale: 110,
     bypassCache: false,
     orientation: 'landscape',
+    createdAt: '2026-10-08',
   },
 ];
 
 export default function WebViewManagerTab() {
-  const [webViews, setWebViews] = useState<WebViewConfig[]>(DEFAULT_CONFIGS);
-  const [selectedId, setSelectedId] = useState<string>('wv-1');
-  const [isEditing, setIsEditing] = useState(false);
+  const [items, setItems] = useState<WebViewConfig[]>(DEFAULT_WEBVIEWS);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [previewItem, setPreviewItem] = useState<WebViewConfig | null>(null);
 
-  // Form State
-  const [formName, setFormName] = useState('');
-  const [formUrl, setFormUrl] = useState('');
-  const [formInterval, setFormInterval] = useState(60);
-  const [formZoom, setFormZoom] = useState(100);
-  const [formBypassCache, setFormBypassCache] = useState(true);
-  const [formOrientation, setFormOrientation] = useState<'landscape' | 'portrait'>('landscape');
-
-  // Preview State
-  const [iframeKey, setIframeKey] = useState(Date.now());
-  const [nextRefreshSec, setNextRefreshSec] = useState(60);
-  const [isAutoRefreshActive, setIsAutoRefreshActive] = useState(true);
-
-  // Load from local storage
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(WEBVIEW_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setWebViews(parsed);
-          setSelectedId(parsed[0].id);
+          setItems(parsed);
         }
       }
-    } catch {
-      // fallback to defaults
-    }
+    } catch {}
   }, []);
 
-  const saveToStorage = (items: WebViewConfig[]) => {
-    setWebViews(items);
+  const saveItems = (updated: WebViewConfig[]) => {
+    setItems(updated);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      localStorage.setItem(WEBVIEW_STORAGE_KEY, JSON.stringify(updated));
     } catch {}
   };
 
-  const activeWebView = webViews.find((w) => w.id === selectedId) || webViews[0];
-
-  useEffect(() => {
-    if (activeWebView) {
-      setFormName(activeWebView.name);
-      setFormUrl(activeWebView.url);
-      setFormInterval(activeWebView.refreshIntervalSeconds);
-      setFormZoom(activeWebView.zoomScale);
-      setFormBypassCache(activeWebView.bypassCache);
-      setFormOrientation(activeWebView.orientation);
-      setNextRefreshSec(activeWebView.refreshIntervalSeconds);
-      setIframeKey(Date.now());
-    }
-  }, [activeWebView?.id]);
-
-  // Auto-refresh countdown
-  useEffect(() => {
-    if (!isAutoRefreshActive || formInterval <= 0) return;
-
-    const timer = setInterval(() => {
-      setNextRefreshSec((prev) => {
-        if (prev <= 1) {
-          setIframeKey(Date.now());
-          return formInterval;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [isAutoRefreshActive, formInterval]);
-
-  const handleManualRefresh = () => {
-    setIframeKey(Date.now());
-    setNextRefreshSec(formInterval);
+  const handleDelete = (id: string, name: string) => {
+    if (!confirm(`Hapus konfigurasi Web View "${name}"?`)) return;
+    const updated = items.filter((item) => item.id !== id);
+    saveItems(updated);
   };
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formUrl.trim()) return;
+  const filtered = items.filter((item) =>
+    item.name.toLowerCase().includes(search.toLowerCase()) ||
+    item.url.toLowerCase().includes(search.toLowerCase())
+  );
 
-    let validUrl = formUrl.trim();
-    if (!validUrl.startsWith('http://') && !validUrl.startsWith('https://')) {
-      validUrl = 'https://' + validUrl;
-    }
-
-    const updated: WebViewConfig = {
-      id: selectedId || `wv-${Date.now()}`,
-      name: formName.trim() || 'Halaman Web Tanpa Nama',
-      url: validUrl,
-      refreshIntervalSeconds: formInterval,
-      zoomScale: formZoom,
-      bypassCache: formBypassCache,
-      orientation: formOrientation,
-    };
-
-    const exists = webViews.some((w) => w.id === updated.id);
-    const newItems = exists
-      ? webViews.map((w) => (w.id === updated.id ? updated : w))
-      : [...webViews, updated];
-
-    saveToStorage(newItems);
-    setSelectedId(updated.id);
-    setIsEditing(false);
-    handleManualRefresh();
-  };
-
-  const handleAddNew = () => {
-    const newId = `wv-${Date.now()}`;
-    const newConfig: WebViewConfig = {
-      id: newId,
-      name: 'Web View Baru',
-      url: 'https://example.com',
-      refreshIntervalSeconds: 60,
-      zoomScale: 100,
-      bypassCache: true,
-      orientation: 'landscape',
-    };
-    const updated = [...webViews, newConfig];
-    saveToStorage(updated);
-    setSelectedId(newId);
-    setIsEditing(true);
-  };
-
-  const handleDelete = (id: string) => {
-    if (webViews.length <= 1) {
-      alert('Minimal harus ada 1 konfigurasi Web View.');
-      return;
-    }
-    if (!confirm('Hapus konfigurasi Web View ini?')) return;
-    const filtered = webViews.filter((w) => w.id !== id);
-    saveToStorage(filtered);
-    setSelectedId(filtered[0].id);
-  };
+  const paginated = filtered.slice((page - 1) * limit, page * limit);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Header */}
+      {/* Action & Filter Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-            Komponen Web View (Auto-Refresh & Skala)
+            Daftar Komponen Web View
           </h2>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Tampilkan URL website interaktif, live dashboard, atau katalog online dengan pembaruan otomatis berkala.
+            Kelola URL halaman web interaktif, live reporting, atau menu online dengan auto-refresh berkala.
           </p>
         </div>
 
-        <button onClick={handleAddNew} className="btn btn-primary">
+        <Link href="/studio/components/webview/create" className="btn btn-primary">
           <Plus size={16} />
           <span>Tambah Web View Baru</span>
-        </button>
+        </Link>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 380px) 1fr', gap: '24px' }}>
-        {/* Left: Configuration Panel */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Preset Selector */}
-          <div className="card-elevated" style={{ padding: '16px' }}>
-            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Pilih Konfigurasi Tersimpan
-            </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
-              {webViews.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => setSelectedId(item.id)}
-                  style={{
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    cursor: 'pointer',
-                    backgroundColor: item.id === selectedId ? 'rgba(37, 99, 235, 0.15)' : 'var(--bg-surface-elevated)',
-                    border: `1px solid ${item.id === selectedId ? 'var(--primary-500)' : 'var(--border-subtle)'}`,
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-                    <Globe size={16} style={{ color: item.id === selectedId ? 'var(--primary-400)' : 'var(--text-muted)', flexShrink: 0 }} />
-                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>{item.name}</div>
-                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{item.refreshIntervalSeconds}s reload • {item.zoomScale}% zoom</div>
-                    </div>
-                  </div>
-                  {webViews.length > 1 && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(item.id);
-                      }}
-                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
-                      title="Hapus"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Edit Form */}
-          <form onSubmit={handleSave} className="card-elevated" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Pengaturan Tampilan Web
-            </h3>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                Nama Komponen
-              </label>
-              <input
-                type="text"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="Contoh: Menu Makanan Hari Ini"
-                className="form-input"
-                required
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                Alamat Web (URL)
-              </label>
-              <input
-                type="text"
-                value={formUrl}
-                onChange={(e) => setFormUrl(e.target.value)}
-                placeholder="https://toko.com/katalog-promo"
-                className="form-input"
-                required
-              />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Interval Auto-Refresh
-                </label>
-                <select
-                  value={formInterval}
-                  onChange={(e) => setFormInterval(Number(e.target.value))}
-                  className="form-input"
-                >
-                  <option value={0}>Nonaktif (Manual)</option>
-                  <option value={15}>15 Detik</option>
-                  <option value={30}>30 Detik</option>
-                  <option value={60}>1 Menit</option>
-                  <option value={300}>5 Menit</option>
-                  <option value={900}>15 Menit</option>
-                  <option value={3600}>1 Jam</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Skala Zoom
-                </label>
-                <select
-                  value={formZoom}
-                  onChange={(e) => setFormZoom(Number(e.target.value))}
-                  className="form-input"
-                >
-                  <option value={75}>75% (Kecil)</option>
-                  <option value={90}>90%</option>
-                  <option value={100}>100% (Normal)</option>
-                  <option value={110}>110%</option>
-                  <option value={125}>125%</option>
-                  <option value={150}>150% (Besar)</option>
-                </select>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0' }}>
-              <label style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                Hapus Cache Saat Refresh
-              </label>
-              <input
-                type="checkbox"
-                checked={formBypassCache}
-                onChange={(e) => setFormBypassCache(e.target.checked)}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-            </div>
-
-            <button type="submit" className="btn btn-primary" style={{ marginTop: '6px' }}>
-              <Check size={16} />
-              <span>Simpan Konfigurasi Web</span>
-            </button>
-          </form>
-        </div>
-
-        {/* Right: Live Interactive Simulation Viewport */}
-        <div className="card-elevated" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* Toolbar Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Simulasi Layar Display:
-              </span>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                {activeWebView?.url}
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {formInterval > 0 && (
-                <div
-                  style={{
-                    fontSize: '0.6875rem',
-                    fontWeight: 700,
-                    padding: '4px 8px',
-                    borderRadius: '6px',
-                    backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                    color: 'var(--primary-400)',
-                    border: '1px solid rgba(59, 130, 246, 0.25)',
-                  }}
-                >
-                  Reload dalam: {nextRefreshSec}s
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => setIsAutoRefreshActive(!isAutoRefreshActive)}
-                className="btn btn-secondary"
-                style={{ padding: '6px 10px', fontSize: '0.75rem' }}
-                title={isAutoRefreshActive ? 'Jeda Auto-Refresh' : 'Mulai Auto-Refresh'}
-              >
-                {isAutoRefreshActive ? <Pause size={12} /> : <Play size={12} />}
-                <span>{isAutoRefreshActive ? 'Jeda' : 'Aktifkan'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleManualRefresh}
-                className="btn btn-secondary"
-                style={{ padding: '6px 10px', fontSize: '0.75rem' }}
-                title="Refresh Sekarang"
-              >
-                <RefreshCw size={12} />
-                <span>Refresh Now</span>
-              </button>
-              <a
-                href={activeWebView?.url}
-                target="_blank"
-                rel="noreferrer"
-                className="btn btn-outline"
-                style={{ padding: '6px 10px', fontSize: '0.75rem' }}
-                title="Buka di Tab Baru"
-              >
-                <ExternalLink size={12} />
-              </a>
-            </div>
-          </div>
-
-          {/* Browser Display Frame */}
-          <div
-            style={{
-              position: 'relative',
-              width: '100%',
-              height: '520px',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              backgroundColor: '#000',
-              border: '2px solid var(--border-subtle)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+      {/* Search Input */}
+      <div className="card-elevated" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
             }}
-          >
-            <iframe
-              key={iframeKey}
-              src={activeWebView?.url}
-              title={activeWebView?.name}
-              style={{
-                width: `${100 / (formZoom / 100)}%`,
-                height: `${100 / (formZoom / 100)}%`,
-                transform: `scale(${formZoom / 100})`,
-                transformOrigin: 'top left',
-                border: 'none',
-                backgroundColor: '#fff',
-              }}
-              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-            />
-          </div>
-
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Shield size={14} style={{ color: 'var(--accent-emerald)' }} />
-            <span>
-              Sistem signage memuat halaman dengan sandbox isolasi untuk mencegah interupsi layar perangkat fisik Android.
-            </span>
-          </div>
+            placeholder="Cari web view berdasarkan nama atau URL..."
+            className="form-input"
+            style={{ paddingLeft: '36px' }}
+          />
         </div>
       </div>
+
+      {/* Main Table */}
+      <div className="card-elevated" style={{ overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Nama Komponen</th>
+                <th>Alamat Web (URL)</th>
+                <th>Interval Auto-Refresh</th>
+                <th>Skala Tampilan</th>
+                <th>Mode Cache</th>
+                <th style={{ textAlign: 'right' }}>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginated.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                    Belum ada konfigurasi Web View tersimpan. Klik "Tambah Web View Baru" untuk membuat.
+                  </td>
+                </tr>
+              ) : (
+                paginated.map((item) => (
+                  <tr key={item.id}>
+                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Globe size={18} style={{ color: 'var(--primary-400)', flexShrink: 0 }} />
+                        <span>{item.name}</span>
+                      </div>
+                    </td>
+                    <td style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <a href={item.url} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <span>{item.url}</span>
+                        <ExternalLink size={12} />
+                      </a>
+                    </td>
+                    <td>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                          fontSize: '0.6875rem',
+                          fontWeight: 700,
+                          backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                          color: 'var(--primary-400)',
+                          border: '1px solid rgba(59, 130, 246, 0.3)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <Clock size={10} />
+                        {item.refreshIntervalSeconds > 0 ? `${item.refreshIntervalSeconds} Detik` : 'Manual (Off)'}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                        {item.zoomScale}% Zoom
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ fontSize: '0.75rem', color: item.bypassCache ? 'var(--accent-emerald)' : 'var(--text-muted)' }}>
+                        {item.bypassCache ? 'Bypass Cache' : 'Cache Standar'}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <button
+                          onClick={() => setPreviewItem(item)}
+                          className="btn btn-outline"
+                          style={{ padding: '5px 8px' }}
+                          title="Pratinjau Layar"
+                        >
+                          <Eye size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(item.id, item.name)}
+                          className="btn btn-danger"
+                          style={{ padding: '5px 8px' }}
+                          title="Hapus"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <Pagination
+          page={page}
+          limit={limit}
+          total={filtered.length}
+          onPageChange={(newPage) => setPage(newPage)}
+          onLimitChange={(newLimit) => {
+            setLimit(newLimit);
+            setPage(1);
+          }}
+        />
+      </div>
+
+      {/* Interactive Preview Modal */}
+      {previewItem && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            backdropFilter: 'blur(4px)',
+          }}
+          onClick={() => setPreviewItem(null)}
+        >
+          <div
+            className="card-elevated"
+            style={{
+              width: '100%',
+              maxWidth: '900px',
+              height: '620px',
+              display: 'flex',
+              flexDirection: 'column',
+              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid var(--border-subtle)',
+              overflow: 'hidden',
+              borderRadius: '16px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Globe size={20} style={{ color: 'var(--primary-400)' }} />
+                <div>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    Pratinjau Web View: {previewItem.name}
+                  </h3>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    {previewItem.url} • Reload: {previewItem.refreshIntervalSeconds}s • Skala: {previewItem.zoomScale}%
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setPreviewItem(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '6px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Simulated Frame */}
+            <div style={{ flex: 1, backgroundColor: '#000', position: 'relative', overflow: 'hidden' }}>
+              <iframe
+                src={previewItem.url}
+                title={previewItem.name}
+                style={{
+                  width: `${100 / (previewItem.zoomScale / 100)}%`,
+                  height: `${100 / (previewItem.zoomScale / 100)}%`,
+                  transform: `scale(${previewItem.zoomScale / 100})`,
+                  transformOrigin: 'top left',
+                  border: 'none',
+                  backgroundColor: '#fff',
+                }}
+                sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
