@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Clock, Check, CloudSun, Calendar, MapPin, Droplets, Wind } from 'lucide-react';
-import { CLOCK_STORAGE_KEY, DEFAULT_CLOCKS, CITY_PRESETS, ClockWeatherConfig } from '../../tabs/ClockWeatherManagerTab';
+import { CLOCK_STORAGE_KEY, DEFAULT_CLOCKS, CITY_PRESETS, ClockWeatherConfig } from '../types';
 
 export default function CreateClockWeatherPage() {
   const router = useRouter();
@@ -43,7 +43,7 @@ export default function CreateClockWeatherPage() {
       localStorage.setItem(CLOCK_STORAGE_KEY, JSON.stringify(updated));
     } catch {}
 
-    router.push('/studio/components?tab=clock');
+    router.push('/studio/components/clock');
   };
 
   const weather = CITY_PRESETS[city] || CITY_PRESETS['Makassar'];
@@ -52,7 +52,7 @@ export default function CreateClockWeatherPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        <Link href="/studio/components?tab=clock" className="btn btn-outline" style={{ padding: '8px' }}>
+        <Link href="/studio/components/clock" className="btn btn-outline" style={{ padding: '8px' }}>
           <ArrowLeft size={16} />
         </Link>
         <div>

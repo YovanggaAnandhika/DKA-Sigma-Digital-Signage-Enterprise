@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Ticket, Check, Volume2, Bell } from 'lucide-react';
-import { QUEUE_STORAGE_KEY, DEFAULT_QUEUES, QueueDisplayConfig } from '../../tabs/QueueTicketManagerTab';
+import { QUEUE_STORAGE_KEY, DEFAULT_QUEUES, QueueDisplayConfig } from '../types';
 
 export default function CreateQueueTicketPage() {
   const router = useRouter();
@@ -40,14 +40,14 @@ export default function CreateQueueTicketPage() {
       localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(updated));
     } catch {}
 
-    router.push('/studio/components?tab=ticket');
+    router.push('/studio/components/ticket');
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        <Link href="/studio/components?tab=ticket" className="btn btn-outline" style={{ padding: '8px' }}>
+        <Link href="/studio/components/ticket" className="btn btn-outline" style={{ padding: '8px' }}>
           <ArrowLeft size={16} />
         </Link>
         <div>

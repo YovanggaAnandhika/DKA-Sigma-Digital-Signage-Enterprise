@@ -2,14 +2,17 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import PlaylistManagerTab from '../components/tabs/PlaylistManagerTab';
 
-export default function PlaylistsPage() {
+export default function PlaylistsRedirectPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/studio/components?tab=playlist');
+    router.replace('/studio/components/playlists');
   }, [router]);
 
-  return <PlaylistManagerTab />;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px', color: 'var(--text-muted)' }}>
+      <span>Mengalihkan ke Komponen Daftar Putar...</span>
+    </div>
+  );
 }

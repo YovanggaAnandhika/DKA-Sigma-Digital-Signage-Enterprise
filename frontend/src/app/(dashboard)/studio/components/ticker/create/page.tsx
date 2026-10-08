@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, MessageSquareText, Plus, Trash2, Check } from 'lucide-react';
-import { TICKER_STORAGE_KEY, DEFAULT_TICKERS, THEME_STYLES, SPEED_SECONDS, TickerConfig } from '../../tabs/TickerManagerTab';
+import { TICKER_STORAGE_KEY, DEFAULT_TICKERS, THEME_STYLES, SPEED_SECONDS, TickerConfig } from '../types';
 
 export default function CreateTickerPage() {
   const router = useRouter();
@@ -56,7 +56,7 @@ export default function CreateTickerPage() {
       localStorage.setItem(TICKER_STORAGE_KEY, JSON.stringify(updated));
     } catch {}
 
-    router.push('/studio/components?tab=ticker');
+    router.push('/studio/components/ticker');
   };
 
   const currentTheme = THEME_STYLES[theme];
@@ -65,7 +65,7 @@ export default function CreateTickerPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        <Link href="/studio/components?tab=ticker" className="btn btn-outline" style={{ padding: '8px' }}>
+        <Link href="/studio/components/ticker" className="btn btn-outline" style={{ padding: '8px' }}>
           <ArrowLeft size={16} />
         </Link>
         <div>

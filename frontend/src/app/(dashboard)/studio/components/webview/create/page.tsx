@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Globe, Check, Shield, RefreshCw } from 'lucide-react';
-import { WEBVIEW_STORAGE_KEY, DEFAULT_WEBVIEWS, WebViewConfig } from '../../tabs/WebViewManagerTab';
+import { WEBVIEW_STORAGE_KEY, DEFAULT_WEBVIEWS, WebViewConfig } from '../types';
 
 export default function CreateWebViewPage() {
   const router = useRouter();
@@ -44,7 +44,7 @@ export default function CreateWebViewPage() {
       localStorage.setItem(WEBVIEW_STORAGE_KEY, JSON.stringify(updated));
     } catch {}
 
-    router.push('/studio/components?tab=webview');
+    router.push('/studio/components/webview');
   };
 
   const previewUrl = url.trim()
@@ -57,7 +57,7 @@ export default function CreateWebViewPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        <Link href="/studio/components?tab=webview" className="btn btn-outline" style={{ padding: '8px' }}>
+        <Link href="/studio/components/webview" className="btn btn-outline" style={{ padding: '8px' }}>
           <ArrowLeft size={16} />
         </Link>
         <div>

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Images, Plus, Trash2, Check, Sparkles } from 'lucide-react';
-import { ALBUM_STORAGE_KEY, DEFAULT_ALBUMS, PhotoAlbum, PhotoItem } from '../../tabs/PhotoAlbumManagerTab';
+import { ALBUM_STORAGE_KEY, DEFAULT_ALBUMS, PhotoAlbum, PhotoItem } from '../types';
 
 export default function CreatePhotoAlbumPage() {
   const router = useRouter();
@@ -81,14 +81,14 @@ export default function CreatePhotoAlbumPage() {
       localStorage.setItem(ALBUM_STORAGE_KEY, JSON.stringify(updated));
     } catch {}
 
-    router.push('/studio/components?tab=album');
+    router.push('/studio/components/album');
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        <Link href="/studio/components?tab=album" className="btn btn-outline" style={{ padding: '8px' }}>
+        <Link href="/studio/components/album" className="btn btn-outline" style={{ padding: '8px' }}>
           <ArrowLeft size={16} />
         </Link>
         <div>
