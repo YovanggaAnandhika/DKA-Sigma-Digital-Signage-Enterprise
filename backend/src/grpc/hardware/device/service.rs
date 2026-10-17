@@ -212,7 +212,19 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             .await
             .map_err(Status::from)?;
 
-        Ok(Response::new(Self::map_device_entity(dev)))
+        let mut proto = Self::map_device_entity(dev);
+        if !proto.is_paired {
+            if let Ok(Some(code)) = sqlx::query_scalar::<_, String>(
+                "SELECT pairing_code FROM device_pairings WHERE device_id = $1 AND status = 'pending' AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1"
+            )
+            .bind(device_id)
+            .fetch_optional(&self.pool)
+            .await {
+                proto.pairing_code = code;
+            }
+        }
+
+        Ok(Response::new(proto))
     }
 
     async fn list_devices(
@@ -224,7 +236,23 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             .await
             .map_err(Status::from)?;
 
-        let items = devices.into_iter().map(Self::map_device_entity).collect();
+        let mut items = Vec::new();
+        for dev in devices {
+            let mut proto = Self::map_device_entity(dev);
+            if !proto.is_paired {
+                if let Ok(dev_uuid) = Uuid::parse_str(&proto.id) {
+                    if let Ok(Some(code)) = sqlx::query_scalar::<_, String>(
+                        "SELECT pairing_code FROM device_pairings WHERE device_id = $1 AND status = 'pending' AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1"
+                    )
+                    .bind(dev_uuid)
+                    .fetch_optional(&self.pool)
+                    .await {
+                        proto.pairing_code = code;
+                    }
+                }
+            }
+            items.push(proto);
+        }
 
         Ok(Response::new(ListDevicesResponse {
             items,
