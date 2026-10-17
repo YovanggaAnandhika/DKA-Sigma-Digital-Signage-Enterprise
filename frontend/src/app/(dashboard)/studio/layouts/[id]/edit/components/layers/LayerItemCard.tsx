@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Film, ListMusic, GripVertical } from 'lucide-react';
+import { Film, ListMusic, GripVertical, Lock } from 'lucide-react';
 import { useLayoutEditor } from '../../context/LayoutEditorContext';
 import { Layer } from '../../context/LayoutStateContext';
 
@@ -118,18 +118,25 @@ export default function LayerItemCard({ z }: LayerItemCardProps) {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
-        <span
-          style={{
-            fontSize: '0.75rem',
-            fontWeight: isSelected ? 700 : 500,
-            color: isSelected ? 'var(--primary-600)' : 'var(--text-primary)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {z.name}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
+          <span
+            style={{
+              fontSize: '0.75rem',
+              fontWeight: isSelected ? 700 : 500,
+              color: isSelected ? 'var(--primary-600)' : 'var(--text-primary)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {z.name}
+          </span>
+          {z.isLocked && (
+            <span title="Layer terkunci" style={{ display: 'flex', alignItems: 'center' }}>
+              <Lock size={10} color="#f59e0b" style={{ flexShrink: 0 }} />
+            </span>
+          )}
+        </div>
         <div
           onClick={(e) => {
             e.stopPropagation();

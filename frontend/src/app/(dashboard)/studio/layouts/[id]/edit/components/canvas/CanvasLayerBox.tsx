@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Rnd } from 'react-rnd';
-import { Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX, Lock } from 'lucide-react';
 import { useLayoutEditor } from '../../context/LayoutEditorContext';
 import SynchronizedVideo from './SynchronizedVideo';
 import { Layer } from '../../context/LayoutStateContext';
@@ -12,9 +12,10 @@ const Marquee = 'marquee' as any;
 interface CanvasLayerBoxProps {
   layer: Layer;
   idx: number;
+  onContextMenu?: (e: React.MouseEvent, layerId: string) => void;
 }
 
-export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
+export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasLayerBoxProps) {
   const {
     setLayers,
     selectedLayerId,
@@ -202,8 +203,15 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
           )
         );
       }}
+      onContextMenu={(e: any) => {
+        if (onContextMenu) {
+          e.preventDefault();
+          e.stopPropagation();
+          onContextMenu(e, z.id);
+        }
+      }}
       style={{
-        border: `2px ${active ? 'solid' : 'dashed'} ${active ? (isSelected ? '#38bdf8' : color) : 'rgba(255,255,255,0.2)'}`,
+        border: `2px ${z.isLocked ? 'dotted' : active ? 'solid' : 'dashed'} ${z.isLocked ? '#f59e0b' : active ? (isSelected ? '#38bdf8' : color) : 'rgba(255,255,255,0.2)'}`,
         boxShadow: isSelected ? '0 0 0 1px rgba(56, 189, 248, 0.5), 0 4px 12px rgba(0,0,0,0.4)' : 'none',
         opacity: hiddenZones.includes(z.id) ? 0 : (isSelected ? 1 : active ? 1 : 0.35),
         pointerEvents: hiddenZones.includes(z.id) ? 'none' : 'auto',
@@ -211,26 +219,26 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
         userSelect: 'none',
       }}
       resizeHandleStyles={{
-        bottomRight: { display: isSelected ? 'block' : 'none', width: 10, height: 10, backgroundColor: '#fff', border: `2px solid ${color}`, right: -5, bottom: -5, borderRadius: '50%', zIndex: 12 },
-        bottomLeft: { display: isSelected ? 'block' : 'none', width: 10, height: 10, backgroundColor: '#fff', border: `2px solid ${color}`, left: -5, bottom: -5, borderRadius: '50%', zIndex: 12 },
-        topRight: { display: isSelected ? 'block' : 'none', width: 10, height: 10, backgroundColor: '#fff', border: `2px solid ${color}`, right: -5, top: -5, borderRadius: '50%', zIndex: 12 },
-        topLeft: { display: isSelected ? 'block' : 'none', width: 10, height: 10, backgroundColor: '#fff', border: `2px solid ${color}`, left: -5, top: -5, borderRadius: '50%', zIndex: 12 },
-        top: { display: isSelected ? 'flex' : 'none', height: 10, top: -5, cursor: 'ns-resize', zIndex: 11, alignItems: 'center', justifyContent: 'center' },
-        bottom: { display: isSelected ? 'flex' : 'none', height: 10, bottom: -5, cursor: 'ns-resize', zIndex: 11, alignItems: 'center', justifyContent: 'center' },
-        left: { display: isSelected ? 'flex' : 'none', width: 10, left: -5, cursor: 'ew-resize', zIndex: 11, alignItems: 'center', justifyContent: 'center' },
-        right: { display: isSelected ? 'flex' : 'none', width: 10, right: -5, cursor: 'ew-resize', zIndex: 11, alignItems: 'center', justifyContent: 'center' },
+        bottomRight: { display: isSelected && !z.isLocked ? 'block' : 'none', width: 10, height: 10, backgroundColor: '#fff', border: `2px solid ${color}`, right: -5, bottom: -5, borderRadius: '50%', zIndex: 12 },
+        bottomLeft: { display: isSelected && !z.isLocked ? 'block' : 'none', width: 10, height: 10, backgroundColor: '#fff', border: `2px solid ${color}`, left: -5, bottom: -5, borderRadius: '50%', zIndex: 12 },
+        topRight: { display: isSelected && !z.isLocked ? 'block' : 'none', width: 10, height: 10, backgroundColor: '#fff', border: `2px solid ${color}`, right: -5, top: -5, borderRadius: '50%', zIndex: 12 },
+        topLeft: { display: isSelected && !z.isLocked ? 'block' : 'none', width: 10, height: 10, backgroundColor: '#fff', border: `2px solid ${color}`, left: -5, top: -5, borderRadius: '50%', zIndex: 12 },
+        top: { display: isSelected && !z.isLocked ? 'flex' : 'none', height: 10, top: -5, cursor: 'ns-resize', zIndex: 11, alignItems: 'center', justifyContent: 'center' },
+        bottom: { display: isSelected && !z.isLocked ? 'flex' : 'none', height: 10, bottom: -5, cursor: 'ns-resize', zIndex: 11, alignItems: 'center', justifyContent: 'center' },
+        left: { display: isSelected && !z.isLocked ? 'flex' : 'none', width: 10, left: -5, cursor: 'ew-resize', zIndex: 11, alignItems: 'center', justifyContent: 'center' },
+        right: { display: isSelected && !z.isLocked ? 'flex' : 'none', width: 10, right: -5, cursor: 'ew-resize', zIndex: 11, alignItems: 'center', justifyContent: 'center' },
       }}
-      resizeHandleComponent={isSelected ? {
+      resizeHandleComponent={isSelected && !z.isLocked ? {
         top: <div style={{ width: 22, height: 4, backgroundColor: '#ffffff', border: `1px solid ${color}`, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.5)' }} />,
         bottom: <div style={{ width: 22, height: 4, backgroundColor: '#ffffff', border: `1px solid ${color}`, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.5)' }} />,
         left: <div style={{ width: 4, height: 22, backgroundColor: '#ffffff', border: `1px solid ${color}`, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.5)' }} />,
         right: <div style={{ width: 4, height: 22, backgroundColor: '#ffffff', border: `1px solid ${color}`, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.5)' }} />,
       } : undefined}
-      enableResizing={isSelected ? {
+      enableResizing={isSelected && !z.isLocked ? {
         top: true, right: true, bottom: true, left: true,
         topRight: true, bottomRight: true, bottomLeft: true, topLeft: true
       } : false}
-      disableDragging={false}
+      disableDragging={!!z.isLocked}
     >
       {/* Inner container to clip media correctly while keeping handles visible outside */}
       <div
@@ -530,6 +538,22 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
                   title={isEffectiveMuted ? 'Suara dibisukan (Muted)' : 'Suara aktif (Unmuted)'}
                 >
                   {isEffectiveMuted ? <VolumeX size={11} /> : <Volume2 size={11} />}
+                </span>
+              )}
+              {z.isLocked && (
+                <span
+                  style={{
+                    fontSize: '0.5625rem',
+                    color: '#f59e0b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                    borderLeft: '1px solid rgba(255,255,255,0.2)',
+                    paddingLeft: '4px',
+                  }}
+                  title="Layer terkunci"
+                >
+                  <Lock size={10} />
                 </span>
               )}
             </div>

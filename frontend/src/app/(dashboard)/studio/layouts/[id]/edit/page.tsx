@@ -39,6 +39,11 @@ function EditorContent() {
     rightSidebarWidth,
     setRightSidebarWidth,
     isInspectorCollapsed,
+    selectedLayerId,
+    setSelectedLayerId,
+    handleDeleteLayer,
+    duplicateLayer,
+    setLayers,
   } = useLayoutEditor();
   const [isDraggingSidebar, setIsDraggingSidebar] = React.useState(false);
   const [isDraggingRightSidebar, setIsDraggingRightSidebar] = React.useState(false);
@@ -111,18 +116,64 @@ function EditorContent() {
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input
+      // Ignore if user is typing in an input or textarea
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
+
       if (e.code === 'Space') {
         e.preventDefault();
         togglePlay();
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        setSelectedLayerId(null);
+        return;
+      }
+
+      if (selectedLayerId) {
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+          e.preventDefault();
+          handleDeleteLayer(selectedLayerId);
+          return;
+        }
+
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
+          e.preventDefault();
+          duplicateLayer(selectedLayerId);
+          return;
+        }
+
+        if (e.key.startsWith('Arrow')) {
+          const step = e.shiftKey ? 10 : 1;
+          let dx = 0;
+          let dy = 0;
+          if (e.key === 'ArrowUp') dy = -step;
+          else if (e.key === 'ArrowDown') dy = step;
+          else if (e.key === 'ArrowLeft') dx = -step;
+          else if (e.key === 'ArrowRight') dx = step;
+
+          if (dx !== 0 || dy !== 0) {
+            e.preventDefault();
+            setLayers((prev) =>
+              prev.map((l) =>
+                l.id === selectedLayerId && !l.isLocked
+                  ? {
+                      ...l,
+                      x: Math.round(Number(l.x) || 0) + dx,
+                      y: Math.round(Number(l.y) || 0) + dy,
+                    }
+                  : l
+              )
+            );
+          }
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [togglePlay]);
+  }, [togglePlay, selectedLayerId, handleDeleteLayer, duplicateLayer, setLayers, setSelectedLayerId]);
 
   if (loading || !layout) {
     return (

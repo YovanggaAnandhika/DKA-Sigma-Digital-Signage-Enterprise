@@ -22,6 +22,11 @@ import {
   Layers,
   Scissors,
   LayoutGrid,
+  Lock,
+  Unlock,
+  Copy,
+  Maximize,
+  AlignCenter,
 } from 'lucide-react';
 import { updatePlaylistBlock, addPlaylistBlock, addMediaBlock, removePlaylistBlock } from '@/lib/services/studio/layout.service';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
@@ -65,6 +70,9 @@ export default function InspectorPanel() {
     setSelectedLayerId,
     handleDeleteLayer,
     updateSelectedLayer,
+    duplicateLayer,
+    alignLayer,
+    toggleLockLayer,
     availablePlaylists,
     mediaList,
     transitionsList,
@@ -615,27 +623,75 @@ export default function InspectorPanel() {
               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-600)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Dimensi & Posisi
               </span>
-              <button
-                onClick={() => handleDeleteLayer(selectedZone.id)}
-                title="Hapus Layer Ini"
-                style={{
-                  width: '26px',
-                  height: '26px',
-                  backgroundColor: 'rgba(225, 29, 72, 0.1)',
-                  border: '1px solid rgba(225, 29, 72, 0.2)',
-                  color: 'var(--accent-rose)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: '5px',
-                  flexShrink: 0,
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(225, 29, 72, 0.2)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(225, 29, 72, 0.1)'; }}
-              >
-                <Trash2 size={13} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <button
+                  onClick={() => toggleLockLayer(selectedZone.id)}
+                  title={selectedZone.isLocked ? "Buka Kunci Layer" : "Kunci Layer (Cegah tergeser)"}
+                  style={{
+                    width: '26px',
+                    height: '26px',
+                    backgroundColor: selectedZone.isLocked ? 'rgba(245, 158, 11, 0.15)' : 'var(--bg-base)',
+                    border: `1px solid ${selectedZone.isLocked ? 'rgba(245, 158, 11, 0.4)' : 'var(--border-subtle)'}`,
+                    color: selectedZone.isLocked ? '#f59e0b' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '5px',
+                    flexShrink: 0,
+                    transition: 'all 0.1s',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(0.95)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.filter = 'none'; }}
+                >
+                  {selectedZone.isLocked ? <Lock size={13} /> : <Unlock size={13} />}
+                </button>
+
+                <button
+                  onClick={() => duplicateLayer(selectedZone.id)}
+                  title="Duplikat Layer (Ctrl+D)"
+                  style={{
+                    width: '26px',
+                    height: '26px',
+                    backgroundColor: 'var(--bg-base)',
+                    border: '1px solid var(--border-subtle)',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '5px',
+                    flexShrink: 0,
+                    transition: 'all 0.1s',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-base)'; }}
+                >
+                  <Copy size={13} />
+                </button>
+
+                <button
+                  onClick={() => handleDeleteLayer(selectedZone.id)}
+                  title="Hapus Layer (Del)"
+                  style={{
+                    width: '26px',
+                    height: '26px',
+                    backgroundColor: 'rgba(225, 29, 72, 0.1)',
+                    border: '1px solid rgba(225, 29, 72, 0.2)',
+                    color: 'var(--accent-rose)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '5px',
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(225, 29, 72, 0.2)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(225, 29, 72, 0.1)'; }}
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -717,6 +773,72 @@ export default function InspectorPanel() {
                   className="form-input"
                   style={{ fontSize: '0.75rem', padding: '6px 10px' }}
                 />
+              </div>
+
+              {/* Quick alignment and position presets */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  PRESETS & PERATAAN CEPAT
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => alignLayer(selectedZone.id, 'fill')}
+                    className="btn btn-outline"
+                    style={{ fontSize: '0.6875rem', padding: '5px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                    title="Penuhi Kanvas (100% Layar)"
+                  >
+                    <Maximize size={11} /> Fullscreen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      alignLayer(selectedZone.id, 'center');
+                      alignLayer(selectedZone.id, 'middle');
+                    }}
+                    className="btn btn-outline"
+                    style={{ fontSize: '0.6875rem', padding: '5px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                    title="Pusatkan di Tengah Kanvas"
+                  >
+                    <AlignCenter size={11} /> Tengah
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => alignLayer(selectedZone.id, 'split-left')}
+                    className="btn btn-outline"
+                    style={{ fontSize: '0.6875rem', padding: '5px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                    title="Setengah Layar Kiri (50%)"
+                  >
+                    Split Kiri
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => alignLayer(selectedZone.id, 'split-right')}
+                    className="btn btn-outline"
+                    style={{ fontSize: '0.6875rem', padding: '5px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                    title="Setengah Layar Kanan (50%)"
+                  >
+                    Split Kanan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => alignLayer(selectedZone.id, 'ticker-bottom')}
+                    className="btn btn-outline"
+                    style={{ fontSize: '0.6875rem', padding: '5px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                    title="Banner Running Ticker di Bawah"
+                  >
+                    Banner Bwh
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => alignLayer(selectedZone.id, 'header-top')}
+                    className="btn btn-outline"
+                    style={{ fontSize: '0.6875rem', padding: '5px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                    title="Banner Header di Atas"
+                  >
+                    Header Atas
+                  </button>
+                </div>
               </div>
 
               {/* Quick block allocation button inside layer */}

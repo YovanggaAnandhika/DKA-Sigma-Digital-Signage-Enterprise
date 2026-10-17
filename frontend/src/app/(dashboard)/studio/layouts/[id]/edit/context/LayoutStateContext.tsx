@@ -8,6 +8,7 @@ import { ensureUuid, isUuid, resolveWidgetInfo } from '@/lib/services/studio/wid
 export interface Layer extends ApiLayer {
   timeline_start?: number;
   timeline_width?: number;
+  isLocked?: boolean;
 }
 
 interface LayoutStateContextType {
@@ -21,10 +22,15 @@ interface LayoutStateContextType {
   loading: boolean;
   saving: boolean;
   handleSave: (showToast: (msg: string, type?: 'success' | 'error') => void) => Promise<void>;
-  handleAddLayer: () => void;
+  handleAddLayer: (customCoords?: { x: number; y: number } | any) => Promise<void>;
   handleDeleteLayer: (layerId: string) => void;
   updateSelectedLayer: (field: keyof Layer, value: any) => void;
   reorderLayers: (sourceId: string, targetId: string) => void;
+  duplicateLayer: (layerId: string) => Promise<void>;
+  alignLayer: (layerId: string, alignment: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom' | 'fill' | 'split-left' | 'split-right' | 'ticker-bottom' | 'header-top') => void;
+  toggleLockLayer: (layerId: string) => void;
+  bringToFront: (layerId: string) => void;
+  sendToBack: (layerId: string) => void;
 }
 
 const LayoutStateContext = createContext<LayoutStateContextType | undefined>(undefined);
@@ -247,14 +253,16 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const handleAddLayer = async () => {
+  const handleAddLayer = async (customCoords?: any) => {
     if (!layout) return;
     try {
+      const posX = (customCoords && typeof customCoords.x === 'number') ? customCoords.x : 100;
+      const posY = (customCoords && typeof customCoords.y === 'number') ? customCoords.y : 100;
       const newZ = await api.createLayer({
         layoutId: layout.id,
         name: `Kotak Lapisan ${layers.length + 1}`,
-        x: 100,
-        y: 100,
+        x: posX,
+        y: posY,
         width: Math.round(layout.canvasWidth * 0.4),
         height: Math.round(layout.canvasHeight * 0.4),
         zIndex: layers.length + 1,
@@ -264,17 +272,18 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         id: newZ.id,
         layoutId: layout.id,
         name: newZ.name,
-        x: Number(newZ.x) || 100,
-        y: Number(newZ.y) || 100,
+        x: Number(newZ.x) || posX,
+        y: Number(newZ.y) || posY,
         width: Number(newZ.width) || Math.round(layout.canvasWidth * 0.4),
         height: Number(newZ.height) || Math.round(layout.canvasHeight * 0.4),
         zIndex: Number(newZ.zIndex) || (layers.length + 1),
         blocksList: [],
         backgroundColor: newZ.backgroundColor || '#1e293b',
+        isLocked: false,
         createdAt: newZ.createdAt || new Date().toISOString(),
         updatedAt: newZ.updatedAt || new Date().toISOString(),
       };
-      setLayers([...layers, newLayer]);
+      setLayers([newLayer, ...layers]);
       setSelectedLayerId(newLayer.id);
     } catch (err: any) {
       console.error('Failed to create layer:', err);
@@ -335,6 +344,138 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const duplicateLayer = async (layerId: string) => {
+    if (!layout) return;
+    const target = layers.find((l) => l.id === layerId);
+    if (!target) return;
+    try {
+      const offsetX = Math.min(layout.canvasWidth - 100, (Number(target.x) || 0) + 30);
+      const offsetY = Math.min(layout.canvasHeight - 100, (Number(target.y) || 0) + 30);
+      const newZ = await api.createLayer({
+        layoutId: layout.id,
+        name: `${target.name} (Salinan)`,
+        x: offsetX,
+        y: offsetY,
+        width: Number(target.width) || 400,
+        height: Number(target.height) || 300,
+        zIndex: layers.length + 1,
+        backgroundColor: target.backgroundColor || '#1e293b',
+      });
+      const duplicatedLayer: Layer = {
+        id: newZ.id,
+        layoutId: layout.id,
+        name: newZ.name,
+        x: Number(newZ.x) || offsetX,
+        y: Number(newZ.y) || offsetY,
+        width: Number(newZ.width) || Number(target.width) || 400,
+        height: Number(newZ.height) || Number(target.height) || 300,
+        zIndex: layers.length + 1,
+        blocksList: (target.blocksList || []).map((b) => ({
+          ...b,
+          id: 'temp-' + crypto.randomUUID(),
+          layerId: newZ.id,
+        })),
+        backgroundColor: newZ.backgroundColor || target.backgroundColor || '#1e293b',
+        isLocked: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setLayers([duplicatedLayer, ...layers]);
+      setSelectedLayerId(duplicatedLayer.id);
+    } catch (err) {
+      console.error('Failed to duplicate layer:', err);
+    }
+  };
+
+  const alignLayer = (layerId: string, alignment: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom' | 'fill' | 'split-left' | 'split-right' | 'ticker-bottom' | 'header-top') => {
+    if (!layout) return;
+    setLayers((prev) =>
+      prev.map((l) => {
+        if (l.id !== layerId) return l;
+        const w = Number(l.width) || 200;
+        const h = Number(l.height) || 200;
+        const cW = layout.canvasWidth;
+        const cH = layout.canvasHeight;
+        let nextX = Number(l.x) || 0;
+        let nextY = Number(l.y) || 0;
+        let nextW = w;
+        let nextH = h;
+
+        switch (alignment) {
+          case 'left':
+            nextX = 0;
+            break;
+          case 'center':
+            nextX = Math.round((cW - w) / 2);
+            break;
+          case 'right':
+            nextX = Math.round(cW - w);
+            break;
+          case 'top':
+            nextY = 0;
+            break;
+          case 'middle':
+            nextY = Math.round((cH - h) / 2);
+            break;
+          case 'bottom':
+            nextY = Math.round(cH - h);
+            break;
+          case 'fill':
+            nextX = 0;
+            nextY = 0;
+            nextW = cW;
+            nextH = cH;
+            break;
+          case 'split-left':
+            nextX = 0;
+            nextY = 0;
+            nextW = Math.round(cW / 2);
+            nextH = cH;
+            break;
+          case 'split-right':
+            nextX = Math.round(cW / 2);
+            nextY = 0;
+            nextW = Math.round(cW / 2);
+            nextH = cH;
+            break;
+          case 'ticker-bottom':
+            nextX = 0;
+            nextY = Math.round(cH * 0.88);
+            nextW = cW;
+            nextH = Math.round(cH * 0.12);
+            break;
+          case 'header-top':
+            nextX = 0;
+            nextY = 0;
+            nextW = cW;
+            nextH = Math.round(cH * 0.15);
+            break;
+        }
+        return { ...l, x: nextX, y: nextY, width: nextW, height: nextH };
+      })
+    );
+  };
+
+  const toggleLockLayer = (layerId: string) => {
+    setLayers((prev) =>
+      prev.map((l) => (l.id === layerId ? { ...l, isLocked: !l.isLocked } : l))
+    );
+  };
+
+  const bringToFront = (layerId: string) => {
+    const sorted = [...layers].sort((a, b) => (Number(b.zIndex) || 0) - (Number(a.zIndex) || 0));
+    if (sorted.length > 0 && sorted[0].id !== layerId) {
+      reorderLayers(layerId, sorted[0].id);
+    }
+  };
+
+  const sendToBack = (layerId: string) => {
+    const sorted = [...layers].sort((a, b) => (Number(b.zIndex) || 0) - (Number(a.zIndex) || 0));
+    if (sorted.length > 0 && sorted[sorted.length - 1].id !== layerId) {
+      reorderLayers(layerId, sorted[sorted.length - 1].id);
+    }
+  };
+
   return (
     <LayoutStateContext.Provider
       value={{
@@ -352,6 +493,11 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         handleDeleteLayer,
         updateSelectedLayer,
         reorderLayers,
+        duplicateLayer,
+        alignLayer,
+        toggleLockLayer,
+        bringToFront,
+        sendToBack,
       }}
     >
       {children}

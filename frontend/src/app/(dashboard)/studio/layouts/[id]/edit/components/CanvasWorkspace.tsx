@@ -1,14 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { MousePointer2, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 import CanvasLayerBox from './canvas/CanvasLayerBox';
+import CanvasContextMenu, { ContextMenuState } from './canvas/CanvasContextMenu';
 
 export default function CanvasWorkspace() {
   const {
     layout,
     layers,
+    scale,
     setSelectedLayerId,
     previewHeight,
     canvasDisplayWidth,
@@ -20,7 +22,47 @@ export default function CanvasWorkspace() {
     setInspectorTarget,
   } = useLayoutEditor();
 
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>({
+    isOpen: false,
+    x: 0,
+    y: 0,
+  });
+
+  const canvasRef = useRef<HTMLDivElement>(null);
+
   if (!layout) return null;
+
+  const handleWorkspaceContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const rect = canvasRef.current?.getBoundingClientRect();
+    let canvasCoords = undefined;
+    if (rect && scale) {
+      const rawX = (e.clientX - rect.left) / scale;
+      const rawY = (e.clientY - rect.top) / scale;
+      if (rawX >= 0 && rawX <= layout.canvasWidth && rawY >= 0 && rawY <= layout.canvasHeight) {
+        canvasCoords = { x: Math.round(rawX), y: Math.round(rawY) };
+      }
+    }
+    setContextMenu({
+      isOpen: true,
+      x: e.clientX,
+      y: e.clientY,
+      canvasCoords,
+      layerId: null,
+    });
+  };
+
+  const handleLayerContextMenu = (e: React.MouseEvent, layerId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedLayerId(layerId);
+    setContextMenu({
+      isOpen: true,
+      x: e.clientX,
+      y: e.clientY,
+      layerId,
+    });
+  };
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', backgroundColor: 'var(--bg-surface-elevated)', backgroundImage: 'radial-gradient(var(--border-subtle) 1px, transparent 0)', backgroundSize: '20px 20px' }}>
@@ -85,6 +127,7 @@ export default function CanvasWorkspace() {
       {/* Scrollable canvas area */}
       <div 
         style={{ flex: 1, overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '52px', paddingBottom: '16px', paddingLeft: '16px', paddingRight: '16px' }}
+        onContextMenu={handleWorkspaceContextMenu}
         onClick={(e) => {
           if (e.target === e.currentTarget) {
             setSelectedLayerId(null);
@@ -94,6 +137,7 @@ export default function CanvasWorkspace() {
         }}
       >
         <div
+          ref={canvasRef}
           style={{
             width: `${canvasDisplayWidth}px`,
             height: `${previewHeight}px`,
@@ -111,10 +155,21 @@ export default function CanvasWorkspace() {
           }}
         >
           {layers.map((z, idx) => (
-            <CanvasLayerBox key={z.id} layer={z} idx={idx} />
+            <CanvasLayerBox
+              key={z.id}
+              layer={z}
+              idx={idx}
+              onContextMenu={handleLayerContextMenu}
+            />
           ))}
         </div>
       </div>
+
+      {/* Floating Canvas & Layer Context Menu */}
+      <CanvasContextMenu
+        state={contextMenu}
+        onClose={() => setContextMenu((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }
