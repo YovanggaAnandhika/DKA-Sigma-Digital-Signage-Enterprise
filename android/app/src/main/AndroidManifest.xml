@@ -16,7 +16,7 @@
     <uses-feature android:name="android.software.leanback" android:required="false" />
 
     <application
-        android:name=".DkaSignageApp"
+        android:name="com.dkaapis.sigma.DkaSignageApp"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -29,7 +29,7 @@
 
         <!-- ══ Main Signage UI & Playback Engine (Default App Process) ══ -->
         <activity
-            android:name=".presentation.player.PlayerActivity"
+            android:name="com.dkaapis.sigma.presentation.player.PlayerActivity"
             android:exported="true"
             android:launchMode="singleInstance"
             android:screenOrientation="unspecified"
@@ -43,27 +43,27 @@
         </activity>
 
         <activity
-            android:name=".presentation.pairing.PairingActivity"
+            android:name="com.dkaapis.sigma.presentation.pairing.PairingActivity"
             android:exported="false"
             android:launchMode="singleTop"
             android:theme="@style/Theme.DKASigmaPlayer.Fullscreen" />
 
         <!-- Foreground stream connection daemon -->
         <service
-            android:name=".service.PlayerForegroundService"
+            android:name="com.dkaapis.sigma.service.PlayerForegroundService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
         <!-- ══ PROCESS 2: Isolated Companion Watchdog Process ══ -->
         <!-- Catches ANR / decoder deadlock and revives player within 1s -->
         <service
-            android:name=".service.WatchdogService"
+            android:name="com.dkaapis.sigma.service.WatchdogService"
             android:process=":watchdog"
             android:exported="false" />
 
         <!-- Kiosk Autostart on TV Box boot -->
         <receiver
-            android:name=".service.BootReceiver"
+            android:name="com.dkaapis.sigma.service.BootReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

@@ -35,15 +35,26 @@ class WatchdogService : Service() {
             mainPlayerPid = pid
             lastHeartbeatTimestamp = System.currentTimeMillis()
         }
+
+        if (intent?.hasExtra(EXTRA_PLAYBACK_ACTIVE) == true) {
+            isPlaybackActive = intent.getBooleanExtra(EXTRA_PLAYBACK_ACTIVE, false)
+            Log.d(TAG, "Status playback watchdog diperbarui: isPlaybackActive=$isPlaybackActive")
+        }
+
         return START_STICKY
     }
 
     private fun checkPlayerLiveness() {
+        // Hanya awasi freeze jika proses player terdeteksi DAN sedang dalam mode tayang aktif
+        if (!isPlaybackActive || mainPlayerPid <= 0) {
+            return
+        }
+
         val now = System.currentTimeMillis()
         val elapsed = now - lastHeartbeatTimestamp
 
-        if (mainPlayerPid > 0 && elapsed > HEARTBEAT_TIMEOUT_MS) {
-            Log.e(TAG, "ANR / Freeze terdeteksi pada proses utama :player (PID: $mainPlayerPid)! Me-restart secara otomatis...")
+        if (elapsed > HEARTBEAT_TIMEOUT_MS) {
+            Log.e(TAG, "ANR / Freeze terdeteksi pada proses utama saat tayang (PID: $mainPlayerPid, idle: ${elapsed}ms)! Me-restart secara otomatis...")
 
             // 1. Matikan paksa proses yang hang/freeze
             try {
@@ -76,6 +87,7 @@ class WatchdogService : Service() {
             // Reset timestamp agar tidak loop kill
             lastHeartbeatTimestamp = System.currentTimeMillis()
             mainPlayerPid = -1
+            isPlaybackActive = false
         }
     }
 
@@ -88,9 +100,10 @@ class WatchdogService : Service() {
 
     companion object {
         private const val TAG = "DKAWatchdog"
-        private const val CHECK_INTERVAL_MS = 5_000L
-        private const val HEARTBEAT_TIMEOUT_MS = 15_000L
+        private const val CHECK_INTERVAL_MS = 10_000L
+        private const val HEARTBEAT_TIMEOUT_MS = 60_000L
         const val EXTRA_PLAYER_PID = "extra_player_pid"
+        const val EXTRA_PLAYBACK_ACTIVE = "extra_playback_active"
 
         @Volatile
         private var lastHeartbeatTimestamp = 0L
@@ -98,9 +111,20 @@ class WatchdogService : Service() {
         @Volatile
         private var mainPlayerPid = -1
 
+        @Volatile
+        private var isPlaybackActive = false
+
         fun pingFromPlayer(context: Context) {
             val intent = Intent(context, WatchdogService::class.java).apply {
                 putExtra(EXTRA_PLAYER_PID, Process.myPid())
+            }
+            context.startService(intent)
+        }
+
+        fun setPlaybackActive(context: Context, active: Boolean) {
+            val intent = Intent(context, WatchdogService::class.java).apply {
+                putExtra(EXTRA_PLAYER_PID, Process.myPid())
+                putExtra(EXTRA_PLAYBACK_ACTIVE, active)
             }
             context.startService(intent)
         }

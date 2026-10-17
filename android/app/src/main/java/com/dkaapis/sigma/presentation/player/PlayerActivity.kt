@@ -157,18 +157,22 @@ class PlayerActivity : AppCompatActivity() {
             viewModel.uiState.collectLatest { state ->
                 when (state) {
                     is PlayerUiState.NotPaired -> {
+                        WatchdogService.setPlaybackActive(this@PlayerActivity, false)
                         startActivity(Intent(this@PlayerActivity, PairingActivity::class.java))
                         finish()
                     }
                     is PlayerUiState.SyncingManifest -> {
+                        WatchdogService.setPlaybackActive(this@PlayerActivity, false)
                         loadingOverlay.visibility = View.VISIBLE
                         loadingText.text = state.message
                     }
                     is PlayerUiState.DownloadingAssets -> {
+                        WatchdogService.setPlaybackActive(this@PlayerActivity, false)
                         loadingOverlay.visibility = View.VISIBLE
                         loadingText.text = "Mengunduh Aset Media (${state.assetIndex}/${state.total}) • ${state.progressPercent}%"
                     }
                     is PlayerUiState.Playing -> {
+                        WatchdogService.setPlaybackActive(this@PlayerActivity, true)
                         loadingOverlay.visibility = View.GONE
                         renderManifest(state.manifest)
                     }

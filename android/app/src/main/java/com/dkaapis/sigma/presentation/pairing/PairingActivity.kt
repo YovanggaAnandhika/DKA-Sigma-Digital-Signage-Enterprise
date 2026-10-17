@@ -34,6 +34,8 @@ class PairingActivity : AppCompatActivity() {
         val useCase = RegisterAndPairUseCase(deviceRepo)
         viewModel = PairingViewModel(useCase)
 
+        com.dkaapis.sigma.service.WatchdogService.setPlaybackActive(this, false)
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
