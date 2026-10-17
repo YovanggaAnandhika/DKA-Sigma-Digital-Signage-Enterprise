@@ -46,19 +46,28 @@ impl StreamServiceTrait for StreamServiceImpl {
 
             loop {
                 tokio::select! {
-                    msg_res = in_stream.message() => {
-                        match msg_res {
-                            Ok(Some(client_msg)) => {
+                    timed_msg = tokio::time::timeout(tokio::time::Duration::from_secs(45), in_stream.message()) => {
+                        match timed_msg {
+                            Ok(Ok(Some(client_msg))) => {
                                 if let Ok(dev_id) = Uuid::parse_str(&client_msg.device_id) {
                                     if registered_device_id.is_none() {
                                         registered_device_id = Some(dev_id);
                                         manager.register_connection(dev_id, tx.clone()).await;
+                                        let _ = sqlx::query("UPDATE devices SET is_online = TRUE, last_heartbeat_at = NOW() WHERE id = $1")
+                                            .bind(dev_id)
+                                            .execute(&pool)
+                                            .await;
                                     }
 
-                                     // Handle stream client payload (Ping telemetry, Screenshot upload, Command ACK)
+                                    // Handle stream client payload (Ping telemetry, Screenshot upload, Command ACK)
                                     if let Some(payload) = client_msg.payload {
                                         match payload {
                                             crate::grpc::proto::distribution::v1::stream::stream_client_message::Payload::Ping(ping) => {
+                                                let _ = sqlx::query("UPDATE devices SET is_online = TRUE, last_heartbeat_at = NOW() WHERE id = $1")
+                                                    .bind(dev_id)
+                                                    .execute(&pool)
+                                                    .await;
+
                                                 let telemetry_json = serde_json::json!({
                                                     "memory_percent": ping.memory_percent,
                                                     "storage_free_bytes": ping.storage_free_bytes,
@@ -108,9 +117,25 @@ impl StreamServiceTrait for StreamServiceImpl {
                                     payload_json: String::new(),
                                 };
                             }
-                            Ok(None) | Err(_) => {
+                            Ok(Ok(None)) | Ok(Err(_)) => {
                                 if let Some(id) = registered_device_id {
                                     manager.unregister_connection(&id).await;
+                                    let _ = sqlx::query("UPDATE devices SET is_online = FALSE WHERE id = $1")
+                                        .bind(id)
+                                        .execute(&pool)
+                                        .await;
+                                }
+                                break;
+                            }
+                            Err(_) => {
+                                // 45s socket timeout: player stopped pinging (dead connection or dropped wifi/cell)
+                                tracing::warn!("Dead socket detected: device {:?} inactive for 45s, disconnecting", registered_device_id);
+                                if let Some(id) = registered_device_id {
+                                    manager.unregister_connection(&id).await;
+                                    let _ = sqlx::query("UPDATE devices SET is_online = FALSE WHERE id = $1")
+                                        .bind(id)
+                                        .execute(&pool)
+                                        .await;
                                 }
                                 break;
                             }
@@ -135,6 +160,10 @@ impl StreamServiceTrait for StreamServiceImpl {
                     else => {
                         if let Some(id) = registered_device_id {
                             manager.unregister_connection(&id).await;
+                            let _ = sqlx::query("UPDATE devices SET is_online = FALSE WHERE id = $1")
+                                .bind(id)
+                                .execute(&pool)
+                                .await;
                         }
                         break;
                     }

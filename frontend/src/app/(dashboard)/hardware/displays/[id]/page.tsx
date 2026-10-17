@@ -156,6 +156,16 @@ export default function ViewDisplayPage() {
             <span>Reboot</span>
           </button>
 
+          <button
+            onClick={() => handleSendCommand(ServerCommandType.COMMAND_CLEAR_CACHE, 'Bersihkan Cache')}
+            disabled={!!sendingCmd}
+            className="btn btn-secondary"
+            title="Hapus cache media lokal player dan unduh ulang"
+          >
+            <Trash2 size={14} />
+            <span>Clear Cache</span>
+          </button>
+
           <Link href={`/hardware/displays/${device.id}/edit`} className="btn btn-primary">
             <Edit size={14} />
             <span>Edit</span>

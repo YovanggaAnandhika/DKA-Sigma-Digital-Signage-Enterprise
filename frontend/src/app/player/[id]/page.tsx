@@ -75,6 +75,106 @@ export default function WebKioskPlayerPage() {
   const [weatherData, setWeatherData] = useState<{ temp: number; code: number } | null>(null);
   const assetMapRef = useRef<Map<string, ManifestAsset>>(new Map());
 
+  // Queue & Audio Ducking Engine
+  const [queueState, setQueueState] = useState({ ticket: 'A-001', counter: 'LOKET 01', isCalling: false });
+  const [isAudioDucked, setIsAudioDucked] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
+
+  // Web Audio 2-tone Chime (Ding-Dong: C5 523.25Hz -> E5 659.25Hz)
+  const playChime = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+      const now = ctx.currentTime;
+      // Tone 1: C5
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(523.25, now);
+      gain1.gain.setValueAtTime(0.35, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.6);
+
+      // Tone 2: E5
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(659.25, now + 0.32);
+      gain2.gain.setValueAtTime(0.35, now + 0.32);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 1.1);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.32);
+      osc2.stop(now + 1.1);
+    } catch (e) {
+      console.warn('AudioContext chime error:', e);
+    }
+  }, []);
+
+  // Announce Queue Ticket with Automatic Video Audio Ducking (100% -> 15% -> 100%)
+  const triggerQueueCall = useCallback((customTicket?: string, customCounter?: string) => {
+    const ticket = customTicket || queueState.ticket;
+    const counter = customCounter || queueState.counter;
+
+    setQueueState({ ticket, counter, isCalling: true });
+    setIsAudioDucked(true);
+
+    // Apply Audio Ducking: drop video volumes to 15%
+    videoRefs.current.forEach((video) => {
+      if (video) {
+        video.muted = false;
+        video.volume = 0.15;
+      }
+    });
+
+    playChime();
+
+    setTimeout(() => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const spelled = ticket.replace('-', ' ').split('').join(' ');
+        const utterance = new SpeechSynthesisUtterance(`Nomor antrian ${spelled}, menuju ${counter}`);
+        utterance.lang = 'id-ID';
+        utterance.rate = 0.88;
+        utterance.pitch = 1.0;
+
+        const restoreAudio = () => {
+          setQueueState((prev) => ({ ...prev, isCalling: false }));
+          setIsAudioDucked(false);
+          // Restore video volumes smoothly to 100%
+          videoRefs.current.forEach((video) => {
+            if (video) video.volume = 1.0;
+          });
+        };
+
+        utterance.onend = () => {
+          setTimeout(restoreAudio, 600);
+        };
+        utterance.onerror = () => {
+          restoreAudio();
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } else {
+        setTimeout(() => {
+          setQueueState((prev) => ({ ...prev, isCalling: false }));
+          setIsAudioDucked(false);
+          videoRefs.current.forEach((video) => {
+            if (video) video.volume = 1.0;
+          });
+        }, 3500);
+      }
+    }, 700);
+  }, [playChime, queueState.counter, queueState.ticket]);
+
   // Clock ticker
   useEffect(() => {
     const timer = setInterval(() => {
@@ -383,6 +483,79 @@ export default function WebKioskPlayerPage() {
                     Scan Promo Smartphone
                   </span>
                 </div>
+              ) : firstBlock?.queueId || layer.name.toLowerCase().includes('antrian') || layer.name.toLowerCase().includes('queue') ? (
+                <div style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 'clamp(12px, 3vh, 24px)',
+                  background: 'linear-gradient(145deg, #0f172a, #1e293b)',
+                  border: queueState.isCalling ? '3px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '16px',
+                  boxShadow: queueState.isCalling ? '0 0 40px rgba(16, 185, 129, 0.4)' : 'none',
+                  padding: '24px',
+                  textAlign: 'center',
+                  transition: 'all 0.3s ease',
+                }}>
+                  <div style={{
+                    fontSize: 'clamp(1rem, 2vw, 1.75rem)',
+                    fontWeight: 700,
+                    color: '#94a3b8',
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                  }}>
+                    Layar Antrian Baru
+                  </div>
+
+                  <div style={{
+                    fontSize: 'clamp(3.5rem, 10vw, 7.5rem)',
+                    fontWeight: 900,
+                    fontFamily: 'monospace',
+                    color: queueState.isCalling ? '#10b981' : '#38bdf8',
+                    letterSpacing: '0.04em',
+                    textShadow: queueState.isCalling ? '0 0 35px rgba(16, 185, 129, 0.8)' : '0 4px 15px rgba(0,0,0,0.5)',
+                    transition: 'all 0.3s ease',
+                  }}>
+                    {queueState.ticket}
+                  </div>
+
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#059669',
+                    color: '#ffffff',
+                    padding: '12px 36px',
+                    borderRadius: '9999px',
+                    fontSize: 'clamp(1.125rem, 2.5vw, 2rem)',
+                    fontWeight: 800,
+                    letterSpacing: '0.08em',
+                    boxShadow: '0 4px 20px rgba(5, 150, 105, 0.5)',
+                  }}>
+                    {queueState.counter}
+                  </div>
+
+                  {queueState.isCalling && (
+                    <div style={{
+                      fontSize: '0.875rem',
+                      fontWeight: 700,
+                      color: '#10b981',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                      padding: '6px 16px',
+                      borderRadius: '9999px',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                    }}>
+                      <span>📢</span>
+                      <span>SEDANG DIPANGGIL (AUDIO DUCKING 15%)</span>
+                    </div>
+                  )}
+                </div>
               ) : firstBlock?.tickerId || layer.name.toLowerCase().includes('ticker') || layer.name.toLowerCase().includes('berita') ? (
                 <div style={{
                   width: '100%',
@@ -409,10 +582,18 @@ export default function WebKioskPlayerPage() {
               ) : matchedAsset ? (
                 matchedAsset.url?.endsWith('.mp4') || matchedAsset.url?.endsWith('.webm') ? (
                   <video
+                    ref={(el) => {
+                      if (el) {
+                        videoRefs.current.set(layer.id, el);
+                        el.volume = isAudioDucked ? 0.15 : 1.0;
+                      } else {
+                        videoRefs.current.delete(layer.id);
+                      }
+                    }}
                     src={getMediaStreamUrl(matchedAsset.localFilename)}
                     autoPlay
                     loop
-                    muted
+                    muted={isMuted}
                     playsInline
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
@@ -473,27 +654,83 @@ export default function WebKioskPlayerPage() {
         </div>
       )}
 
-      {/* Floating Kiosk Status Badge */}
+      {/* Interactive Kiosk Simulator Controls Pill */}
       <div style={{
         position: 'fixed',
         bottom: '12px',
         right: '12px',
-        padding: '6px 12px',
+        padding: '6px 14px',
         borderRadius: '9999px',
-        backgroundColor: 'rgba(10, 13, 20, 0.75)',
-        backdropFilter: 'blur(8px)',
+        backgroundColor: 'rgba(10, 13, 20, 0.88)',
+        backdropFilter: 'blur(12px)',
         border: '1px solid rgba(255, 255, 255, 0.15)',
         color: '#94a3b8',
-        fontSize: '0.6875rem',
+        fontSize: '0.75rem',
         fontWeight: 600,
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
+        gap: '12px',
         zIndex: 99999,
-        pointerEvents: 'none',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
       }}>
-        <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-        <span>Kiosk Web Simulator • {canvasW}×{canvasH}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+          <span>Kiosk • {canvasW}×{canvasH}</span>
+        </div>
+
+        <div style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
+
+        {/* Simulasi Panggil Antrian Button */}
+        <button
+          onClick={() => triggerQueueCall('A-001', 'LOKET 01')}
+          disabled={queueState.isCalling}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            backgroundColor: queueState.isCalling ? 'rgba(16, 185, 129, 0.2)' : '#10b981',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '9999px',
+            padding: '4px 12px',
+            fontSize: '0.6875rem',
+            fontWeight: 700,
+            cursor: queueState.isCalling ? 'not-allowed' : 'pointer',
+          }}
+          title="Klik untuk mensimulasikan panggilan suara TTS antrian dan audio ducking video"
+        >
+          <span>📢</span>
+          <span>{queueState.isCalling ? 'Memanggil...' : 'Simulasi Panggil A-001'}</span>
+        </button>
+
+        <button
+          onClick={() => triggerQueueCall('A-002', 'LOKET 02')}
+          disabled={queueState.isCalling}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            color: '#ffffff',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '9999px',
+            padding: '4px 10px',
+            fontSize: '0.6875rem',
+            fontWeight: 700,
+            cursor: queueState.isCalling ? 'not-allowed' : 'pointer',
+          }}
+        >
+          <span>A-002</span>
+        </button>
+
+        {/* Audio Volume Status Indicator */}
+        <div style={{
+          fontSize: '0.6875rem',
+          color: isAudioDucked ? '#10b981' : '#94a3b8',
+          fontWeight: 700,
+        }}>
+          Vol: {isAudioDucked ? '15% (Ducked)' : '100%'}
+        </div>
       </div>
     </div>
   );
