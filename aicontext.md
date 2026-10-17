@@ -1,45 +1,80 @@
 # DKASigma Digital Signage Enterprise (SIGNAGE) - AI Context
 
-## Project Overview
-This repository contains the codebase for DKASigma Digital Signage Enterprise, a system designed to manage and broadcast media content to distributed Android-based digital signage players.
+## System Architecture
 
-## Tech Stack Overview
-- **Backend**: Rust, gRPC (tonic), PostgreSQL, sqlx (Database Migrations & Seeders).
-- **Frontend (Studio CMS)**: Next.js, React, TypeScript, SWC.
-- **Proxy**: Envoy (transcoding gRPC-Web from Frontend to gRPC for Backend).
-- **Hardware Player**: Android TV / Tablet (Kotlin, Media3/ExoPlayer), gRPC bi-directional stream.
+DKASigma Digital Signage Enterprise is a broadcast and display management system for distributed Android hardware players managed via a Next.js Studio CMS and backed by a high-performance Rust gRPC server.
 
-## Core Domain Models & Architecture
-- **IAM (Identity and Access Management)**: `UserEntity`, `RoleEntity`, `PermissionEntity`, `RoleGroupEntity`.
-- **Media & Content**: `MediaEntity` (Asset storage and tracking).
-- **Presentation**: `LayoutEntity` (Defines multi-zone layouts), `ZoneWithPlaylistDto` (Assigns content sequences to layout zones).
-- **Hardware**: `DeviceEntity` (Represents an Android Player in the field).
-- **Manifest Engine**: Generates a synchronized content schedule + visual layout + media hash list (`CompiledManifestDto`) that players sync offline.
-- **Canary Rollouts**: `CanaryGroupEntity` allows distributing manifests gradually.
+```
+┌─────────────────────────────────────────────────────────┐
+│               Frontend CMS (Next.js 14)                │
+│  - App Router: (auth), (dashboard), (api)               │
+│  - Studio Layout Canvas (react-rnd, Vanilla CSS HDR+)   │
+│  - IAM & Hardware Management Web UI                     │
+└──────────────────────────┬──────────────────────────────┘
+                           │ Route Handlers (@grpc/grpc-js)
+                           ▼
+┌─────────────────────────────────────────────────────────┐
+│            Backend Server (Rust + Tonic gRPC)           │
+│  - Port 50051 (HTTP/2 Cleartext / TLS)                  │
+│  - Modules: IAM, Studio, Hardware, Distribution         │
+│  - Manifest Compiler Engine & Dynamic Telemetry Stream  │
+└──────────────┬───────────────────────────┬──────────────┘
+               │ SQLx Pools                │ Bidirectional DisplayStream
+               ▼                           ▼
+┌───────────────────────────┐ ┌───────────────────────────┐
+│  PostgreSQL 17.1 Database │ │ Android Hardware Players  │
+│  - Schemas & Migrations   │ │ - Kotlin / Media3         │
+│  - Relational DB Storage  │ │ - Offline SHA-256 caching │
+└───────────────────────────┘ └───────────────────────────┘
+```
 
-## Essential Business Flows
+---
 
-1. **Boot & Pairing Flow**: 
-   - New device requests pairing via `RegisterDevice()`.
-   - Backend returns `pairing_code`. Device shows it.
-   - Admin maps the `pairing_code` via the Next.js CMS.
-   - Device polls and receives a persistent `device_token`.
+## Architectural God Nodes (Graphify Insights)
 
-2. **Offline-First Caching**:
-   - Player polls `ManifestService.GetActiveManifest()`.
-   - If changed, player downloads missing `required_assets` matching their `sha256_hash`.
-   - Playback transition only occurs *after* 100% of assets are locally validated.
+Extracted from Graphify knowledge graph analysis (`graphify-out/GRAPH_REPORT.md`):
 
-3. **Bi-directional Stream (`DisplayStream`)**:
-   - Player maintains an active gRPC HTTP/2 stream with the backend.
-   - **Upstream (Telemetry)**: Memory usage, disk space, currently playing media id.
-   - **Downstream (Commands)**: Server issues `COMMAND_RELOAD_MANIFEST`, `COMMAND_CAPTURE_SCREENSHOT`, `COMMAND_EMERGENCY_BROADCAST`, or `COMMAND_REBOOT_PLAYER`.
+1. **`getGrpcCredentials()`, `getGrpcHost()`, `getGrpcMetadata()`, `getTokenFromRequest()`**:
+   - Location: `frontend/src/lib/core/grpcClient.ts`
+   - Purpose: Universal communication nexus bridging Next.js server-side route handlers to backend gRPC services. Every API route handler relies on these 4 primitives.
+2. **`AppError` & `tonic::Status`**:
+   - Location: `backend/src/common/error.rs`
+   - Purpose: Unified backend error boundary. Translates domain database, authentication, and validation failures into standard gRPC error status codes.
+3. **`CompiledManifestDto` & `ManifestAssetDto`**:
+   - Location: `backend/src/modules/distribution/` / `backend/proto/distribution/`
+   - Purpose: The synchronized manifest format consumed by Android display clients to schedule zones, playlists, layouts, and assets offline.
 
-4. **Multi-Zone Rendering**:
-   - Android client renders multiple `Zone` elements using absolute coordinates (`x, y, width, height`) and `z_index` based on the compiled layout manifest.
+---
 
-## AI Instructions for Maintaining this Codebase
-- **Rust Backend**: Prioritize robust error handling via the custom `AppError` and gRPC `Status` objects. Ensure any new service implements the appropriate gRPC traits and handles IAM correctly (e.g., via `auth_interceptor()` and `require_permission()`).
-- **Frontend Next.js**: Ensure new gRPC-Web clients use `loginWithGrpc()` and `saveSession()` for authentication. Maintain UI consistency within the AppShell and Theme context.
-- **Protobufs**: Any API change must start in the `backend/proto/` files. Note the common types and separate files (e.g., `device.proto` & `device.common.proto`).
-- **Graphify**: Consult `graphify-out/GRAPH_REPORT.md` and related graph data if exploring architectural dependencies or isolated components.
+## Domain Modules & Structural Map
+
+| Domain | Backend Rust Module | Backend Proto | Frontend Route Handlers / Pages |
+|---|---|---|---|
+| **IAM** | `backend/src/modules/iam/` | `proto/iam/` | `src/app/(dashboard)/iam/`, `api/grpc/iam/` |
+| **Studio** | `backend/src/modules/studio/` | `proto/studio/` | `src/app/(dashboard)/studio/`, `api/grpc/studio/` |
+| **Hardware** | `backend/src/modules/hardware/` | `proto/hardware/` | `src/app/(dashboard)/hardware/`, `api/grpc/hardware/` |
+| **Distribution** | `backend/src/modules/distribution/` | `proto/distribution/` | `api/grpc/distribution/` |
+| **Common** | `backend/src/common/` | `proto/common/` | `src/lib/api/common/`, `src/lib/core/` |
+
+### Key Business Flows
+1. **Device Pairing Handshake:**
+   - Player calls `RegisterDevice()` with hardware specs → receives `pairing_code`.
+   - Admin enters `pairing_code` into Studio CMS → maps device to organization and sets active layout.
+   - Player polling resolves the handshake and secures a persistent JWT `device_token`.
+2. **Offline-First Manifest Distribution:**
+   - Player retrieves latest manifest (`GetActiveManifest`).
+   - Downloads required media files matching `sha256_hash` to local storage.
+   - Playback changes only after all assets verify cleanly against their hashes.
+3. **Display Telemetry Stream (`DisplayStream`):**
+   - Persistent HTTP/2 bi-directional gRPC stream between player and server.
+   - Upstream: Periodic heartbeat, CPU/memory stats, storage availability, active media ID.
+   - Downstream: Instant commands (`COMMAND_RELOAD_MANIFEST`, `COMMAND_CAPTURE_SCREENSHOT`, `COMMAND_EMERGENCY_BROADCAST`, `COMMAND_REBOOT_PLAYER`).
+
+---
+
+## Development Environment & Container Specs
+
+Managed via `compose.yml`:
+- **Frontend**: Bun-powered Next.js running on port 80. Hot reloads on local file change.
+- **Backend**: Rust container with `cargo watch` monitoring `src/`, `proto/`, `migrations/`, and `build.rs`. Port 50051.
+- **Database**: PostgreSQL 17.1 container on host port 54321 (`dka_signage` database).
