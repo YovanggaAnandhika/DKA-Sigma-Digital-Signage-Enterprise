@@ -1,0 +1,6 @@
+uploads/
+uploads/**
+target/
+target/**
+*.tmp
+.part_*

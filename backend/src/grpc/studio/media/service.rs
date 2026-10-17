@@ -233,12 +233,26 @@ impl MediaServiceTrait for MediaServiceImpl {
             return Err(Status::not_found("File sementara tidak ditemukan"));
         }
 
-        let full_bytes = tokio::fs::read(&temp_path)
+        let mut file = tokio::fs::File::open(&temp_path)
             .await
-            .map_err(|e| Status::internal(format!("Gagal membaca file lengkap: {}", e)))?;
+            .map_err(|e| Status::internal(format!("Gagal membuka file sementara: {}", e)))?;
 
         let mut hasher = Sha256::new();
-        hasher.update(&full_bytes);
+        let mut buffer = [0u8; 65536];
+        let mut file_size_bytes: i64 = 0;
+
+        loop {
+            let n = file.read(&mut buffer)
+                .await
+                .map_err(|e| Status::internal(format!("Gagal membaca chunk hash: {}", e)))?;
+            if n == 0 {
+                break;
+            }
+            hasher.update(&buffer[..n]);
+            file_size_bytes += n as i64;
+        }
+        drop(file);
+
         let sha256_hash = format!("{:x}", hasher.finalize());
 
         let clean_name = req.original_filename.replace(|c: char| !c.is_alphanumeric() && c != '.' && c != '_' && c != '-', "_");
@@ -249,7 +263,6 @@ impl MediaServiceTrait for MediaServiceImpl {
             .await
             .map_err(|e| Status::internal(format!("Gagal memindahkan file upload: {}", e)))?;
 
-        let file_size_bytes = full_bytes.len() as i64;
         let public_url = format!("/api/assets/{}", final_filename);
         let file_path = format!("/storage/media/{}", final_filename);
 

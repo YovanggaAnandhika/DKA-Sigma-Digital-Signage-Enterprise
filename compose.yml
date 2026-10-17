@@ -34,6 +34,7 @@ services:
     image: yovanggaanandhika/rust:latest
     container_name: dka_signage_backend
     restart: always
+    command: cargo watch -w src -w proto -w migrations -w Cargo.toml -w build.rs -i uploads -x run
     networks:
       - dka_signage_network
     ports:

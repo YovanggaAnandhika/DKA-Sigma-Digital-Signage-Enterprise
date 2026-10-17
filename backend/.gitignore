@@ -1,5 +1,10 @@
 /target
+target/
+target/**
 /uploads
+uploads/
+uploads/**
 *.db
 *.log
 .env
+.part_*
