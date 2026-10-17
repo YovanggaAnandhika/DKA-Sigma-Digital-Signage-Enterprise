@@ -6,6 +6,7 @@ export interface ScheduleEvent {
   startTime: string;
   endTime: string;
   daysOfWeek: string;
+  priority?: number;
   createdAt: string;
 }
 

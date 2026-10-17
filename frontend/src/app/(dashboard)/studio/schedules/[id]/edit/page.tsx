@@ -25,6 +25,7 @@ export default function EditSchedulePage() {
     startTime: '08:00:00',
     endTime: '18:00:00',
     daysOfWeek: '1,2,3,4,5,6,7',
+    priority: 0,
   });
   const [addingEvent, setAddingEvent] = useState(false);
 
@@ -80,8 +81,9 @@ export default function EditSchedulePage() {
         startTime: newEvent.startTime,
         endTime: newEvent.endTime,
         daysOfWeek: newEvent.daysOfWeek,
+        priority: Number(newEvent.priority) || 0,
       });
-      setNewEvent({ ...newEvent, layout_id: '' });
+      setNewEvent({ ...newEvent, layout_id: '', priority: 0 });
       fetchSchedule(); // Refresh
     } catch (err: any) {
       alert(err.message || 'Gagal menambah event');
@@ -183,7 +185,14 @@ export default function EditSchedulePage() {
               schedule.eventsList.map(ev => (
                 <div key={ev.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
                   <div>
-                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{ev.layoutName}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{ev.layoutName}</span>
+                      {typeof ev.priority === 'number' && ev.priority > 0 && (
+                        <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(234, 88, 12, 0.15)', color: '#ea580c' }}>
+                          Prioritas: {ev.priority}
+                        </span>
+                      )}
+                    </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                       {ev.startTime} - {ev.endTime} &bull; {daysLabel(ev.daysOfWeek)}
                     </div>
@@ -244,19 +253,35 @@ export default function EditSchedulePage() {
               </div>
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                Hari Tayang
-              </label>
-              <select
-                value={newEvent.daysOfWeek}
-                onChange={(e) => setNewEvent({ ...newEvent, daysOfWeek: e.target.value })}
-                className="form-select"
-              >
-                <option value="1,2,3,4,5,6,7">Setiap Hari (Senin-Minggu)</option>
-                <option value="1,2,3,4,5">Hari Kerja (Senin-Jumat)</option>
-                <option value="6,7">Akhir Pekan (Sabtu-Minggu)</option>
-              </select>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Hari Tayang
+                </label>
+                <select
+                  value={newEvent.daysOfWeek}
+                  onChange={(e) => setNewEvent({ ...newEvent, daysOfWeek: e.target.value })}
+                  className="form-select"
+                >
+                  <option value="1,2,3,4,5,6,7">Setiap Hari (Senin-Minggu)</option>
+                  <option value="1,2,3,4,5">Hari Kerja (Senin-Jumat)</option>
+                  <option value="6,7">Akhir Pekan (Sabtu-Minggu)</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Prioritas (Bobot)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={newEvent.priority}
+                  onChange={(e) => setNewEvent({ ...newEvent, priority: parseInt(e.target.value, 10) || 0 })}
+                  className="form-input"
+                  title="Nilai lebih tinggi mengabaikan event tumpang tindih lainnya"
+                />
+              </div>
             </div>
 
             <button type="submit" disabled={addingEvent || !newEvent.layout_id} className="btn btn-secondary" style={{ marginTop: '8px' }}>

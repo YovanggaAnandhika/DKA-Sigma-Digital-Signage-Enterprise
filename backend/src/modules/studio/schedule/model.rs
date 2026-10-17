@@ -20,6 +20,7 @@ pub struct ScheduleEventEntity {
     pub start_time: NaiveTime,
     pub end_time: NaiveTime,
     pub days_of_week: String,
+    pub priority: i32,
     pub created_at: DateTime<Utc>,
 }
 
@@ -49,4 +50,5 @@ pub struct AddScheduleEventDto {
     pub start_time: String,
     pub end_time: String,
     pub days_of_week: String,
+    pub priority: Option<i32>,
 }

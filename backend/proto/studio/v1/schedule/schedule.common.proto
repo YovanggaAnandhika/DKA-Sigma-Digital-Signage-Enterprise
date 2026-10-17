@@ -13,6 +13,7 @@ message ScheduleEvent {
   string end_time = 6;   // HH:MM:SS format
   string days_of_week = 7; // e.g., "1,2,3,4,5"
   string created_at = 8;
+  int32 priority = 9;
 }
 
 message Schedule {
@@ -63,6 +64,7 @@ message AddScheduleEventRequest {
   string start_time = 3;
   string end_time = 4;
   string days_of_week = 5;
+  optional int32 priority = 6;
 }
 
 message RemoveScheduleEventRequest {

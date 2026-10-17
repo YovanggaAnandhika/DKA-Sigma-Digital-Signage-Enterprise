@@ -42,6 +42,7 @@ impl ScheduleServiceImpl {
             start_time: entity.start_time.format("%H:%M:%S").to_string(),
             end_time: entity.end_time.format("%H:%M:%S").to_string(),
             days_of_week: entity.days_of_week,
+            priority: entity.priority,
             created_at: entity.created_at.to_rfc3339(),
         }
     }
@@ -158,6 +159,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
             start_time: req.start_time,
             end_time: req.end_time,
             days_of_week: req.days_of_week,
+            priority: req.priority,
         };
 
         let event = ScheduleService::add_schedule_event(&self.pool, dto)

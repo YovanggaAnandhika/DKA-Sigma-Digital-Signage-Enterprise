@@ -39,7 +39,7 @@ impl ScheduleRepository {
 
         if let Some(schedule) = schedule {
             let events = sqlx::query_as::<_, ScheduleEventEntity>(
-                "SELECT * FROM schedule_events WHERE schedule_id = $1 ORDER BY start_time ASC",
+                "SELECT * FROM schedule_events WHERE schedule_id = $1 ORDER BY priority DESC, start_time ASC",
             )
             .bind(id)
             .fetch_all(pool)
@@ -106,8 +106,8 @@ impl ScheduleRepository {
 
         let event = sqlx::query_as::<_, ScheduleEventEntity>(
             r#"
-            INSERT INTO schedule_events (schedule_id, layout_id, start_time, end_time, days_of_week)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO schedule_events (schedule_id, layout_id, start_time, end_time, days_of_week, priority)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
             "#,
         )
@@ -116,6 +116,7 @@ impl ScheduleRepository {
         .bind(start_time)
         .bind(end_time)
         .bind(dto.days_of_week)
+        .bind(dto.priority.unwrap_or(0))
         .fetch_one(pool)
         .await?;
 

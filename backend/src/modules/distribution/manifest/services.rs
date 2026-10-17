@@ -45,7 +45,7 @@ impl ManifestService {
             }
         }
 
-        // Schedule Evaluation (Latest Schedule overrides previous)
+        // Schedule Evaluation (Priority first, then latest recency)
         if let Some(schedule_id) = active_schedule_id {
             if let Ok(Some(schedule_with_events)) = ScheduleRepository::find_by_id(pool, schedule_id).await {
                 let tz: Tz = device.timezone.parse().unwrap_or(chrono_tz::UTC);
@@ -53,24 +53,28 @@ impl ManifestService {
                 let current_time = now_local.time();
                 let current_day = now_local.weekday().number_from_monday().to_string(); // 1 = Monday, 7 = Sunday
 
-                let mut latest_matched_event_created_at = None;
+                let mut best_match: Option<(i32, chrono::DateTime<Utc>, Uuid)> = None;
 
                 for event in schedule_with_events.events {
                     if event.start_time <= current_time && event.end_time >= current_time {
                         let days: Vec<&str> = event.days_of_week.split(',').collect();
                         if days.contains(&current_day.as_str()) {
-                            // Apply latest event logic
-                            if let Some(latest_ts) = latest_matched_event_created_at {
-                                if event.created_at > latest_ts {
-                                    active_layout_id = Some(event.layout_id);
-                                    latest_matched_event_created_at = Some(event.created_at);
+                            let is_better = match &best_match {
+                                None => true,
+                                Some((best_priority, best_created, _)) => {
+                                    event.priority > *best_priority
+                                        || (event.priority == *best_priority && event.created_at > *best_created)
                                 }
-                            } else {
-                                active_layout_id = Some(event.layout_id);
-                                latest_matched_event_created_at = Some(event.created_at);
+                            };
+                            if is_better {
+                                best_match = Some((event.priority, event.created_at, event.layout_id));
                             }
                         }
                     }
+                }
+
+                if let Some((_, _, layout_id)) = best_match {
+                    active_layout_id = Some(layout_id);
                 }
             }
         }
