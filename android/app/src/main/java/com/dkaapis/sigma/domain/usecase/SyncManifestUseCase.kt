@@ -26,11 +26,26 @@ class SyncManifestUseCase(
             return Result.success(cached)
         }
 
-        // Jika offline / gagal fetch, fallback ke manifest lokal yang sudah dicache
+        val err = remoteResult.exceptionOrNull()
+        val errMsg = err?.message ?: ""
+
+        // Jika device telah dihapus atau ditolak dari CMS (404/401/Device not found)
+        if (errMsg.contains("Device not found", ignoreCase = true) ||
+            errMsg.contains("404") ||
+            errMsg.contains("Unauthorized", ignoreCase = true) ||
+            errMsg.contains("401") ||
+            errMsg.contains("tidak ditemukan", ignoreCase = true)
+        ) {
+            deviceRepository.clearCredentials()
+            manifestRepository.clearManifestCache()
+            return Result.failure(IllegalStateException("Perangkat telah dihapus dari CMS. Silakan lakukan pairing ulang."))
+        }
+
+        // Jika offline murni / timeout, fallback ke manifest lokal yang sudah dicache
         return if (cached != null) {
             Result.success(cached)
         } else {
-            Result.failure(remoteResult.exceptionOrNull() ?: Exception("Gagal sinkronisasi manifest"))
+            Result.failure(err ?: Exception("Gagal sinkronisasi manifest"))
         }
     }
 }

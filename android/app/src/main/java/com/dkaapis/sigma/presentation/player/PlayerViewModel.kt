@@ -54,7 +54,12 @@ class PlayerViewModel(
                     _uiState.value = PlayerUiState.Error("Manifest kosong dari server")
                 }
             } else {
-                _uiState.value = PlayerUiState.Error(result.exceptionOrNull()?.message ?: "Gagal sinkronisasi")
+                val err = result.exceptionOrNull()
+                if (err is IllegalStateException || !registerAndPairUseCase.isAlreadyPaired()) {
+                    _uiState.value = PlayerUiState.NotPaired
+                } else {
+                    _uiState.value = PlayerUiState.Error(err?.message ?: "Gagal sinkronisasi")
+                }
             }
         }
     }
