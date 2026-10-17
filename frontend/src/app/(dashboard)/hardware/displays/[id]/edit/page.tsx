@@ -24,6 +24,9 @@ export default function EditDisplayPage() {
     displayGroupId: '',
     schedule_id: '',
     current_layout_id: '',
+    power_schedule_enabled: false,
+    sleep_time: '22:00:00',
+    wake_time: '06:00:00',
   });
 
   useEffect(() => {
@@ -48,6 +51,9 @@ export default function EditDisplayPage() {
           displayGroupId: data.displayGroupId || '',
           schedule_id: data.scheduleId || '',
           current_layout_id: data.currentLayoutId || '',
+          power_schedule_enabled: Boolean(data.powerScheduleEnabled),
+          sleep_time: data.sleepTime || '22:00:00',
+          wake_time: data.wakeTime || '06:00:00',
         });
       } catch (err: any) {
         alert(err.message || 'Gagal memuat display');
@@ -74,6 +80,9 @@ export default function EditDisplayPage() {
         display_group_id: formData.displayGroupId || undefined,
         schedule_id: formData.schedule_id || undefined,
         current_layout_id: formData.current_layout_id || undefined,
+        power_schedule_enabled: formData.power_schedule_enabled,
+        sleep_time: formData.power_schedule_enabled ? formData.sleep_time : undefined,
+        wake_time: formData.power_schedule_enabled ? formData.wake_time : undefined,
       });
       router.push(`/hardware/displays/${params.id}`);
     } catch (err: any) {
@@ -227,6 +236,66 @@ export default function EditDisplayPage() {
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Power Schedule / CEC Eco Mode */}
+          <div style={{ padding: '16px', borderRadius: '8px', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', marginTop: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: formData.power_schedule_enabled ? '14px' : '0' }}>
+              <div>
+                <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Otomasi Jadwal Daya Layar (CEC / Standby)
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Matikan tampilan pada jam malam dan hidupkan otomatis saat jam buka untuk menghemat energi.
+                </div>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={formData.power_schedule_enabled}
+                  onChange={(e) => setFormData({ ...formData, power_schedule_enabled: e.target.checked })}
+                  style={{ width: '18px', height: '18px', accentColor: 'var(--primary-500)', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: formData.power_schedule_enabled ? 'var(--accent-emerald)' : 'var(--text-muted)' }}>
+                  {formData.power_schedule_enabled ? 'Aktif' : 'Nonaktif'}
+                </span>
+              </label>
+            </div>
+
+            {formData.power_schedule_enabled && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    Jam Tidur / Standby (Sleep Time)
+                  </label>
+                  <input
+                    type="time"
+                    step="1"
+                    value={formData.sleep_time}
+                    onChange={(e) => setFormData({ ...formData, sleep_time: e.target.value })}
+                    className="form-input"
+                  />
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                    Layar masuk mode standby dan mematikan backlight.
+                  </span>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    Jam Bangun (Wake Time)
+                  </label>
+                  <input
+                    type="time"
+                    step="1"
+                    value={formData.wake_time}
+                    onChange={(e) => setFormData({ ...formData, wake_time: e.target.value })}
+                    className="form-input"
+                  />
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                    Layar kembali memutar layout signage normal.
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>

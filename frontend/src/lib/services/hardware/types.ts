@@ -23,6 +23,9 @@ export interface Device {
   displayGroupId: string;
   scheduleId: string;
   timezone: string;
+  sleepTime?: string;
+  wakeTime?: string;
+  powerScheduleEnabled?: boolean;
 }
 
 

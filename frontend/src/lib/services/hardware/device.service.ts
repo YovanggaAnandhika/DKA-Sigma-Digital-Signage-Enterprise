@@ -46,6 +46,9 @@ export async function updateDevice(id: string, data: {
   schedule_id?: string;
   current_layout_id?: string;
   canary_group_id?: string;
+  sleep_time?: string;
+  wake_time?: string;
+  power_schedule_enabled?: boolean;
 }): Promise<Device> {
   await invokeApi<any>('/api/grpc/hardware/device/UpdateDevice', { id, ...data });
   return getDevice(id);
@@ -121,6 +124,38 @@ export async function reportPlaybackBatch(
     items,
   });
 }
+
+export interface DeviceScreenshot {
+  id: string;
+  deviceId: string;
+  fileUrl: string;
+  capturedAt: string;
+}
+
+export async function listDeviceScreenshots(deviceId: string, limit?: number): Promise<DeviceScreenshot[]> {
+  const res = await invokeApi<any>('/api/grpc/distribution/stream/ListDeviceScreenshots', {
+    deviceId,
+    limit: limit || 10,
+  });
+  return res.itemsList || [];
+}
+
+export interface LatestTelemetry {
+  memoryPercent: number;
+  storageFreeBytes: number;
+  storageTotalBytes: number;
+  ipAddress: string;
+  currentPlayingMediaId: string;
+  reportedAt: string;
+}
+
+export async function getLatestDeviceTelemetry(deviceId: string): Promise<LatestTelemetry | null> {
+  const res = await invokeApi<any>('/api/grpc/distribution/stream/GetLatestDeviceTelemetry', {
+    deviceId,
+  });
+  return res.telemetry || null;
+}
+
 
 
 

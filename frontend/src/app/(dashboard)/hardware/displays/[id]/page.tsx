@@ -4,13 +4,18 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, Device } from '@/lib/services';
-import { pushDeviceCommand, ServerCommandType } from '@/lib/services/hardware/device.service';
-import { ArrowLeft, Edit, Tv, Radio, Clock, HardDrive, Cpu, RefreshCw, Zap, Play, Camera, RotateCcw, Trash2, CheckCircle2 } from 'lucide-react';
+import { pushDeviceCommand, ServerCommandType, PlaybackRecord, DeviceScreenshot, LatestTelemetry } from '@/lib/services/hardware/device.service';
+import { getMediaStreamUrl } from '@/lib/services/studio/media.service';
+import { ArrowLeft, Edit, Tv, Radio, Clock, HardDrive, Cpu, RefreshCw, Zap, Play, Camera, RotateCcw, Trash2, CheckCircle2, ShieldCheck, Download, Eye, Image as ImageIcon, X } from 'lucide-react';
 
 export default function ViewDisplayPage() {
   const params = useParams() as { id: string };
   const router = useRouter();
   const [device, setDevice] = useState<Device | null>(null);
+  const [playbackLogs, setPlaybackLogs] = useState<PlaybackRecord[]>([]);
+  const [screenshots, setScreenshots] = useState<DeviceScreenshot[]>([]);
+  const [telemetry, setTelemetry] = useState<LatestTelemetry | null>(null);
+  const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sendingCmd, setSendingCmd] = useState<string | null>(null);
   const [cmdFeedback, setCmdFeedback] = useState<string | null>(null);
@@ -21,6 +26,13 @@ export default function ViewDisplayPage() {
         setLoading(true);
         const data = await api.getDevice(params.id);
         setDevice(data);
+        
+        // Concurrent non-blocking telemetry, logs, screenshots
+        await Promise.allSettled([
+          api.listPlaybackLogs({ deviceId: params.id, limit: 15 }).then(res => setPlaybackLogs(res.items)),
+          api.listDeviceScreenshots(params.id, 10).then(res => setScreenshots(res)),
+          api.getLatestDeviceTelemetry(params.id).then(res => setTelemetry(res)),
+        ]);
       } catch (err: any) {
         alert(err.message || 'Gagal memuat detail display');
         router.push('/hardware/displays');
@@ -30,6 +42,27 @@ export default function ViewDisplayPage() {
     };
     fetchDevice();
   }, [params.id, router]);
+
+  const handleExportCSV = () => {
+    if (!playbackLogs.length) return alert('Tidak ada log penayangan untuk diekspor');
+    const headers = ['ID Rekaman', 'Nama Media', 'Layout', 'Waktu Tayang', 'Durasi (Detik)', 'Status Tayang'];
+    const rows = playbackLogs.map(l => [
+      l.id,
+      `"${(l.mediaName || l.mediaId || '').replace(/"/g, '""')}"`,
+      `"${(l.layoutName || l.layoutId || '').replace(/"/g, '""')}"`,
+      `"${new Date(l.startedAt).toLocaleString('id-ID')}"`,
+      l.durationSeconds,
+      l.isCompleted ? 'Selesai' : 'Sebagian'
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `proof_of_play_${device?.name || 'display'}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleSendCommand = async (cmdType: ServerCommandType, label: string) => {
     try {
@@ -223,6 +256,73 @@ export default function ViewDisplayPage() {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Proof-of-Play (Audit & Impression Logs) */}
+      <div className="card-elevated" style={{ padding: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ShieldCheck size={18} style={{ color: 'var(--accent-emerald)' }} />
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Bukti Tayang / Proof of Play
+            </h2>
+          </div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            {playbackLogs.length} rekaman terakhir
+          </span>
+        </div>
+
+        {playbackLogs.length === 0 ? (
+          <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', backgroundColor: 'var(--bg-surface)', borderRadius: '8px' }}>
+            Belum ada rekaman penayangan media dari player ini.
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
+                  <th style={{ padding: '8px 12px' }}>Media / Konten</th>
+                  <th style={{ padding: '8px 12px' }}>Layout</th>
+                  <th style={{ padding: '8px 12px' }}>Waktu Mulai Tayang</th>
+                  <th style={{ padding: '8px 12px' }}>Durasi</th>
+                  <th style={{ padding: '8px 12px' }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {playbackLogs.map((log) => (
+                  <tr key={log.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                    <td style={{ padding: '10px 12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {log.mediaName || log.mediaId || 'Media Item'}
+                    </td>
+                    <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>
+                      {log.layoutName || log.layoutId || '-'}
+                    </td>
+                    <td style={{ padding: '10px 12px', color: 'var(--text-muted)' }}>
+                      {new Date(log.startedAt).toLocaleString('id-ID')}
+                    </td>
+                    <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>
+                      {log.durationSeconds} detik
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                          fontSize: '0.6875rem',
+                          fontWeight: 700,
+                          backgroundColor: log.isCompleted ? 'rgba(16, 185, 129, 0.12)' : 'rgba(234, 88, 12, 0.12)',
+                          color: log.isCompleted ? 'var(--accent-emerald)' : 'var(--accent-amber)',
+                        }}
+                      >
+                        {log.isCompleted ? 'Selesai' : 'Sebagian'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

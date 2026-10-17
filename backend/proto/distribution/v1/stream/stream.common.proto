@@ -102,3 +102,37 @@ message ListPlaybackLogsResponse {
   int32 total_count = 2;
 }
 
+message DeviceScreenshotItem {
+  string id = 1;
+  string device_id = 2;
+  string file_url = 3;
+  string captured_at = 4;
+}
+
+message ListDeviceScreenshotsRequest {
+  string device_id = 1;
+  int32 limit = 2;
+}
+
+message ListDeviceScreenshotsResponse {
+  repeated DeviceScreenshotItem items = 1;
+}
+
+message LatestTelemetryData {
+  int32 memory_percent = 1;
+  int64 storage_free_bytes = 2;
+  int64 storage_total_bytes = 3;
+  string ip_address = 4;
+  string current_playing_media_id = 5;
+  string reported_at = 6;
+}
+
+message GetLatestDeviceTelemetryRequest {
+  string device_id = 1;
+}
+
+message GetLatestDeviceTelemetryResponse {
+  optional LatestTelemetryData telemetry = 1;
+}
+
+

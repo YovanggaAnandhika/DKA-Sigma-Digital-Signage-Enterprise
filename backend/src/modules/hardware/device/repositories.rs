@@ -195,6 +195,17 @@ impl DeviceRepository {
         id: Uuid,
         dto: UpdateDeviceDto,
     ) -> Result<DeviceEntity, sqlx::Error> {
+        let sleep_time = dto.sleep_time.as_ref().and_then(|s| {
+            chrono::NaiveTime::parse_from_str(s, "%H:%M:%S")
+                .ok()
+                .or_else(|| chrono::NaiveTime::parse_from_str(s, "%H:%M").ok())
+        });
+        let wake_time = dto.wake_time.as_ref().and_then(|s| {
+            chrono::NaiveTime::parse_from_str(s, "%H:%M:%S")
+                .ok()
+                .or_else(|| chrono::NaiveTime::parse_from_str(s, "%H:%M").ok())
+        });
+
         let device = sqlx::query_as::<_, DeviceEntity>(
             r#"
             UPDATE devices
@@ -208,6 +219,9 @@ impl DeviceRepository {
                 display_group_id = COALESCE($8, display_group_id),
                 schedule_id = COALESCE($9, schedule_id),
                 timezone = COALESCE($10, timezone),
+                sleep_time = COALESCE($11, sleep_time),
+                wake_time = COALESCE($12, wake_time),
+                power_schedule_enabled = COALESCE($13, power_schedule_enabled),
                 updated_at = NOW()
             WHERE id = $1
             RETURNING *
@@ -223,6 +237,9 @@ impl DeviceRepository {
         .bind(dto.display_group_id)
         .bind(dto.schedule_id)
         .bind(dto.timezone)
+        .bind(sleep_time)
+        .bind(wake_time)
+        .bind(dto.power_schedule_enabled)
         .fetch_one(pool)
         .await?;
 

@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
@@ -28,6 +28,9 @@ pub struct DeviceEntity {
     pub canary_group_id: Option<Uuid>,
     pub is_online: bool,
     pub last_heartbeat_at: Option<DateTime<Utc>>,
+    pub sleep_time: Option<NaiveTime>,
+    pub wake_time: Option<NaiveTime>,
+    pub power_schedule_enabled: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -92,4 +95,7 @@ pub struct UpdateDeviceDto {
     pub display_group_id: Option<Uuid>,
     pub schedule_id: Option<Uuid>,
     pub timezone: Option<String>,
+    pub sleep_time: Option<String>,
+    pub wake_time: Option<String>,
+    pub power_schedule_enabled: Option<bool>,
 }

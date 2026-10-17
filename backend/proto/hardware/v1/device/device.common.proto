@@ -35,6 +35,9 @@ message Device {
   string display_group_id = 22;
   string schedule_id = 23;
   string timezone = 24;
+  optional string sleep_time = 25;
+  optional string wake_time = 26;
+  bool power_schedule_enabled = 27;
 }
 
 message RegisterDeviceRequest {
@@ -110,6 +113,9 @@ message UpdateDeviceRequest {
   string display_group_id = 8;
   string schedule_id = 9;
   string timezone = 10;
+  optional string sleep_time = 11;
+  optional string wake_time = 12;
+  optional bool power_schedule_enabled = 13;
 }
 
 message DeleteDeviceRequest {

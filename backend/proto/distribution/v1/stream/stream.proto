@@ -16,4 +16,8 @@ service StreamService {
 
   // CMS query proof-of-play telemetry / audit logs
   rpc ListPlaybackLogs(ListPlaybackLogsRequest) returns (ListPlaybackLogsResponse);
+
+  // Fleet Observability: Screenshots & Realtime Telemetry
+  rpc ListDeviceScreenshots(ListDeviceScreenshotsRequest) returns (ListDeviceScreenshotsResponse);
+  rpc GetLatestDeviceTelemetry(GetLatestDeviceTelemetryRequest) returns (GetLatestDeviceTelemetryResponse);
 }

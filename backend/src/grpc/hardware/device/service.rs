@@ -52,6 +52,9 @@ impl DeviceServiceImpl {
             display_group_id: dev.display_group_id.map(|id| id.to_string()).unwrap_or_default(),
             schedule_id: dev.schedule_id.map(|id| id.to_string()).unwrap_or_default(),
             timezone: dev.timezone,
+            sleep_time: dev.sleep_time.map(|t| t.format("%H:%M:%S").to_string()),
+            wake_time: dev.wake_time.map(|t| t.format("%H:%M:%S").to_string()),
+            power_schedule_enabled: dev.power_schedule_enabled,
         }
     }
 }
@@ -253,6 +256,9 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             display_group_id,
             schedule_id,
             timezone: if req.timezone.is_empty() { None } else { Some(req.timezone) },
+            sleep_time: req.sleep_time,
+            wake_time: req.wake_time,
+            power_schedule_enabled: req.power_schedule_enabled,
         };
 
         let dev = DeviceService::update_device(&self.pool, device_id, dto)

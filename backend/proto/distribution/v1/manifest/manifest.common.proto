@@ -24,6 +24,13 @@ message CompiledManifest {
   repeated ManifestAsset required_assets = 6; // all assets player must download before switching
   int64 total_download_size_bytes = 7;
   bool is_canary = 8;
+  optional DevicePowerSchedule power_schedule = 9;
+}
+
+message DevicePowerSchedule {
+  bool enabled = 1;
+  string sleep_time = 2; // e.g. "22:00:00"
+  string wake_time = 3;  // e.g. "06:00:00"
 }
 
 message GetActiveManifestRequest {

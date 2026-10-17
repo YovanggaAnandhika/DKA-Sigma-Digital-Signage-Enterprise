@@ -1,5 +1,5 @@
 use super::model::{
-    CompiledManifestDto, ManifestAssetDto, ManifestSyncResponseDto};
+    CompiledManifestDto, DevicePowerScheduleDto, ManifestAssetDto, ManifestSyncResponseDto};
 use crate::modules::studio::layer::layer::model::LayerWithBlocksDto;
 use super::repositories::ManifestRepository;
 use crate::common::AppError;
@@ -192,6 +192,19 @@ impl ManifestService {
             }
         }
 
+        let power_schedule = if device.power_schedule_enabled {
+            match (device.sleep_time, device.wake_time) {
+                (Some(s), Some(w)) => Some(DevicePowerScheduleDto {
+                    enabled: true,
+                    sleep_time: s.format("%H:%M:%S").to_string(),
+                    wake_time: w.format("%H:%M:%S").to_string(),
+                }),
+                _ => None,
+            }
+        } else {
+            None
+        };
+
         let compiled = CompiledManifestDto {
             manifest_id: Uuid::new_v4(),
             device_id,
@@ -208,6 +221,7 @@ impl ManifestService {
             required_assets: assets_vec,
             total_download_size_bytes: total_size,
             is_canary: canary_res.is_in_canary,
+            power_schedule,
         };
 
         Ok(ManifestSyncResponseDto {

@@ -44,6 +44,8 @@ export const api = {
   pushDeviceCommand: hardwareModule.pushDeviceCommand,
   listPlaybackLogs: hardwareModule.listPlaybackLogs,
   reportPlaybackBatch: hardwareModule.reportPlaybackBatch,
+  listDeviceScreenshots: hardwareModule.listDeviceScreenshots,
+  getLatestDeviceTelemetry: hardwareModule.getLatestDeviceTelemetry,
 
   // Hardware - Display Groups
   getDisplayGroups: hardwareModule.getDisplayGroups,

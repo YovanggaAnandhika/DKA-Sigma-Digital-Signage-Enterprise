@@ -94,6 +94,14 @@ impl ManifestServiceImpl {
             }
         }).collect();
 
+        let power_schedule = dto.power_schedule.map(|ps| {
+            crate::grpc::proto::distribution::v1::manifest::DevicePowerSchedule {
+                enabled: ps.enabled,
+                sleep_time: ps.sleep_time,
+                wake_time: ps.wake_time,
+            }
+        });
+
         CompiledManifest {
             manifest_id: dto.manifest_id.to_string(),
             device_id: dto.device_id.to_string(),
@@ -103,6 +111,7 @@ impl ManifestServiceImpl {
             required_assets,
             total_download_size_bytes: dto.total_download_size_bytes,
             is_canary: dto.is_canary,
+            power_schedule,
         }
     }
 }

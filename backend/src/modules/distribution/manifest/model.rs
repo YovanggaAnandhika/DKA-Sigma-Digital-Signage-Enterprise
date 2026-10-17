@@ -55,6 +55,14 @@ pub struct CompiledManifestDto {
     pub required_assets: Vec<ManifestAssetDto>,
     pub total_download_size_bytes: i64,
     pub is_canary: bool,
+    pub power_schedule: Option<DevicePowerScheduleDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevicePowerScheduleDto {
+    pub enabled: bool,
+    pub sleep_time: String,
+    pub wake_time: String,
 }
 
 #[derive(Debug, Serialize)]

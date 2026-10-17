@@ -10,6 +10,8 @@ use crate::grpc::proto::distribution::v1::stream::{
     StreamClientMessage, StreamServerMessage, PushCommandRequest, PushCommandResponse,
     ServerCommandType, ReportPlaybackBatchRequest, ReportPlaybackBatchResponse,
     ListPlaybackLogsRequest, ListPlaybackLogsResponse, PlaybackRecord,
+    ListDeviceScreenshotsRequest, ListDeviceScreenshotsResponse, DeviceScreenshotItem,
+    GetLatestDeviceTelemetryRequest, GetLatestDeviceTelemetryResponse, LatestTelemetryData,
 };
 
 pub struct StreamServiceImpl {
@@ -297,5 +299,95 @@ impl StreamServiceTrait for StreamServiceImpl {
             items,
             total_count,
         }))
+    }
+
+    async fn list_device_screenshots(
+        &self,
+        request: Request<ListDeviceScreenshotsRequest>,
+    ) -> Result<Response<ListDeviceScreenshotsResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")
+            .or_else(|_| crate::grpc::middleware::require_permission(&request, "can_manage_distribution"))?;
+        let req = request.into_inner();
+        let device_id = Uuid::parse_str(&req.device_id)
+            .map_err(|_| Status::invalid_argument("ID Device tidak valid"))?;
+        let limit = if req.limit <= 0 || req.limit > 50 { 10 } else { req.limit as i64 };
+
+        #[derive(sqlx::FromRow)]
+        struct ScreenshotRow {
+            id: Uuid,
+            device_id: Uuid,
+            file_url: String,
+            captured_at: chrono::DateTime<chrono::Utc>,
+        }
+
+        let rows = sqlx::query_as::<_, ScreenshotRow>(
+            r#"
+            SELECT id, device_id, file_url, captured_at
+            FROM device_screenshots
+            WHERE device_id = $1
+            ORDER BY captured_at DESC
+            LIMIT $2
+            "#,
+        )
+        .bind(device_id)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let items = rows.into_iter().map(|r| DeviceScreenshotItem {
+            id: r.id.to_string(),
+            device_id: r.device_id.to_string(),
+            file_url: r.file_url,
+            captured_at: r.captured_at.to_rfc3339(),
+        }).collect();
+
+        Ok(Response::new(ListDeviceScreenshotsResponse { items }))
+    }
+
+    async fn get_latest_device_telemetry(
+        &self,
+        request: Request<GetLatestDeviceTelemetryRequest>,
+    ) -> Result<Response<GetLatestDeviceTelemetryResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")
+            .or_else(|_| crate::grpc::middleware::require_permission(&request, "can_manage_distribution"))?;
+        let req = request.into_inner();
+        let device_id = Uuid::parse_str(&req.device_id)
+            .map_err(|_| Status::invalid_argument("ID Device tidak valid"))?;
+
+        #[derive(sqlx::FromRow)]
+        struct TelemetryRow {
+            memory_percent: Option<i32>,
+            storage_free_bytes: Option<i64>,
+            storage_total_bytes: Option<i64>,
+            ip_address: Option<String>,
+            current_playing_media_id: Option<Uuid>,
+            created_at: chrono::DateTime<chrono::Utc>,
+        }
+
+        let row = sqlx::query_as::<_, TelemetryRow>(
+            r#"
+            SELECT memory_percent, storage_free_bytes, storage_total_bytes, ip_address, current_playing_media_id, created_at
+            FROM device_telemetry
+            WHERE device_id = $1
+            ORDER BY created_at DESC
+            LIMIT 1
+            "#,
+        )
+        .bind(device_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let telemetry = row.map(|r| LatestTelemetryData {
+            memory_percent: r.memory_percent.unwrap_or(0),
+            storage_free_bytes: r.storage_free_bytes.unwrap_or(0),
+            storage_total_bytes: r.storage_total_bytes.unwrap_or(0),
+            ip_address: r.ip_address.unwrap_or_default(),
+            current_playing_media_id: r.current_playing_media_id.map(|id| id.to_string()).unwrap_or_default(),
+            reported_at: r.created_at.to_rfc3339(),
+        });
+
+        Ok(Response::new(GetLatestDeviceTelemetryResponse { telemetry }))
     }
 }
