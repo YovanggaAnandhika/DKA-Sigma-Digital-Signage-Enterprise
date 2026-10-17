@@ -7,6 +7,7 @@ import { useLayoutEditor } from '../../context/LayoutEditorContext';
 import SynchronizedVideo from './SynchronizedVideo';
 import { Layer } from '../../context/LayoutStateContext';
 import { calculateSnap } from '../../utils/snapHelper';
+import { injectQueueVariables, createDefaultQueueLayoutItems } from '@/app/(dashboard)/studio/components/ticket/types';
 
 const Marquee = 'marquee' as any;
 
@@ -434,48 +435,130 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                 style={{
                   position: 'absolute',
                   inset: 0,
+                  width: '100%',
+                  height: '100%',
                   backgroundColor: activeBlock.widgetData?.backgroundColor || '#0f172a',
-                  color: activeBlock.widgetData?.themePreset === 'clean-light' || activeBlock.widgetData?.themePreset === 'medical-green' ? '#0f172a' : '#ffffff',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '12px',
+                  backgroundImage: activeBlock.widgetData?.backgroundImageUrl ? `url(${activeBlock.widgetData.backgroundImageUrl})` : undefined,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
                   overflow: 'hidden',
+                  containerType: 'size',
                 }}
               >
-                <div style={{ fontSize: '0.6875rem', fontWeight: 800, color: activeBlock.widgetData?.themePreset === 'medical-green' ? '#059669' : '#0284c7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {activeBlock.widgetData?.name || 'Nomor Antrian'}
-                </div>
-                <div style={{ fontSize: '2.5rem', fontWeight: 900, color: activeBlock.widgetData?.themePreset === 'medical-green' ? '#059669' : activeBlock.widgetData?.themePreset === 'solid-dark' ? '#38bdf8' : '#0284c7', letterSpacing: '0.05em', margin: '4px 0' }}>
-                  {activeBlock.widgetData?.currentNumber || 'A-001'}
-                </div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800, backgroundColor: activeBlock.widgetData?.themePreset === 'medical-green' ? '#0d9488' : '#f59e0b', color: '#ffffff', padding: '3px 12px', borderRadius: '6px' }}>
-                  {activeBlock.widgetData?.currentCounter || 'LOKET 01'}
-                </div>
-                {activeBlock.widgetData?.marqueeText && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      padding: '4px 8px',
-                      backgroundColor: activeBlock.widgetData?.themePreset === 'solid-dark' ? '#020617' : '#0f172a',
-                      overflow: 'hidden',
-                      fontSize: '0.6875rem',
-                      color: '#ffffff',
-                    }}
-                  >
-                    <Marquee scrollamount={5}>
-                      {activeBlock.widgetData.marqueeText
-                        .replaceAll('$queue_number$', activeBlock.widgetData?.currentNumber || 'A-001')
-                        .replaceAll('$queue_counter$', activeBlock.widgetData?.currentCounter || 'LOKET 01')
-                        .replaceAll('$queue_name$', activeBlock.widgetData?.name || 'Antrian')
-                        .replaceAll('$queue_prefix$', activeBlock.widgetData?.prefix || 'A')}
-                    </Marquee>
-                  </div>
-                )}
+                {(() => {
+                  const qData = activeBlock.widgetData || {};
+                  const canvasW = qData.canvasWidth || 1920;
+                  const canvasH = qData.canvasHeight || 1080;
+                  const rawItems = (qData.items && qData.items.length > 0)
+                    ? qData.items
+                    : createDefaultQueueLayoutItems(qData.themePreset || 'clean-light');
+
+                  return rawItems
+                    .filter((it: any) => it.isVisible !== false)
+                    .sort((a: any, b: any) => (a.zIndex || 1) - (b.zIndex || 1))
+                    .map((item: any) => {
+                      const interpolated = injectQueueVariables(item.templateContent || '', {
+                        queueNumber: qData.currentNumber || 'A-001',
+                        queueCounter: qData.currentCounter || 'LOKET 01',
+                        queuePrefix: qData.prefix || 'A',
+                        queueName: qData.name || 'Layar Antrian',
+                      });
+
+                      const leftPct = (item.x / canvasW) * 100;
+                      const topPct = (item.y / canvasH) * 100;
+                      const widthPct = (item.width / canvasW) * 100;
+                      const heightPct = (item.height / canvasH) * 100;
+                      const fontSizeCqw = `calc(${item.fontSize || 24} / ${canvasW} * 100cqw)`;
+                      const borderRadiusCqw = item.config?.borderRadius
+                        ? `calc(${item.config.borderRadius} / ${canvasW} * 100cqw)`
+                        : undefined;
+
+                      const hasBg = item.backgroundColor && item.backgroundColor !== 'transparent';
+
+                      if (item.itemType === 'marquee') {
+                        return (
+                          <div
+                            key={item.id}
+                            style={{
+                              position: 'absolute',
+                              left: `${leftPct}%`,
+                              top: `${topPct}%`,
+                              width: `${widthPct}%`,
+                              height: `${heightPct}%`,
+                              backgroundColor: hasBg ? item.backgroundColor : 'transparent',
+                              borderRadius: borderRadiusCqw,
+                              border: hasBg && item.config?.borderWidth
+                                ? `${item.config.borderWidth}px solid ${item.config.borderColor || 'rgba(0,0,0,0.1)'}`
+                                : 'none',
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '0 calc(12 / 1920 * 100cqw)',
+                              overflow: 'hidden',
+                              zIndex: item.zIndex || 1,
+                            }}
+                          >
+                            <Marquee
+                              behavior="scroll"
+                              direction={item.config?.direction || 'left'}
+                              scrollamount={item.config?.speed === 'fast' ? 12 : item.config?.speed === 'slow' ? 4 : 8}
+                              style={{
+                                width: '100%',
+                                color: item.textColor || '#ffffff',
+                                fontSize: fontSizeCqw,
+                                fontWeight: item.fontWeight || 'bold',
+                              }}
+                            >
+                              {interpolated}
+                            </Marquee>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={item.id}
+                          style={{
+                            position: 'absolute',
+                            left: `${leftPct}%`,
+                            top: `${topPct}%`,
+                            width: `${widthPct}%`,
+                            height: `${heightPct}%`,
+                            backgroundColor: hasBg ? item.backgroundColor : 'transparent',
+                            color: item.textColor || '#ffffff',
+                            borderRadius: borderRadiusCqw,
+                            border: hasBg && item.config?.borderWidth
+                              ? `${item.config.borderWidth}px solid ${item.config.borderColor || 'rgba(0,0,0,0.1)'}`
+                              : 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent:
+                              item.textAlign === 'center'
+                                ? 'center'
+                                : item.textAlign === 'right'
+                                ? 'flex-end'
+                                : 'flex-start',
+                            padding: hasBg ? '0 calc(12 / 1920 * 100cqw)' : 0,
+                            overflow: 'hidden',
+                            zIndex: item.zIndex || 1,
+                            userSelect: 'none',
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: fontSizeCqw,
+                              fontWeight: item.fontWeight || 'bold',
+                              textAlign: item.textAlign || 'center',
+                              width: '100%',
+                              lineHeight: 1.1,
+                              letterSpacing: item.itemType === 'ticket_number' ? '0.02em' : 'normal',
+                            }}
+                          >
+                            {interpolated}
+                          </span>
+                        </div>
+                      );
+                    });
+                })()}
               </div>
             ) : activeBlock.widgetType === 'album' && (activeBlock.widgetData?.photos?.length || 0) > 0 ? (
               <img

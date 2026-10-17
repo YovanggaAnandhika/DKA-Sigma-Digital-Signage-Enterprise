@@ -378,7 +378,7 @@ export function QueueEditorProvider({
           backgroundColor: payload.backgroundColor,
           backgroundImageUrl: payload.backgroundImageUrl,
           themePreset: payload.themePreset,
-          autoRecallEnabled: payload.autoRecallEnabled,
+          autoRecallEnabled: !!payload.autoRecallEnabled,
           items: payload.items,
           counters: payload.counters,
         }).catch((err) => console.warn('Sync backend queue create failed:', err));
@@ -392,7 +392,7 @@ export function QueueEditorProvider({
           backgroundColor: payload.backgroundColor,
           backgroundImageUrl: payload.backgroundImageUrl,
           themePreset: payload.themePreset,
-          autoRecallEnabled: payload.autoRecallEnabled,
+          autoRecallEnabled: !!payload.autoRecallEnabled,
           items: payload.items,
           counters: payload.counters,
         }).catch((err) => console.warn('Sync backend queue update failed:', err));
