@@ -24,6 +24,7 @@ interface LayoutStateContextType {
   handleAddLayer: () => void;
   handleDeleteLayer: (layerId: string) => void;
   updateSelectedLayer: (field: keyof Layer, value: any) => void;
+  reorderLayers: (sourceId: string, targetId: string) => void;
 }
 
 const LayoutStateContext = createContext<LayoutStateContextType | undefined>(undefined);
@@ -93,6 +94,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
           };
         });
 
+        sanitizedLayers.sort((a: any, b: any) => (Number(b.zIndex) || 0) - (Number(a.zIndex) || 0));
         setLayers(sanitizedLayers);
         if (sanitizedLayers.length > 0) {
           setSelectedLayerId(sanitizedLayers[0].id);
@@ -313,6 +315,26 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const reorderLayers = (sourceId: string, targetId: string) => {
+    if (!sourceId || !targetId || sourceId === targetId) return;
+    setLayers((prev) => {
+      const sorted = [...prev].sort((a, b) => (Number(b.zIndex) || 0) - (Number(a.zIndex) || 0));
+      const sourceIdx = sorted.findIndex((l) => l.id === sourceId);
+      const targetIdx = sorted.findIndex((l) => l.id === targetId);
+      if (sourceIdx === -1 || targetIdx === -1) return prev;
+
+      const updated = [...sorted];
+      const [moved] = updated.splice(sourceIdx, 1);
+      updated.splice(targetIdx, 0, moved);
+
+      const total = updated.length;
+      return updated.map((layer, index) => ({
+        ...layer,
+        zIndex: total - index,
+      }));
+    });
+  };
+
   return (
     <LayoutStateContext.Provider
       value={{
@@ -329,6 +351,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         handleAddLayer,
         handleDeleteLayer,
         updateSelectedLayer,
+        reorderLayers,
       }}
     >
       {children}

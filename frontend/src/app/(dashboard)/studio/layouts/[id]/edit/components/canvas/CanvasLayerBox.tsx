@@ -38,6 +38,7 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
   const color = zColors[idx % zColors.length];
   const isSelected = z.id === selectedLayerId;
   const active = isLayerActive(z, playheadPosition);
+  const [isHovered, setIsHovered] = React.useState(false);
 
   // Find active block
   const currentSec = playheadPosition / (pxPerSecond || 20);
@@ -168,6 +169,8 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
         setSelectedBlockId(null);
         setInspectorTarget('layer');
       }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       onMouseDown={() => {
         setSelectedLayerId(z.id);
         setSelectedBlockId(null);
@@ -208,15 +211,25 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
         userSelect: 'none',
       }}
       resizeHandleStyles={{
-        bottomRight: { display: isSelected ? 'block' : 'none', width: 10, height: 10, backgroundColor: '#fff', border: `2px solid ${color}`, right: -5, bottom: -5, borderRadius: '50%' },
-        bottomLeft: { display: isSelected ? 'block' : 'none', width: 10, height: 10, backgroundColor: '#fff', border: `2px solid ${color}`, left: -5, bottom: -5, borderRadius: '50%' },
-        topRight: { display: isSelected ? 'block' : 'none', width: 10, height: 10, backgroundColor: '#fff', border: `2px solid ${color}`, right: -5, top: -5, borderRadius: '50%' },
-        topLeft: { display: isSelected ? 'block' : 'none', width: 10, height: 10, backgroundColor: '#fff', border: `2px solid ${color}`, left: -5, top: -5, borderRadius: '50%' },
+        bottomRight: { display: isSelected ? 'block' : 'none', width: 10, height: 10, backgroundColor: '#fff', border: `2px solid ${color}`, right: -5, bottom: -5, borderRadius: '50%', zIndex: 12 },
+        bottomLeft: { display: isSelected ? 'block' : 'none', width: 10, height: 10, backgroundColor: '#fff', border: `2px solid ${color}`, left: -5, bottom: -5, borderRadius: '50%', zIndex: 12 },
+        topRight: { display: isSelected ? 'block' : 'none', width: 10, height: 10, backgroundColor: '#fff', border: `2px solid ${color}`, right: -5, top: -5, borderRadius: '50%', zIndex: 12 },
+        topLeft: { display: isSelected ? 'block' : 'none', width: 10, height: 10, backgroundColor: '#fff', border: `2px solid ${color}`, left: -5, top: -5, borderRadius: '50%', zIndex: 12 },
+        top: { display: isSelected ? 'flex' : 'none', height: 10, top: -5, cursor: 'ns-resize', zIndex: 11, alignItems: 'center', justifyContent: 'center' },
+        bottom: { display: isSelected ? 'flex' : 'none', height: 10, bottom: -5, cursor: 'ns-resize', zIndex: 11, alignItems: 'center', justifyContent: 'center' },
+        left: { display: isSelected ? 'flex' : 'none', width: 10, left: -5, cursor: 'ew-resize', zIndex: 11, alignItems: 'center', justifyContent: 'center' },
+        right: { display: isSelected ? 'flex' : 'none', width: 10, right: -5, cursor: 'ew-resize', zIndex: 11, alignItems: 'center', justifyContent: 'center' },
       }}
-      enableResizing={{
-        top: false, right: false, bottom: false, left: false,
+      resizeHandleComponent={isSelected ? {
+        top: <div style={{ width: 22, height: 4, backgroundColor: '#ffffff', border: `1px solid ${color}`, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.5)' }} />,
+        bottom: <div style={{ width: 22, height: 4, backgroundColor: '#ffffff', border: `1px solid ${color}`, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.5)' }} />,
+        left: <div style={{ width: 4, height: 22, backgroundColor: '#ffffff', border: `1px solid ${color}`, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.5)' }} />,
+        right: <div style={{ width: 4, height: 22, backgroundColor: '#ffffff', border: `1px solid ${color}`, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.5)' }} />,
+      } : undefined}
+      enableResizing={isSelected ? {
+        top: true, right: true, bottom: true, left: true,
         topRight: true, bottomRight: true, bottomLeft: true, topLeft: true
-      }}
+      } : false}
       disableDragging={false}
     >
       {/* Inner container to clip media correctly while keeping handles visible outside */}
@@ -450,7 +463,7 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
         {/* Non-intrusive metadata rendering */}
         {(activeMedia?.publicUrl || activeBlock?.widgetType) ? (
           <>
-            {/* Unobtrusive minimal corner tag */}
+            {/* Minimal corner tag: only visible when hovered or selected */}
             <div
               style={{
                 position: 'absolute',
@@ -460,13 +473,17 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
-                backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                backgroundColor: 'rgba(15, 23, 42, 0.85)',
                 backdropFilter: 'blur(4px)',
                 padding: '2px 6px',
                 borderRadius: '4px',
                 border: '1px solid rgba(255, 255, 255, 0.18)',
                 boxShadow: '0 1px 4px rgba(0,0,0,0.5)',
                 maxWidth: '85%',
+                opacity: (isHovered || isSelected) ? 1 : 0,
+                transform: (isHovered || isSelected) ? 'translateY(0)' : 'translateY(-2px)',
+                transition: 'opacity 0.15s ease, transform 0.15s ease',
+                pointerEvents: (isHovered || isSelected) ? 'auto' : 'none',
               }}
             >
               <span
@@ -562,6 +579,8 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
                 justifyContent: 'center',
                 padding: '6px',
                 textAlign: 'center',
+                opacity: (isHovered || isSelected) ? 1 : 0.45,
+                transition: 'opacity 0.15s ease',
               }}
             >
               <div
