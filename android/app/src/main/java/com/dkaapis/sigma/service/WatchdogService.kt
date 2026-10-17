@@ -115,18 +115,26 @@ class WatchdogService : Service() {
         private var isPlaybackActive = false
 
         fun pingFromPlayer(context: Context) {
-            val intent = Intent(context, WatchdogService::class.java).apply {
-                putExtra(EXTRA_PLAYER_PID, Process.myPid())
+            try {
+                val intent = Intent(context, WatchdogService::class.java).apply {
+                    putExtra(EXTRA_PLAYER_PID, Process.myPid())
+                }
+                context.startService(intent)
+            } catch (e: Throwable) {
+                Log.w(TAG, "Gagal ping watchdog: ${e.message}")
             }
-            context.startService(intent)
         }
 
         fun setPlaybackActive(context: Context, active: Boolean) {
-            val intent = Intent(context, WatchdogService::class.java).apply {
-                putExtra(EXTRA_PLAYER_PID, Process.myPid())
-                putExtra(EXTRA_PLAYBACK_ACTIVE, active)
+            try {
+                val intent = Intent(context, WatchdogService::class.java).apply {
+                    putExtra(EXTRA_PLAYER_PID, Process.myPid())
+                    putExtra(EXTRA_PLAYBACK_ACTIVE, active)
+                }
+                context.startService(intent)
+            } catch (e: Throwable) {
+                Log.w(TAG, "Gagal setPlaybackActive watchdog: ${e.message}")
             }
-            context.startService(intent)
         }
     }
 }

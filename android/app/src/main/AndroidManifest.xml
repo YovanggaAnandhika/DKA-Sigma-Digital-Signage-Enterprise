@@ -54,11 +54,9 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
-        <!-- ══ PROCESS 2: Isolated Companion Watchdog Process ══ -->
-        <!-- Catches ANR / decoder deadlock and revives player within 1s -->
+        <!-- ══ Watchdog Service (Anti-Freeze & KeepAlive) ══ -->
         <service
             android:name="com.dkaapis.sigma.service.WatchdogService"
-            android:process=":watchdog"
             android:exported="false" />
 
         <!-- Kiosk Autostart on TV Box boot -->
