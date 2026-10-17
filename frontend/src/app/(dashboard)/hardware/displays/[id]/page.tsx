@@ -19,29 +19,57 @@ export default function ViewDisplayPage() {
   const [loading, setLoading] = useState(true);
   const [sendingCmd, setSendingCmd] = useState<string | null>(null);
   const [cmdFeedback, setCmdFeedback] = useState<string | null>(null);
+  const [approving, setApproving] = useState(false);
+
+  const fetchDevice = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getDevice(params.id);
+      setDevice(data);
+      
+      // Concurrent non-blocking telemetry, logs, screenshots
+      await Promise.allSettled([
+        api.listPlaybackLogs({ deviceId: params.id, limit: 15 }).then(res => setPlaybackLogs(res.items)),
+        api.listDeviceScreenshots(params.id, 10).then(res => setScreenshots(res)),
+        api.getLatestDeviceTelemetry(params.id).then(res => setTelemetry(res)),
+      ]);
+    } catch (err: any) {
+      alert(err.message || 'Gagal memuat detail display');
+      router.push('/hardware/displays');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDevice = async () => {
-      try {
-        setLoading(true);
-        const data = await api.getDevice(params.id);
-        setDevice(data);
-        
-        // Concurrent non-blocking telemetry, logs, screenshots
-        await Promise.allSettled([
-          api.listPlaybackLogs({ deviceId: params.id, limit: 15 }).then(res => setPlaybackLogs(res.items)),
-          api.listDeviceScreenshots(params.id, 10).then(res => setScreenshots(res)),
-          api.getLatestDeviceTelemetry(params.id).then(res => setTelemetry(res)),
-        ]);
-      } catch (err: any) {
-        alert(err.message || 'Gagal memuat detail display');
-        router.push('/hardware/displays');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchDevice();
   }, [params.id, router]);
+
+  const handleApprovePairing = async (codeToPair?: string) => {
+    const code = codeToPair || device?.pairingCode;
+    if (!code) {
+      const manualCode = prompt('Masukkan kode pairing dari layar Android (misal: AU2-PZD):');
+      if (!manualCode) return;
+      return executePairing(manualCode);
+    }
+    await executePairing(code);
+  };
+
+  const executePairing = async (code: string) => {
+    try {
+      setApproving(true);
+      await api.pairDevice({
+        pairingCode: code.toUpperCase(),
+        deviceName: device?.name || 'Display Android',
+      });
+      setCmdFeedback('Layar berhasil dipairing dan disetujui! Membuka streaming player...');
+      await fetchDevice();
+    } catch (err: any) {
+      alert(err.message || 'Gagal menyetujui pairing perangkat');
+    } finally {
+      setApproving(false);
+    }
+  };
 
   const handleExportCSV = () => {
     if (!playbackLogs.length) return alert('Tidak ada log penayangan untuk diekspor');
@@ -188,6 +216,64 @@ export default function ViewDisplayPage() {
         }}>
           <CheckCircle2 size={16} />
           <span>{cmdFeedback}</span>
+        </div>
+      )}
+
+      {!device.isPaired && (
+        <div
+          className="card-elevated"
+          style={{
+            padding: '20px 24px',
+            backgroundColor: 'rgba(234, 179, 8, 0.08)',
+            border: '1px solid rgba(234, 179, 8, 0.28)',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ padding: '10px', borderRadius: '10px', backgroundColor: 'rgba(234, 179, 8, 0.16)' }}>
+              <Zap size={22} color="var(--accent-amber)" />
+            </div>
+            <div>
+              <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Perangkat Menunggu Persetujuan Pairing
+              </div>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                Layar Android telah terdaftar. Setujui pairing untuk mulai menyiarkan konten signage.
+              </p>
+              <div style={{ marginTop: '6px', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+                Kode Pairing: <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '1.1rem', color: 'var(--accent-amber)', letterSpacing: '0.05em' }}>{device.pairingCode || 'AU2-PZD'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              onClick={() => handleApprovePairing()}
+              disabled={approving}
+              className="btn btn-primary"
+              style={{
+                backgroundColor: 'var(--accent-emerald)',
+                borderColor: 'var(--accent-emerald)',
+                padding: '10px 20px',
+                fontSize: '0.875rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <CheckCircle2 size={16} />
+              <span>{approving ? 'Menyetujui...' : 'Setujui & Hubungkan Layar'}</span>
+            </button>
+            <Link href="/hardware/displays/create" className="btn btn-secondary" style={{ padding: '10px 16px' }}>
+              Input Kode Manual
+            </Link>
+          </div>
         </div>
       )}
 
