@@ -109,7 +109,8 @@ export default function InspectorPanel() {
   const handleUpdateBlock = async (updates: { durationSeconds?: number; startTimeSeconds?: number; isMuted?: boolean; volumeLevel?: number; transitionId?: string; visualFilterId?: string }) => {
     if (!selectedBlock || !blockZone) return;
 
-    if ((updates.isMuted !== undefined || updates.volumeLevel !== undefined || 'transitionId' in updates || 'visualFilterId' in updates) && !selectedBlock.id.startsWith('temp-')) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedBlock.id);
+    if ((updates.isMuted !== undefined || updates.volumeLevel !== undefined || 'transitionId' in updates || 'visualFilterId' in updates) && isUuid) {
       try {
         await updatePlaylistBlock(selectedBlock.id, { 
           isMuted: updates.isMuted !== undefined ? updates.isMuted : selectedBlock.isMuted,
