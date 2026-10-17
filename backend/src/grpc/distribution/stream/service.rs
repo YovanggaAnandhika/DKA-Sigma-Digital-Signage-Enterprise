@@ -12,6 +12,7 @@ use crate::grpc::proto::distribution::v1::stream::{
     ListPlaybackLogsRequest, ListPlaybackLogsResponse, PlaybackRecord,
     ListDeviceScreenshotsRequest, ListDeviceScreenshotsResponse, DeviceScreenshotItem,
     GetLatestDeviceTelemetryRequest, GetLatestDeviceTelemetryResponse, LatestTelemetryData,
+    UploadScreenshotRequest, UploadScreenshotResponse,
 };
 
 pub struct StreamServiceImpl {
@@ -418,5 +419,43 @@ impl StreamServiceTrait for StreamServiceImpl {
         });
 
         Ok(Response::new(GetLatestDeviceTelemetryResponse { telemetry }))
+    }
+
+    async fn upload_screenshot(
+        &self,
+        request: Request<UploadScreenshotRequest>,
+    ) -> Result<Response<UploadScreenshotResponse>, Status> {
+        let req = request.into_inner();
+        let device_id = Uuid::parse_str(&req.device_id)
+            .map_err(|_| Status::invalid_argument("ID Device tidak valid"))?;
+
+        if req.image_data.is_empty() {
+            return Err(Status::invalid_argument("Data gambar kosong"));
+        }
+
+        let upload_dir = std::env::var("UPLOAD_DIR").unwrap_or_else(|_| "./uploads".to_string());
+        let screenshots_dir = std::path::Path::new(&upload_dir).join("screenshots");
+        let _ = tokio::fs::create_dir_all(&screenshots_dir).await;
+
+        let filename = format!("{}_{}.jpg", device_id, chrono::Utc::now().timestamp_millis());
+        let file_path = screenshots_dir.join(&filename);
+        tokio::fs::write(&file_path, &req.image_data)
+            .await
+            .map_err(|e| Status::internal(format!("Gagal menyimpan file screenshot: {}", e)))?;
+
+        let file_url = format!("/api/assets/screenshots/{}", filename);
+        sqlx::query(
+            "INSERT INTO device_screenshots (device_id, file_url) VALUES ($1, $2)"
+        )
+        .bind(device_id)
+        .bind(&file_url)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| Status::internal(format!("Gagal mencatat screenshot ke database: {}", e)))?;
+
+        Ok(Response::new(UploadScreenshotResponse {
+            success: true,
+            file_url,
+        }))
     }
 }

@@ -203,10 +203,32 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             Err(_) => false,
         };
 
+        // Periksa apakah ada perintah tertunda (seperti CAPTURE_SCREENSHOT atau RELOAD_MANIFEST)
+        let pending_command = if let Ok(Some(row)) = sqlx::query_scalar::<_, serde_json::Value>(
+            "SELECT payload_json FROM device_telemetry WHERE device_id = $1 AND payload_json->>'command_type' IS NOT NULL AND (payload_json->>'consumed')::boolean IS NOT TRUE ORDER BY created_at DESC LIMIT 1"
+        )
+        .bind(device_id)
+        .fetch_optional(&self.pool)
+        .await {
+            let cmd_type = row.get("command_type").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let cmd_id = row.get("command_id").and_then(|v| v.as_str()).map(|s| s.to_string());
+            if let Some(cid) = cmd_id {
+                let _ = sqlx::query("UPDATE device_telemetry SET payload_json = payload_json || '{\"consumed\": true}'::jsonb WHERE device_id = $1 AND payload_json->>'command_id' = $2")
+                    .bind(device_id)
+                    .bind(cid)
+                    .execute(&self.pool)
+                    .await;
+            }
+            cmd_type
+        } else {
+            None
+        };
+
         Ok(Response::new(HeartbeatResponse {
             acknowledged: true,
             needs_manifest_sync,
             server_time: chrono::Utc::now().to_rfc3339(),
+            pending_command,
         }))
     }
 
