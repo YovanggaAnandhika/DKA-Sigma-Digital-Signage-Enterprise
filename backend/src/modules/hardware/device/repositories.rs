@@ -9,29 +9,43 @@ impl DeviceRepository {
         pool: &DbPool,
         dto: RegisterDeviceDto,
         pairing_code: String,
-    ) -> Result<DeviceEntity, sqlx::Error> {
+    ) -> Result<(DeviceEntity, String), sqlx::Error> {
+        let mut tx = pool.begin().await?;
+
         let device = sqlx::query_as::<_, DeviceEntity>(
             r#"
             INSERT INTO devices (
-                name, pairing_code, is_paired, screen_width, screen_height,
+                name, is_paired, screen_width, screen_height,
                 orientation, timezone, mac_address, app_version, android_version
             )
-            VALUES ($1, $2, FALSE, $3, $4, $5, 'UTC', $6, $7, $8)
+            VALUES ($1, FALSE, $2, $3, $4, 'UTC', $5, $6, $7)
             RETURNING *
             "#,
         )
         .bind("New Display")
-        .bind(pairing_code)
         .bind(dto.screen_width.unwrap_or(1920))
         .bind(dto.screen_height.unwrap_or(1080))
         .bind(dto.orientation.unwrap_or_else(|| "landscape".to_string()))
         .bind(dto.mac_address)
         .bind(dto.app_version)
         .bind(dto.android_version)
-        .fetch_one(pool)
+        .fetch_one(&mut *tx)
         .await?;
 
-        Ok(device)
+        sqlx::query(
+            r#"
+            INSERT INTO device_pairings (device_id, pairing_code, status, expires_at)
+            VALUES ($1, $2, 'pending', NOW() + INTERVAL '30 minutes')
+            "#,
+        )
+        .bind(device.id)
+        .bind(&pairing_code)
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        Ok((device, pairing_code))
     }
 
     pub async fn find_by_id(pool: &DbPool, id: Uuid) -> Result<Option<DeviceEntity>, sqlx::Error> {
@@ -43,26 +57,43 @@ impl DeviceRepository {
         Ok(device)
     }
 
-    pub async fn find_by_pairing_code(
+    pub async fn find_pending_pairing(
         pool: &DbPool,
         code: &str,
-    ) -> Result<Option<DeviceEntity>, sqlx::Error> {
-        let device = sqlx::query_as::<_, DeviceEntity>("SELECT * FROM devices WHERE pairing_code = $1")
-            .bind(code)
-            .fetch_optional(pool)
-            .await?;
+    ) -> Result<Option<(DeviceEntity, Uuid)>, sqlx::Error> {
+        let record = sqlx::query_as::<_, (Uuid, Uuid)>(
+            r#"
+            SELECT p.id, p.device_id
+            FROM device_pairings p
+            WHERE p.pairing_code = $1 AND p.status = 'pending' AND p.expires_at > NOW()
+            ORDER BY p.created_at DESC
+            LIMIT 1
+            "#,
+        )
+        .bind(code)
+        .fetch_optional(pool)
+        .await?;
 
-        Ok(device)
+        if let Some((pairing_id, device_id)) = record {
+            if let Some(device) = Self::find_by_id(pool, device_id).await? {
+                return Ok(Some((device, pairing_id)));
+            }
+        }
+
+        Ok(None)
     }
 
     pub async fn pair_device(
         pool: &DbPool,
+        pairing_id: Uuid,
         id: Uuid,
         name: &str,
         token_hash: &str,
         default_layout_id: Option<Uuid>,
         canary_group_id: Option<Uuid>,
     ) -> Result<DeviceEntity, sqlx::Error> {
+        let mut tx = pool.begin().await?;
+
         let device = sqlx::query_as::<_, DeviceEntity>(
             r#"
             UPDATE devices
@@ -82,8 +113,21 @@ impl DeviceRepository {
         .bind(token_hash)
         .bind(default_layout_id)
         .bind(canary_group_id)
-        .fetch_one(pool)
+        .fetch_one(&mut *tx)
         .await?;
+
+        sqlx::query(
+            r#"
+            UPDATE device_pairings
+            SET status = 'paired', paired_at = NOW()
+            WHERE id = $1
+            "#,
+        )
+        .bind(pairing_id)
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
 
         Ok(device)
     }

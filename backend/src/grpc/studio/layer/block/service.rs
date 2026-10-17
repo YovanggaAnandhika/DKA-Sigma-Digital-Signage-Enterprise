@@ -41,6 +41,11 @@ impl LayerBlockServiceImpl {
             order_index: block.order_index,
             is_muted: block.is_muted,
             volume_level: block.volume_level,
+            ticker_id: block.ticker_id.map(|id| id.to_string()),
+            clock_id: block.clock_id.map(|id| id.to_string()),
+            webview_id: block.webview_id.map(|id| id.to_string()),
+            queue_id: block.queue_id.map(|id| id.to_string()),
+            album_id: block.album_id.map(|id| id.to_string()),
             created_at: block.created_at.to_rfc3339(),
             item_overrides: vec![], // Populated elsewhere if needed
             transition: None,
@@ -61,16 +66,21 @@ impl LayerBlockServiceTrait for LayerBlockServiceImpl {
 
         let playlist_id = req.playlist_id.and_then(|id| Uuid::from_str(&id).ok());
         let media_item_id = req.media_item_id.and_then(|id| Uuid::from_str(&id).ok());
+        let ticker_id = req.ticker_id.and_then(|id| Uuid::from_str(&id).ok());
+        let clock_id = req.clock_id.and_then(|id| Uuid::from_str(&id).ok());
+        let webview_id = req.webview_id.and_then(|id| Uuid::from_str(&id).ok());
+        let queue_id = req.queue_id.and_then(|id| Uuid::from_str(&id).ok());
+        let album_id = req.album_id.and_then(|id| Uuid::from_str(&id).ok());
 
         let dto = CreateLayerBlockDto {
             layer_id,
             playlist_id,
             media_item_id,
-            ticker_id: None,
-            clock_id: None,
-            webview_id: None,
-            queue_id: None,
-            album_id: None,
+            ticker_id,
+            clock_id,
+            webview_id,
+            queue_id,
+            album_id,
             start_time_seconds: req.start_time_seconds,
             duration_seconds: req.duration_seconds,
             trim_start_seconds: req.trim_start_seconds,

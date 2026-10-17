@@ -30,7 +30,7 @@ impl DeviceServiceImpl {
         Device {
             id: dev.id.to_string(),
             name: dev.name,
-            pairing_code: dev.pairing_code,
+            pairing_code: "".to_string(),
             is_paired: dev.is_paired,
             device_token: "".to_string(),
             screen_width: dev.screen_width,
@@ -77,14 +77,14 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             orientation: Some(orientation_str),
         };
 
-        let device = DeviceService::register_device(&self.pool, dto)
+        let (device, pairing_code) = DeviceService::register_device(&self.pool, dto)
             .await
             .map_err(Status::from)?;
 
         Ok(Response::new(RegisterDeviceResponse {
             device_id: device.id.to_string(),
-            pairing_code: device.pairing_code,
-            expires_in_seconds: 3600,
+            pairing_code,
+            expires_in_seconds: 1800,
         }))
     }
 

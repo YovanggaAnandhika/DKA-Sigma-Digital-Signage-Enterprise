@@ -15,19 +15,19 @@ impl DeviceService {
     pub async fn register_device(
         pool: &DbPool,
         dto: RegisterDeviceDto,
-    ) -> Result<DeviceEntity, AppError> {
+    ) -> Result<(DeviceEntity, String), AppError> {
         let code = Self::generate_pairing_code();
-        let device = DeviceRepository::register(pool, dto, code).await?;
-        Ok(device)
+        let (device, pairing_code) = DeviceRepository::register(pool, dto, code).await?;
+        Ok((device, pairing_code))
     }
 
     pub async fn pair_device(
         pool: &DbPool,
         dto: PairDeviceDto,
     ) -> Result<PairDeviceResultDto, AppError> {
-        let device = DeviceRepository::find_by_pairing_code(pool, &dto.pairing_code)
+        let (device, pairing_id) = DeviceRepository::find_pending_pairing(pool, &dto.pairing_code)
             .await?
-            .ok_or_else(|| AppError::NotFound("Invalid pairing code".into()))?;
+            .ok_or_else(|| AppError::NotFound("Invalid or expired pairing code".into()))?;
 
         if device.is_paired {
             return Err(AppError::BadRequest("Device is already paired".into()));
@@ -40,6 +40,7 @@ impl DeviceService {
 
         let paired_device = DeviceRepository::pair_device(
             pool,
+            pairing_id,
             device.id,
             &dto.device_name,
             &token_hash,

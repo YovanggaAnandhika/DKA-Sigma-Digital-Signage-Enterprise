@@ -28,16 +28,27 @@ message LayerPlaylist {
   bool is_muted = 13;
   int32 volume_level = 14;
   
+  // Studio Component Widgets
+  optional string ticker_id = 20;
+  optional string clock_id = 21;
+  optional string webview_id = 22;
+  optional string queue_id = 23;
+  optional string album_id = 24;
+
   // Computed fields (populated in backend based on relations)
   optional signage.studio.v1.transition.Transition transition = 18;
   optional signage.studio.v1.visual_filter.VisualFilter visual_filter = 19;
 }
 
-
 message CreateLayerBlockRequest {
   string layer_id = 1;
   optional string playlist_id = 2;
   optional string media_item_id = 3;
+  optional string ticker_id = 10;
+  optional string clock_id = 11;
+  optional string webview_id = 12;
+  optional string queue_id = 13;
+  optional string album_id = 14;
   int32 start_time_seconds = 4;
   int32 duration_seconds = 5;
   optional int32 trim_start_seconds = 6;

@@ -136,7 +136,7 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Erro
 
     // 6. Seed Demonstration Displays
     info!("Seeding demo devices...");
-    let dev1 = DeviceService::register_device(pool, RegisterDeviceDto {
+    let (dev1, code1) = DeviceService::register_device(pool, RegisterDeviceDto {
         mac_address: Some("00:1A:2B:3C:4D:5E".to_string()),
         app_version: Some("v1.0.0".to_string()),
         android_version: Some("Android 11".to_string()),
@@ -146,8 +146,8 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Erro
     }).await?;
 
     // Pair and update dev1
-    let dev1_paired = DeviceService::pair_device(pool, PairDeviceDto {
-        pairing_code: dev1.pairing_code.clone(),
+    let _dev1_paired = DeviceService::pair_device(pool, PairDeviceDto {
+        pairing_code: code1,
         device_name: "Lobby Main Totem".to_string(),
         store_location: None,
         default_layout_id: Some(layout.id),
@@ -156,7 +156,7 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Erro
     
     // Simulate it being online via direct update if needed, but pairing makes it essentially active.
     
-    let _dev2 = DeviceService::register_device(pool, RegisterDeviceDto {
+    let (_dev2, _code2) = DeviceService::register_device(pool, RegisterDeviceDto {
         mac_address: Some("AA:BB:CC:DD:EE:FF".to_string()),
         app_version: Some("v1.0.0".to_string()),
         android_version: Some("Android 10".to_string()),

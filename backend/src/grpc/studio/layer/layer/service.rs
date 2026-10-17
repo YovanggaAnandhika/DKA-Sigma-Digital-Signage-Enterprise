@@ -75,6 +75,11 @@ impl LayerServiceImpl {
                     volume_level: ov.volume_level.unwrap_or(100),
                 })
                 .collect(),
+            ticker_id: dto.block.ticker_id.map(|id| id.to_string()),
+            clock_id: dto.block.clock_id.map(|id| id.to_string()),
+            webview_id: dto.block.webview_id.map(|id| id.to_string()),
+            queue_id: dto.block.queue_id.map(|id| id.to_string()),
+            album_id: dto.block.album_id.map(|id| id.to_string()),
             transition: None,
             visual_filter: None,
         }
