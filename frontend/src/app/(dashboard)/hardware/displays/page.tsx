@@ -13,6 +13,7 @@ export default function DisplaysPage() {
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isSseConnected, setIsSseConnected] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -30,6 +31,52 @@ export default function DisplaysPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Realtime Fleet Observability via Server-Sent Events (SSE)
+  useEffect(() => {
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource('/api/stream/events');
+
+      es.addEventListener('connected', () => {
+        setIsSseConnected(true);
+      });
+
+      es.addEventListener('fleet_status', (event) => {
+        setIsSseConnected(true);
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload?.devices?.length) {
+            const statusMap = new Map<string, { isOnline: boolean; lastHeartbeatAt?: string }>(
+              payload.devices.map((d: any) => [d.id, { isOnline: d.isOnline, lastHeartbeatAt: d.lastHeartbeatAt }])
+            );
+
+            setDevices((prev) =>
+              prev.map((dev) => {
+                const liveStatus = statusMap.get(dev.id);
+                if (liveStatus && (liveStatus.isOnline !== dev.isOnline || liveStatus.lastHeartbeatAt !== dev.lastHeartbeatAt)) {
+                  return {
+                    ...dev,
+                    isOnline: liveStatus.isOnline,
+                    lastHeartbeatAt: liveStatus.lastHeartbeatAt || dev.lastHeartbeatAt,
+                  };
+                }
+                return dev;
+              })
+            );
+          }
+        } catch (_) {}
+      });
+
+      es.onerror = () => {
+        setIsSseConnected(false);
+      };
+    } catch (_) {}
+
+    return () => {
+      if (es) es.close();
+    };
+  }, []);
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Hapus display player "${name}"?`)) return;
@@ -68,7 +115,34 @@ export default function DisplaysPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button onClick={loadData} className="btn btn-secondary" title="Segarkan data">
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '9999px',
+              backgroundColor: isSseConnected ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255, 255, 255, 0.05)',
+              border: isSseConnected ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
+              color: isSseConnected ? 'var(--accent-emerald)' : 'var(--text-muted)',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+            }}
+            title={isSseConnected ? 'Terhubung ke Real-time SSE Stream (Pembaruan status otomatis tanpa refresh)' : 'SSE Offline'}
+          >
+            <span
+              style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                backgroundColor: isSseConnected ? 'var(--accent-emerald)' : 'var(--text-muted)',
+                boxShadow: isSseConnected ? '0 0 8px var(--accent-emerald)' : 'none',
+              }}
+            />
+            <span>{isSseConnected ? 'Live Stream SSE' : 'Offline'}</span>
+          </div>
+
+          <button onClick={loadData} className="btn btn-secondary" title="Segarkan data manual">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
           <Link href="/hardware/displays/create" className="btn btn-primary">
