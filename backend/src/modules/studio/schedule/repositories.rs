@@ -3,7 +3,7 @@
     ScheduleWithEventsDto, UpdateScheduleDto,
 };
 use crate::db::DbPool;
-use chrono::NaiveTime;
+use chrono::{NaiveDate, NaiveTime};
 use uuid::Uuid;
 
 pub struct ScheduleRepository;
@@ -103,11 +103,13 @@ impl ScheduleRepository {
             .unwrap_or_else(|_| NaiveTime::from_hms_opt(0, 0, 0).unwrap());
         let end_time = NaiveTime::parse_from_str(&dto.end_time, "%H:%M:%S")
             .unwrap_or_else(|_| NaiveTime::from_hms_opt(23, 59, 59).unwrap());
+        let start_date = dto.start_date.as_ref().and_then(|d| NaiveDate::parse_from_str(d, "%Y-%m-%d").ok());
+        let end_date = dto.end_date.as_ref().and_then(|d| NaiveDate::parse_from_str(d, "%Y-%m-%d").ok());
 
         let event = sqlx::query_as::<_, ScheduleEventEntity>(
             r#"
-            INSERT INTO schedule_events (schedule_id, layout_id, start_time, end_time, days_of_week, priority)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO schedule_events (schedule_id, layout_id, start_time, end_time, days_of_week, priority, start_date, end_date)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
             "#,
         )
@@ -117,6 +119,8 @@ impl ScheduleRepository {
         .bind(end_time)
         .bind(dto.days_of_week)
         .bind(dto.priority.unwrap_or(0))
+        .bind(start_date)
+        .bind(end_date)
         .fetch_one(pool)
         .await?;
 

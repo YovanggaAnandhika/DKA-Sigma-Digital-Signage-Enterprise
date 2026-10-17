@@ -8,7 +8,8 @@ use crate::modules::distribution::stream::services::StreamConnectionManager;
 use crate::grpc::proto::distribution::v1::stream::{
     stream_service_server::StreamService as StreamServiceTrait,
     StreamClientMessage, StreamServerMessage, PushCommandRequest, PushCommandResponse,
-    ServerCommandType,
+    ServerCommandType, ReportPlaybackBatchRequest, ReportPlaybackBatchResponse,
+    ListPlaybackLogsRequest, ListPlaybackLogsResponse, PlaybackRecord,
 };
 
 pub struct StreamServiceImpl {
@@ -52,21 +53,48 @@ impl StreamServiceTrait for StreamServiceImpl {
                                         manager.register_connection(dev_id, tx.clone()).await;
                                     }
 
-                                    // Log ping telemetry to device_telemetry if ping message present
-                                    if let Some(crate::grpc::proto::distribution::v1::stream::stream_client_message::Payload::Ping(ping)) = client_msg.payload {
-                                        let telemetry_json = serde_json::json!({
-                                            "memory_percent": ping.memory_percent,
-                                            "storage_free_bytes": ping.storage_free_bytes,
-                                            "current_playing_media_id": ping.current_playing_media_id,
-                                        });
+                                     // Handle stream client payload (Ping telemetry, Screenshot upload, Command ACK)
+                                    if let Some(payload) = client_msg.payload {
+                                        match payload {
+                                            crate::grpc::proto::distribution::v1::stream::stream_client_message::Payload::Ping(ping) => {
+                                                let telemetry_json = serde_json::json!({
+                                                    "memory_percent": ping.memory_percent,
+                                                    "storage_free_bytes": ping.storage_free_bytes,
+                                                    "current_playing_media_id": ping.current_playing_media_id,
+                                                });
 
-                                        let _ = sqlx::query(
-                                            "INSERT INTO device_telemetry (device_id, payload_json) VALUES ($1, $2)"
-                                        )
-                                        .bind(dev_id)
-                                        .bind(telemetry_json)
-                                        .execute(&pool)
-                                        .await;
+                                                let _ = sqlx::query(
+                                                    "INSERT INTO device_telemetry (device_id, payload_json) VALUES ($1, $2)"
+                                                )
+                                                .bind(dev_id)
+                                                .bind(telemetry_json)
+                                                .execute(&pool)
+                                                .await;
+                                            }
+                                            crate::grpc::proto::distribution::v1::stream::stream_client_message::Payload::Screenshot(screenshot) => {
+                                                if !screenshot.image_data.is_empty() {
+                                                    let upload_dir = std::env::var("UPLOAD_DIR").unwrap_or_else(|_| "./uploads".to_string());
+                                                    let screenshots_dir = std::path::Path::new(&upload_dir).join("screenshots");
+                                                    let _ = tokio::fs::create_dir_all(&screenshots_dir).await;
+
+                                                    let filename = format!("{}_{}.jpg", dev_id, chrono::Utc::now().timestamp_millis());
+                                                    let file_path = screenshots_dir.join(&filename);
+                                                    if let Ok(_) = tokio::fs::write(&file_path, &screenshot.image_data).await {
+                                                        let file_url = format!("/api/assets/screenshots/{}", filename);
+                                                        let _ = sqlx::query(
+                                                            "INSERT INTO device_screenshots (device_id, file_url) VALUES ($1, $2)"
+                                                        )
+                                                        .bind(dev_id)
+                                                        .bind(file_url)
+                                                        .execute(&pool)
+                                                        .await;
+                                                    }
+                                                }
+                                            }
+                                            crate::grpc::proto::distribution::v1::stream::stream_client_message::Payload::CommandAck(ack) => {
+                                                tracing::info!("Received command ACK from device {}: success={}, msg={}", dev_id, ack.success, ack.error_message);
+                                            }
+                                        }
                                     }
                                 }
 
@@ -146,6 +174,128 @@ impl StreamServiceTrait for StreamServiceImpl {
         Ok(Response::new(PushCommandResponse {
             queued: true,
             command_id: res.command_id.to_string(),
+        }))
+    }
+
+    async fn report_playback_batch(
+        &self,
+        request: Request<ReportPlaybackBatchRequest>,
+    ) -> Result<Response<ReportPlaybackBatchResponse>, Status> {
+        let req = request.into_inner();
+        let device_id = Uuid::parse_str(&req.device_id)
+            .map_err(|_| Status::invalid_argument("ID Device tidak valid"))?;
+
+        let mut recorded = 0;
+        for item in req.items {
+            let media_id = Uuid::parse_str(&item.media_id).ok();
+            let layout_id = Uuid::parse_str(&item.layout_id).ok();
+            let started_at = chrono::DateTime::from_timestamp(item.started_at, 0)
+                .unwrap_or_else(|| chrono::Utc::now());
+
+            let res = sqlx::query(
+                r#"
+                INSERT INTO playback_logs (device_id, media_id, layout_id, started_at, duration_seconds, is_completed)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                "#,
+            )
+            .bind(device_id)
+            .bind(media_id)
+            .bind(layout_id)
+            .bind(started_at)
+            .bind(item.duration_seconds)
+            .bind(item.is_completed)
+            .execute(&self.pool)
+            .await;
+
+            if res.is_ok() {
+                recorded += 1;
+            }
+        }
+
+        Ok(Response::new(ReportPlaybackBatchResponse {
+            success: true,
+            recorded_count: recorded,
+        }))
+    }
+
+    async fn list_playback_logs(
+        &self,
+        request: Request<ListPlaybackLogsRequest>,
+    ) -> Result<Response<ListPlaybackLogsResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_distribution")
+            .or_else(|_| crate::grpc::middleware::require_permission(&request, "can_manage_devices"))?;
+        let req = request.into_inner();
+
+        let device_id = req.device_id.as_deref().and_then(|id| Uuid::parse_str(id).ok());
+        let media_id = req.media_id.as_deref().and_then(|id| Uuid::parse_str(id).ok());
+        let limit = if req.limit <= 0 || req.limit > 100 { 50 } else { req.limit as i64 };
+        let offset = if req.offset < 0 { 0 } else { req.offset as i64 };
+
+        #[derive(sqlx::FromRow)]
+        struct Row {
+            id: Uuid,
+            device_id: Uuid,
+            device_name: Option<String>,
+            media_id: Option<Uuid>,
+            media_name: Option<String>,
+            layout_id: Option<Uuid>,
+            layout_name: Option<String>,
+            started_at: chrono::DateTime<chrono::Utc>,
+            duration_seconds: i32,
+            is_completed: bool,
+            total_count: Option<i64>,
+        }
+
+        let rows = sqlx::query_as::<_, Row>(
+            r#"
+            SELECT 
+                l.id,
+                l.device_id,
+                d.name as device_name,
+                l.media_id,
+                m.name as media_name,
+                l.layout_id,
+                lay.name as layout_name,
+                l.started_at,
+                l.duration_seconds,
+                l.is_completed,
+                COUNT(*) OVER() as total_count
+            FROM playback_logs l
+            LEFT JOIN devices d ON d.id = l.device_id
+            LEFT JOIN media_items m ON m.id = l.media_id
+            LEFT JOIN layouts lay ON lay.id = l.layout_id
+            WHERE ($1::uuid IS NULL OR l.device_id = $1)
+              AND ($2::uuid IS NULL OR l.media_id = $2)
+            ORDER BY l.started_at DESC
+            LIMIT $3 OFFSET $4
+            "#,
+        )
+        .bind(device_id)
+        .bind(media_id)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let total_count = rows.first().and_then(|r| r.total_count).unwrap_or(0) as i32;
+
+        let items = rows.into_iter().map(|r| PlaybackRecord {
+            id: r.id.to_string(),
+            device_id: r.device_id.to_string(),
+            device_name: r.device_name.unwrap_or_default(),
+            media_id: r.media_id.map(|id| id.to_string()).unwrap_or_default(),
+            media_name: r.media_name.unwrap_or_default(),
+            layout_id: r.layout_id.map(|id| id.to_string()).unwrap_or_default(),
+            layout_name: r.layout_name.unwrap_or_default(),
+            started_at: r.started_at.to_rfc3339(),
+            duration_seconds: r.duration_seconds,
+            is_completed: r.is_completed,
+        }).collect();
+
+        Ok(Response::new(ListPlaybackLogsResponse {
+            items,
+            total_count,
         }))
     }
 }

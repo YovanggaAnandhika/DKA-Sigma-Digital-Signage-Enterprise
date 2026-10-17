@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveTime, Utc};
+use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
@@ -22,6 +22,8 @@ pub struct ScheduleEventEntity {
     pub days_of_week: String,
     pub priority: i32,
     pub created_at: DateTime<Utc>,
+    pub start_date: Option<NaiveDate>,
+    pub end_date: Option<NaiveDate>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,4 +53,6 @@ pub struct AddScheduleEventDto {
     pub end_time: String,
     pub days_of_week: String,
     pub priority: Option<i32>,
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
 }

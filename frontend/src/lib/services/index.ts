@@ -41,6 +41,9 @@ export const api = {
   pairDevice: hardwareModule.pairDevice,
   updateDevice: hardwareModule.updateDevice,
   deleteDevice: hardwareModule.deleteDevice,
+  pushDeviceCommand: hardwareModule.pushDeviceCommand,
+  listPlaybackLogs: hardwareModule.listPlaybackLogs,
+  reportPlaybackBatch: hardwareModule.reportPlaybackBatch,
 
   // Hardware - Display Groups
   getDisplayGroups: hardwareModule.getDisplayGroups,

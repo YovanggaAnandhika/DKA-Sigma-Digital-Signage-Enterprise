@@ -10,4 +10,10 @@ service StreamService {
 
   // Admin CMS push immediate commands
   rpc PushCommand(PushCommandRequest) returns (PushCommandResponse);
+
+  // Player report proof-of-play batches
+  rpc ReportPlaybackBatch(ReportPlaybackBatchRequest) returns (ReportPlaybackBatchResponse);
+
+  // CMS query proof-of-play telemetry / audit logs
+  rpc ListPlaybackLogs(ListPlaybackLogsRequest) returns (ListPlaybackLogsResponse);
 }

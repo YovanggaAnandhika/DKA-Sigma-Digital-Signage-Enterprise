@@ -22,7 +22,7 @@ export default function CreateSchedulePage() {
         name: formData.name,
         description: formData.description,
       });
-      router.push('/schedules');
+      router.push('/studio/schedules');
     } catch (err: any) {
       alert(err.message || 'Gagal membuat jadwal');
     } finally {
@@ -33,7 +33,7 @@ export default function CreateSchedulePage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <Link href="/schedules" className="btn btn-outline" style={{ padding: '8px' }}>
+        <Link href="/studio/schedules" className="btn btn-outline" style={{ padding: '8px' }}>
           <ArrowLeft size={16} />
         </Link>
         <div>
@@ -75,7 +75,7 @@ export default function CreateSchedulePage() {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-            <Link href="/schedules" className="btn btn-secondary">
+            <Link href="/studio/schedules" className="btn btn-secondary">
               Batal
             </Link>
             <button type="submit" disabled={saving || !formData.name} className="btn btn-primary">

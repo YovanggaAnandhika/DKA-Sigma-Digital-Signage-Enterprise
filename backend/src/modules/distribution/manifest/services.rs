@@ -50,13 +50,28 @@ impl ManifestService {
             if let Ok(Some(schedule_with_events)) = ScheduleRepository::find_by_id(pool, schedule_id).await {
                 let tz: Tz = device.timezone.parse().unwrap_or(chrono_tz::UTC);
                 let now_local = Utc::now().with_timezone(&tz);
+                let now_date = now_local.date_naive();
                 let current_time = now_local.time();
                 let current_day = now_local.weekday().number_from_monday().to_string(); // 1 = Monday, 7 = Sunday
 
                 let mut best_match: Option<(i32, chrono::DateTime<Utc>, Uuid)> = None;
 
                 for event in schedule_with_events.events {
-                    if event.start_time <= current_time && event.end_time >= current_time {
+                    let is_date_match = match (event.start_date, event.end_date) {
+                        (Some(s), Some(e)) => now_date >= s && now_date <= e,
+                        (Some(s), None) => now_date >= s,
+                        (None, Some(e)) => now_date <= e,
+                        (None, None) => true,
+                    };
+
+                    let is_time_match = if event.start_time <= event.end_time {
+                        event.start_time <= current_time && event.end_time >= current_time
+                    } else {
+                        // Overnight window (e.g. 22:00 to 04:00)
+                        current_time >= event.start_time || current_time <= event.end_time
+                    };
+
+                    if is_date_match && is_time_match {
                         let days: Vec<&str> = event.days_of_week.split(',').collect();
                         if days.contains(&current_day.as_str()) {
                             let is_better = match &best_match {

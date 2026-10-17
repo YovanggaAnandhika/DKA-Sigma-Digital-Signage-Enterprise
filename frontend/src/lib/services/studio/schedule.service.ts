@@ -38,7 +38,21 @@ export async function deleteSchedule(id: string): Promise<boolean> {
   return true;
 }
 
-export async function addScheduleEvent(data: { scheduleId: string; layoutId?: string; layout_id?: string; startTime: string; endTime?: string; end_time?: string; daysOfWeek?: string; days_of_week?: string; priority?: number }): Promise<any> {
+export async function addScheduleEvent(data: {
+  scheduleId: string;
+  layoutId?: string;
+  layout_id?: string;
+  startTime: string;
+  endTime?: string;
+  end_time?: string;
+  daysOfWeek?: string;
+  days_of_week?: string;
+  priority?: number;
+  startDate?: string;
+  start_date?: string;
+  endDate?: string;
+  end_date?: string;
+}): Promise<any> {
   return await invokeApi<any>('/api/grpc/studio/schedule/AddScheduleEvent', {
     ...data,
     layoutId: data.layoutId || data.layout_id,
@@ -48,6 +62,10 @@ export async function addScheduleEvent(data: { scheduleId: string; layoutId?: st
     daysOfWeek: data.daysOfWeek || data.days_of_week,
     days_of_week: data.daysOfWeek || data.days_of_week,
     priority: data.priority ?? 0,
+    startDate: data.startDate || data.start_date,
+    start_date: data.startDate || data.start_date,
+    endDate: data.endDate || data.end_date,
+    end_date: data.endDate || data.end_date,
   });
 }
 

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/services';
-import type { Device, DisplayGroup, Schedule } from '@/lib/services';
+import type { Device, DisplayGroup, Schedule, Layout } from '@/lib/services';
 import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
 
 export default function EditDisplayPage() {
@@ -13,6 +13,7 @@ export default function EditDisplayPage() {
   const [device, setDevice] = useState<Device | null>(null);
   const [groups, setGroups] = useState<DisplayGroup[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [layouts, setLayouts] = useState<Layout[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -22,20 +23,23 @@ export default function EditDisplayPage() {
     timezone: 'Asia/Jakarta',
     displayGroupId: '',
     schedule_id: '',
+    current_layout_id: '',
   });
 
   useEffect(() => {
     const fetchDevice = async () => {
       try {
         setLoading(true);
-        const [data, groupsData, schedulesData] = await Promise.all([
+        const [data, groupsData, schedulesData, layoutsData] = await Promise.all([
           api.getDevice(params.id),
           api.getDisplayGroups({ limit: 1000 }),
-          api.getSchedules({ limit: 1000 })
+          api.getSchedules({ limit: 1000 }),
+          api.getLayouts({ limit: 1000 }),
         ]);
         setDevice(data);
         setGroups(groupsData.data);
         setSchedules(schedulesData.data);
+        setLayouts(layoutsData.data);
         setFormData({
           name: data.name,
           resolution: data.screenWidth && data.screenHeight ? `${data.screenWidth}x${data.screenHeight}` : '1920x1080',
@@ -43,10 +47,11 @@ export default function EditDisplayPage() {
           timezone: data.timezone || 'Asia/Jakarta',
           displayGroupId: data.displayGroupId || '',
           schedule_id: data.scheduleId || '',
+          current_layout_id: data.currentLayoutId || '',
         });
       } catch (err: any) {
         alert(err.message || 'Gagal memuat display');
-        router.push('/displays');
+        router.push('/hardware/displays');
       } finally {
         setLoading(false);
       }
@@ -66,8 +71,9 @@ export default function EditDisplayPage() {
         screen_height: sh || 1080,
         orientation: orientationVal,
         timezone: formData.timezone,
-        display_group_id: formData.displayGroupId,
-        schedule_id: formData.schedule_id,
+        display_group_id: formData.displayGroupId || undefined,
+        schedule_id: formData.schedule_id || undefined,
+        current_layout_id: formData.current_layout_id || undefined,
       });
       router.push(`/hardware/displays/${params.id}`);
     } catch (err: any) {
@@ -149,7 +155,47 @@ export default function EditDisplayPage() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                Layout Utama Layar (Default Layout)
+              </label>
+              <select
+                value={formData.current_layout_id}
+                onChange={(e) => setFormData({ ...formData, current_layout_id: e.target.value })}
+                className="form-select"
+              >
+                <option value="">-- Gunakan Layout Grup atau Kosong --</option>
+                {layouts.map(l => (
+                  <option key={l.id} value={l.id}>{l.name} ({l.canvasWidth}×{l.canvasHeight})</option>
+                ))}
+              </select>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                Layout ini diputar otomatis jika tidak ada jadwal aktif.
+              </span>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                Jadwal Perangkat (Schedule Override)
+              </label>
+              <select
+                value={formData.schedule_id}
+                onChange={(e) => setFormData({ ...formData, schedule_id: e.target.value })}
+                className="form-select"
+              >
+                <option value="">-- Gunakan Jadwal Grup / Tanpa Jadwal --</option>
+                {schedules.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                Event tayang dalam jadwal ini mengesampingkan layout utama.
+              </span>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
                 Zona Waktu (Timezone)
@@ -178,22 +224,6 @@ export default function EditDisplayPage() {
                 <option value="">-- Tidak Tergabung --</option>
                 {groups.map(g => (
                   <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                Jadwal Perangkat
-              </label>
-              <select
-                value={formData.schedule_id}
-                onChange={(e) => setFormData({ ...formData, schedule_id: e.target.value })}
-                className="form-select"
-              >
-                <option value="">-- Gunakan Jadwal Grup/Tanpa Jadwal --</option>
-                {schedules.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
             </div>

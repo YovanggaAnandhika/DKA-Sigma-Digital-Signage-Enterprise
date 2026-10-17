@@ -26,6 +26,8 @@ export default function EditSchedulePage() {
     endTime: '18:00:00',
     daysOfWeek: '1,2,3,4,5,6,7',
     priority: 0,
+    startDate: '',
+    endDate: '',
   });
   const [addingEvent, setAddingEvent] = useState(false);
 
@@ -44,7 +46,7 @@ export default function EditSchedulePage() {
       });
     } catch (err: any) {
       alert(err.message || 'Gagal memuat jadwal');
-      router.push('/schedules');
+      router.push('/studio/schedules');
     } finally {
       setLoading(false);
     }
@@ -82,8 +84,10 @@ export default function EditSchedulePage() {
         endTime: newEvent.endTime,
         daysOfWeek: newEvent.daysOfWeek,
         priority: Number(newEvent.priority) || 0,
+        startDate: newEvent.startDate || undefined,
+        endDate: newEvent.endDate || undefined,
       });
-      setNewEvent({ ...newEvent, layout_id: '', priority: 0 });
+      setNewEvent({ ...newEvent, layout_id: '', priority: 0, startDate: '', endDate: '' });
       fetchSchedule(); // Refresh
     } catch (err: any) {
       alert(err.message || 'Gagal menambah event');
@@ -119,7 +123,7 @@ export default function EditSchedulePage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <Link href="/schedules" className="btn btn-outline" style={{ padding: '8px' }}>
+        <Link href="/studio/schedules" className="btn btn-outline" style={{ padding: '8px' }}>
           <ArrowLeft size={16} />
         </Link>
         <div>
@@ -196,6 +200,11 @@ export default function EditSchedulePage() {
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                       {ev.startTime} - {ev.endTime} &bull; {daysLabel(ev.daysOfWeek)}
                     </div>
+                    {(ev.startDate || ev.endDate) && (
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--accent-cyan)', marginTop: '2px', fontWeight: 500 }}>
+                        Periode: {ev.startDate || 'Sekarang'} s/d {ev.endDate || 'Seterusnya'}
+                      </div>
+                    )}
                   </div>
                   <button onClick={() => handleRemoveEvent(ev.id)} className="btn btn-danger" style={{ padding: '6px' }} title="Hapus Event">
                     <Trash2 size={14} />
@@ -222,6 +231,32 @@ export default function EditSchedulePage() {
                   <option key={l.id} value={l.id}>{l.name}</option>
                 ))}
               </select>
+            </div>
+
+            {/* Campaign Date Range */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Tanggal Mulai (Opsional)
+                </label>
+                <input
+                  type="date"
+                  value={newEvent.startDate}
+                  onChange={(e) => setNewEvent({ ...newEvent, startDate: e.target.value })}
+                  className="form-input"
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Tanggal Selesai (Opsional)
+                </label>
+                <input
+                  type="date"
+                  value={newEvent.endDate}
+                  onChange={(e) => setNewEvent({ ...newEvent, endDate: e.target.value })}
+                  className="form-input"
+                />
+              </div>
             </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

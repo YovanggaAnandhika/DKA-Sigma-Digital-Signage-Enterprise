@@ -57,3 +57,48 @@ message PushCommandResponse {
   bool queued = 1;
   string command_id = 2;
 }
+
+message PlaybackLogItem {
+  string media_id = 1;
+  string layout_id = 2;
+  int64 started_at = 3; // Epoch seconds
+  int32 duration_seconds = 4;
+  bool is_completed = 5;
+}
+
+message ReportPlaybackBatchRequest {
+  string device_id = 1;
+  string device_token = 2;
+  repeated PlaybackLogItem items = 3;
+}
+
+message ReportPlaybackBatchResponse {
+  bool success = 1;
+  int32 recorded_count = 2;
+}
+
+message PlaybackRecord {
+  string id = 1;
+  string device_id = 2;
+  string device_name = 3;
+  string media_id = 4;
+  string media_name = 5;
+  string layout_id = 6;
+  string layout_name = 7;
+  string started_at = 8;
+  int32 duration_seconds = 9;
+  bool is_completed = 10;
+}
+
+message ListPlaybackLogsRequest {
+  optional string device_id = 1;
+  optional string media_id = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message ListPlaybackLogsResponse {
+  repeated PlaybackRecord items = 1;
+  int32 total_count = 2;
+}
+

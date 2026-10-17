@@ -37,7 +37,7 @@ impl ManifestServiceImpl {
                     layer_id: z.layer.id.to_string(),
                     volume_level: 100,
                     playlist_id: b.block.playlist_id.map(|id| id.to_string()).unwrap_or_default(),
-                    media_item_id: String::new(),
+                    media_item_id: b.block.media_item_id.map(|id| id.to_string()).unwrap_or_default(),
                     playlist: None, // Simplified for now
                     media_item: None,
                     start_time_seconds: b.block.start_time_seconds,

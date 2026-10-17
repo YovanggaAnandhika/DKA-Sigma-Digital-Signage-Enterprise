@@ -309,10 +309,15 @@ impl MediaServiceTrait for MediaServiceImpl {
             .ok_or_else(|| Status::invalid_argument("Nama file tidak valid"))?;
 
         let upload_dir = std::env::var("UPLOAD_DIR").unwrap_or_else(|_| "./uploads".to_string());
-        let file_path = std::path::Path::new(&upload_dir).join(clean_filename);
+        let mut file_path = std::path::Path::new(&upload_dir).join(clean_filename);
 
         if !file_path.exists() {
-            return Err(Status::not_found(format!("File {} tidak ditemukan di backend", clean_filename)));
+            let screenshot_path = std::path::Path::new(&upload_dir).join("screenshots").join(clean_filename);
+            if screenshot_path.exists() {
+                file_path = screenshot_path;
+            } else {
+                return Err(Status::not_found(format!("File {} tidak ditemukan di backend", clean_filename)));
+            }
         }
 
         let file_data = tokio::fs::read(&file_path)
@@ -362,10 +367,15 @@ impl MediaServiceTrait for MediaServiceImpl {
             .ok_or_else(|| Status::invalid_argument("Nama file tidak valid"))?;
 
         let upload_dir = std::env::var("UPLOAD_DIR").unwrap_or_else(|_| "./uploads".to_string());
-        let file_path = std::path::Path::new(&upload_dir).join(clean_filename);
+        let mut file_path = std::path::Path::new(&upload_dir).join(clean_filename);
 
         if !file_path.exists() {
-            return Err(Status::not_found(format!("File {} tidak ditemukan di backend", clean_filename)));
+            let screenshot_path = std::path::Path::new(&upload_dir).join("screenshots").join(clean_filename);
+            if screenshot_path.exists() {
+                file_path = screenshot_path;
+            } else {
+                return Err(Status::not_found(format!("File {} tidak ditemukan di backend", clean_filename)));
+            }
         }
 
         let ext = std::path::Path::new(clean_filename)

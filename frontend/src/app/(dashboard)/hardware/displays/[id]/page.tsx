@@ -4,13 +4,16 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, Device } from '@/lib/services';
-import { ArrowLeft, Edit, Tv, Radio, Clock, HardDrive, Cpu, RefreshCw, Zap } from 'lucide-react';
+import { pushDeviceCommand, ServerCommandType } from '@/lib/services/hardware/device.service';
+import { ArrowLeft, Edit, Tv, Radio, Clock, HardDrive, Cpu, RefreshCw, Zap, Play, Camera, RotateCcw, Trash2, CheckCircle2 } from 'lucide-react';
 
 export default function ViewDisplayPage() {
   const params = useParams() as { id: string };
   const router = useRouter();
   const [device, setDevice] = useState<Device | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sendingCmd, setSendingCmd] = useState<string | null>(null);
+  const [cmdFeedback, setCmdFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDevice = async () => {
@@ -27,6 +30,20 @@ export default function ViewDisplayPage() {
     };
     fetchDevice();
   }, [params.id, router]);
+
+  const handleSendCommand = async (cmdType: ServerCommandType, label: string) => {
+    try {
+      setSendingCmd(label);
+      setCmdFeedback(null);
+      await pushDeviceCommand(params.id, cmdType);
+      setCmdFeedback(`Perintah "${label}" berhasil dikirim ke player.`);
+      setTimeout(() => setCmdFeedback(null), 4000);
+    } catch (err: any) {
+      alert(`Gagal mengirim perintah: ${err.message}`);
+    } finally {
+      setSendingCmd(null);
+    }
+  };
 
   if (loading || !device) {
     return (
@@ -70,13 +87,66 @@ export default function ViewDisplayPage() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <Link href={`/hardware/displays/${device.id}/edit`} className="btn btn-secondary">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <Link href={`/player/${device.id}`} target="_blank" className="btn btn-outline" title="Buka Kiosk Player Simulator di Browser">
+            <Play size={14} />
+            <span>Web Player</span>
+          </Link>
+
+          <button
+            onClick={() => handleSendCommand(ServerCommandType.COMMAND_RELOAD_MANIFEST, 'Sync Konten')}
+            disabled={!!sendingCmd}
+            className="btn btn-secondary"
+            title="Kirim sinyal sinkronisasi manifest konten instan ke player"
+          >
+            <RefreshCw size={14} className={sendingCmd === 'Sync Konten' ? 'animate-spin' : ''} />
+            <span>Sync Now</span>
+          </button>
+
+          <button
+            onClick={() => handleSendCommand(ServerCommandType.COMMAND_CAPTURE_SCREENSHOT, 'Ambil Screenshot')}
+            disabled={!!sendingCmd}
+            className="btn btn-secondary"
+            title="Minta player mengambil tangkapan layar tampilan live"
+          >
+            <Camera size={14} />
+            <span>Screenshot</span>
+          </button>
+
+          <button
+            onClick={() => handleSendCommand(ServerCommandType.COMMAND_REBOOT_PLAYER, 'Reboot Player')}
+            disabled={!!sendingCmd}
+            className="btn btn-secondary"
+            title="Minta aplikasi display player restart"
+          >
+            <RotateCcw size={14} />
+            <span>Reboot</span>
+          </button>
+
+          <Link href={`/hardware/displays/${device.id}/edit`} className="btn btn-primary">
             <Edit size={14} />
-            <span>Edit Konfigurasi</span>
+            <span>Edit</span>
           </Link>
         </div>
       </div>
+
+      {cmdFeedback && (
+        <div style={{
+          padding: '12px 16px',
+          borderRadius: '10px',
+          backgroundColor: 'rgba(16, 185, 129, 0.12)',
+          color: 'var(--accent-emerald)',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '0.875rem',
+          fontWeight: 600,
+        }}>
+          <CheckCircle2 size={16} />
+          <span>{cmdFeedback}</span>
+        </div>
+      )}
 
       {/* Overview Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>

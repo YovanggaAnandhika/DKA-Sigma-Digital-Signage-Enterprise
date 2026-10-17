@@ -10,11 +10,14 @@ export async function POST(req: NextRequest) {
     const client = new ScheduleServiceClient(getGrpcHost(), getGrpcCredentials());
     
     const request = new AddScheduleEventRequest();
-    if (body.scheduleId) request.setScheduleId(body.scheduleId);
-    if (body.layout_id) request.setLayoutId(body.layout_id);
-    if (body.startTime) request.setStartTime(body.startTime);
-    if (body.end_time) request.setEndTime(body.end_time);
-    if (body.days_of_week) request.setDaysOfWeek(body.days_of_week);
+    if (body.scheduleId || body.schedule_id) request.setScheduleId(body.scheduleId || body.schedule_id);
+    if (body.layout_id || body.layoutId) request.setLayoutId(body.layout_id || body.layoutId);
+    if (body.startTime || body.start_time) request.setStartTime(body.startTime || body.start_time);
+    if (body.end_time || body.endTime) request.setEndTime(body.end_time || body.endTime);
+    if (body.days_of_week || body.daysOfWeek) request.setDaysOfWeek(body.days_of_week || body.daysOfWeek);
+    if (body.priority !== undefined) request.setPriority(Number(body.priority));
+    if (body.startDate || body.start_date) request.setStartDate(body.startDate || body.start_date);
+    if (body.endDate || body.end_date) request.setEndDate(body.endDate || body.end_date);
 
     return new Promise<NextResponse>((resolve) => {
       client.addScheduleEvent(request, getGrpcMetadata(token), (error: any, response: any) => {
