@@ -12,6 +12,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
@@ -226,6 +227,60 @@ class ManifestRepositoryImpl(
             put("canvasHeight", manifest.canvasHeight)
             put("totalDownloadSizeBytes", manifest.totalDownloadSizeBytes)
             put("generatedAt", manifest.generatedAt)
+
+            val layoutObj = JSONObject().apply {
+                put("id", manifest.layoutId)
+                put("name", manifest.layoutName)
+                put("canvasWidth", manifest.canvasWidth)
+                put("canvasHeight", manifest.canvasHeight)
+
+                val layersArr = JSONArray()
+                for (zone in manifest.zones) {
+                    val zObj = JSONObject().apply {
+                        put("id", zone.id)
+                        put("name", zone.name)
+                        put("x", zone.x)
+                        put("y", zone.y)
+                        put("width", zone.width)
+                        put("height", zone.height)
+                        put("zIndex", zone.zIndex)
+                        if (zone.backgroundColor != null) put("backgroundColor", zone.backgroundColor)
+
+                        val blocksArr = JSONArray()
+                        for (block in zone.blocks) {
+                            val bObj = JSONObject().apply {
+                                put("id", block.id)
+                                if (block.mediaItemId != null) put("mediaItemId", block.mediaItemId)
+                                if (block.playlistId != null) put("playlistId", block.playlistId)
+                                put("widgetType", block.widgetType.name)
+                                if (block.widgetDataJson != null) put("widgetDataJson", block.widgetDataJson)
+                                put("durationSeconds", block.durationSeconds)
+                                put("isMuted", block.isMuted)
+                            }
+                            blocksArr.put(bObj)
+                        }
+                        put("blocksList", blocksArr)
+                    }
+                    layersArr.put(zObj)
+                }
+                put("layersList", layersArr)
+            }
+            put("layout", layoutObj)
+
+            val assetsArr = JSONArray()
+            for (asset in manifest.requiredAssets) {
+                val aObj = JSONObject().apply {
+                    put("mediaId", asset.mediaId)
+                    put("url", asset.url)
+                    put("sha256Hash", asset.sha256Hash)
+                    put("fileSizeBytes", asset.fileSizeBytes)
+                    put("localFilename", asset.localFilename)
+                    put("mediaType", asset.mediaType.rawValue)
+                    put("durationSeconds", asset.durationSeconds)
+                }
+                assetsArr.put(aObj)
+            }
+            put("requiredAssetsList", assetsArr)
         }
         return root.toString()
     }

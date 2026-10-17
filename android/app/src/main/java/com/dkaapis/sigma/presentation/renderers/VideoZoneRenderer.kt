@@ -20,7 +20,18 @@ class VideoZoneRenderer(
         val player = ExoPlayer.Builder(context).build().apply {
             repeatMode = Player.REPEAT_MODE_ALL
             volume = if (isMuted) 0f else 1.0f
-            val item = MediaItem.fromUri(Uri.fromFile(videoFile))
+            addListener(object : Player.Listener {
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    android.util.Log.e("VideoZoneRenderer", "Playback error for ${videoFile.absolutePath}: ${error.message}", error)
+                }
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    android.util.Log.i("VideoZoneRenderer", "Playback state for ${videoFile.name}: $playbackState (READY=3)")
+                }
+            })
+            val item = MediaItem.Builder()
+                .setUri(Uri.fromFile(videoFile))
+                .setMimeType(androidx.media3.common.MimeTypes.VIDEO_MP4)
+                .build()
             setMediaItem(item)
             prepare()
             playWhenReady = true

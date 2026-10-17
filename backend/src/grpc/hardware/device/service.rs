@@ -177,6 +177,12 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             Uuid::parse_str(&req.active_layout_id).ok()
         };
 
+        let client_hash = if req.active_manifest_hash.is_empty() {
+            None
+        } else {
+            Some(req.active_manifest_hash)
+        };
+
         let dto = HeartbeatDto {
             device_id,
             device_token: req.device_token,
@@ -185,18 +191,12 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             memory_percent: Some(req.memory_usage_percent),
             current_playing_media_id,
             active_layout_id,
-            active_manifest_hash: if req.active_manifest_hash.is_empty() { None } else { Some(req.active_manifest_hash) },
+            active_manifest_hash: client_hash.clone(),
         };
 
         DeviceService::process_heartbeat(&self.pool, dto)
             .await
             .map_err(Status::from)?;
-
-        let client_hash = if req.active_manifest_hash.is_empty() {
-            None
-        } else {
-            Some(req.active_manifest_hash)
-        };
 
         let needs_manifest_sync = match crate::modules::distribution::manifest::services::ManifestService::get_manifest_for_device(&self.pool, device_id, client_hash).await {
             Ok(res) => !res.is_up_to_date,

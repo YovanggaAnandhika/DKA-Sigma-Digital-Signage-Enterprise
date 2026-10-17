@@ -21,6 +21,7 @@ import com.dkaapis.sigma.data.repository.DeviceRepositoryImpl
 import com.dkaapis.sigma.data.repository.ManifestRepositoryImpl
 import com.dkaapis.sigma.data.repository.MediaStorageRepositoryImpl
 import com.dkaapis.sigma.domain.model.Manifest
+import com.dkaapis.sigma.domain.model.MediaType
 import com.dkaapis.sigma.domain.model.ZoneWidgetType
 import com.dkaapis.sigma.domain.usecase.DownloadAndVerifyMediaUseCase
 import com.dkaapis.sigma.domain.usecase.RegisterAndPairUseCase
@@ -33,6 +34,7 @@ import com.dkaapis.sigma.service.PlayerForegroundService
 import com.dkaapis.sigma.service.WatchdogService
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.io.File
 
 class PlayerActivity : AppCompatActivity() {
 
@@ -54,8 +56,12 @@ class PlayerActivity : AppCompatActivity() {
             WatchdogService.pingFromPlayer(this@PlayerActivity)
             lifecycleScope.launch {
                 try {
-                    if (::deviceRepo.isInitialized) {
-                        deviceRepo.sendHeartbeat()
+                    if (::deviceRepo.isInitialized && ::viewModel.isInitialized) {
+                        val currentHash = viewModel.getActiveManifestHash()
+                        val res = deviceRepo.sendHeartbeat(manifestHash = currentHash)
+                        if (res.getOrDefault(false)) {
+                            viewModel.syncManifest()
+                        }
                     }
                 } catch (_: Exception) {}
             }
@@ -195,6 +201,7 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun renderManifest(manifest: Manifest) {
+        android.util.Log.i("PlayerActivity", "renderManifest: layout=${manifest.layoutName}, zones=${manifest.zones.size}, assets=${manifest.requiredAssets.size}")
         releaseRenderers()
         canvasLayout.removeAllViews()
 
@@ -243,7 +250,13 @@ class PlayerActivity : AppCompatActivity() {
                     activeBlock.mediaItemId != null -> {
                         val file = storageRepo.getLocalFileForAsset(activeBlock.mediaItemId)
                         if (file != null) {
-                            if (file.name.endsWith(".mp4", ignoreCase = true) || file.extension == "video") {
+                            val asset = manifest.requiredAssets.find { it.mediaId == activeBlock.mediaItemId }
+                            val isVideo = asset?.localFilename?.endsWith(".mp4", ignoreCase = true) == true
+                                || asset?.url?.endsWith(".mp4", ignoreCase = true) == true
+                                || asset?.mediaType == MediaType.VIDEO
+                                || isVideoFile(file)
+
+                            if (isVideo) {
                                 val renderer = VideoZoneRenderer(this)
                                 videoRenderers.add(renderer)
                                 val view = renderer.createView(zoneView, file, activeBlock.isMuted)
@@ -259,6 +272,23 @@ class PlayerActivity : AppCompatActivity() {
             }
 
             canvasLayout.addView(zoneView)
+        }
+    }
+
+    private fun isVideoFile(file: File): Boolean {
+        if (file.name.endsWith(".mp4", ignoreCase = true) || file.extension.equals("video", ignoreCase = true)) return true
+        return try {
+            if (file.length() > 12) {
+                java.io.FileInputStream(file).use { fis ->
+                    val header = ByteArray(12)
+                    if (fis.read(header) == 12) {
+                        val signature = String(header, 4, 4, java.nio.charset.StandardCharsets.ISO_8859_1)
+                        signature == "ftyp" || signature == "moov"
+                    } else false
+                }
+            } else false
+        } catch (_: Exception) {
+            false
         }
     }
 
