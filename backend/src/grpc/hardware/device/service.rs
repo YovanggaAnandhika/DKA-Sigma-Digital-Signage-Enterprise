@@ -192,9 +192,20 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             .await
             .map_err(Status::from)?;
 
+        let client_hash = if req.active_manifest_hash.is_empty() {
+            None
+        } else {
+            Some(req.active_manifest_hash)
+        };
+
+        let needs_manifest_sync = match crate::modules::distribution::manifest::services::ManifestService::get_manifest_for_device(&self.pool, device_id, client_hash).await {
+            Ok(res) => !res.is_up_to_date,
+            Err(_) => false,
+        };
+
         Ok(Response::new(HeartbeatResponse {
             acknowledged: true,
-            needs_manifest_sync: false,
+            needs_manifest_sync,
             server_time: chrono::Utc::now().to_rfc3339(),
         }))
     }

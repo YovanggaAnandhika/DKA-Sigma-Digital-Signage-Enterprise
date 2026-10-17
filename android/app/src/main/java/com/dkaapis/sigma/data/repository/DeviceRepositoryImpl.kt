@@ -248,7 +248,13 @@ class DeviceRepositoryImpl(
                 .build()
 
             val response = httpClient.newCall(request).execute()
-            Result.success(response.isSuccessful)
+            if (response.isSuccessful) {
+                val json = JSONObject(response.body?.string() ?: "")
+                val needsSync = json.optBoolean("needsManifestSync", false) || json.optBoolean("needs_manifest_sync", false)
+                Result.success(needsSync)
+            } else {
+                Result.success(false)
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
