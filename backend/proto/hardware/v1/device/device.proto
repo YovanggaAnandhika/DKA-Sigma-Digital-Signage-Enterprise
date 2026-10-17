@@ -8,6 +8,7 @@ service DeviceService {
   // Retail Display Operations
   rpc RegisterDevice(RegisterDeviceRequest) returns (RegisterDeviceResponse);
   rpc PairDevice(PairDeviceRequest) returns (PairDeviceResponse);
+  rpc CheckPairingStatus(CheckPairingStatusRequest) returns (CheckPairingStatusResponse);
   rpc SendHeartbeat(HeartbeatRequest) returns (HeartbeatResponse);
 
   // Backoffice Device CRUD

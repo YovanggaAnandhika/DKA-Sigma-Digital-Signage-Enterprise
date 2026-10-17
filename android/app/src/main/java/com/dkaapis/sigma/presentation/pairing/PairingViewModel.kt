@@ -35,8 +35,9 @@ class PairingViewModel(
             val regResult = registerAndPairUseCase.register()
             if (regResult.isSuccess) {
                 val pairing = regResult.getOrThrow()
-                _uiState.value = PairingUiState.WaitingForAdmin(pairing.deviceId, pairing.deviceId)
-                pollPairingStatus(pairing.deviceId)
+                val code = pairing.pairingCode.ifEmpty { pairing.deviceId }
+                _uiState.value = PairingUiState.WaitingForAdmin(code, pairing.deviceId)
+                pollPairingStatus(code)
             } else {
                 _uiState.value = PairingUiState.Error(regResult.exceptionOrNull()?.message ?: "Gagal registrasi perangkat")
             }

@@ -33,6 +33,12 @@ class TokenStorage(context: Context) {
             .apply()
     }
 
+    fun saveDeviceId(deviceId: String) {
+        prefs.edit()
+            .putString(KEY_DEVICE_ID, deviceId)
+            .apply()
+    }
+
     fun getDeviceId(): String? = prefs.getString(KEY_DEVICE_ID, null)
 
     fun getDeviceToken(): String? = prefs.getString(KEY_DEVICE_TOKEN, null)

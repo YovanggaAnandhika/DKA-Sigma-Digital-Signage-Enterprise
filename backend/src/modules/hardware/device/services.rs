@@ -43,6 +43,7 @@ impl DeviceService {
             pairing_id,
             device.id,
             &dto.device_name,
+            &raw_token,
             &token_hash,
             dto.default_layout_id,
             dto.canary_group_id,
@@ -53,6 +54,14 @@ impl DeviceService {
             device: paired_device,
             device_token: raw_token,
         })
+    }
+
+    pub async fn get_pairing_status(
+        pool: &DbPool,
+        code: &str,
+    ) -> Result<Option<(Uuid, String, Option<String>)>, AppError> {
+        let status = DeviceRepository::get_pairing_status(pool, code).await?;
+        Ok(status)
     }
 
     pub async fn process_heartbeat(pool: &DbPool, dto: HeartbeatDto) -> Result<bool, AppError> {

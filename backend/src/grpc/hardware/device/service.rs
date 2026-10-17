@@ -9,7 +9,7 @@ use crate::grpc::proto::hardware::v1::device::{
     Device, DeviceOrientation, GetDeviceRequest, HeartbeatRequest, HeartbeatResponse,
     ListDevicesRequest, ListDevicesResponse, PairDeviceRequest, PairDeviceResponse,
     RegisterDeviceRequest, RegisterDeviceResponse, UpdateDeviceRequest, DeleteDeviceRequest,
-    DeleteDeviceResponse,
+    DeleteDeviceResponse, CheckPairingStatusRequest, CheckPairingStatusResponse,
 };
 
 pub struct DeviceServiceImpl {
@@ -130,6 +130,31 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             device: Some(proto_dev),
             device_token: res.device_token,
         }))
+    }
+
+    async fn check_pairing_status(
+        &self,
+        request: Request<CheckPairingStatusRequest>,
+    ) -> Result<Response<CheckPairingStatusResponse>, Status> {
+        let req = request.into_inner();
+        let status_opt = DeviceService::get_pairing_status(&self.pool, &req.pairing_code)
+            .await
+            .map_err(Status::from)?;
+
+        if let Some((device_id, status, token_opt)) = status_opt {
+            let is_paired = status == "paired";
+            Ok(Response::new(CheckPairingStatusResponse {
+                is_paired,
+                device_id: device_id.to_string(),
+                device_token: token_opt.unwrap_or_default(),
+            }))
+        } else {
+            Ok(Response::new(CheckPairingStatusResponse {
+                is_paired: false,
+                device_id: String::new(),
+                device_token: String::new(),
+            }))
+        }
     }
 
     async fn send_heartbeat(

@@ -88,6 +88,7 @@ impl DeviceRepository {
         pairing_id: Uuid,
         id: Uuid,
         name: &str,
+        raw_token: &str,
         token_hash: &str,
         default_layout_id: Option<Uuid>,
         canary_group_id: Option<Uuid>,
@@ -119,17 +120,38 @@ impl DeviceRepository {
         sqlx::query(
             r#"
             UPDATE device_pairings
-            SET status = 'paired', paired_at = NOW()
+            SET status = 'paired', paired_at = NOW(), device_token = $2
             WHERE id = $1
             "#,
         )
         .bind(pairing_id)
+        .bind(raw_token)
         .execute(&mut *tx)
         .await?;
 
         tx.commit().await?;
 
         Ok(device)
+    }
+
+    pub async fn get_pairing_status(
+        pool: &DbPool,
+        code: &str,
+    ) -> Result<Option<(Uuid, String, Option<String>)>, sqlx::Error> {
+        let record = sqlx::query_as::<_, (Uuid, String, Option<String>)>(
+            r#"
+            SELECT device_id, status, device_token
+            FROM device_pairings
+            WHERE pairing_code = $1
+            ORDER BY created_at DESC
+            LIMIT 1
+            "#,
+        )
+        .bind(code)
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(record)
     }
 
     pub async fn update_heartbeat(

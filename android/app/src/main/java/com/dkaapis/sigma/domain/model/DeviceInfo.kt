@@ -19,5 +19,6 @@ data class PairingResult(
     val isSuccess: Boolean,
     val deviceId: String,
     val deviceToken: String,
+    val pairingCode: String = "",
     val errorMessage: String? = null
 )

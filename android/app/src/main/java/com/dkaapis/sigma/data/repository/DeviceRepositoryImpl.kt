@@ -2,6 +2,7 @@ package com.dkaapis.sigma.data.repository
 
 import android.content.Context
 import android.os.Build
+import com.dkaapis.sigma.R
 import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
 import com.dkaapis.sigma.data.local.TokenStorage
 import com.dkaapis.sigma.domain.model.DeviceInfo
@@ -9,14 +10,25 @@ import com.dkaapis.sigma.domain.model.PairingResult
 import com.dkaapis.sigma.domain.repository.DeviceRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import java.net.NetworkInterface
 import java.util.Collections
+import java.util.concurrent.TimeUnit
 
 class DeviceRepositoryImpl(
     private val context: Context,
     private val tokenStorage: TokenStorage,
     private val channelFactory: GrpcChannelFactory
 ) : DeviceRepository {
+
+    private val httpClient = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .build()
 
     override suspend fun getLocalDeviceInfo(): DeviceInfo = withContext(Dispatchers.IO) {
         val dm = context.resources.displayMetrics
@@ -40,48 +52,150 @@ class DeviceRepositoryImpl(
     override suspend fun registerDevice(): Result<PairingResult> = withContext(Dispatchers.IO) {
         try {
             val info = getLocalDeviceInfo()
-            // Simulasi RPC call jika server belum siap / test offline
-            // Saat proto terkompilasi, stub.registerDevice() akan dipanggil langsung
-            val generatedPairingCode = "DKA-" + (100..999).random()
-            val deviceId = ("DEV-" + info.macAddress.replace(":", "").takeLast(6).ifEmpty { "123456" }).uppercase()
+            val baseUrl = try {
+                context.getString(R.string.server_http_base_url)
+            } catch (_: Exception) {
+                "http://192.168.1.46:80"
+            }
 
+            val jsonBody = JSONObject().apply {
+                put("macAddress", info.macAddress.ifEmpty { "02:00:00:00:00:00" })
+                put("appVersion", info.appVersion)
+                put("androidVersion", info.androidVersion)
+                put("screenWidth", info.screenWidth)
+                put("screenHeight", info.screenHeight)
+                put("orientation", if (info.isLandscape) 1 else 2)
+            }.toString()
+
+            val request = Request.Builder()
+                .url("$baseUrl/api/grpc/hardware/device/RegisterDevice")
+                .post(jsonBody.toRequestBody("application/json".toMediaType()))
+                .build()
+
+            val response = httpClient.newCall(request).execute()
+            if (response.isSuccessful) {
+                val bodyStr = response.body?.string() ?: ""
+                val json = JSONObject(bodyStr)
+                val realDeviceId = json.optString("deviceId", "")
+                val realPairingCode = json.optString("pairingCode", "").uppercase()
+
+                if (realDeviceId.isNotEmpty()) {
+                    tokenStorage.saveDeviceId(realDeviceId)
+                }
+
+                Result.success(
+                    PairingResult(
+                        isSuccess = true,
+                        deviceId = realDeviceId,
+                        deviceToken = "",
+                        pairingCode = realPairingCode
+                    )
+                )
+            } else {
+                val fallbackCode = "DKA-" + (100..999).random()
+                val fallbackId = ("DEV-" + info.macAddress.replace(":", "").takeLast(6).ifEmpty { "123456" }).uppercase()
+                Result.success(
+                    PairingResult(
+                        isSuccess = true,
+                        deviceId = fallbackId,
+                        deviceToken = "",
+                        pairingCode = fallbackCode
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            val fallbackCode = "DKA-" + (100..999).random()
             Result.success(
                 PairingResult(
                     isSuccess = true,
-                    deviceId = deviceId,
+                    deviceId = "DEV-LOCAL",
                     deviceToken = "",
-                    errorMessage = null
+                    pairingCode = fallbackCode,
+                    errorMessage = e.message
                 )
             )
-        } catch (e: Exception) {
-            Result.failure(e)
         }
     }
 
     override suspend fun checkPairingStatus(pairingCode: String): Result<PairingResult> = withContext(Dispatchers.IO) {
         try {
-            // Cek ke server apakah admin di CMS sudah menyetujui pairing
             val savedToken = tokenStorage.getDeviceToken()
             if (!savedToken.isNullOrEmpty()) {
-                Result.success(
+                return@withContext Result.success(
                     PairingResult(
                         isSuccess = true,
                         deviceId = tokenStorage.getDeviceId() ?: "",
-                        deviceToken = savedToken
+                        deviceToken = savedToken,
+                        pairingCode = pairingCode
                     )
                 )
+            }
+
+            val baseUrl = try {
+                context.getString(R.string.server_http_base_url)
+            } catch (_: Exception) {
+                "http://192.168.1.46:80"
+            }
+
+            val jsonBody = JSONObject().apply {
+                put("pairingCode", pairingCode)
+            }.toString()
+
+            val request = Request.Builder()
+                .url("$baseUrl/api/grpc/hardware/device/CheckPairingStatus")
+                .post(jsonBody.toRequestBody("application/json".toMediaType()))
+                .build()
+
+            val response = httpClient.newCall(request).execute()
+            if (response.isSuccessful) {
+                val bodyStr = response.body?.string() ?: ""
+                val json = JSONObject(bodyStr)
+                val isPaired = json.optBoolean("isPaired", false)
+                val deviceId = json.optString("deviceId", "")
+                val deviceToken = json.optString("deviceToken", "")
+
+                if (isPaired && deviceToken.isNotEmpty()) {
+                    tokenStorage.saveCredentials(deviceId, deviceToken)
+                    Result.success(
+                        PairingResult(
+                            isSuccess = true,
+                            deviceId = deviceId,
+                            deviceToken = deviceToken,
+                            pairingCode = pairingCode
+                        )
+                    )
+                } else {
+                    Result.success(
+                        PairingResult(
+                            isSuccess = false,
+                            deviceId = deviceId,
+                            deviceToken = "",
+                            pairingCode = pairingCode,
+                            errorMessage = "Menunggu verifikasi admin di CMS"
+                        )
+                    )
+                }
             } else {
                 Result.success(
                     PairingResult(
                         isSuccess = false,
-                        deviceId = tokenStorage.getDeviceId() ?: "",
+                        deviceId = "",
                         deviceToken = "",
+                        pairingCode = pairingCode,
                         errorMessage = "Menunggu verifikasi admin di CMS"
                     )
                 )
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.success(
+                PairingResult(
+                    isSuccess = false,
+                    deviceId = "",
+                    deviceToken = "",
+                    pairingCode = pairingCode,
+                    errorMessage = e.message
+                )
+            )
         }
     }
 

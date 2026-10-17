@@ -125,3 +125,13 @@ message DeleteDeviceRequest {
 message DeleteDeviceResponse {
   bool success = 1;
 }
+
+message CheckPairingStatusRequest {
+  string pairing_code = 1;
+}
+
+message CheckPairingStatusResponse {
+  bool is_paired = 1;
+  string device_id = 2;
+  string device_token = 3;
+}
