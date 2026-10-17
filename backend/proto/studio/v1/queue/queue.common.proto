@@ -159,3 +159,100 @@ message DeleteCounterRequest {
 message DeleteCounterResponse {
   bool success = 1;
 }
+
+// Queue Layout Items ("Tata Letak Antrian")
+message SaveQueueLayoutRequest {
+  string queue_display_id = 1;
+  repeated QueueLayoutItem items = 2;
+}
+
+message SaveQueueLayoutResponse {
+  repeated QueueLayoutItem items = 1;
+}
+
+message GetQueueLayoutRequest {
+  string queue_display_id = 1;
+}
+
+message GetQueueLayoutResponse {
+  repeated QueueLayoutItem items = 1;
+}
+
+message UpdateQueueLayoutItemRequest {
+  QueueLayoutItem item = 1;
+}
+
+message DeleteQueueLayoutItemRequest {
+  string id = 1;
+}
+
+message DeleteQueueLayoutItemResponse {
+  bool success = 1;
+}
+
+// Queue Counters
+message UpdateCounterRequest {
+  string id = 1;
+  int32 counter_number = 2;
+  string counter_name = 3;
+  string operator_name = 4;
+  bool is_active = 5;
+}
+
+message ListCountersRequest {
+  string queue_display_id = 1;
+}
+
+message ListCountersResponse {
+  repeated QueueCounter items = 1;
+}
+
+// Queue Tickets
+message IssueTicketRequest {
+  string queue_display_id = 1;
+  string prefix = 2;
+}
+
+message ListTicketsRequest {
+  string queue_display_id = 1;
+  optional string status = 2;
+  int32 limit = 3;
+}
+
+message ListTicketsResponse {
+  repeated QueueTicket items = 1;
+}
+
+message UpdateTicketStatusRequest {
+  string id = 1;
+  string status = 2;
+  optional string counter_id = 3;
+}
+
+// Queue Audios
+message AddAudioRequest {
+  string queue_display_id = 1;
+  string name = 2;
+  string audio_type = 3;
+  optional string media_item_id = 4;
+  optional string file_url = 5;
+  int32 volume_percent = 6;
+  bool is_active = 7;
+}
+
+message DeleteAudioRequest {
+  string id = 1;
+}
+
+message DeleteAudioResponse {
+  bool success = 1;
+}
+
+message ListAudiosRequest {
+  string queue_display_id = 1;
+}
+
+message ListAudiosResponse {
+  repeated QueueAudio items = 1;
+}
+

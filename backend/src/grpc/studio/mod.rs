@@ -5,6 +5,11 @@ pub mod playlist;
 pub mod schedule;
 pub mod transition;
 pub mod visual_filter;
+pub mod queue;
+pub mod ticker;
+pub mod clock;
+pub mod webview;
+pub mod album;
 
 #[macro_export]
 macro_rules! register_studio_services {
@@ -41,5 +46,21 @@ macro_rules! register_studio_services {
                     std::sync::Arc::new(crate::modules::studio::visual_filter::repositories::VisualFilterRepository::new($pool.clone()))
                 )
             ))
+            .add_service(crate::grpc::proto::studio::v1::queue::queue_service_server::QueueServiceServer::new(
+                crate::grpc::studio::queue::service::QueueServiceImpl::new($pool.clone())
+            ))
+            .add_service(crate::grpc::proto::studio::v1::ticker::ticker_service_server::TickerServiceServer::new(
+                crate::grpc::studio::ticker::service::TickerServiceImpl::new($pool.clone())
+            ))
+            .add_service(crate::grpc::proto::studio::v1::clock::clock_service_server::ClockServiceServer::new(
+                crate::grpc::studio::clock::service::ClockServiceImpl::new($pool.clone())
+            ))
+            .add_service(crate::grpc::proto::studio::v1::webview::webview_service_server::WebviewServiceServer::new(
+                crate::grpc::studio::webview::service::WebviewServiceImpl::new($pool.clone())
+            ))
+            .add_service(crate::grpc::proto::studio::v1::album::album_service_server::AlbumServiceServer::new(
+                crate::grpc::studio::album::service::AlbumServiceImpl::new($pool.clone())
+            ))
     };
 }
+

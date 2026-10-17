@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package signage.studio.v1.clock;
+
+import "common/v1/types.proto";
+
+message Clock {
+  string id = 1;
+  string name = 2;
+  string city = 3;
+  bool show_seconds = 4;
+  bool is_24_hour = 5;
+  string theme = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message CreateClockRequest {
+  string name = 1;
+  string city = 2;
+  bool show_seconds = 3;
+  bool is_24_hour = 4;
+  string theme = 5;
+}
+
+message GetClockRequest {
+  string id = 1;
+}
+
+message ListClocksRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+}
+
+message ListClocksResponse {
+  repeated Clock items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateClockRequest {
+  string id = 1;
+  string name = 2;
+  string city = 3;
+  bool show_seconds = 4;
+  bool is_24_hour = 5;
+  string theme = 6;
+}
+
+message DeleteClockRequest {
+  string id = 1;
+}
+
+message DeleteClockResponse {
+  bool success = 1;
+}

@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package signage.studio.v1.ticker;
+
+import "common/v1/types.proto";
+
+message Ticker {
+  string id = 1;
+  string name = 2;
+  string badge = 3;
+  repeated string messages = 4;
+  string speed = 5;
+  string theme = 6;
+  int32 font_size = 7;
+  string created_at = 8;
+  string updated_at = 9;
+}
+
+message CreateTickerRequest {
+  string name = 1;
+  string badge = 2;
+  repeated string messages = 3;
+  string speed = 4;
+  string theme = 5;
+  int32 font_size = 6;
+}
+
+message GetTickerRequest {
+  string id = 1;
+}
+
+message ListTickersRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+}
+
+message ListTickersResponse {
+  repeated Ticker items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateTickerRequest {
+  string id = 1;
+  string name = 2;
+  string badge = 3;
+  repeated string messages = 4;
+  string speed = 5;
+  string theme = 6;
+  int32 font_size = 7;
+}
+
+message DeleteTickerRequest {
+  string id = 1;
+}
+
+message DeleteTickerResponse {
+  bool success = 1;
+}

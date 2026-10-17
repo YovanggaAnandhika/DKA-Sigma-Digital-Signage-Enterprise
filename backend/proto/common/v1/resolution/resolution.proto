@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package signage.common.v1.resolution;
+
+import "common/v1/resolution/resolution.common.proto";
+
+service ResolutionService {
+  rpc ListResolutions(ListResolutionsRequest) returns (ListResolutionsResponse);
+  rpc GetResolution(GetResolutionRequest) returns (Resolution);
+  rpc CreateResolution(CreateResolutionRequest) returns (Resolution);
+  rpc DeleteResolution(DeleteResolutionRequest) returns (DeleteResolutionResponse);
+}

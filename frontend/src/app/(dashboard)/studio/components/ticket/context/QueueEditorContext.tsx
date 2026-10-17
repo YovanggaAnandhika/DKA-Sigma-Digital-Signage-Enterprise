@@ -12,6 +12,7 @@ import {
   createDefaultQueueLayoutItems,
 } from '../types';
 import { modal } from '@/components/ui/ModalDialog';
+import { createQueueDisplay, updateQueueDisplay } from '@/lib/services/studio/queue.service';
 
 interface SimulatorState {
   currentSeq: number;
@@ -369,8 +370,32 @@ export function QueueEditorProvider({
 
       if (isNew) {
         items.unshift(payload);
+        createQueueDisplay({
+          name: payload.name,
+          prefix: payload.prefix,
+          canvasWidth: payload.canvasWidth,
+          canvasHeight: payload.canvasHeight,
+          backgroundColor: payload.backgroundColor,
+          backgroundImageUrl: payload.backgroundImageUrl,
+          themePreset: payload.themePreset,
+          autoRecallEnabled: payload.autoRecallEnabled,
+          items: payload.items,
+          counters: payload.counters,
+        }).catch((err) => console.warn('Sync backend queue create failed:', err));
       } else {
         items = items.map((q) => (q.id === payload.id ? payload : q));
+        updateQueueDisplay(payload.id, {
+          name: payload.name,
+          prefix: payload.prefix,
+          canvasWidth: payload.canvasWidth,
+          canvasHeight: payload.canvasHeight,
+          backgroundColor: payload.backgroundColor,
+          backgroundImageUrl: payload.backgroundImageUrl,
+          themePreset: payload.themePreset,
+          autoRecallEnabled: payload.autoRecallEnabled,
+          items: payload.items,
+          counters: payload.counters,
+        }).catch((err) => console.warn('Sync backend queue update failed:', err));
       }
 
       localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(items));

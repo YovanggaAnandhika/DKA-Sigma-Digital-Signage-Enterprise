@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package signage.studio.v1.clock;
+
+import "studio/v1/clock/clock.common.proto";
+
+service ClockService {
+  rpc CreateClock(CreateClockRequest) returns (Clock);
+  rpc GetClock(GetClockRequest) returns (Clock);
+  rpc ListClocks(ListClocksRequest) returns (ListClocksResponse);
+  rpc UpdateClock(UpdateClockRequest) returns (Clock);
+  rpc DeleteClock(DeleteClockRequest) returns (DeleteClockResponse);
+}

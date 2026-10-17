@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package signage.common.v1.resolution;
+
+import "common/v1/types.proto";
+
+message Resolution {
+  string id = 1;
+  string name = 2;
+  int32 width = 3;
+  int32 height = 4;
+  string aspect_ratio = 5;
+  string created_at = 6;
+  string updated_at = 7;
+}
+
+message ListResolutionsRequest {}
+
+message ListResolutionsResponse {
+  repeated Resolution items = 1;
+}
+
+message GetResolutionRequest {
+  string id = 1;
+}
+
+message CreateResolutionRequest {
+  string name = 1;
+  int32 width = 2;
+  int32 height = 3;
+  string aspect_ratio = 4;
+}
+
+message DeleteResolutionRequest {
+  string id = 1;
+}
+
+message DeleteResolutionResponse {
+  bool success = 1;
+}

@@ -5,13 +5,34 @@ package signage.studio.v1.queue;
 import "studio/v1/queue/queue.common.proto";
 
 service QueueService {
+  // Queue Displays
   rpc CreateQueueDisplay(CreateQueueDisplayRequest) returns (QueueDisplayDetail);
   rpc GetQueueDisplay(GetQueueDisplayRequest) returns (QueueDisplayDetail);
   rpc ListQueueDisplays(ListQueueDisplaysRequest) returns (ListQueueDisplaysResponse);
   rpc UpdateQueueDisplay(UpdateQueueDisplayRequest) returns (QueueDisplayDetail);
   rpc DeleteQueueDisplay(DeleteQueueDisplayRequest) returns (DeleteQueueDisplayResponse);
 
+  // Queue Layout Items ("Tata Letak Antrian")
+  rpc SaveQueueLayout(SaveQueueLayoutRequest) returns (SaveQueueLayoutResponse);
+  rpc GetQueueLayout(GetQueueLayoutRequest) returns (GetQueueLayoutResponse);
+  rpc UpdateQueueLayoutItem(UpdateQueueLayoutItemRequest) returns (QueueLayoutItem);
+  rpc DeleteQueueLayoutItem(DeleteQueueLayoutItemRequest) returns (DeleteQueueLayoutItemResponse);
+
+  // Queue Counters
   rpc AddCounter(AddCounterRequest) returns (QueueCounter);
+  rpc UpdateCounter(UpdateCounterRequest) returns (QueueCounter);
   rpc DeleteCounter(DeleteCounterRequest) returns (DeleteCounterResponse);
+  rpc ListCounters(ListCountersRequest) returns (ListCountersResponse);
+
+  // Queue Tickets
+  rpc IssueTicket(IssueTicketRequest) returns (QueueTicket);
   rpc CallNextTicket(CallNextTicketRequest) returns (CallNextTicketResponse);
+  rpc ListTickets(ListTicketsRequest) returns (ListTicketsResponse);
+  rpc UpdateTicketStatus(UpdateTicketStatusRequest) returns (QueueTicket);
+
+  // Queue Audios
+  rpc AddAudio(AddAudioRequest) returns (QueueAudio);
+  rpc DeleteAudio(DeleteAudioRequest) returns (DeleteAudioResponse);
+  rpc ListAudios(ListAudiosRequest) returns (ListAudiosResponse);
 }
+

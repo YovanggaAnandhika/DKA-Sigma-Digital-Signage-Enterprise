@@ -8,8 +8,8 @@ impl LayerBlockRepository {
     pub async fn create(pool: &PgPool, dto: CreateLayerBlockDto) -> Result<LayerBlockEntity, sqlx::Error> {
         if let Some(qid) = dto.queue_id {
             sqlx::query(
-                "INSERT INTO queue_displays (id, name, prefix, current_number, current_counter)
-                 VALUES ($1, 'Antrian Kasir & Layanan', 'A', 'A-001', 'LOKET 01')
+                "INSERT INTO queue_displays (id, name, prefix)
+                 VALUES ($1, 'Antrian Kasir & Layanan', 'A')
                  ON CONFLICT (id) DO NOTHING"
             )
             .bind(qid)

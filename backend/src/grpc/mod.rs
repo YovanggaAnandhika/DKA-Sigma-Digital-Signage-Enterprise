@@ -5,6 +5,9 @@ pub mod proto {
             pub mod orientation {
                 tonic::include_proto!("signage.common.v1.orientation");
             }
+            pub mod resolution {
+                tonic::include_proto!("signage.common.v1.resolution");
+            }
         }
     }
     pub mod iam {
@@ -58,6 +61,18 @@ pub mod proto {
             }
             pub mod queue {
                 tonic::include_proto!("signage.studio.v1.queue");
+            }
+            pub mod ticker {
+                tonic::include_proto!("signage.studio.v1.ticker");
+            }
+            pub mod clock {
+                tonic::include_proto!("signage.studio.v1.clock");
+            }
+            pub mod webview {
+                tonic::include_proto!("signage.studio.v1.webview");
+            }
+            pub mod album {
+                tonic::include_proto!("signage.studio.v1.album");
             }
         }
     }
