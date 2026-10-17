@@ -27,7 +27,7 @@ export default function CreateClockWeatherPage() {
     if (!name.trim()) return;
 
     const newWidget: ClockWeatherConfig = {
-      id: `cw-${Date.now()}`,
+      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `d0000000-0000-0000-0000-${Date.now().toString().padStart(12, '0')}`,
       name: name.trim(),
       city,
       showSeconds,

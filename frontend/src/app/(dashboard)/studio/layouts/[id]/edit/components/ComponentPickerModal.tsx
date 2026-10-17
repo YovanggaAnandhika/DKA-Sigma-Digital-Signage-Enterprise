@@ -9,6 +9,7 @@ import { DEFAULT_TICKERS, TICKER_STORAGE_KEY, TickerConfig } from '@/app/(dashbo
 import { DEFAULT_CLOCKS, CLOCK_STORAGE_KEY, ClockWeatherConfig } from '@/app/(dashboard)/studio/components/clock/types';
 import { DEFAULT_QUEUES, QUEUE_STORAGE_KEY, QueueDisplayConfig } from '@/app/(dashboard)/studio/components/ticket/types';
 import { DEFAULT_ALBUMS, ALBUM_STORAGE_KEY, PhotoAlbum } from '@/app/(dashboard)/studio/components/album/types';
+import { ensureUuid } from '@/lib/services/studio/widgetHelper';
 
 export default function ComponentPickerModal() {
   const {
@@ -31,15 +32,30 @@ export default function ComponentPickerModal() {
     if (typeof window === 'undefined') return;
     try {
       const storedWv = localStorage.getItem(WEBVIEW_STORAGE_KEY);
-      if (storedWv) setWebviews(JSON.parse(storedWv));
+      if (storedWv) {
+        const parsed = JSON.parse(storedWv);
+        setWebviews(parsed.map((item: any) => ({ ...item, id: ensureUuid(item.id) })));
+      }
       const storedTk = localStorage.getItem(TICKER_STORAGE_KEY);
-      if (storedTk) setTickers(JSON.parse(storedTk));
+      if (storedTk) {
+        const parsed = JSON.parse(storedTk);
+        setTickers(parsed.map((item: any) => ({ ...item, id: ensureUuid(item.id) })));
+      }
       const storedCk = localStorage.getItem(CLOCK_STORAGE_KEY);
-      if (storedCk) setClocks(JSON.parse(storedCk));
+      if (storedCk) {
+        const parsed = JSON.parse(storedCk);
+        setClocks(parsed.map((item: any) => ({ ...item, id: ensureUuid(item.id) })));
+      }
       const storedQu = localStorage.getItem(QUEUE_STORAGE_KEY);
-      if (storedQu) setQueues(JSON.parse(storedQu));
+      if (storedQu) {
+        const parsed = JSON.parse(storedQu);
+        setQueues(parsed.map((item: any) => ({ ...item, id: ensureUuid(item.id) })));
+      }
       const storedAl = localStorage.getItem(ALBUM_STORAGE_KEY);
-      if (storedAl) setAlbums(JSON.parse(storedAl));
+      if (storedAl) {
+        const parsed = JSON.parse(storedAl);
+        setAlbums(parsed.map((item: any) => ({ ...item, id: ensureUuid(item.id) })));
+      }
     } catch (e) {
       console.warn('Gagal memuat local storage komponen', e);
     }
@@ -85,11 +101,12 @@ export default function ComponentPickerModal() {
         realZoneId = newZ.id;
       }
 
-      // Simpan block komponen ke backend via addWidgetBlock (atau fallback jika item ID belum di DB)
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.id);
-      const res = isUuid
-        ? await addWidgetBlock(realZoneId, widgetType, item.id, start_time_seconds, duration_seconds).catch(() => null)
-        : null;
+      // Pastikan item.id adalah UUID standar
+      const targetWidgetId = ensureUuid(item.id);
+      const res = await addWidgetBlock(realZoneId, widgetType, targetWidgetId, start_time_seconds, duration_seconds).catch((err) => {
+        console.warn('Simpan async widget block gagal, diteruskan di tombol Simpan Layout:', err);
+        return null;
+      });
 
       const createdBlock = res?.block || res || {};
 
@@ -100,8 +117,8 @@ export default function ComponentPickerModal() {
         playlistId: '',
         mediaItemId: '',
         widgetType,
-        widgetId: item.id,
-        widgetData: item,
+        widgetId: targetWidgetId,
+        widgetData: { ...item, id: targetWidgetId },
         startTimeSeconds: start_time_seconds,
         durationSeconds: duration_seconds,
         transitionType: 'none',

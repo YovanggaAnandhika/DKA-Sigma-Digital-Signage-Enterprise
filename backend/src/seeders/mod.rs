@@ -165,6 +165,79 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Erro
         orientation: Some("portrait".to_string()),
     }).await?;
 
+    // 7. Seed Default Studio Components / Widgets
+    info!("Seeding default studio widgets...");
+    let queue_id1 = Uuid::parse_str("a0000000-0000-0000-0000-000000000001")?;
+    let queue_id2 = Uuid::parse_str("a0000000-0000-0000-0000-000000000002")?;
+    sqlx::query(
+        "INSERT INTO queue_displays (id, name, prefix, current_number, current_counter, marquee_text)
+         VALUES 
+         ($1, 'Antrian Kasir Utama & CS', 'A', 'A-024', 'LOKET 02', 'Silakan menuju loket saat nomor Anda dipanggil.'),
+         ($2, 'Antrian Pengambilan Obat / Farmasi', 'B', 'B-015', 'LOKET 01', 'Harap persiapkan struk resep Anda.')
+         ON CONFLICT (id) DO NOTHING"
+    )
+    .bind(queue_id1)
+    .bind(queue_id2)
+    .execute(pool)
+    .await?;
+
+    let webview_id1 = Uuid::parse_str("b0000000-0000-0000-0000-000000000001")?;
+    let webview_id2 = Uuid::parse_str("b0000000-0000-0000-0000-000000000002")?;
+    sqlx::query(
+        "INSERT INTO webviews (id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation)
+         VALUES 
+         ($1, 'Katalog Menu & Promo Kafe', 'https://en.wikipedia.org/wiki/Digital_signage', 60, 100, true, 'landscape'),
+         ($2, 'Live Dashboard Indikator Penjualan Toko', 'https://worldtimeapi.org', 30, 110, false, 'landscape')
+         ON CONFLICT (id) DO NOTHING"
+    )
+    .bind(webview_id1)
+    .bind(webview_id2)
+    .execute(pool)
+    .await?;
+
+    let ticker_id1 = Uuid::parse_str("c0000000-0000-0000-0000-000000000001")?;
+    let ticker_id2 = Uuid::parse_str("c0000000-0000-0000-0000-000000000002")?;
+    let ticker_messages1: &[&str] = &["Dapatkan diskon 20% untuk semua produk segar!", "Gunakan kartu member DKASigma Point."];
+    let ticker_messages2: &[&str] = &["Flash Sale akhir pekan diskon hingga 50%!"];
+    sqlx::query(
+        "INSERT INTO tickers (id, name, badge, messages, speed, theme, font_size)
+         VALUES 
+         ($1, 'Pengumuman Promo Kasir & Diskon Member', 'PROMO HARI INI', $3, 'normal', 'blue', 16),
+         ($2, 'Flash Sale Akhir Pekan', 'FLASH SALE', $4, 'fast', 'red', 18)
+         ON CONFLICT (id) DO NOTHING"
+    )
+    .bind(ticker_id1)
+    .bind(ticker_id2)
+    .bind(ticker_messages1)
+    .bind(ticker_messages2)
+    .execute(pool)
+    .await?;
+
+    let clock_id1 = Uuid::parse_str("d0000000-0000-0000-0000-000000000001")?;
+    let clock_id2 = Uuid::parse_str("d0000000-0000-0000-0000-000000000002")?;
+    sqlx::query(
+        "INSERT INTO clocks (id, name, city, show_seconds, is_24_hour, theme)
+         VALUES 
+         ($1, 'Widget Jam Utama Makassar', 'Makassar', true, true, 'glass'),
+         ($2, 'Widget Jam Layar Toko Jakarta', 'Jakarta', false, true, 'emerald')
+         ON CONFLICT (id) DO NOTHING"
+    )
+    .bind(clock_id1)
+    .bind(clock_id2)
+    .execute(pool)
+    .await?;
+
+    let album_id1 = Uuid::parse_str("e0000000-0000-0000-0000-000000000001")?;
+    sqlx::query(
+        "INSERT INTO albums (id, name, description, transition_effect, slide_duration_seconds)
+         VALUES 
+         ($1, 'Promo Kuliner Nusantara', 'Slideshow menu andalan restoran', 'ken-burns', 4)
+         ON CONFLICT (id) DO NOTHING"
+    )
+    .bind(album_id1)
+    .execute(pool)
+    .await?;
+
     info!("Database seeding via Services completed successfully!");
     Ok(())
 }

@@ -23,7 +23,7 @@ export default function CreateQueueTicketPage() {
     const formattedNumber = `${prefix}-${String(startNumber).padStart(3, '0')}`;
 
     const newQueue: QueueDisplayConfig = {
-      id: `q-${Date.now()}`,
+      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `a0000000-0000-0000-0000-${Date.now().toString().padStart(12, '0')}`,
       name: name.trim(),
       prefix,
       currentNumber: formattedNumber,

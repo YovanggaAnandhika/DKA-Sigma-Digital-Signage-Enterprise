@@ -21,7 +21,7 @@ export const ALBUM_STORAGE_KEY = 'dka_signage_photo_albums';
 
 export const DEFAULT_ALBUMS: PhotoAlbum[] = [
   {
-    id: 'album-1',
+    id: 'e0000000-0000-0000-0000-000000000001',
     name: 'Promo Kuliner Nusantara',
     description: 'Slideshow menu andalan restoran untuk layar kasir dan display etalase.',
     transitionEffect: 'ken-burns',

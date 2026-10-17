@@ -39,6 +39,7 @@ pub struct LayerBlockEntity {
     pub is_muted: bool,
     pub volume_level: i32,
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]

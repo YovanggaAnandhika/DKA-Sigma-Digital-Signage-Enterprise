@@ -13,7 +13,7 @@ export const QUEUE_STORAGE_KEY = 'dka_signage_queue_displays';
 
 export const DEFAULT_QUEUES: QueueDisplayConfig[] = [
   {
-    id: 'q-1',
+    id: 'a0000000-0000-0000-0000-000000000001',
     name: 'Antrian Kasir Utama & CS',
     prefix: 'A',
     currentNumber: 'A-024',
@@ -23,7 +23,7 @@ export const DEFAULT_QUEUES: QueueDisplayConfig[] = [
     createdAt: '2026-10-08',
   },
   {
-    id: 'q-2',
+    id: 'a0000000-0000-0000-0000-000000000002',
     name: 'Antrian Pengambilan Obat / Farmasi',
     prefix: 'B',
     currentNumber: 'B-015',

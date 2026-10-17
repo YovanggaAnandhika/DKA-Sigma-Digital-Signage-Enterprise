@@ -27,7 +27,7 @@ export const SPEED_SECONDS: Record<string, number> = {
 
 export const DEFAULT_TICKERS: TickerConfig[] = [
   {
-    id: 't-1',
+    id: 'c0000000-0000-0000-0000-000000000001',
     name: 'Pengumuman Promo Kasir & Diskon Member',
     badge: 'PROMO HARI INI',
     messages: [
@@ -40,7 +40,7 @@ export const DEFAULT_TICKERS: TickerConfig[] = [
     createdAt: '2026-10-08',
   },
   {
-    id: 't-2',
+    id: 'c0000000-0000-0000-0000-000000000002',
     name: 'Flash Sale Akhir Pekan',
     badge: 'FLASH SALE',
     messages: [

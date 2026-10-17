@@ -6,6 +6,57 @@ pub struct LayerBlockRepository;
 
 impl LayerBlockRepository {
     pub async fn create(pool: &PgPool, dto: CreateLayerBlockDto) -> Result<LayerBlockEntity, sqlx::Error> {
+        if let Some(qid) = dto.queue_id {
+            sqlx::query(
+                "INSERT INTO queue_displays (id, name, prefix, current_number, current_counter)
+                 VALUES ($1, 'Antrian Kasir & Layanan', 'A', 'A-001', 'LOKET 01')
+                 ON CONFLICT (id) DO NOTHING"
+            )
+            .bind(qid)
+            .execute(pool)
+            .await?;
+        }
+        if let Some(tid) = dto.ticker_id {
+            sqlx::query(
+                "INSERT INTO tickers (id, name, badge, speed, theme, font_size)
+                 VALUES ($1, 'Teks Berjalan', 'INFO', 'normal', 'blue', 16)
+                 ON CONFLICT (id) DO NOTHING"
+            )
+            .bind(tid)
+            .execute(pool)
+            .await?;
+        }
+        if let Some(cid) = dto.clock_id {
+            sqlx::query(
+                "INSERT INTO clocks (id, name, city, show_seconds, is_24_hour, theme)
+                 VALUES ($1, 'Jam Digital & Cuaca', 'Makassar', true, true, 'glass')
+                 ON CONFLICT (id) DO NOTHING"
+            )
+            .bind(cid)
+            .execute(pool)
+            .await?;
+        }
+        if let Some(wid) = dto.webview_id {
+            sqlx::query(
+                "INSERT INTO webviews (id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation)
+                 VALUES ($1, 'Webview Display', 'https://en.wikipedia.org/wiki/Digital_signage', 60, 100, true, 'landscape')
+                 ON CONFLICT (id) DO NOTHING"
+            )
+            .bind(wid)
+            .execute(pool)
+            .await?;
+        }
+        if let Some(aid) = dto.album_id {
+            sqlx::query(
+                "INSERT INTO albums (id, name, description, transition_effect, slide_duration_seconds)
+                 VALUES ($1, 'Album Foto Digital', 'Slideshow promo', 'ken-burns', 5)
+                 ON CONFLICT (id) DO NOTHING"
+            )
+            .bind(aid)
+            .execute(pool)
+            .await?;
+        }
+
         let max_order: (Option<i32>,) = sqlx::query_as(
             "SELECT MAX(order_index) FROM layer_blocks WHERE layer_id = $1"
         )

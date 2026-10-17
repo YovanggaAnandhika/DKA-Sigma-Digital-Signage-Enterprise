@@ -13,7 +13,7 @@ export const WEBVIEW_STORAGE_KEY = 'dka_signage_webviews';
 
 export const DEFAULT_WEBVIEWS: WebViewConfig[] = [
   {
-    id: 'wv-1',
+    id: 'b0000000-0000-0000-0000-000000000001',
     name: 'Katalog Menu & Promo Kafe',
     url: 'https://en.wikipedia.org/wiki/Digital_signage',
     refreshIntervalSeconds: 60,
@@ -23,7 +23,7 @@ export const DEFAULT_WEBVIEWS: WebViewConfig[] = [
     createdAt: '2026-10-08',
   },
   {
-    id: 'wv-2',
+    id: 'b0000000-0000-0000-0000-000000000002',
     name: 'Live Dashboard Indikator Penjualan Toko',
     url: 'https://worldtimeapi.org',
     refreshIntervalSeconds: 30,

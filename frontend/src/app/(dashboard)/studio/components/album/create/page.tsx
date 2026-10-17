@@ -40,7 +40,7 @@ export default function CreatePhotoAlbumPage() {
     if (!name.trim()) return;
 
     const newAlbum: PhotoAlbum = {
-      id: `album-${Date.now()}`,
+      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `e0000000-0000-0000-0000-${Date.now().toString().padStart(12, '0')}`,
       name: name.trim(),
       description: description.trim() || 'Album foto promosi produk.',
       transitionEffect,

@@ -21,7 +21,7 @@ export const CITY_PRESETS: Record<string, { city: string; temp: number; conditio
 
 export const DEFAULT_CLOCKS: ClockWeatherConfig[] = [
   {
-    id: 'cw-1',
+    id: 'd0000000-0000-0000-0000-000000000001',
     name: 'Widget Jam Utama Makassar',
     city: 'Makassar',
     showSeconds: true,
@@ -30,7 +30,7 @@ export const DEFAULT_CLOCKS: ClockWeatherConfig[] = [
     createdAt: '2026-10-08',
   },
   {
-    id: 'cw-2',
+    id: 'd0000000-0000-0000-0000-000000000002',
     name: 'Widget Jam Layar Toko Jakarta',
     city: 'Jakarta',
     showSeconds: false,

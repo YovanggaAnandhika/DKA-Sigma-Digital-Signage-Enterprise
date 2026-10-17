@@ -27,7 +27,7 @@ export default function CreateWebViewPage() {
     }
 
     const newConfig: WebViewConfig = {
-      id: `wv-${Date.now()}`,
+      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `b0000000-0000-0000-0000-${Date.now().toString().padStart(12, '0')}`,
       name: name.trim() || 'Halaman Web Tanpa Nama',
       url: validUrl,
       refreshIntervalSeconds: interval,

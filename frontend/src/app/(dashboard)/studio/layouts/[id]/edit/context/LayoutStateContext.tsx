@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api, Layout, Layer as ApiLayer } from '@/lib/services';
+import { ensureUuid, isUuid, resolveWidgetInfo } from '@/lib/services/studio/widgetHelper';
 
 export interface Layer extends ApiLayer {
   timeline_start?: number;
@@ -51,27 +52,31 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         const rawLayers = data.layersList || [];
         const sanitizedLayers = rawLayers.map((z: any) => {
           const rawBlocks = z.blocksList || [];
-          const blocks = rawBlocks.map((b: any) => ({
-            ...b,
-            id: b.id,
-            layerId: b.layerId || b.layer_id,
-            playlistId: b.playlistId || '',
-            mediaItemId: b.mediaItemId || '',
-            playlist: b.playlist,
-            mediaItem: b.mediaItem,
-            startTimeSeconds: b.startTimeSeconds ?? 0,
-            durationSeconds: b.durationSeconds ?? 10,
-            transitionId: b.transitionId,
-            transition: b.transition,
-            orderIndex: b.orderIndex ?? b.position ?? 0,
-            isMuted: b.isMuted ?? b.is_muted ?? false,
-            itemOverridesList: (b.itemOverridesList || []).map((o: any) => ({
-              id: o.id,
-              layerPlaylistId: o.layerPlaylistId || o.layer_playlist_id,
-              playlistItemId: o.playlistItemId,
-              isMuted: o.isMuted ?? false,
-            })),
-          }));
+          const blocks = rawBlocks.map((b: any) => {
+            const widgetInfo = resolveWidgetInfo(b);
+            return {
+              ...b,
+              id: b.id,
+              layerId: b.layerId || b.layer_id,
+              playlistId: b.playlistId || '',
+              mediaItemId: b.mediaItemId || '',
+              playlist: b.playlist,
+              mediaItem: b.mediaItem,
+              startTimeSeconds: b.startTimeSeconds ?? 0,
+              durationSeconds: b.durationSeconds ?? 10,
+              transitionId: b.transitionId,
+              transition: b.transition,
+              orderIndex: b.orderIndex ?? b.position ?? 0,
+              isMuted: b.isMuted ?? b.is_muted ?? false,
+              itemOverridesList: (b.itemOverridesList || []).map((o: any) => ({
+                id: o.id,
+                layerPlaylistId: o.layerPlaylistId || o.layer_playlist_id,
+                playlistItemId: o.playlistItemId,
+                isMuted: o.isMuted ?? false,
+              })),
+              ...widgetInfo,
+            };
+          });
 
           return {
             ...z,
@@ -153,12 +158,13 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
           });
         }
 
-        const isUuid = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-
         for (const b of (z.blocksList || [])) {
           if (b.id.startsWith('temp-') || b.id.startsWith('wb-') || !isUuid(b.id)) {
-            if (b.widgetType && b.widgetId && isUuid(b.widgetId)) {
-              await api.addWidgetBlock(realLayerId, b.widgetType, b.widgetId, b.startTimeSeconds, b.durationSeconds).catch(() => null);
+            if (b.widgetType && b.widgetId) {
+              const wid = ensureUuid(b.widgetId);
+              await api.addWidgetBlock(realLayerId, b.widgetType, wid, b.startTimeSeconds, b.durationSeconds).catch((err) => {
+                console.error('Gagal menambahkan widget block:', err);
+              });
             } else if (b.mediaItemId && isUuid(b.mediaItemId)) {
               await api.addMediaBlock(realLayerId, b.mediaItemId, b.startTimeSeconds, b.durationSeconds).catch(() => null);
             } else if (b.playlistId && isUuid(b.playlistId)) {
@@ -186,8 +192,12 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
       const sanitizedLayers = rawLayers.map((z: any) => {
         const prevLayer = prevLayers.find((pz) => pz.id === z.id);
         const rawBlocks = z.blocksList || [];
-        const blocks = rawBlocks.map((b: any) => {
-          const prevBlock = prevLayer?.blocksList?.find((pb) => pb.id === b.id);
+        const blocks = rawBlocks.map((b: any, bIdx: number) => {
+          let prevBlock = prevLayer?.blocksList?.find((pb) => pb.id === b.id);
+          if (!prevBlock && prevLayer?.blocksList) {
+            prevBlock = prevLayer.blocksList[bIdx];
+          }
+          const widgetInfo = resolveWidgetInfo(b, prevBlock);
           return {
             ...b,
             id: b.id,
@@ -209,6 +219,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
               playlistItemId: o.playlistItemId,
               isMuted: o.isMuted ?? false,
             })),
+            ...widgetInfo,
           };
         });
         return {
