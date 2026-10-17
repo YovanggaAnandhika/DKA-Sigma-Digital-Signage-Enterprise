@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Clock, Plus, Search, Eye, Edit, Trash2, X, CloudSun, Calendar, MapPin, Droplets, Wind } from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
+import { modal } from '@/components/ui/ModalDialog';
 import { ClockWeatherConfig, CLOCK_STORAGE_KEY, DEFAULT_CLOCKS, CITY_PRESETS } from './types';
 
 export default function ClockPage() {
@@ -33,8 +34,14 @@ export default function ClockPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleDelete = (id: string, name: string) => {
-    if (!confirm(`Hapus widget jam & cuaca "${name}"?`)) return;
+  const handleDelete = async (id: string, name: string) => {
+    const ok = await modal.confirm({
+      title: 'Hapus Widget Jam & Cuaca',
+      message: `Apakah Anda yakin ingin menghapus widget jam & cuaca "${name}"?`,
+      variant: 'danger',
+      confirmText: 'Hapus Widget',
+    });
+    if (!ok) return;
     const updated = items.filter((i) => i.id !== id);
     setItems(updated);
     try {

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Images, Plus, Search, Eye, Edit, Trash2, X, Sparkles, Play, Pause, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
+import { modal } from '@/components/ui/ModalDialog';
 import { PhotoAlbum, ALBUM_STORAGE_KEY, DEFAULT_ALBUMS } from './types';
 
 export default function AlbumPage() {
@@ -40,8 +41,14 @@ export default function AlbumPage() {
     return () => clearInterval(interval);
   }, [previewAlbum, isPlaying]);
 
-  const handleDelete = (id: string, name: string) => {
-    if (!confirm(`Hapus album foto "${name}"?`)) return;
+  const handleDelete = async (id: string, name: string) => {
+    const ok = await modal.confirm({
+      title: 'Hapus Album Foto',
+      message: `Apakah Anda yakin ingin menghapus album foto "${name}"?`,
+      variant: 'danger',
+      confirmText: 'Hapus Album',
+    });
+    if (!ok) return;
     const updated = albums.filter((a) => a.id !== id);
     setAlbums(updated);
     try {

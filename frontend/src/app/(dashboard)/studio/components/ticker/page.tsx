@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { MessageSquareText, Plus, Search, Eye, Edit, Trash2, X, Sparkles } from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
+import { modal } from '@/components/ui/ModalDialog';
 import { TickerConfig, TICKER_STORAGE_KEY, DEFAULT_TICKERS, THEME_STYLES } from './types';
 
 const Marquee = 'marquee' as any;
@@ -29,8 +30,14 @@ export default function TickerPage() {
     } catch { }
   }, []);
 
-  const handleDelete = (id: string, name: string) => {
-    if (!confirm(`Hapus komponen teks berjalan "${name}"?`)) return;
+  const handleDelete = async (id: string, name: string) => {
+    const ok = await modal.confirm({
+      title: 'Hapus Teks Berjalan',
+      message: `Apakah Anda yakin ingin menghapus komponen teks berjalan "${name}"?`,
+      variant: 'danger',
+      confirmText: 'Hapus Teks',
+    });
+    if (!ok) return;
     const updated = tickers.filter((t) => t.id !== id);
     setTickers(updated);
     try {

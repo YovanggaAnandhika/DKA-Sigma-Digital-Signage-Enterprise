@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, MessageSquareText, Plus, Trash2, Check } from 'lucide-react';
 import { TICKER_STORAGE_KEY, DEFAULT_TICKERS, THEME_STYLES, SPEED_SECONDS, TickerConfig } from '../types';
+import { modal } from '@/components/ui/ModalDialog';
 
 export default function CreateTickerPage() {
   const router = useRouter();
@@ -28,7 +29,11 @@ export default function CreateTickerPage() {
 
   const handleRemoveMessage = (index: number) => {
     if (messages.length <= 1) {
-      alert('Minimal harus ada 1 pesan teks.');
+      modal.alert({
+        title: 'Pesan Teks Diperlukan',
+        message: 'Minimal harus ada 1 pesan teks untuk komponen teks berjalan.',
+        variant: 'warning',
+      });
       return;
     }
     setMessages(messages.filter((_, i) => i !== index));

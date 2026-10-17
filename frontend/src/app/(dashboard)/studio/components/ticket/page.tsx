@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Ticket, Plus, Search, Eye, Edit, Trash2, Bell, Volume2, X, RotateCcw, Monitor } from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
+import { modal } from '@/components/ui/ModalDialog';
 import { QueueDisplayConfig, QUEUE_STORAGE_KEY, DEFAULT_QUEUES } from './types';
 
 const Marquee = 'marquee' as any;
@@ -70,8 +71,14 @@ export default function TicketPage() {
     } catch {}
   }, []);
 
-  const handleDelete = (id: string, name: string) => {
-    if (!confirm(`Hapus konfigurasi layar antrian "${name}"?`)) return;
+  const handleDelete = async (id: string, name: string) => {
+    const ok = await modal.confirm({
+      title: 'Hapus Layar Antrian',
+      message: `Apakah Anda yakin ingin menghapus konfigurasi layar antrian "${name}"?`,
+      variant: 'danger',
+      confirmText: 'Hapus Layar',
+    });
+    if (!ok) return;
     const updated = queues.filter((q) => q.id !== id);
     setQueues(updated);
     try {

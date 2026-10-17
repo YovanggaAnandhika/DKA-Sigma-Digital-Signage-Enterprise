@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { DialogProvider } from '@/components/ui/ModalDialog';
 
 export const metadata: Metadata = {
   title: 'DKASigma | Modern Retail Digital Signage Platform',
@@ -16,7 +17,9 @@ export default function RootLayout({
     <html lang="id" data-theme="dark">
       <body>
         <ThemeProvider>
-          {children}
+          <DialogProvider>
+            {children}
+          </DialogProvider>
         </ThemeProvider>
       </body>
     </html>

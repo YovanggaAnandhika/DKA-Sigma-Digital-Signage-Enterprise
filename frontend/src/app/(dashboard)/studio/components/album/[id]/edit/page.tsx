@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Images, Plus, Trash2, Check, Sparkles, Save, RefreshCw, FolderOpen } from 'lucide-react';
 import { ALBUM_STORAGE_KEY, DEFAULT_ALBUMS, PhotoAlbum, PhotoItem } from '../../types';
 import AlbumMediaPickerModal from '../../components/AlbumMediaPickerModal';
+import { modal } from '@/components/ui/ModalDialog';
 
 export default function EditPhotoAlbumPage() {
   const params = useParams() as { id: string };
@@ -31,7 +32,11 @@ export default function EditPhotoAlbumPage() {
         setDuration(found.slideDurationSeconds);
         setPhotos(found.photos || []);
       } else {
-        alert('Album foto tidak ditemukan.');
+        modal.alert({
+          title: 'Tidak Ditemukan',
+          message: 'Album foto tidak ditemukan.',
+          variant: 'warning',
+        });
         router.push('/studio/components/album');
       }
     } catch {
@@ -41,14 +46,18 @@ export default function EditPhotoAlbumPage() {
     }
   }, [params.id, router]);
 
-
-
   const handleRemovePhoto = (id: string) => {
     setPhotos((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const handleClearAllPhotos = () => {
-    if (confirm('Hapus semua foto dari album ini?')) {
+  const handleClearAllPhotos = async () => {
+    const ok = await modal.confirm({
+      title: 'Hapus Semua Foto',
+      message: 'Apakah Anda yakin ingin menghapus semua foto dari album ini?',
+      variant: 'danger',
+      confirmText: 'Bersihkan Semua',
+    });
+    if (ok) {
       setPhotos([]);
     }
   };

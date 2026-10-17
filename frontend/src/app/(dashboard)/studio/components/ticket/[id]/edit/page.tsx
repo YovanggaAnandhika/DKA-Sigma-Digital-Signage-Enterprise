@@ -30,6 +30,7 @@ import {
   injectQueueVariables,
 } from '../../types';
 import QueueAudioPickerModal from '../../components/QueueAudioPickerModal';
+import { modal } from '@/components/ui/ModalDialog';
 
 const Marquee = 'marquee' as any;
 
@@ -149,7 +150,11 @@ export default function EditQueueTicketPage() {
           setAudioItem(found.audios[0]);
         }
       } else {
-        alert('Layar antrian tidak ditemukan.');
+        modal.alert({
+          title: 'Tidak Ditemukan',
+          message: 'Layar antrian tidak ditemukan.',
+          variant: 'warning',
+        });
         router.push('/studio/components/ticket');
       }
     } catch {

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, MessageSquareText, Plus, Trash2, Check, Save, RefreshCw } from 'lucide-react';
 import { TICKER_STORAGE_KEY, DEFAULT_TICKERS, THEME_STYLES, SPEED_SECONDS, TickerConfig } from '../../types';
+import { modal } from '@/components/ui/ModalDialog';
 
 const Marquee = 'marquee' as any;
 
@@ -34,7 +35,11 @@ export default function EditTickerPage() {
         setTheme(found.theme);
         setFontSize(found.fontSize || 16);
       } else {
-        alert('Teks berjalan tidak ditemukan.');
+        modal.alert({
+          title: 'Tidak Ditemukan',
+          message: 'Komponen teks berjalan tidak ditemukan.',
+          variant: 'warning',
+        });
         router.push('/studio/components/ticker');
       }
     } catch {
@@ -53,7 +58,11 @@ export default function EditTickerPage() {
 
   const handleRemoveMessage = (index: number) => {
     if (messages.length <= 1) {
-      alert('Minimal harus ada 1 pesan teks.');
+      modal.alert({
+        title: 'Pesan Teks Diperlukan',
+        message: 'Minimal harus ada 1 pesan teks untuk komponen teks berjalan.',
+        variant: 'warning',
+      });
       return;
     }
     setMessages(messages.filter((_, i) => i !== index));
