@@ -224,52 +224,196 @@ export default function ViewDisplayPage() {
         </div>
       </div>
 
-      {/* Telemetry Detail Panel */}
-      <div className="card-elevated" style={{ padding: '24px' }}>
-        <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)' }}>
-          Metrik Hardware & Penyimpanan Player
-        </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-          <div style={{ padding: '16px', borderRadius: '12px', backgroundColor: 'var(--bg-surface-elevated)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-cyan)', marginBottom: '8px' }}>
-              <Cpu size={16} />
-              <span style={{ fontWeight: 600, fontSize: '0.8125rem' }}>Penggunaan Memori RAM</span>
+      {/* Fleet Observability: Real-time Telemetry & Live Screenshot Preview */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+        {/* Hardware & Resource Gauge */}
+        <div className="card-elevated" style={{ padding: '24px' }}>
+          <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)' }}>
+            Metrik Hardware & Penyimpanan Player
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ padding: '14px', borderRadius: '12px', backgroundColor: 'var(--bg-surface-elevated)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-cyan)' }}>
+                  <Cpu size={16} />
+                  <span style={{ fontWeight: 600, fontSize: '0.8125rem' }}>Penggunaan Memori RAM</span>
+                </div>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {telemetry?.memoryPercent ? `${telemetry.memoryPercent}%` : '32%'}
+                </span>
+              </div>
+              <div style={{ width: '100%', height: '8px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                <div
+                  style={{
+                    width: `${telemetry?.memoryPercent || 32}%`,
+                    height: '100%',
+                    backgroundColor: (telemetry?.memoryPercent || 32) > 85 ? 'var(--accent-rose)' : 'var(--accent-cyan)',
+                    transition: 'width 0.4s ease',
+                  }}
+                />
+              </div>
             </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              Normal (32%)
+
+            <div style={{ padding: '14px', borderRadius: '12px', backgroundColor: 'var(--bg-surface-elevated)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-amber)' }}>
+                  <HardDrive size={16} />
+                  <span style={{ fontWeight: 600, fontSize: '0.8125rem' }}>Penyimpanan Lokal Player</span>
+                </div>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {telemetry?.storageFreeBytes
+                    ? `${(telemetry.storageFreeBytes / (1024 * 1024 * 1024)).toFixed(1)} GB Free`
+                    : device.storageFreeBytes > 0
+                    ? `${(device.storageFreeBytes / (1024 * 1024 * 1024)).toFixed(1)} GB Free`
+                    : '18.4 GB Free'}
+                </span>
+              </div>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                Cache konten offline sinkron otomatis dengan manifest terbaru.
+              </p>
             </div>
-            <div style={{ width: '100%', height: '6px', borderRadius: '3px', backgroundColor: 'rgba(255,255,255,0.1)', marginTop: '10px', overflow: 'hidden' }}>
-              <div style={{ width: '32%', height: '100%', backgroundColor: 'var(--accent-cyan)' }} />
+          </div>
+        </div>
+
+        {/* Live Visual Screenshot Audit */}
+        <div className="card-elevated" style={{ padding: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ImageIcon size={16} style={{ color: 'var(--accent-indigo)' }} />
+              <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Tangkapan Layar Live (Audit Visual)
+              </h3>
             </div>
+            {screenshots.length > 0 && (
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                {new Date(screenshots[0].capturedAt).toLocaleTimeString('id-ID')}
+              </span>
+            )}
           </div>
 
-          <div style={{ padding: '16px', borderRadius: '12px', backgroundColor: 'var(--bg-surface-elevated)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-amber)', marginBottom: '8px' }}>
-              <HardDrive size={16} />
-              <span style={{ fontWeight: 600, fontSize: '0.8125rem' }}>Ruang Penyimpanan Bebas</span>
+          {screenshots.length === 0 ? (
+            <div style={{
+              height: '140px',
+              borderRadius: '10px',
+              backgroundColor: 'var(--bg-surface-elevated)',
+              border: '1px dashed var(--border-subtle)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              color: 'var(--text-muted)',
+              fontSize: '0.75rem',
+            }}>
+              <Camera size={24} style={{ opacity: 0.5 }} />
+              <span>Belum ada screenshot yang diunggah player.</span>
+              <button
+                onClick={() => handleSendCommand(ServerCommandType.COMMAND_CAPTURE_SCREENSHOT, 'Ambil Screenshot')}
+                className="btn btn-outline"
+                style={{ fontSize: '0.6875rem', padding: '4px 8px', marginTop: '4px' }}
+              >
+                Minta Screenshot Sekarang
+              </button>
             </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              {device.storageFreeBytes > 0 ? `${(device.storageFreeBytes / (1024 * 1024 * 1024)).toFixed(1)} GB Free` : '18.4 GB Free'}
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div
+                onClick={() => setSelectedScreenshot(getMediaStreamUrl(screenshots[0].fileUrl))}
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: '140px',
+                  borderRadius: '10px',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  border: '1px solid var(--border-subtle)',
+                  backgroundColor: '#000',
+                }}
+              >
+                <img
+                  src={getMediaStreamUrl(screenshots[0].fileUrl)}
+                  alt="Live Screen Capture"
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  backgroundColor: 'rgba(0,0,0,0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 0,
+                  transition: 'opacity 0.2s ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>
+                    <Eye size={16} />
+                    <span>Perbesar Layar</span>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                <span>Klik gambar untuk melihat resolusi penuh</span>
+                <span>Tersedia {screenshots.length} arsip</span>
+              </div>
             </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-              Digunakan untuk cache manifest dan file video lokal offline.
-            </p>
-          </div>
+          )}
         </div>
       </div>
 
       {/* Proof-of-Play (Audit & Impression Logs) */}
       <div className="card-elevated" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ShieldCheck size={18} style={{ color: 'var(--accent-emerald)' }} />
-            <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Bukti Tayang / Proof of Play
-            </h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ShieldCheck size={18} style={{ color: 'var(--accent-emerald)' }} />
+              <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Bukti Tayang / Proof of Play
+              </h2>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Laporan verifikasi kepatuhan impresi iklan dan penayangan konten di layar.
+            </p>
           </div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            {playbackLogs.length} rekaman terakhir
-          </span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              onClick={handleExportCSV}
+              disabled={playbackLogs.length === 0}
+              className="btn btn-outline"
+              title="Unduh data bukti tayang ke berkas CSV"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Download size={14} />
+              <span>Ekspor Laporan CSV</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Airtime & Delivery KPIs */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '20px' }}>
+          <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'var(--bg-surface-elevated)' }}>
+            <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)' }}>TOTAL PENAYANGAN (IMPRESI)</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '4px' }}>
+              {playbackLogs.length}
+            </div>
+          </div>
+          <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'var(--bg-surface-elevated)' }}>
+            <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)' }}>TOTAL AIRTIME (DURASI)</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-cyan)', marginTop: '4px' }}>
+              {(playbackLogs.reduce((acc, cur) => acc + (cur.durationSeconds || 0), 0) / 60).toFixed(1)} Menit
+            </div>
+          </div>
+          <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'var(--bg-surface-elevated)' }}>
+            <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)' }}>RASIO TAYANG SUKSES</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-emerald)', marginTop: '4px' }}>
+              {playbackLogs.length
+                ? `${Math.round((playbackLogs.filter(l => l.isCompleted).length / playbackLogs.length) * 100)}%`
+                : '100%'}
+            </div>
+          </div>
         </div>
 
         {playbackLogs.length === 0 ? (
@@ -324,6 +468,70 @@ export default function ViewDisplayPage() {
           </div>
         )}
       </div>
+
+      {/* Lightbox Modal for Full Screenshot View */}
+      {selectedScreenshot && (
+        <div
+          onClick={() => setSelectedScreenshot(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'relative',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              backgroundColor: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            }}
+          >
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 16px',
+              borderBottom: '1px solid var(--border-subtle)',
+            }}>
+              <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                Tangkapan Layar Langsung (Live Screen Capture)
+              </span>
+              <button
+                onClick={() => setSelectedScreenshot(null)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' }}>
+              <img
+                src={selectedScreenshot}
+                alt="Enlarged screenshot"
+                style={{ maxWidth: '85vw', maxHeight: '75vh', objectFit: 'contain', borderRadius: '4px' }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

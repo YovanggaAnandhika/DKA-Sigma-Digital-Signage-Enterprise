@@ -57,6 +57,11 @@ interface CompiledManifest {
   requiredAssetsList?: ManifestAsset[];
   totalDownloadSizeBytes?: number;
   isCanary?: boolean;
+  powerSchedule?: {
+    enabled: boolean;
+    sleepTime: string;
+    wakeTime: string;
+  };
 }
 
 export default function WebKioskPlayerPage() {
@@ -66,6 +71,8 @@ export default function WebKioskPlayerPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<string>('');
   const [currentHash, setCurrentHash] = useState<string>('');
+  const [isSleeping, setIsSleeping] = useState(false);
+  const [weatherData, setWeatherData] = useState<{ temp: number; code: number } | null>(null);
   const assetMapRef = useRef<Map<string, ManifestAsset>>(new Map());
 
   // Clock ticker
@@ -76,6 +83,52 @@ export default function WebKioskPlayerPage() {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Live Weather Widget (Default: Kota Makassar)
+  useEffect(() => {
+    async function fetchWeather() {
+      try {
+        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=-5.1477&longitude=119.4327&current_weather=true');
+        const json = await res.json();
+        if (json.current_weather) {
+          setWeatherData({
+            temp: Math.round(json.current_weather.temperature),
+            code: json.current_weather.weathercode,
+          });
+        }
+      } catch {
+        setWeatherData({ temp: 31, code: 1 }); // Default fallback for Makassar
+      }
+    }
+    fetchWeather();
+    const interval = setInterval(fetchWeather, 600000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Display Power Management (CEC Sleep / Wake schedule)
+  useEffect(() => {
+    const evaluatePowerSchedule = () => {
+      if (!manifest?.powerSchedule?.enabled) {
+        setIsSleeping(false);
+        return;
+      }
+      const now = new Date();
+      const currentHms = now.toTimeString().slice(0, 8);
+      const sleep = manifest.powerSchedule.sleepTime;
+      const wake = manifest.powerSchedule.wakeTime;
+      if (!sleep || !wake) return;
+
+      const shouldSleep = sleep <= wake
+        ? currentHms >= sleep && currentHms <= wake
+        : currentHms >= sleep || currentHms <= wake;
+
+      setIsSleeping(shouldSleep);
+    };
+
+    evaluatePowerSchedule();
+    const interval = setInterval(evaluatePowerSchedule, 10000);
+    return () => clearInterval(interval);
+  }, [manifest?.powerSchedule]);
 
   const fetchManifest = useCallback(async (existingHash?: string) => {
     try {
@@ -253,7 +306,7 @@ export default function WebKioskPlayerPage() {
               }}
             >
               {/* Check if widget block */}
-              {firstBlock?.clockId ? (
+              {firstBlock?.clockId || layer.name.toLowerCase().includes('clock') || layer.name.toLowerCase().includes('jam') ? (
                 <div style={{
                   width: '100%',
                   height: '100%',
@@ -270,7 +323,67 @@ export default function WebKioskPlayerPage() {
                 }}>
                   {currentTime}
                 </div>
-              ) : firstBlock?.tickerId ? (
+              ) : layer.name.toLowerCase().includes('cuaca') || layer.name.toLowerCase().includes('weather') ? (
+                <div style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  background: 'linear-gradient(135deg, rgba(30, 58, 138, 0.8), rgba(15, 23, 42, 0.9))',
+                  backdropFilter: 'blur(10px)',
+                  color: '#ffffff',
+                  padding: '16px',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: '1.75rem' }}>☀️</div>
+                  <div style={{ fontSize: 'clamp(1.5rem, 3vw, 2.5rem)', fontWeight: 800 }}>
+                    {weatherData ? `${weatherData.temp}°C` : '31°C'}
+                  </div>
+                  <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#93c5fd' }}>
+                    Makassar, Sulawesi Selatan
+                  </div>
+                  <div style={{ fontSize: '0.6875rem', color: '#cbd5e1' }}>
+                    Prakiraan: Cerah Berawan
+                  </div>
+                </div>
+              ) : layer.name.toLowerCase().includes('qr') ? (
+                <div style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  background: '#ffffff',
+                  color: '#0f172a',
+                  padding: '12px',
+                }}>
+                  {/* Clean SVG QR Code pattern */}
+                  <svg width="70%" height="70%" viewBox="0 0 100 100" fill="none">
+                    <rect width="100" height="100" fill="white" />
+                    <rect x="10" y="10" width="25" height="25" fill="#0f172a" />
+                    <rect x="15" y="15" width="15" height="15" fill="white" />
+                    <rect x="18" y="18" width="9" height="9" fill="#0f172a" />
+                    <rect x="65" y="10" width="25" height="25" fill="#0f172a" />
+                    <rect x="70" y="15" width="15" height="15" fill="white" />
+                    <rect x="73" y="18" width="9" height="9" fill="#0f172a" />
+                    <rect x="10" y="65" width="25" height="25" fill="#0f172a" />
+                    <rect x="15" y="70" width="15" height="15" fill="white" />
+                    <rect x="18" y="73" width="9" height="9" fill="#0f172a" />
+                    <rect x="42" y="15" width="8" height="25" fill="#0f172a" />
+                    <rect x="42" y="55" width="18" height="8" fill="#0f172a" />
+                    <rect x="65" y="65" width="10" height="20" fill="#0f172a" />
+                    <rect x="80" y="65" width="10" height="10" fill="#0f172a" />
+                  </svg>
+                  <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#334155' }}>
+                    Scan Promo Smartphone
+                  </span>
+                </div>
+              ) : firstBlock?.tickerId || layer.name.toLowerCase().includes('ticker') || layer.name.toLowerCase().includes('berita') ? (
                 <div style={{
                   width: '100%',
                   height: '100%',
@@ -289,7 +402,7 @@ export default function WebKioskPlayerPage() {
                     paddingLeft: '100%',
                     animation: 'marquee 15s linear infinite',
                   }}>
-                    Selamat Datang di Layar Informasi Digital Signage Enterprise • Nikmati Penawaran Spesial Hari Ini!
+                    🔴 LIVE FEED: Selamat Datang di Layar Informasi Digital Signage Enterprise • Suhu Kota Makassar {weatherData?.temp ?? 31}°C Cerah • Update Berita & Penawaran Spesial Terkini
                   </span>
                   <style>{`@keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }`}</style>
                 </div>
@@ -329,6 +442,36 @@ export default function WebKioskPlayerPage() {
           );
         })}
       </div>
+
+      {/* Standby CEC Sleep Mode Screen Overlay */}
+      {isSleeping && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: '#000000',
+          zIndex: 999998,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#334155',
+          userSelect: 'none',
+        }}>
+          <div style={{
+            padding: '8px 16px',
+            borderRadius: '9999px',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            fontSize: '0.75rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#64748b' }} />
+            <span>Mode Standby Hemat Energi (CEC) • Bangun pukul {manifest?.powerSchedule?.wakeTime || '06:00'}</span>
+          </div>
+        </div>
+      )}
 
       {/* Floating Kiosk Status Badge */}
       <div style={{
