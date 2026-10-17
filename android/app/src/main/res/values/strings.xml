@@ -4,4 +4,10 @@
     <string name="pairing_subtitle">Masukkan kode verifikasi berikut pada CMS DKASigma:</string>
     <string name="connecting">Menghubungkan ke Server…</string>
     <string name="syncing_manifest">Menyinkronkan Jadwal &amp; Konten…</string>
+
+    <!-- Environment Server Configurations -->
+    <string name="server_host">192.168.1.46</string>
+    <string name="server_port">50051</string>
+    <string name="server_use_tls">false</string>
+    <string name="server_http_base_url">http://192.168.1.46:80</string>
 </resources>

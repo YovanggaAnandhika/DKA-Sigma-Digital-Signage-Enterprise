@@ -63,11 +63,15 @@ class WatchdogService : Service() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            alarmManager.setExact(
-                AlarmManager.RTC_WAKEUP,
-                System.currentTimeMillis() + 1000,
-                pendingIntent
-            )
+            try {
+                alarmManager.set(
+                    AlarmManager.RTC_WAKEUP,
+                    System.currentTimeMillis() + 1000,
+                    pendingIntent
+                )
+            } catch (e: Exception) {
+                Log.w(TAG, "Gagal set alarm: ${e.message}")
+            }
 
             // Reset timestamp agar tidak loop kill
             lastHeartbeatTimestamp = System.currentTimeMillis()

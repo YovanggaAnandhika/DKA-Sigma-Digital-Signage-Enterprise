@@ -29,7 +29,7 @@ class PairingActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         val tokenStorage = TokenStorage(this)
-        val channelFactory = GrpcChannelFactory()
+        val channelFactory = GrpcChannelFactory(this)
         val deviceRepo = DeviceRepositoryImpl(this, tokenStorage, channelFactory)
         val useCase = RegisterAndPairUseCase(deviceRepo)
         viewModel = PairingViewModel(useCase)

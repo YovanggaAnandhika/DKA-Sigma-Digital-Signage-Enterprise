@@ -64,17 +64,30 @@ class PlayerActivity : AppCompatActivity() {
         observeState()
 
         // Start background stream daemon
-        startService(Intent(this, PlayerForegroundService::class.java))
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                startForegroundService(Intent(this, PlayerForegroundService::class.java))
+            } else {
+                startService(Intent(this, PlayerForegroundService::class.java))
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("PlayerActivity", "Gagal start PlayerForegroundService: ${e.message}")
+        }
+
         // Start companion watchdog
-        startService(Intent(this, WatchdogService::class.java))
-        watchdogHandler.post(watchdogHeartbeatRunnable)
+        try {
+            startService(Intent(this, WatchdogService::class.java))
+            watchdogHandler.post(watchdogHeartbeatRunnable)
+        } catch (e: Exception) {
+            android.util.Log.w("PlayerActivity", "Gagal start WatchdogService: ${e.message}")
+        }
 
         viewModel.initializePlayer()
     }
 
     private fun initDependencies() {
         val tokenStorage = TokenStorage(this)
-        val channelFactory = GrpcChannelFactory()
+        val channelFactory = GrpcChannelFactory(this)
         val manifestStorage = ManifestStorage(this)
         val diskCache = MediaDiskCache(this)
 
