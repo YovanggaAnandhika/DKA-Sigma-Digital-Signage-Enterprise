@@ -1,7 +1,7 @@
-package com.dkasigma.player.data.local
+package com.dkaapis.sigma.data.local
 
 import android.content.Context
-import com.dkasigma.player.domain.model.Manifest
+import com.dkaapis.sigma.domain.model.Manifest
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File

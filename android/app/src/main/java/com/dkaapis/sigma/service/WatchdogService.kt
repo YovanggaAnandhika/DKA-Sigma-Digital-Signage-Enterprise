@@ -1,4 +1,4 @@
-package com.dkasigma.player.service
+package com.dkaapis.sigma.service
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -10,7 +10,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Process
 import android.util.Log
-import com.dkasigma.player.presentation.player.PlayerActivity
+import com.dkaapis.sigma.presentation.player.PlayerActivity
 
 class WatchdogService : Service() {
 

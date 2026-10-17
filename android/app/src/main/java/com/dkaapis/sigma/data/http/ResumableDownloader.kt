@@ -1,6 +1,6 @@
-package com.dkasigma.player.data.http
+package com.dkaapis.sigma.data.http
 
-import com.dkasigma.player.domain.model.MediaAsset
+import com.dkaapis.sigma.domain.model.MediaAsset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient

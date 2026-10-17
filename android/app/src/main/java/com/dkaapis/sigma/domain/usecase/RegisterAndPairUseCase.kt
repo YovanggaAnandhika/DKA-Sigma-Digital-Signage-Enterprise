@@ -1,7 +1,7 @@
-package com.dkasigma.player.domain.usecase
+package com.dkaapis.sigma.domain.usecase
 
-import com.dkasigma.player.domain.model.PairingResult
-import com.dkasigma.player.domain.repository.DeviceRepository
+import com.dkaapis.sigma.domain.model.PairingResult
+import com.dkaapis.sigma.domain.repository.DeviceRepository
 
 class RegisterAndPairUseCase(
     private val deviceRepository: DeviceRepository

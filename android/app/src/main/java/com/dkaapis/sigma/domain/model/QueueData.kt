@@ -1,4 +1,4 @@
-package com.dkasigma.player.domain.model
+package com.dkaapis.sigma.domain.model
 
 data class QueueDisplayData(
     val queueNumber: String = "A-001",

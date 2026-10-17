@@ -1,4 +1,4 @@
-package com.dkasigma.player.presentation.renderers
+package com.dkaapis.sigma.presentation.renderers
 
 import android.content.Context
 import android.net.Uri

@@ -1,7 +1,7 @@
-package com.dkasigma.player.domain.repository
+package com.dkaapis.sigma.domain.repository
 
-import com.dkasigma.player.domain.model.HeartbeatMetrics
-import com.dkasigma.player.domain.model.ServerCommand
+import com.dkaapis.sigma.domain.model.HeartbeatMetrics
+import com.dkaapis.sigma.domain.model.ServerCommand
 import kotlinx.coroutines.flow.Flow
 
 interface StreamRepository {

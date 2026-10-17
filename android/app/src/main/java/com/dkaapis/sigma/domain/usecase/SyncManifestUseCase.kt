@@ -1,8 +1,8 @@
-package com.dkasigma.player.domain.usecase
+package com.dkaapis.sigma.domain.usecase
 
-import com.dkasigma.player.domain.model.Manifest
-import com.dkasigma.player.domain.repository.DeviceRepository
-import com.dkasigma.player.domain.repository.ManifestRepository
+import com.dkaapis.sigma.domain.model.Manifest
+import com.dkaapis.sigma.domain.repository.DeviceRepository
+import com.dkaapis.sigma.domain.repository.ManifestRepository
 
 class SyncManifestUseCase(
     private val deviceRepository: DeviceRepository,

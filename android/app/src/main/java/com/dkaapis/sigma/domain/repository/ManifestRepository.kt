@@ -1,6 +1,6 @@
-package com.dkasigma.player.domain.repository
+package com.dkaapis.sigma.domain.repository
 
-import com.dkasigma.player.domain.model.Manifest
+import com.dkaapis.sigma.domain.model.Manifest
 
 interface ManifestRepository {
     suspend fun fetchActiveManifest(deviceId: String, currentHash: String): Result<Manifest?>

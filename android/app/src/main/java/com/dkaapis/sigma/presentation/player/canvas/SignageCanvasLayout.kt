@@ -1,4 +1,4 @@
-package com.dkasigma.player.presentation.player.canvas
+package com.dkaapis.sigma.presentation.player.canvas
 
 import android.content.Context
 import android.util.AttributeSet

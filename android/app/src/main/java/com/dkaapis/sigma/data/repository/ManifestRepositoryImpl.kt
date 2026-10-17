@@ -1,9 +1,9 @@
-package com.dkasigma.player.data.repository
+package com.dkaapis.sigma.data.repository
 
-import com.dkasigma.player.data.grpc.GrpcChannelFactory
-import com.dkasigma.player.data.local.ManifestStorage
-import com.dkasigma.player.domain.model.*
-import com.dkasigma.player.domain.repository.ManifestRepository
+import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
+import com.dkaapis.sigma.data.local.ManifestStorage
+import com.dkaapis.sigma.domain.model.*
+import com.dkaapis.sigma.domain.repository.ManifestRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject

@@ -1,7 +1,7 @@
-package com.dkasigma.player.domain.repository
+package com.dkaapis.sigma.domain.repository
 
-import com.dkasigma.player.domain.model.DeviceInfo
-import com.dkasigma.player.domain.model.PairingResult
+import com.dkaapis.sigma.domain.model.DeviceInfo
+import com.dkaapis.sigma.domain.model.PairingResult
 
 interface DeviceRepository {
     suspend fun getLocalDeviceInfo(): DeviceInfo

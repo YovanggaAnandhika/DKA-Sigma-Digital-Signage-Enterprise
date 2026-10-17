@@ -1,4 +1,4 @@
-package com.dkasigma.player.service
+package com.dkaapis.sigma.service
 
 import android.app.Notification
 import android.app.Service
@@ -8,7 +8,7 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.dkasigma.player.DkaSignageApp
+import com.dkaapis.sigma.DkaSignageApp
 
 class PlayerForegroundService : Service() {
 

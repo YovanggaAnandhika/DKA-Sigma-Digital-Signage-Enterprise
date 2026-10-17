@@ -1,12 +1,12 @@
-package com.dkasigma.player.data.repository
+package com.dkaapis.sigma.data.repository
 
 import android.content.Context
 import android.os.Build
-import com.dkasigma.player.data.grpc.GrpcChannelFactory
-import com.dkasigma.player.data.local.TokenStorage
-import com.dkasigma.player.domain.model.DeviceInfo
-import com.dkasigma.player.domain.model.PairingResult
-import com.dkasigma.player.domain.repository.DeviceRepository
+import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
+import com.dkaapis.sigma.data.local.TokenStorage
+import com.dkaapis.sigma.domain.model.DeviceInfo
+import com.dkaapis.sigma.domain.model.PairingResult
+import com.dkaapis.sigma.domain.repository.DeviceRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.NetworkInterface

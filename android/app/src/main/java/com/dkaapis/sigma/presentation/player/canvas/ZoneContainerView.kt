@@ -1,10 +1,10 @@
-package com.dkasigma.player.presentation.player.canvas
+package com.dkaapis.sigma.presentation.player.canvas
 
 import android.content.Context
 import android.graphics.Color
 import android.util.AttributeSet
 import android.widget.FrameLayout
-import com.dkasigma.player.domain.model.LayerZone
+import com.dkaapis.sigma.domain.model.LayerZone
 
 class ZoneContainerView @JvmOverloads constructor(
     context: Context,

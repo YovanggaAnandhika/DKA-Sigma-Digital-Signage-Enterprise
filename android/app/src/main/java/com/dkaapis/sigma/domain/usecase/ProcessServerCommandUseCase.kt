@@ -1,10 +1,10 @@
-package com.dkasigma.player.domain.usecase
+package com.dkaapis.sigma.domain.usecase
 
-import com.dkasigma.player.domain.model.ServerCommand
-import com.dkasigma.player.domain.model.ServerCommandType
-import com.dkasigma.player.domain.repository.ManifestRepository
-import com.dkasigma.player.domain.repository.MediaStorageRepository
-import com.dkasigma.player.domain.repository.StreamRepository
+import com.dkaapis.sigma.domain.model.ServerCommand
+import com.dkaapis.sigma.domain.model.ServerCommandType
+import com.dkaapis.sigma.domain.repository.ManifestRepository
+import com.dkaapis.sigma.domain.repository.MediaStorageRepository
+import com.dkaapis.sigma.domain.repository.StreamRepository
 
 sealed class CommandExecutionResult {
     data class ReloadManifest(val messageId: String) : CommandExecutionResult()

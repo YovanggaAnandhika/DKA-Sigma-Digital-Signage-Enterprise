@@ -1,12 +1,12 @@
-package com.dkasigma.player.presentation.player
+package com.dkaapis.sigma.presentation.player
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.dkasigma.player.domain.model.Manifest
-import com.dkasigma.player.domain.usecase.DownloadAndVerifyMediaUseCase
-import com.dkasigma.player.domain.usecase.DownloadState
-import com.dkasigma.player.domain.usecase.RegisterAndPairUseCase
-import com.dkasigma.player.domain.usecase.SyncManifestUseCase
+import com.dkaapis.sigma.domain.model.Manifest
+import com.dkaapis.sigma.domain.usecase.DownloadAndVerifyMediaUseCase
+import com.dkaapis.sigma.domain.usecase.DownloadState
+import com.dkaapis.sigma.domain.usecase.RegisterAndPairUseCase
+import com.dkaapis.sigma.domain.usecase.SyncManifestUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

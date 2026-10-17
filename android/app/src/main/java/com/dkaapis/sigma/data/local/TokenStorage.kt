@@ -1,4 +1,4 @@
-package com.dkasigma.player.data.local
+package com.dkaapis.sigma.data.local
 
 import android.content.Context
 import android.content.SharedPreferences

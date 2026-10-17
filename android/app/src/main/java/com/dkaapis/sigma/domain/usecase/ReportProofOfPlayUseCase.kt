@@ -1,8 +1,8 @@
-package com.dkasigma.player.domain.usecase
+package com.dkaapis.sigma.domain.usecase
 
-import com.dkasigma.player.domain.model.ProofOfPlayLog
-import com.dkasigma.player.domain.repository.DeviceRepository
-import com.dkasigma.player.domain.repository.TelemetryRepository
+import com.dkaapis.sigma.domain.model.ProofOfPlayLog
+import com.dkaapis.sigma.domain.repository.DeviceRepository
+import com.dkaapis.sigma.domain.repository.TelemetryRepository
 
 class ReportProofOfPlayUseCase(
     private val deviceRepository: DeviceRepository,

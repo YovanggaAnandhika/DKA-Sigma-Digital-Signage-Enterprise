@@ -1,8 +1,8 @@
-package com.dkasigma.player.domain.usecase
+package com.dkaapis.sigma.domain.usecase
 
-import com.dkasigma.player.domain.model.Manifest
-import com.dkasigma.player.domain.model.MediaAsset
-import com.dkasigma.player.domain.repository.MediaStorageRepository
+import com.dkaapis.sigma.domain.model.Manifest
+import com.dkaapis.sigma.domain.model.MediaAsset
+import com.dkaapis.sigma.domain.repository.MediaStorageRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 

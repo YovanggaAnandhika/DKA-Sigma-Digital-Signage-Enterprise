@@ -1,4 +1,4 @@
-package com.dkasigma.player.presentation.overlay
+package com.dkaapis.sigma.presentation.overlay
 
 import android.content.Context
 import android.graphics.Color

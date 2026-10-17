@@ -1,7 +1,7 @@
-package com.dkasigma.player.data.grpc
+package com.dkaapis.sigma.data.grpc
 
 import android.content.Context
-import com.dkasigma.player.R
+import com.dkaapis.sigma.R
 import io.grpc.ManagedChannel
 import io.grpc.okhttp.OkHttpChannelBuilder
 import java.util.concurrent.TimeUnit

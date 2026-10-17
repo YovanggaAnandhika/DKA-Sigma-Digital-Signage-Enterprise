@@ -1,8 +1,8 @@
-package com.dkasigma.player.presentation.pairing
+package com.dkaapis.sigma.presentation.pairing
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.dkasigma.player.domain.usecase.RegisterAndPairUseCase
+import com.dkaapis.sigma.domain.usecase.RegisterAndPairUseCase
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

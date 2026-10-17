@@ -1,6 +1,6 @@
-package com.dkasigma.player.domain.repository
+package com.dkaapis.sigma.domain.repository
 
-import com.dkasigma.player.domain.model.ProofOfPlayLog
+import com.dkaapis.sigma.domain.model.ProofOfPlayLog
 
 interface TelemetryRepository {
     suspend fun recordPlayback(log: ProofOfPlayLog)

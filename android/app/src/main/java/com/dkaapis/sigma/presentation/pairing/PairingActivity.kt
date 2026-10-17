@@ -1,4 +1,4 @@
-package com.dkasigma.player.presentation.pairing
+package com.dkaapis.sigma.presentation.pairing
 
 import android.content.Intent
 import android.graphics.Color
@@ -10,11 +10,11 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.dkasigma.player.data.grpc.GrpcChannelFactory
-import com.dkasigma.player.data.local.TokenStorage
-import com.dkasigma.player.data.repository.DeviceRepositoryImpl
-import com.dkasigma.player.domain.usecase.RegisterAndPairUseCase
-import com.dkasigma.player.presentation.player.PlayerActivity
+import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
+import com.dkaapis.sigma.data.local.TokenStorage
+import com.dkaapis.sigma.data.repository.DeviceRepositoryImpl
+import com.dkaapis.sigma.domain.usecase.RegisterAndPairUseCase
+import com.dkaapis.sigma.presentation.player.PlayerActivity
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 

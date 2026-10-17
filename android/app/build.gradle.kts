@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.dkasigma.player"
+    namespace = "com.dkaapis.sigma"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -11,7 +11,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.dkasigma.player"
+        applicationId = "com.dkaapis.sigma"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

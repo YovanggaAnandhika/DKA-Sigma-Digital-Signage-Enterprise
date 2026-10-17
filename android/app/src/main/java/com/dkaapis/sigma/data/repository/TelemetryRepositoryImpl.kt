@@ -1,8 +1,8 @@
-package com.dkasigma.player.data.repository
+package com.dkaapis.sigma.data.repository
 
-import com.dkasigma.player.data.grpc.GrpcChannelFactory
-import com.dkasigma.player.domain.model.ProofOfPlayLog
-import com.dkasigma.player.domain.repository.TelemetryRepository
+import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
+import com.dkaapis.sigma.domain.model.ProofOfPlayLog
+import com.dkaapis.sigma.domain.repository.TelemetryRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentLinkedQueue

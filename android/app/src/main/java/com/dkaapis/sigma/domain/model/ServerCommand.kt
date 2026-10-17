@@ -1,4 +1,4 @@
-package com.dkasigma.player.domain.model
+package com.dkaapis.sigma.domain.model
 
 enum class ServerCommandType {
     UNSPECIFIED,

@@ -1,10 +1,10 @@
-package com.dkasigma.player.service
+package com.dkaapis.sigma.service
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.dkasigma.player.presentation.player.PlayerActivity
+import com.dkaapis.sigma.presentation.player.PlayerActivity
 
 class BootReceiver : BroadcastReceiver() {
 

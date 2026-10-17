@@ -1,4 +1,4 @@
-package com.dkasigma.player
+package com.dkaapis.sigma
 
 import android.app.Application
 import android.app.NotificationChannel

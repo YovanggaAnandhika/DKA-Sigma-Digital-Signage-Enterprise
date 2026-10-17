@@ -1,9 +1,9 @@
-package com.dkasigma.player.data.repository
+package com.dkaapis.sigma.data.repository
 
-import com.dkasigma.player.data.http.ResumableDownloader
-import com.dkasigma.player.data.local.MediaDiskCache
-import com.dkasigma.player.domain.model.MediaAsset
-import com.dkasigma.player.domain.repository.MediaStorageRepository
+import com.dkaapis.sigma.data.http.ResumableDownloader
+import com.dkaapis.sigma.data.local.MediaDiskCache
+import com.dkaapis.sigma.domain.model.MediaAsset
+import com.dkaapis.sigma.domain.repository.MediaStorageRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File

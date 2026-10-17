@@ -1,6 +1,6 @@
-package com.dkasigma.player.domain.repository
+package com.dkaapis.sigma.domain.repository
 
-import com.dkasigma.player.domain.model.MediaAsset
+import com.dkaapis.sigma.domain.model.MediaAsset
 import java.io.File
 
 interface MediaStorageRepository {

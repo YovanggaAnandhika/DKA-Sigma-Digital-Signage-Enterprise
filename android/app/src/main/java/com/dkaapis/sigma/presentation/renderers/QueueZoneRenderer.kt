@@ -1,4 +1,4 @@
-package com.dkasigma.player.presentation.renderers
+package com.dkaapis.sigma.presentation.renderers
 
 import android.content.Context
 import android.graphics.Color
@@ -11,7 +11,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.dkasigma.player.domain.model.QueueDisplayData
+import com.dkaapis.sigma.domain.model.QueueDisplayData
 
 class QueueZoneRenderer(
     private val context: Context,

@@ -1,11 +1,11 @@
-package com.dkasigma.player.data.repository
+package com.dkaapis.sigma.data.repository
 
 import android.util.Log
-import com.dkasigma.player.data.grpc.GrpcChannelFactory
-import com.dkasigma.player.domain.model.HeartbeatMetrics
-import com.dkasigma.player.domain.model.ServerCommand
-import com.dkasigma.player.domain.model.ServerCommandType
-import com.dkasigma.player.domain.repository.StreamRepository
+import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
+import com.dkaapis.sigma.domain.model.HeartbeatMetrics
+import com.dkaapis.sigma.domain.model.ServerCommand
+import com.dkaapis.sigma.domain.model.ServerCommandType
+import com.dkaapis.sigma.domain.repository.StreamRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
