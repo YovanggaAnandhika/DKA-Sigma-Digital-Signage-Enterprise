@@ -44,11 +44,13 @@ export default function EditPhotoAlbumPage() {
 
 
   const handleRemovePhoto = (id: string) => {
-    if (photos.length <= 1) {
-      alert('Minimal harus ada 1 foto di dalam album.');
-      return;
+    setPhotos((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const handleClearAllPhotos = () => {
+    if (confirm('Hapus semua foto dari album ini?')) {
+      setPhotos([]);
     }
-    setPhotos(photos.filter((p) => p.id !== id));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -205,12 +207,35 @@ export default function EditPhotoAlbumPage() {
 
           {/* Photos List Table */}
           <div className="card-elevated" style={{ padding: '20px' }}>
-            <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '14px' }}>
-              Daftar Foto dalam Album ({photos.length} Gambar)
-            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+              <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                Daftar Foto dalam Album ({photos.length} Gambar)
+              </h3>
+              {photos.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearAllPhotos}
+                  className="btn btn-outline"
+                  style={{ fontSize: '0.75rem', padding: '4px 10px', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.4)' }}
+                >
+                  <Trash2 size={13} style={{ marginRight: '4px' }} /> Bersihkan Semua
+                </button>
+              )}
+            </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {photos.map((photo, idx) => (
+            {photos.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '36px 16px', border: '1px dashed var(--border-subtle)', borderRadius: '10px', color: 'var(--text-muted)' }}>
+                <Images size={36} style={{ margin: '0 auto 8px auto', opacity: 0.4 }} />
+                <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0 }}>
+                  Belum ada foto dalam album
+                </p>
+                <p style={{ fontSize: '0.75rem', margin: '4px 0 0 0' }}>
+                  Klik tombol &quot;Buka Pustaka Media&quot; di atas untuk memilih foto promosi.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {photos.map((photo, idx) => (
                 <div
                   key={photo.id}
                   style={{
@@ -266,6 +291,7 @@ export default function EditPhotoAlbumPage() {
                 </div>
               ))}
             </div>
+          )}
           </div>
         </div>
       </form>

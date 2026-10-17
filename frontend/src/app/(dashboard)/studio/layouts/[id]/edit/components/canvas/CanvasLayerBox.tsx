@@ -434,8 +434,8 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  backgroundColor: '#0f172a',
-                  color: '#ffffff',
+                  backgroundColor: activeBlock.widgetData?.backgroundColor || '#0f172a',
+                  color: activeBlock.widgetData?.themePreset === 'clean-light' || activeBlock.widgetData?.themePreset === 'medical-green' ? '#0f172a' : '#ffffff',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -444,13 +444,13 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                   overflow: 'hidden',
                 }}
               >
-                <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#38bdf8', textTransform: 'uppercase' }}>
+                <div style={{ fontSize: '0.6875rem', fontWeight: 800, color: activeBlock.widgetData?.themePreset === 'medical-green' ? '#059669' : '#0284c7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {activeBlock.widgetData?.name || 'Nomor Antrian'}
                 </div>
-                <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#facc15', letterSpacing: '0.05em' }}>
+                <div style={{ fontSize: '2.5rem', fontWeight: 900, color: activeBlock.widgetData?.themePreset === 'medical-green' ? '#059669' : activeBlock.widgetData?.themePreset === 'solid-dark' ? '#38bdf8' : '#0284c7', letterSpacing: '0.05em', margin: '4px 0' }}>
                   {activeBlock.widgetData?.currentNumber || 'A-001'}
                 </div>
-                <div style={{ fontSize: '0.75rem', backgroundColor: 'rgba(255,255,255,0.15)', padding: '2px 8px', borderRadius: '4px', marginTop: '4px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, backgroundColor: activeBlock.widgetData?.themePreset === 'medical-green' ? '#0d9488' : '#f59e0b', color: '#ffffff', padding: '3px 12px', borderRadius: '6px' }}>
                   {activeBlock.widgetData?.currentCounter || 'LOKET 01'}
                 </div>
                 {activeBlock.widgetData?.marqueeText && (
@@ -460,15 +460,19 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                       bottom: 0,
                       left: 0,
                       right: 0,
-                      padding: '3px 8px',
-                      backgroundColor: 'rgba(0,0,0,0.5)',
+                      padding: '4px 8px',
+                      backgroundColor: activeBlock.widgetData?.themePreset === 'solid-dark' ? '#020617' : '#0f172a',
                       overflow: 'hidden',
                       fontSize: '0.6875rem',
-                      color: '#94a3b8',
+                      color: '#ffffff',
                     }}
                   >
                     <Marquee scrollamount={5}>
-                      {activeBlock.widgetData.marqueeText}
+                      {activeBlock.widgetData.marqueeText
+                        .replaceAll('$queue_number$', activeBlock.widgetData?.currentNumber || 'A-001')
+                        .replaceAll('$queue_counter$', activeBlock.widgetData?.currentCounter || 'LOKET 01')
+                        .replaceAll('$queue_name$', activeBlock.widgetData?.name || 'Antrian')
+                        .replaceAll('$queue_prefix$', activeBlock.widgetData?.prefix || 'A')}
                     </Marquee>
                   </div>
                 )}

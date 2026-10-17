@@ -16,23 +16,11 @@ export default function CreatePhotoAlbumPage() {
   const [duration, setDuration] = useState(4);
   const [isMediaPickerOpen, setIsMediaPickerOpen] = useState(false);
 
-  // Photos List in Album
-  const [photos, setPhotos] = useState<PhotoItem[]>([
-    {
-      id: 'p-initial',
-      url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1200&auto=format&fit=crop&q=80',
-      title: 'Item Menu Spesial',
-      promoBadge: 'PROMO UTAMA',
-      priceTag: 'Rp 35.000',
-    },
-  ]);
+  // Photos List in Album (starts empty)
+  const [photos, setPhotos] = useState<PhotoItem[]>([]);
 
   const handleRemovePhoto = (id: string) => {
-    if (photos.length <= 1) {
-      alert('Minimal harus ada 1 foto di dalam album.');
-      return;
-    }
-    setPhotos(photos.filter((p) => p.id !== id));
+    setPhotos((prev) => prev.filter((p) => p.id !== id));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -186,8 +174,19 @@ export default function CreatePhotoAlbumPage() {
           </div>
 
           {/* Photos Table/List */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto' }}>
-            {photos.map((p, idx) => (
+          {photos.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '36px 16px', border: '1px dashed var(--border-subtle)', borderRadius: '10px', color: 'var(--text-muted)' }}>
+              <Images size={36} style={{ margin: '0 auto 8px auto', opacity: 0.4 }} />
+              <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0 }}>
+                Belum ada foto dalam album
+              </p>
+              <p style={{ fontSize: '0.75rem', margin: '4px 0 0 0' }}>
+                Klik tombol &quot;Buka Pustaka Media&quot; di atas untuk memilih foto promosi produk.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto' }}>
+              {photos.map((p, idx) => (
               <div
                 key={p.id}
                 style={{
@@ -233,6 +232,7 @@ export default function CreatePhotoAlbumPage() {
               </div>
             ))}
           </div>
+        )}
         </div>
       </form>
 

@@ -1,6 +1,5 @@
 use sqlx::PgPool;
-use tracing::{info, warn};
-use uuid::Uuid;
+use tracing::info;
 
 use crate::modules::iam::permission::model::CreatePermissionDto;
 use crate::modules::iam::permission::services::PermissionService;
@@ -8,17 +7,9 @@ use crate::modules::iam::role::model::CreateRoleDto;
 use crate::modules::iam::role::services::RoleService;
 use crate::modules::iam::user::model::CreateUserDto;
 use crate::modules::iam::user::services::UserService;
-use crate::modules::distribution::canary::model::CreateCanaryGroupDto;
-use crate::modules::distribution::canary::services::CanaryService;
-use crate::modules::studio::layout::model::CreateLayoutDto;
-use crate::modules::studio::layout::services::LayoutService;
-use crate::modules::studio::layer::layer::model::CreateLayerDto;
-use crate::modules::studio::layer::layer::services::LayerService;
-use crate::modules::hardware::device::model::{RegisterDeviceDto, PairDeviceDto, UpdateDeviceDto};
-use crate::modules::hardware::device::services::DeviceService;
 
 pub async fn seed_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
-    info!("Starting database seeding via Domain Services...");
+    info!("Starting database seeding (Accounts & Roles only)...");
 
     // 1. Seed Permissions
     let permissions = vec![
@@ -82,162 +73,6 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Erro
         role_group_ids: None,
     }).await?;
 
-    // 4. Seed Canary Groups
-    info!("Seeding canary rollout groups...");
-    let _canary = CanaryService::create_canary_group(pool, CreateCanaryGroupDto {
-        name: "Beta Fleet - 10%".to_string(),
-        description: Some("Early preview group receiving newly approved layouts".to_string()),
-        rollout_percentage: Some(10),
-        is_active: Some(true),
-        target_layout_id: None,
-    }).await?;
-
-    // Fetch Landscape orientation ID
-    let landscape_id_row: (Uuid,) = sqlx::query_as("SELECT id FROM orientations WHERE value = 'landscape'")
-        .fetch_one(pool)
-        .await?;
-    let portrait_id_row: (Uuid,) = sqlx::query_as("SELECT id FROM orientations WHERE value = 'portrait'")
-        .fetch_one(pool)
-        .await?;
-
-    // 5. Seed Demonstration Layout & Layers
-    info!("Seeding demonstration layout & layers...");
-    let layout = LayoutService::create_layout(pool, CreateLayoutDto {
-        name: "Corporate HQ Main Lobby".to_string(),
-        description: Some("Default 1080p Landscape Layout with 2 display layers".to_string()),
-        canvas_width: Some(1920),
-        canvas_height: Some(1080),
-        orientation_id: landscape_id_row.0,
-        background_color: Some("#020617".to_string()),
-        background_image_url: None,
-    }).await?;
-
-    let _layer1 = LayerService::create_layer(pool, CreateLayerDto {
-        layout_id: layout.id,
-        name: Some("Main Promo Stage".to_string()),
-        x: 0,
-        y: 0,
-        width: 1344,
-        height: 1080,
-        z_index: Some(1),
-        background_color: Some("#000000".to_string()),
-    }).await?;
-
-    let _layer2 = LayerService::create_layer(pool, CreateLayerDto {
-        layout_id: layout.id,
-        name: Some("Sidebar Widget Stream".to_string()),
-        x: 1344,
-        y: 0,
-        width: 576,
-        height: 1080,
-        z_index: Some(2),
-        background_color: Some("#0f172a".to_string()),
-    }).await?;
-
-    // 6. Seed Demonstration Displays
-    info!("Seeding demo devices...");
-    let (dev1, code1) = DeviceService::register_device(pool, RegisterDeviceDto {
-        mac_address: Some("00:1A:2B:3C:4D:5E".to_string()),
-        app_version: Some("v1.0.0".to_string()),
-        android_version: Some("Android 11".to_string()),
-        screen_width: Some(1920),
-        screen_height: Some(1080),
-        orientation: Some("landscape".to_string()),
-    }).await?;
-
-    // Pair and update dev1
-    let _dev1_paired = DeviceService::pair_device(pool, PairDeviceDto {
-        pairing_code: code1,
-        device_name: "Lobby Main Totem".to_string(),
-        store_location: None,
-        default_layout_id: Some(layout.id),
-        canary_group_id: None,
-    }).await?;
-    
-    // Simulate it being online via direct update if needed, but pairing makes it essentially active.
-    
-    let (_dev2, _code2) = DeviceService::register_device(pool, RegisterDeviceDto {
-        mac_address: Some("AA:BB:CC:DD:EE:FF".to_string()),
-        app_version: Some("v1.0.0".to_string()),
-        android_version: Some("Android 10".to_string()),
-        screen_width: Some(1080),
-        screen_height: Some(1920),
-        orientation: Some("portrait".to_string()),
-    }).await?;
-
-    // 7. Seed Default Studio Components / Widgets
-    info!("Seeding default studio widgets...");
-    let queue_id1 = Uuid::parse_str("a0000000-0000-0000-0000-000000000001")?;
-    let queue_id2 = Uuid::parse_str("a0000000-0000-0000-0000-000000000002")?;
-    sqlx::query(
-        "INSERT INTO queue_displays (id, name, prefix, current_number, current_counter, marquee_text)
-         VALUES 
-         ($1, 'Antrian Kasir Utama & CS', 'A', 'A-024', 'LOKET 02', 'Silakan menuju loket saat nomor Anda dipanggil.'),
-         ($2, 'Antrian Pengambilan Obat / Farmasi', 'B', 'B-015', 'LOKET 01', 'Harap persiapkan struk resep Anda.')
-         ON CONFLICT (id) DO NOTHING"
-    )
-    .bind(queue_id1)
-    .bind(queue_id2)
-    .execute(pool)
-    .await?;
-
-    let webview_id1 = Uuid::parse_str("b0000000-0000-0000-0000-000000000001")?;
-    let webview_id2 = Uuid::parse_str("b0000000-0000-0000-0000-000000000002")?;
-    sqlx::query(
-        "INSERT INTO webviews (id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation)
-         VALUES 
-         ($1, 'Katalog Menu & Promo Kafe', 'https://en.wikipedia.org/wiki/Digital_signage', 60, 100, true, 'landscape'),
-         ($2, 'Live Dashboard Indikator Penjualan Toko', 'https://worldtimeapi.org', 30, 110, false, 'landscape')
-         ON CONFLICT (id) DO NOTHING"
-    )
-    .bind(webview_id1)
-    .bind(webview_id2)
-    .execute(pool)
-    .await?;
-
-    let ticker_id1 = Uuid::parse_str("c0000000-0000-0000-0000-000000000001")?;
-    let ticker_id2 = Uuid::parse_str("c0000000-0000-0000-0000-000000000002")?;
-    let ticker_messages1: &[&str] = &["Dapatkan diskon 20% untuk semua produk segar!", "Gunakan kartu member DKASigma Point."];
-    let ticker_messages2: &[&str] = &["Flash Sale akhir pekan diskon hingga 50%!"];
-    sqlx::query(
-        "INSERT INTO tickers (id, name, badge, messages, speed, theme, font_size)
-         VALUES 
-         ($1, 'Pengumuman Promo Kasir & Diskon Member', 'PROMO HARI INI', $3, 'normal', 'blue', 16),
-         ($2, 'Flash Sale Akhir Pekan', 'FLASH SALE', $4, 'fast', 'red', 18)
-         ON CONFLICT (id) DO NOTHING"
-    )
-    .bind(ticker_id1)
-    .bind(ticker_id2)
-    .bind(ticker_messages1)
-    .bind(ticker_messages2)
-    .execute(pool)
-    .await?;
-
-    let clock_id1 = Uuid::parse_str("d0000000-0000-0000-0000-000000000001")?;
-    let clock_id2 = Uuid::parse_str("d0000000-0000-0000-0000-000000000002")?;
-    sqlx::query(
-        "INSERT INTO clocks (id, name, city, show_seconds, is_24_hour, theme)
-         VALUES 
-         ($1, 'Widget Jam Utama Makassar', 'Makassar', true, true, 'glass'),
-         ($2, 'Widget Jam Layar Toko Jakarta', 'Jakarta', false, true, 'emerald')
-         ON CONFLICT (id) DO NOTHING"
-    )
-    .bind(clock_id1)
-    .bind(clock_id2)
-    .execute(pool)
-    .await?;
-
-    let album_id1 = Uuid::parse_str("e0000000-0000-0000-0000-000000000001")?;
-    sqlx::query(
-        "INSERT INTO albums (id, name, description, transition_effect, slide_duration_seconds)
-         VALUES 
-         ($1, 'Promo Kuliner Nusantara', 'Slideshow menu andalan restoran', 'ken-burns', 4)
-         ON CONFLICT (id) DO NOTHING"
-    )
-    .bind(album_id1)
-    .execute(pool)
-    .await?;
-
-    info!("Database seeding via Services completed successfully!");
+    info!("Database account seeding completed successfully!");
     Ok(())
 }

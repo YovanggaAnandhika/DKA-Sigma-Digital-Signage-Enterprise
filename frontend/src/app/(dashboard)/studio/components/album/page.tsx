@@ -22,7 +22,7 @@ export default function AlbumPage() {
       const stored = localStorage.getItem(ALBUM_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           setAlbums(parsed);
         }
       } else {

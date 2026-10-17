@@ -56,6 +56,9 @@ pub mod proto {
             pub mod visual_filter {
                 tonic::include_proto!("signage.studio.v1.visual_filter");
             }
+            pub mod queue {
+                tonic::include_proto!("signage.studio.v1.queue");
+            }
         }
     }
     pub mod distribution {

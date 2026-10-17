@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package signage.studio.v1.queue;
+
+import "studio/v1/queue/queue.common.proto";
+
+service QueueService {
+  rpc CreateQueueDisplay(CreateQueueDisplayRequest) returns (QueueDisplayDetail);
+  rpc GetQueueDisplay(GetQueueDisplayRequest) returns (QueueDisplayDetail);
+  rpc ListQueueDisplays(ListQueueDisplaysRequest) returns (ListQueueDisplaysResponse);
+  rpc UpdateQueueDisplay(UpdateQueueDisplayRequest) returns (QueueDisplayDetail);
+  rpc DeleteQueueDisplay(DeleteQueueDisplayRequest) returns (DeleteQueueDisplayResponse);
+
+  rpc AddCounter(AddCounterRequest) returns (QueueCounter);
+  rpc DeleteCounter(DeleteCounterRequest) returns (DeleteCounterResponse);
+  rpc CallNextTicket(CallNextTicketRequest) returns (CallNextTicketResponse);
+}
