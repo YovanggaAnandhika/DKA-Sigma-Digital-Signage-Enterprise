@@ -33,6 +33,8 @@ class PlayerViewModel(
 
     private var activeManifest: Manifest? = null
 
+    fun getActiveManifestHash(): String = activeManifest?.versionHash ?: ""
+
     fun initializePlayer() {
         if (!registerAndPairUseCase.isAlreadyPaired()) {
             _uiState.value = PlayerUiState.NotPaired
