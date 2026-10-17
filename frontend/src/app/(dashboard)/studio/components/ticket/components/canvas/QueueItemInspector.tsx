@@ -1,6 +1,15 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import SearchSelect from '@/components/ui/SearchSelect';
+import { getMedia, getMediaDisplayUrl } from '@/lib/services/studio/media.service';
+
+const THEME_OPTIONS = [
+  { value: 'clean-light', label: 'Clean Light', swatch: '#0284c7' },
+  { value: 'solid-dark', label: 'Solid Slate Dark', swatch: '#38bdf8' },
+  { value: 'medical-green', label: 'Medical Green', swatch: '#059669' },
+  { value: 'executive-blue', label: 'Executive Blue', swatch: '#60a5fa' },
+];
 import {
   Sliders,
   Type,
@@ -31,6 +40,20 @@ interface QueueItemInspectorProps {
 
 export default function QueueItemInspector({ selectedItem, onSelect }: QueueItemInspectorProps) {
   const { queue, updateLayoutItem, setQueue, updateField, applyThemePreset, triggerChime } = useQueueEditor();
+
+  const [imageOptions, setImageOptions] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    getMedia({ limit: 200 })
+      .then((res) =>
+        setImageOptions(
+          (res.data || [])
+            .filter((m) => m.mediaType === 1 || m.mimeType?.startsWith('image/'))
+            .map((m) => ({ value: getMediaDisplayUrl(m), label: m.name || m.originalFilename || m.id }))
+        )
+      )
+      .catch((err) => console.error('Gagal memuat media gambar:', err));
+  }, []);
 
   const canvasWidth = queue.canvasWidth || 1920;
   const canvasHeight = queue.canvasHeight || 1080;
@@ -78,37 +101,12 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
             <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>
               Preset Tema Studio
             </span>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-              {[
-                { id: 'clean-light', label: 'Clean Light', bg: '#f8fafc', accent: '#0284c7' },
-                { id: 'solid-dark', label: 'Solid Slate Dark', bg: '#020617', accent: '#38bdf8' },
-                { id: 'medical-green', label: 'Medical Green', bg: '#f0fdf4', accent: '#059669' },
-                { id: 'executive-blue', label: 'Executive Blue', bg: '#0f172a', accent: '#60a5fa' },
-              ].map((th) => (
-                <button
-                  key={th.id}
-                  type="button"
-                  onClick={() => applyThemePreset(th.id as any)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 10px',
-                    borderRadius: '8px',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    border: queue.themePreset === th.id ? '2px solid var(--primary-500)' : '1px solid var(--border-subtle)',
-                    backgroundColor: queue.themePreset === th.id ? 'var(--bg-surface)' : 'transparent',
-                    color: 'var(--text-primary)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                >
-                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: th.accent, flexShrink: 0 }} />
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{th.label}</span>
-                </button>
-              ))}
-            </div>
+            <SearchSelect
+              value={queue.themePreset || ''}
+              options={THEME_OPTIONS}
+              onChange={(v) => v && applyThemePreset(v as any)}
+              placeholder="Cari tema..."
+            />
           </div>
 
           {/* Warna Latar Kanvas */}
@@ -156,25 +154,15 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
           {/* Wallpaper / Gambar Background */}
           <div>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
-              Gambar Background (Opsional)
+              Gambar Background
             </span>
-            <input
-              type="text"
+            <SearchSelect
               value={queue.backgroundImageUrl || ''}
-              onChange={(e) => updateField('backgroundImageUrl', e.target.value)}
-              placeholder="https://... (URL gambar background)"
-              className="form-input"
-              style={{ fontSize: '0.78rem', padding: '6px 8px' }}
+              options={imageOptions}
+              onChange={(v) => updateField('backgroundImageUrl', v)}
+              placeholder="Pilih dari Pustaka Media..."
+              clearable
             />
-            {queue.backgroundImageUrl && (
-              <button
-                type="button"
-                onClick={() => updateField('backgroundImageUrl', '')}
-                style={{ marginTop: '4px', fontSize: '0.6875rem', color: 'var(--accent-rose)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-              >
-                Hapus gambar background
-              </button>
-            )}
           </div>
 
           {/* Awalan Tiket */}

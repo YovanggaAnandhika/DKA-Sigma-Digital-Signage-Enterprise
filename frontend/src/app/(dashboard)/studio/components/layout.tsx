@@ -27,7 +27,7 @@ export default function ComponentsLayout({ children }: { children: React.ReactNo
   const isCreateOrEdit = pathname.includes('/create') || pathname.includes('/edit');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', ...(isCreateOrEdit ? { flex: 1, minHeight: 0 } : {}) }}>
       {/* Top Header & Tab Navigation Bar on List Pages */}
       {!isCreateOrEdit && (
         <>
@@ -117,7 +117,7 @@ export default function ComponentsLayout({ children }: { children: React.ReactNo
       )}
 
       {/* Render Active Route Page */}
-      <div>{children}</div>
+      <div style={isCreateOrEdit ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } : undefined}>{children}</div>
     </div>
   );
 }

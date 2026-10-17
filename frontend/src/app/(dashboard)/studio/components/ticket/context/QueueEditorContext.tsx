@@ -31,7 +31,7 @@ interface QueueEditorContextType {
   triggerChime: () => void;
   updateField: <K extends keyof QueueDisplayConfig>(field: K, value: QueueDisplayConfig[K]) => void;
   updateLayoutItem: (itemId: string, patch: Partial<QueueLayoutItem>) => void;
-  addCounter: () => void;
+  addCounter: (data?: Partial<QueueCounter>) => void;
   removeCounter: (counterId: string) => void;
   updateCounter: (counterId: string, patch: Partial<QueueCounter>) => void;
   updateAudio: (patch: Partial<QueueAudio>) => void;
@@ -199,7 +199,7 @@ export function QueueEditorProvider({
     }));
   }, []);
 
-  const addCounter = useCallback(() => {
+  const addCounter = useCallback((data?: Partial<QueueCounter>) => {
     setQueue((prev) => {
       const nextNum = prev.counters.length + 1;
       const newCounter: QueueCounter = {
@@ -208,6 +208,7 @@ export function QueueEditorProvider({
         counterName: `LOKET ${String(nextNum).padStart(2, '0')}`,
         operatorName: `Petugas ${nextNum}`,
         isActive: true,
+        ...data,
       };
       return { ...prev, counters: [...prev.counters, newCounter] };
     });

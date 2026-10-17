@@ -47,7 +47,7 @@ const TabAudioTab = dynamic(() => import('./tabs/TabAudioTab'), {
   loading: () => <TabLoadingSkeleton label="Memuat pengaturan audio chime..." />,
 });
 
-export default function QueueEditorShell({ activeTab }: { activeTab: string }) {
+export default function QueueEditorShell({ activeTab, children }: { activeTab: string; children?: React.ReactNode }) {
   const { queue, updateField, saveQueue, saving, isNew, loading } = useQueueEditor();
   const { isFullscreen, setFullscreen } = useAppContext();
 
@@ -94,13 +94,13 @@ export default function QueueEditorShell({ activeTab }: { activeTab: string }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '8px 16px',
+          padding: '12px 20px',
           backgroundColor: 'var(--bg-surface)',
           borderBottom: '1px solid var(--border-subtle)',
           flexShrink: 0,
           zIndex: 10,
-          gap: '12px',
-          minHeight: '48px',
+          gap: '16px',
+          minHeight: '56px',
         }}
       >
         {/* Left: Back button & Title */}
@@ -223,24 +223,18 @@ export default function QueueEditorShell({ activeTab }: { activeTab: string }) {
       </div>
 
       {/* Main Full-Width Content Workspace */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: activeTab === 'layout' ? 'hidden' : 'auto', width: '100%', height: '100%' }}>
-        {activeTab === 'layout' && <TabLayoutTab />}
-        {activeTab === 'marquee' && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: '24px', maxWidth: '1200px', width: '100%', margin: '0 auto' }}>
-            <TabMarqueeTab />
-          </div>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: activeTab === 'layout' && !children ? 'hidden' : 'auto', width: '100%' }}>
+        {children ? (
+          <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}>{children}</div>
+        ) : (
+          <>
+            {activeTab === 'layout' && <TabLayoutTab />}
+            {activeTab === 'marquee' && <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}><TabMarqueeTab /></div>}
+            {activeTab === 'counters' && <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}><TabCountersTab /></div>}
+            {activeTab === 'audio' && <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}><TabAudioTab /></div>}
+            {!['layout', 'marquee', 'counters', 'audio'].includes(activeTab) && <TabLayoutTab />}
+          </>
         )}
-        {activeTab === 'counters' && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: '24px', maxWidth: '1200px', width: '100%', margin: '0 auto' }}>
-            <TabCountersTab />
-          </div>
-        )}
-        {activeTab === 'audio' && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: '24px', maxWidth: '1200px', width: '100%', margin: '0 auto' }}>
-            <TabAudioTab />
-          </div>
-        )}
-        {!['layout', 'marquee', 'counters', 'audio'].includes(activeTab) && <TabLayoutTab />}
       </div>
     </div>
   );
