@@ -1,3 +1,7 @@
 <resources>
-    <string name="app_name">My Application</string>
+    <string name="app_name">DKASigma Signage</string>
+    <string name="pairing_title">Hubungkan Perangkat Layar</string>
+    <string name="pairing_subtitle">Masukkan kode verifikasi berikut pada CMS DKASigma:</string>
+    <string name="connecting">Menghubungkan ke Server…</string>
+    <string name="syncing_manifest">Menyinkronkan Jadwal &amp; Konten…</string>
 </resources>
