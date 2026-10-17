@@ -14,6 +14,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 use crate::modules::hardware::display_group::repositories::DisplayGroupRepository;
 use crate::modules::studio::schedule::repositories::ScheduleRepository;
+use crate::modules::studio::media::repositories::MediaRepository;
 use chrono_tz::Tz;
 use std::str::FromStr;
 
@@ -106,29 +107,45 @@ impl ManifestService {
 
         for dto_zone in zones {
             let mut mapped_blocks = Vec::new();
-            for block in dto_zone.blocks {
                 if let Some(pl_id) = block.block.playlist_id {
-                if let Ok(pl) = PlaylistService::get_playlist_by_id(pool, pl_id).await {
-                    for item in &pl.items {
-                        if !required_assets_map.contains_key(&item.media_item_id) {
+                    if let Ok(pl) = PlaylistService::get_playlist_by_id(pool, pl_id).await {
+                        for item in &pl.items {
+                            if !required_assets_map.contains_key(&item.media_item_id) {
+                                required_assets_map.insert(
+                                    item.media_item_id,
+                                    ManifestAssetDto {
+                                        media_id: item.media_item_id,
+                                        name: item.media_name.clone(),
+                                        url: item.media_url.clone(),
+                                        sha256_hash: "hash_placeholder".to_string(),
+                                        file_size_bytes: 0,
+                                        local_filename: format!("{}_{}", item.media_item_id, item.media_name),
+                                        media_type: item.media_type.clone(),
+                                    },
+                                );
+                            }
+                        }
+                        mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto { block: block.block.clone(), item_overrides: block.item_overrides.clone() });
+                    }
+                } else if let Some(media_id) = block.block.media_item_id {
+                    if let Ok(Some(media)) = MediaRepository::find_by_id(pool, media_id).await {
+                        if !required_assets_map.contains_key(&media_id) {
                             required_assets_map.insert(
-                                item.media_item_id,
+                                media_id,
                                 ManifestAssetDto {
-                                    media_id: item.media_item_id,
-                                    name: item.media_name.clone(),
-                                    url: item.media_url.clone(),
-                                    sha256_hash: "hash_placeholder".to_string(),
-                                    file_size_bytes: 0,
-                                    local_filename: format!("{}_{}", item.media_item_id, item.media_name),
-                                    media_type: item.media_type.clone(),
+                                    media_id,
+                                    name: media.name.clone(),
+                                    url: media.public_url.clone(),
+                                    sha256_hash: media.sha256_hash.clone(),
+                                    file_size_bytes: media.file_size_bytes,
+                                    local_filename: format!("{}_{}", media.id, media.original_filename),
+                                    media_type: media.media_type.clone(),
                                 },
                             );
                         }
+                        mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto { block: block.block.clone(), item_overrides: block.item_overrides.clone() });
                     }
-                    mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto { block: block.block.clone(), item_overrides: block.item_overrides.clone() });
                 }
-                } // end if Some(pl_id)
-            }
 
             enriched_zones.push(LayerWithBlocksDto { layer: dto_zone.layer.clone(), blocks: mapped_blocks });
         }
