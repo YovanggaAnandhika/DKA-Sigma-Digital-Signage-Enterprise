@@ -259,7 +259,7 @@ export function QueueEditorProvider({
     let cardBg = '#ffffff';
     let textColor = '#0f172a';
     let primaryColor = '#0284c7';
-    let marqueeBg = '#0f172a';
+    let marqueeBg = '#0369a1';
     let badgeBg = '#f59e0b';
 
     if (preset === 'solid-dark') {

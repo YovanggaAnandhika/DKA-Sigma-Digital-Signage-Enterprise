@@ -87,7 +87,7 @@ export default function LayoutLivePreview({
           style={{
             width: '100%',
             aspectRatio: `${layout.canvasWidth} / ${layout.canvasHeight}`,
-            backgroundColor: '#000000',
+            backgroundColor: 'var(--bg-primary)',
             border: '2px solid var(--border-subtle)',
             borderRadius: '8px',
             position: 'relative',

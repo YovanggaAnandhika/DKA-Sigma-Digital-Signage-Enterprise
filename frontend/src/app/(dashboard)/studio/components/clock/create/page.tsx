@@ -170,21 +170,21 @@ export default function CreateClockWeatherPage() {
               borderRadius: '20px',
               background:
                 theme === 'glass'
-                  ? 'rgba(15, 23, 42, 0.85)'
+                  ? 'var(--bg-surface-elevated)'
                   : theme === 'dark'
-                  ? '#09090b'
+                  ? 'var(--bg-surface)'
                   : theme === 'emerald'
                   ? '#064e3b'
                   : '#78350f',
               backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
+              border: '1px solid var(--border-subtle)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
               gap: '24px',
-              color: '#ffffff',
-              boxShadow: '0 16px 40px rgba(0, 0, 0, 0.4)',
+              color: theme === 'emerald' || theme === 'gold' ? '#ffffff' : 'var(--text-primary)',
+              boxShadow: 'var(--card-shadow)',
             }}
           >
             <div>

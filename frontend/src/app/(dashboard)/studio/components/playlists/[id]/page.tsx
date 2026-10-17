@@ -110,7 +110,7 @@ export default function ViewPlaylistPage() {
                               height: '40px',
                               borderRadius: '6px',
                               overflow: 'hidden',
-                              backgroundColor: '#0f172a',
+                              backgroundColor: 'var(--bg-surface-elevated)',
                               border: '1px solid var(--border-subtle)',
                               display: 'flex',
                               alignItems: 'center',

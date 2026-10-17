@@ -371,7 +371,7 @@ export default function InspectorPanel() {
             <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* Media Preview Box */}
               {isMedia && media?.publicUrl && (
-                <div style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-subtle)', backgroundColor: '#000', position: 'relative' }}>
+                <div style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface-elevated)', position: 'relative' }}>
                   {isVideo ? (
                     <video
                       src={media.publicUrl}

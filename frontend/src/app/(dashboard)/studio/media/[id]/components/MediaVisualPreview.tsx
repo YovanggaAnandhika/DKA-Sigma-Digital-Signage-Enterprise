@@ -74,8 +74,8 @@ export default function MediaVisualPreview({
           width: '100%',
           minHeight: '340px',
           maxHeight: '520px',
-          backgroundColor: '#0a0f1d',
-          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)',
+          backgroundColor: 'var(--bg-primary)',
+          backgroundImage: 'radial-gradient(circle, var(--border-subtle) 1px, transparent 1px)',
           backgroundSize: '20px 20px',
           borderRadius: '12px',
           overflow: 'hidden',
@@ -83,16 +83,16 @@ export default function MediaVisualPreview({
           alignItems: 'center',
           justifyContent: 'center',
           border: '1px solid var(--border-subtle)',
-          boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5)',
+          boxShadow: 'inset 0 2px 8px var(--card-shadow)',
         }}
       >
         {mediaLoadError ? (
           <div style={{ textAlign: 'center', padding: '32px 20px', maxWidth: '480px' }}>
             <AlertTriangle size={40} color="var(--accent-amber)" style={{ margin: '0 auto 12px auto' }} />
-            <div style={{ fontWeight: 700, color: '#f8fafc', fontSize: '1rem', marginBottom: '8px' }}>
+            <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '1rem', marginBottom: '8px' }}>
               Pratinjau Visual Tidak Dapat Dimuat
             </div>
-            <p style={{ color: '#94a3b8', fontSize: '0.8125rem', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem', lineHeight: 1.5, margin: '0 0 16px 0' }}>
               {media.publicUrl?.startsWith('blob:')
                 ? 'Tautan ini sebelumnya tersimpan sebagai memori sementara (blob:) dan telah kedaluwarsa setelah refresh. Silakan unggah berkas baru agar tersimpan permanen di server.'
                 : `Berkas pada alamat "${media.publicUrl || ''}" tidak dapat diakses atau tidak ditemukan.`}

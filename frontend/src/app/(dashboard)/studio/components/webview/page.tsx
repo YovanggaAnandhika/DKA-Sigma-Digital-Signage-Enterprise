@@ -234,7 +234,7 @@ export default function WebViewPage() {
                 <X size={20} />
               </button>
             </div>
-            <div style={{ flex: 1, backgroundColor: '#000000', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ flex: 1, backgroundColor: 'var(--bg-primary)', position: 'relative', overflow: 'hidden' }}>
               <iframe
                 src={previewItem.url}
                 title={previewItem.name}

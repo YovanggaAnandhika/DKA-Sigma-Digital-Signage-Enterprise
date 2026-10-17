@@ -67,7 +67,7 @@ export default function LayoutLayerList({
                   }}
                 >
                   {/* Thumbnail */}
-                  <div style={{ width: '52px', height: '36px', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#0f172a', border: `1px solid ${color}44`, flexShrink: 0, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '52px', height: '36px', borderRadius: '6px', overflow: 'hidden', backgroundColor: 'var(--bg-surface-elevated)', border: `1px solid ${color}44`, flexShrink: 0, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {resolved?.media.publicUrl ? (
                       isVideo ? (
                         <video src={resolved.media.publicUrl} muted loop playsInline autoPlay style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

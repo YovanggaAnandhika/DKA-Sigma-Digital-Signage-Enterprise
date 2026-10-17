@@ -46,7 +46,7 @@ export default function MediaDetailsSidebar({
         <button onClick={() => setSelectedMedia(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }} title="Tutup Panel">✕</button>
       </div>
       
-      <div style={{ height: '180px', backgroundColor: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ height: '180px', backgroundColor: 'var(--bg-surface-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {(() => {
           const displayUrl = getMediaDisplayUrl(selectedMedia);
           return selectedMedia.mediaType === 2 && displayUrl ? (

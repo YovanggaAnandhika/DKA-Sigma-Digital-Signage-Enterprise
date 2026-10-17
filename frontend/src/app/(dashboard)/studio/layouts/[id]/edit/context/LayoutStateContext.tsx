@@ -266,7 +266,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         width: Math.round(layout.canvasWidth * 0.4),
         height: Math.round(layout.canvasHeight * 0.4),
         zIndex: layers.length + 1,
-        backgroundColor: '#1e293b',
+        backgroundColor: 'transparent',
       });
       const newLayer: Layer = {
         id: newZ.id,
@@ -278,7 +278,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         height: Number(newZ.height) || Math.round(layout.canvasHeight * 0.4),
         zIndex: Number(newZ.zIndex) || (layers.length + 1),
         blocksList: [],
-        backgroundColor: newZ.backgroundColor || '#1e293b',
+        backgroundColor: newZ.backgroundColor || 'transparent',
         isLocked: false,
         createdAt: newZ.createdAt || new Date().toISOString(),
         updatedAt: newZ.updatedAt || new Date().toISOString(),
@@ -359,7 +359,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         width: Number(target.width) || 400,
         height: Number(target.height) || 300,
         zIndex: layers.length + 1,
-        backgroundColor: target.backgroundColor || '#1e293b',
+        backgroundColor: target.backgroundColor || 'transparent',
       });
       const duplicatedLayer: Layer = {
         id: newZ.id,
@@ -375,7 +375,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
           id: 'temp-' + crypto.randomUUID(),
           layerId: newZ.id,
         })),
-        backgroundColor: newZ.backgroundColor || target.backgroundColor || '#1e293b',
+        backgroundColor: newZ.backgroundColor || target.backgroundColor || 'transparent',
         isLocked: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

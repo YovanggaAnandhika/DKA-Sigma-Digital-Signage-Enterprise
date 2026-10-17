@@ -240,30 +240,30 @@ export default function TickerPage() {
             style={{
               width: '100%',
               maxWidth: '900px',
-              backgroundColor: '#0f172a',
+              backgroundColor: 'var(--bg-surface)',
               borderRadius: '16px',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--border-subtle)',
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.8)',
+              boxShadow: 'var(--card-shadow)',
             }}
           >
             {/* Header */}
-            <div style={{ padding: '16px 20px', backgroundColor: 'rgba(30, 41, 59, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ padding: '16px 20px', backgroundColor: 'var(--bg-surface-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <MessageSquareText size={18} color="#38bdf8" />
-                <span style={{ fontWeight: 800, fontSize: '0.9375rem', color: '#ffffff' }}>
+                <MessageSquareText size={18} color="var(--primary-400)" />
+                <span style={{ fontWeight: 800, fontSize: '0.9375rem', color: 'var(--text-primary)' }}>
                   Pratinjau Banner: {previewTicker.name}
                 </span>
               </div>
-              <button onClick={() => setPreviewTicker(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
+              <button onClick={() => setPreviewTicker(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
                 <X size={20} />
               </button>
             </div>
 
             {/* Banner Marquee Stage */}
-            <div style={{ padding: '40px 24px', backgroundColor: '#020617', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ padding: '40px 24px', backgroundColor: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               {(() => {
                 const theme = THEME_STYLES[previewTicker.theme] || THEME_STYLES.blue;
                 return (

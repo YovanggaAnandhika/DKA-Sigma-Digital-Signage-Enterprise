@@ -56,7 +56,7 @@ export default function MediaPreviewCard({
             height: '100px',
             borderRadius: '6px',
             overflow: 'hidden',
-            backgroundColor: '#0f172a',
+            backgroundColor: 'var(--bg-surface-elevated)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

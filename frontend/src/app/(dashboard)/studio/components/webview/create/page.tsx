@@ -212,7 +212,7 @@ export default function CreateWebViewPage() {
               margin: '0 auto',
               borderRadius: '12px',
               overflow: 'hidden',
-              backgroundColor: '#000',
+              backgroundColor: 'var(--bg-primary)',
               border: '2px solid var(--border-subtle)',
               boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
             }}

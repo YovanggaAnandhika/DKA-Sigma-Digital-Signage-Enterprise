@@ -300,47 +300,47 @@ export default function TicketPage() {
             style={{
               width: '100%',
               maxWidth: '840px',
-              backgroundColor: '#0f172a',
+              backgroundColor: 'var(--bg-surface)',
               borderRadius: '20px',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--border-subtle)',
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.8)',
+              boxShadow: 'var(--card-shadow)',
             }}
           >
             {/* Header */}
-            <div style={{ padding: '16px 24px', backgroundColor: 'rgba(30, 41, 59, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ padding: '16px 24px', backgroundColor: 'var(--bg-surface-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Ticket size={20} color="#38bdf8" />
-                <span style={{ fontWeight: 800, fontSize: '1rem', color: '#ffffff' }}>
+                <Ticket size={20} color="var(--primary-400)" />
+                <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)' }}>
                   Simulator Layar Antrian: {activeModalQueue.name}
                 </span>
               </div>
-              <button onClick={() => setActiveModalQueue(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
+              <button onClick={() => setActiveModalQueue(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
                 <X size={20} />
               </button>
             </div>
 
             {/* Display Screen Stage */}
-            <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#020617', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-primary)', borderBottom: '1px solid var(--border-subtle)' }}>
               <div
                 style={{
                   width: '100%',
                   maxWidth: '520px',
-                  backgroundColor: '#0f172a',
-                  border: isChiming ? '2px solid #38bdf8' : '2px solid rgba(255,255,255,0.12)',
+                  backgroundColor: 'var(--bg-surface)',
+                  border: isChiming ? '2px solid var(--primary-400)' : '1px solid var(--border-subtle)',
                   borderRadius: '20px',
                   padding: '28px',
                   textAlign: 'center',
-                  boxShadow: isChiming ? '0 0 30px rgba(56, 189, 248, 0.35)' : 'none',
+                  boxShadow: isChiming ? '0 0 30px rgba(56, 189, 248, 0.35)' : 'var(--card-shadow)',
                   transition: 'all 0.3s ease',
                 }}
               >
-                <div style={{ fontSize: '0.875rem', fontWeight: 800, letterSpacing: '0.1em', color: '#94a3b8', textTransform: 'uppercase' }}>
+                <div style={{ fontSize: '0.875rem', fontWeight: 800, letterSpacing: '0.1em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                   NOMOR ANTRIAN
                 </div>
-                <div style={{ fontSize: '4.5rem', fontWeight: 900, letterSpacing: '0.04em', color: '#38bdf8', lineHeight: 1.1, margin: '8px 0' }}>
+                <div style={{ fontSize: '4.5rem', fontWeight: 900, letterSpacing: '0.04em', color: 'var(--primary-400)', lineHeight: 1.1, margin: '8px 0' }}>
                   {modalCurrentNumber}
                 </div>
                 <div style={{ display: 'inline-block', padding: '6px 20px', borderRadius: '10px', backgroundColor: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#fbbf24', fontSize: '1.25rem', fontWeight: 800 }}>
@@ -349,19 +349,19 @@ export default function TicketPage() {
               </div>
 
               {/* Marquee Banner */}
-              <div style={{ marginTop: '20px', width: '100%', maxWidth: '520px', overflow: 'hidden', whiteSpace: 'nowrap', backgroundColor: 'rgba(30, 41, 59, 0.5)', padding: '8px 16px', borderRadius: '8px', color: '#94a3b8', fontSize: '0.8125rem' }}>
+              <div style={{ marginTop: '20px', width: '100%', maxWidth: '520px', overflow: 'hidden', whiteSpace: 'nowrap', backgroundColor: 'var(--bg-surface-elevated)', padding: '8px 16px', borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>
                 <Marquee>{activeModalQueue.marqueeText}</Marquee>
               </div>
             </div>
 
             {/* Operator Control Panel */}
-            <div style={{ padding: '20px 24px', backgroundColor: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+            <div style={{ padding: '20px 24px', backgroundColor: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <label style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>Meja/Loket:</label>
+                <label style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>Meja/Loket:</label>
                 <select
                   value={modalCounter}
                   onChange={(e) => setModalCounter(e.target.value)}
-                  style={{ backgroundColor: '#1e293b', color: '#ffffff', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 12px', fontSize: '0.8125rem' }}
+                  style={{ backgroundColor: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--input-border)', borderRadius: '8px', padding: '6px 12px', fontSize: '0.8125rem' }}
                 >
                   <option value="LOKET 01">LOKET 01</option>
                   <option value="LOKET 02">LOKET 02</option>

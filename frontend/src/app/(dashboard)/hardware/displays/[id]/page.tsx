@@ -337,7 +337,7 @@ export default function ViewDisplayPage() {
                   overflow: 'hidden',
                   cursor: 'pointer',
                   border: '1px solid var(--border-subtle)',
-                  backgroundColor: '#000',
+                  backgroundColor: 'var(--bg-surface-elevated)',
                 }}
               >
                 <img
@@ -532,7 +532,7 @@ export default function ViewDisplayPage() {
                 <X size={18} />
               </button>
             </div>
-            <div style={{ padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' }}>
+            <div style={{ padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-primary)' }}>
               <img
                 src={selectedScreenshot}
                 alt="Enlarged screenshot"

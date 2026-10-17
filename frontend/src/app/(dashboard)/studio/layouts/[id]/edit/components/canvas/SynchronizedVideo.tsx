@@ -113,7 +113,7 @@ export default function SynchronizedVideo({
   }, [timelineStartSec, onBufferUpdate]);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', backgroundColor: '#000', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', backgroundColor: 'var(--bg-surface-elevated)', overflow: 'hidden' }}>
       {!isReady && (
         <div 
           style={{ 

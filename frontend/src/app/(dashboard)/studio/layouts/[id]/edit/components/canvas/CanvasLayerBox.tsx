@@ -414,8 +414,8 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  background: 'linear-gradient(135deg, #0f172a, #1e293b)',
-                  color: '#ffffff',
+                  background: 'var(--bg-surface-elevated)',
+                  color: 'var(--text-primary)',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -437,7 +437,7 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                   inset: 0,
                   width: '100%',
                   height: '100%',
-                  backgroundColor: activeBlock.widgetData?.backgroundColor || '#0f172a',
+                  backgroundColor: activeBlock.widgetData?.backgroundColor || 'var(--bg-surface)',
                   backgroundImage: activeBlock.widgetData?.backgroundImageUrl ? `url(${activeBlock.widgetData.backgroundImageUrl})` : undefined,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
@@ -645,12 +645,12 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
-                backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                backgroundColor: 'var(--bg-surface-elevated)',
                 backdropFilter: 'blur(4px)',
                 padding: '2px 6px',
                 borderRadius: '4px',
-                border: '1px solid rgba(255, 255, 255, 0.18)',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.5)',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
                 maxWidth: '85%',
                 opacity: (isHovered || isSelected) ? 1 : 0,
                 transform: (isHovered || isSelected) ? 'translateY(0)' : 'translateY(-2px)',
@@ -662,7 +662,7 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                 style={{
                   fontSize: '0.625rem',
                   fontWeight: 700,
-                  color: '#ffffff',
+                  color: 'var(--text-primary)',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -674,10 +674,10 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                 <span
                   style={{
                     fontSize: '0.5625rem',
-                    color: '#fef08a',
+                    color: 'var(--accent-amber)',
                     fontWeight: 600,
                     whiteSpace: 'nowrap',
-                    borderLeft: '1px solid rgba(255,255,255,0.2)',
+                    borderLeft: '1px solid var(--border-subtle)',
                     paddingLeft: '4px',
                   }}
                 >
@@ -696,7 +696,7 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                     display: 'flex',
                     alignItems: 'center',
                     gap: '2px',
-                    borderLeft: '1px solid rgba(255,255,255,0.2)',
+                    borderLeft: '1px solid var(--border-subtle)',
                     paddingLeft: '4px',
                   }}
                   title={isEffectiveMuted ? 'Audio dibisukan' : 'Audio aktif'}
@@ -712,7 +712,7 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                     display: 'flex',
                     alignItems: 'center',
                     gap: '2px',
-                    borderLeft: '1px solid rgba(255,255,255,0.2)',
+                    borderLeft: '1px solid var(--border-subtle)',
                     paddingLeft: '4px',
                   }}
                   title="Layer terkunci"
@@ -730,14 +730,14 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                   bottom: '6px',
                   right: '6px',
                   zIndex: 2,
-                  backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                  backgroundColor: 'var(--bg-surface-elevated)',
                   backdropFilter: 'blur(4px)',
                   padding: '2px 5px',
                   borderRadius: '4px',
                   fontSize: '0.5625rem',
                   fontWeight: 600,
-                  color: '#93c5fd',
-                  border: '1px solid rgba(56, 189, 248, 0.35)',
+                  color: 'var(--primary-500)',
+                  border: '1px solid var(--border-subtle)',
                 }}
               >
                 {Math.round(z.width)}×{Math.round(z.height)}
@@ -754,7 +754,7 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                 left: 0,
                 width: '100%',
                 height: '100%',
-                backgroundColor: active ? `${color}${isSelected ? '55' : '22'}` : 'rgba(15, 23, 42, 0.4)',
+                backgroundColor: active ? `${color}${isSelected ? '55' : '22'}` : 'var(--bg-surface-elevated)',
               }}
             />
             <div

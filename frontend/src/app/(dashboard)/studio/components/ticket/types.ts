@@ -180,7 +180,7 @@ export function createDefaultQueueLayoutItems(theme: 'clean-light' | 'solid-dark
       width: 1920,
       height: 90,
       zIndex: 4,
-      backgroundColor: isDark ? '#020617' : '#0f172a',
+      backgroundColor: isDark ? '#020617' : '#0369a1',
       textColor: '#ffffff',
       fontSize: 24,
       fontWeight: 'bold',

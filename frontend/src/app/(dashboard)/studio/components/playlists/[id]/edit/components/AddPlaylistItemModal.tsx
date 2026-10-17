@@ -95,7 +95,7 @@ export default function AddPlaylistItemModal({
                         transform: isSelected ? 'scale(1.02)' : 'scale(1)',
                       }}
                     >
-                      <div style={{ width: '100%', aspectRatio: '16/9', backgroundColor: '#0f172a', position: 'relative' }}>
+                      <div style={{ width: '100%', aspectRatio: '16/9', backgroundColor: 'var(--bg-surface-elevated)', position: 'relative' }}>
                         {m.publicUrl && !isVideo ? (
                           <img src={m.publicUrl} alt={m.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : isVideo && m.publicUrl ? (
@@ -158,7 +158,7 @@ export default function AddPlaylistItemModal({
                 return (
                   <div style={{ flex: 1 }}>
                     {/* Selected Preview */}
-                    <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#0f172a', marginBottom: '16px', position: 'relative' }}>
+                    <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: '8px', overflow: 'hidden', backgroundColor: 'var(--bg-surface-elevated)', marginBottom: '16px', position: 'relative' }}>
                       {selMedia.publicUrl && !isVideo ? (
                         <img src={selMedia.publicUrl} alt={selMedia.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : isVideo && selMedia.publicUrl ? (

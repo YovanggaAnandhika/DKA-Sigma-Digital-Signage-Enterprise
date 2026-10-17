@@ -104,16 +104,16 @@ export default function CanvasContextMenu({ state, onClose }: CanvasContextMenuP
         top: `${posY}px`,
         zIndex: 999999,
         width: `${menuWidth}px`,
-        backgroundColor: 'rgba(15, 23, 42, 0.94)',
+        backgroundColor: 'var(--bg-surface-elevated)',
         backdropFilter: 'blur(16px)',
-        border: '1px solid rgba(255, 255, 255, 0.14)',
+        border: '1px solid var(--border-subtle)',
         borderRadius: '10px',
-        boxShadow: '0 16px 36px rgba(0,0,0,0.65), 0 2px 6px rgba(0,0,0,0.3)',
+        boxShadow: 'var(--card-shadow-hover)',
         padding: '6px',
         display: 'flex',
         flexDirection: 'column',
         gap: '2px',
-        color: '#f8fafc',
+        color: 'var(--text-primary)',
         fontSize: '0.75rem',
         userSelect: 'none',
         animation: 'fadeInMenu 0.1s ease',
@@ -127,7 +127,7 @@ export default function CanvasContextMenu({ state, onClose }: CanvasContextMenuP
           <div
             style={{
               padding: '6px 8px',
-              borderBottom: '1px solid rgba(255,255,255,0.1)',
+              borderBottom: '1px solid var(--border-subtle)',
               marginBottom: '4px',
               display: 'flex',
               alignItems: 'center',
@@ -137,7 +137,7 @@ export default function CanvasContextMenu({ state, onClose }: CanvasContextMenuP
             <span
               style={{
                 fontWeight: 700,
-                color: '#93c5fd',
+                color: 'var(--primary-500)',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
@@ -238,11 +238,11 @@ export default function CanvasContextMenu({ state, onClose }: CanvasContextMenuP
           <div
             style={{
               padding: '6px 8px',
-              borderBottom: '1px solid rgba(255,255,255,0.1)',
+              borderBottom: '1px solid var(--border-subtle)',
               marginBottom: '4px',
               fontSize: '0.6875rem',
               fontWeight: 700,
-              color: '#94a3b8',
+              color: 'var(--text-muted)',
               textTransform: 'uppercase',
             }}
           >
@@ -305,10 +305,12 @@ function MenuItem({
         border: 'none',
         background: hovered
           ? danger
-            ? 'rgba(244, 63, 94, 0.2)'
-            : 'rgba(56, 189, 248, 0.15)'
+            ? 'rgba(239, 68, 68, 0.12)'
+            : 'var(--input-bg)'
           : 'transparent',
-        color: hovered ? (danger ? '#fca5a5' : '#ffffff') : danger ? '#f87171' : '#e2e8f0',
+        color: hovered 
+          ? (danger ? 'var(--accent-rose)' : 'var(--text-primary)') 
+          : (danger ? 'var(--accent-rose)' : 'var(--text-secondary)'),
         cursor: 'pointer',
         textAlign: 'left',
         transition: 'background 0.1s, color 0.1s',
@@ -321,7 +323,7 @@ function MenuItem({
         </span>
       </div>
       {shortcut && (
-        <span style={{ fontSize: '0.625rem', color: '#64748b', fontWeight: 600, marginLeft: '8px' }}>
+        <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', fontWeight: 600, marginLeft: '8px' }}>
           {shortcut}
         </span>
       )}
@@ -334,7 +336,7 @@ function MenuDivider() {
     <div
       style={{
         height: '1px',
-        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        backgroundColor: 'var(--border-subtle)',
         margin: '3px 4px',
       }}
     />

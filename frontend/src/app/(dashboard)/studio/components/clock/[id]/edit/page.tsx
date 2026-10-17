@@ -225,9 +225,9 @@ export default function EditClockWeatherPage() {
             style={{
               flex: 1,
               minHeight: '380px',
-              backgroundColor: '#020617',
+              backgroundColor: 'var(--bg-primary)',
               borderRadius: '16px',
-              border: '2px solid rgba(255,255,255,0.08)',
+              border: '1px solid var(--border-subtle)',
               padding: '24px',
               display: 'flex',
               alignItems: 'center',
@@ -242,16 +242,16 @@ export default function EditClockWeatherPage() {
                 padding: '28px',
                 background:
                   theme === 'glass'
-                    ? 'rgba(30, 41, 59, 0.7)'
+                    ? 'var(--bg-surface-elevated)'
                     : theme === 'emerald'
                     ? 'linear-gradient(135deg, #064e3b 0%, #022c22 100%)'
                     : theme === 'gold'
                     ? 'linear-gradient(135deg, #78350f 0%, #451a03 100%)'
-                    : 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                    : 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: 'var(--card-shadow)',
                 backdropFilter: 'blur(12px)',
-                color: '#ffffff',
+                color: theme === 'emerald' || theme === 'gold' ? '#ffffff' : 'var(--text-primary)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>

@@ -42,7 +42,7 @@ export default function MediaGalleryGrid({
               }}
             >
               {/* Thumbnail Area */}
-              <div style={{ height: '140px', backgroundColor: '#0f172a', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ height: '140px', backgroundColor: 'var(--bg-surface-elevated)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {(() => {
                   const displayUrl = getMediaDisplayUrl(m);
                   return m.mediaType === 2 && displayUrl ? (

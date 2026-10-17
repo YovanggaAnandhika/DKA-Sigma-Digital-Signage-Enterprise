@@ -247,21 +247,22 @@ export default function AlbumPage() {
               height: '80vh',
               display: 'flex',
               flexDirection: 'column',
-              backgroundColor: '#0a0a0a',
+              backgroundColor: 'var(--bg-surface)',
               borderRadius: '16px',
+              border: '1px solid var(--border-subtle)',
               overflow: 'hidden',
               position: 'relative',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+              boxShadow: 'var(--card-shadow)',
             }}
           >
             {/* Header bar */}
-            <div style={{ padding: '16px 20px', backgroundColor: 'rgba(15, 23, 42, 0.8)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
+            <div style={{ padding: '16px 20px', backgroundColor: 'var(--bg-surface-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', zIndex: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Images size={18} color="var(--primary-500)" />
-                <span style={{ fontWeight: 700, fontSize: '1rem', color: '#ffffff' }}>
+                <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>
                   {previewAlbum.name}
                 </span>
-                <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                   Slide {currentSlideIdx + 1} dari {previewAlbum.photos.length} ({previewAlbum.transitionEffect})
                 </span>
               </div>
@@ -269,7 +270,7 @@ export default function AlbumPage() {
                 <button
                   onClick={() => setIsPlaying(!isPlaying)}
                   className="btn btn-outline"
-                  style={{ padding: '6px 10px', color: '#ffffff', borderColor: 'rgba(255,255,255,0.2)' }}
+                  style={{ padding: '6px 10px' }}
                 >
                   {isPlaying ? <Pause size={14} /> : <Play size={14} />}
                 </button>

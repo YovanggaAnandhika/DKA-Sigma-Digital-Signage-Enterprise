@@ -87,7 +87,7 @@ export default function AlbumMediaPickerModal({ isOpen, onClose, onSelectPhoto }
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.75)',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         backdropFilter: 'blur(4px)',
         zIndex: 9999,
         display: 'flex',
@@ -231,7 +231,7 @@ export default function AlbumMediaPickerModal({ isOpen, onClose, onSelectPhoto }
                         border: isSelected
                           ? '2px solid var(--primary-500)'
                           : '1px solid var(--border-subtle)',
-                        backgroundColor: '#0f172a',
+                        backgroundColor: 'var(--bg-surface-elevated)',
                         boxShadow: isSelected ? '0 0 0 3px rgba(59, 130, 246, 0.3)' : 'none',
                         transition: 'all 0.15s ease',
                       }}
@@ -290,7 +290,7 @@ export default function AlbumMediaPickerModal({ isOpen, onClose, onSelectPhoto }
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
-              backgroundColor: 'rgba(15, 23, 42, 0.4)',
+              backgroundColor: 'var(--bg-surface-elevated)',
               overflowY: 'auto',
             }}
           >
@@ -308,7 +308,7 @@ export default function AlbumMediaPickerModal({ isOpen, onClose, onSelectPhoto }
                       borderRadius: '10px',
                       overflow: 'hidden',
                       border: '1px solid var(--border-subtle)',
-                      backgroundColor: '#000',
+                      backgroundColor: 'var(--bg-primary)',
                       position: 'relative',
                     }}
                   >

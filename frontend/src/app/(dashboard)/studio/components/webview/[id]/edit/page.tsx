@@ -243,7 +243,7 @@ export default function EditWebViewPage() {
             style={{
               flex: 1,
               minHeight: '440px',
-              backgroundColor: '#0a0a0a',
+              backgroundColor: 'var(--bg-primary)',
               borderRadius: '12px',
               border: '2px solid var(--border-subtle)',
               position: 'relative',

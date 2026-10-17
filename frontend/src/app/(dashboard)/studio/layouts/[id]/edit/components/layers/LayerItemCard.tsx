@@ -86,7 +86,7 @@ export default function LayerItemCard({ z }: LayerItemCardProps) {
           height: '20px',
           borderRadius: '3px',
           overflow: 'hidden',
-          backgroundColor: '#0f172a',
+          backgroundColor: 'var(--bg-surface-elevated)',
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',

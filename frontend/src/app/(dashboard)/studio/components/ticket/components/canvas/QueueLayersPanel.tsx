@@ -85,7 +85,7 @@ export default function QueueLayersPanel({
         width: 1920,
         height: 90,
         zIndex: maxZ,
-        backgroundColor: '#0f172a',
+        backgroundColor: '#0369a1',
         textColor: '#ffffff',
         fontSize: 24,
         fontWeight: 'bold',

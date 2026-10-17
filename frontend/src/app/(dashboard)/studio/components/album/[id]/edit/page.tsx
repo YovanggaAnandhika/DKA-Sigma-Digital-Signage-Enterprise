@@ -268,7 +268,7 @@ export default function EditPhotoAlbumPage() {
                       backgroundImage: `url(${photo.url})`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
-                      backgroundColor: '#1e293b',
+                      backgroundColor: 'var(--bg-surface-elevated)',
                     }}
                   />
                   <div style={{ flex: 1, minWidth: 0 }}>
