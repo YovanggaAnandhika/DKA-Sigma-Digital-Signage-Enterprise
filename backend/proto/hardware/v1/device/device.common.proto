@@ -84,6 +84,7 @@ message HeartbeatResponse {
   bool acknowledged = 1;
   bool needs_manifest_sync = 2;
   string server_time = 3;
+  optional string pending_command = 4;
 }
 
 message GetDeviceRequest {

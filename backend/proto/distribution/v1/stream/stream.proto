@@ -20,4 +20,5 @@ service StreamService {
   // Fleet Observability: Screenshots & Realtime Telemetry
   rpc ListDeviceScreenshots(ListDeviceScreenshotsRequest) returns (ListDeviceScreenshotsResponse);
   rpc GetLatestDeviceTelemetry(GetLatestDeviceTelemetryRequest) returns (GetLatestDeviceTelemetryResponse);
+  rpc UploadScreenshot(UploadScreenshotRequest) returns (UploadScreenshotResponse);
 }

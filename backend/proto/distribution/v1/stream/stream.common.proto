@@ -135,4 +135,16 @@ message GetLatestDeviceTelemetryResponse {
   optional LatestTelemetryData telemetry = 1;
 }
 
+message UploadScreenshotRequest {
+  string device_id = 1;
+  bytes image_data = 2;
+  string mime_type = 3;
+}
+
+message UploadScreenshotResponse {
+  bool success = 1;
+  string file_url = 2;
+}
+
+
 
