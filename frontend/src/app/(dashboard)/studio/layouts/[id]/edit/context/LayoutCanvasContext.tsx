@@ -3,6 +3,11 @@
 import React, { createContext, useContext, useState, useRef, useEffect, ReactNode } from 'react';
 import { Layout } from '@/lib/services';
 
+export interface SnapGuides {
+  x: number | null;
+  y: number | null;
+}
+
 interface LayoutCanvasContextType {
   scale: number;
   previewHeight: number;
@@ -12,6 +17,8 @@ interface LayoutCanvasContextType {
   zoomIn: () => void;
   zoomOut: () => void;
   zoomFit: () => void;
+  snapGuides: SnapGuides;
+  setSnapGuides: React.Dispatch<React.SetStateAction<SnapGuides>>;
 }
 
 const BASE_CANVAS_PX = 960;
@@ -41,6 +48,8 @@ export function LayoutCanvasProvider({ children, layout }: { children: ReactNode
   const zoomOut = () => setZoomLevel((prev) => Math.max(0.25, parseFloat((prev - 0.25).toFixed(2))));
   const zoomFit = () => setZoomLevel(1.0);
 
+  const [snapGuides, setSnapGuides] = useState<SnapGuides>({ x: null, y: null });
+
   const scale = layout ? (BASE_CANVAS_PX * zoomLevel) / (layout.canvasWidth || 1920) : 1;
   const canvasDisplayWidth = BASE_CANVAS_PX * zoomLevel;
   const previewHeight = layout ? (layout.canvasHeight || 1080) * scale : 1;
@@ -56,6 +65,8 @@ export function LayoutCanvasProvider({ children, layout }: { children: ReactNode
         zoomIn,
         zoomOut,
         zoomFit,
+        snapGuides,
+        setSnapGuides,
       }}
     >
       {children}

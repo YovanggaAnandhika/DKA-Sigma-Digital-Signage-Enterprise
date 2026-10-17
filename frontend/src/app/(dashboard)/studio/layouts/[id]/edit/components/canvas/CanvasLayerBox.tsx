@@ -6,6 +6,7 @@ import { Volume2, VolumeX, Lock } from 'lucide-react';
 import { useLayoutEditor } from '../../context/LayoutEditorContext';
 import SynchronizedVideo from './SynchronizedVideo';
 import { Layer } from '../../context/LayoutStateContext';
+import { calculateSnap } from '../../utils/snapHelper';
 
 const Marquee = 'marquee' as any;
 
@@ -17,10 +18,13 @@ interface CanvasLayerBoxProps {
 
 export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasLayerBoxProps) {
   const {
+    layout,
+    layers,
     setLayers,
     selectedLayerId,
     setSelectedLayerId,
     scale,
+    setSnapGuides,
     isPlaying,
     playheadPosition,
     isMuted,
@@ -148,20 +152,69 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
         setInspectorTarget('layer');
       }}
       onDrag={(e, d) => {
-        const nextX = Math.round(d.x / scale);
-        const nextY = Math.round(d.y / scale);
+        const rawX = Math.round(d.x / scale);
+        const rawY = Math.round(d.y / scale);
+        const w = Number(z.width) || 200;
+        const h = Number(z.height) || 200;
+
+        const otherLayers = layers.map((l) => ({
+          id: l.id,
+          x: Number(l.x) || 0,
+          y: Number(l.y) || 0,
+          width: Number(l.width) || 200,
+          height: Number(l.height) || 200,
+        }));
+
+        const snapped = calculateSnap({
+          currentId: z.id,
+          x: rawX,
+          y: rawY,
+          width: w,
+          height: h,
+          canvasWidth: layout?.canvasWidth || 1920,
+          canvasHeight: layout?.canvasHeight || 1080,
+          otherLayers,
+          threshold: Math.max(6, Math.round(8 / (scale || 1))),
+        });
+
+        setSnapGuides({ x: snapped.guideX, y: snapped.guideY });
+
         setLayers((prev) =>
           prev.map((layer) =>
-            layer.id === z.id ? { ...layer, x: nextX, y: nextY } : layer
+            layer.id === z.id ? { ...layer, x: snapped.x, y: snapped.y } : layer
           )
         );
       }}
       onDragStop={(e, d) => {
-        const nextX = Math.round(d.x / scale);
-        const nextY = Math.round(d.y / scale);
+        setSnapGuides({ x: null, y: null });
+        const rawX = Math.round(d.x / scale);
+        const rawY = Math.round(d.y / scale);
+        const w = Number(z.width) || 200;
+        const h = Number(z.height) || 200;
+
+        const otherLayers = layers.map((l) => ({
+          id: l.id,
+          x: Number(l.x) || 0,
+          y: Number(l.y) || 0,
+          width: Number(l.width) || 200,
+          height: Number(l.height) || 200,
+        }));
+
+        const snapped = calculateSnap({
+          currentId: z.id,
+          x: rawX,
+          y: rawY,
+          width: w,
+          height: h,
+          canvasWidth: layout?.canvasWidth || 1920,
+          canvasHeight: layout?.canvasHeight || 1080,
+          otherLayers,
+          threshold: Math.max(6, Math.round(8 / (scale || 1))),
+        });
+
         setLayers((prev) =>
           prev.map((layer) =>
-            layer.id === z.id ? { ...layer, x: nextX, y: nextY } : layer
+            layer.id === z.id ? { ...layer, x: snapped.x, y: snapped.y } : layer
           )
         );
       }}
@@ -180,17 +233,41 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
       onResize={(e, direction, ref, delta, position) => {
         const nextW = Math.round(ref.offsetWidth / scale);
         const nextH = Math.round(ref.offsetHeight / scale);
-        const nextX = Math.round(position.x / scale);
-        const nextY = Math.round(position.y / scale);
+        const rawX = Math.round(position.x / scale);
+        const rawY = Math.round(position.y / scale);
+
+        const otherLayers = layers.map((l) => ({
+          id: l.id,
+          x: Number(l.x) || 0,
+          y: Number(l.y) || 0,
+          width: Number(l.width) || 200,
+          height: Number(l.height) || 200,
+        }));
+
+        const snapped = calculateSnap({
+          currentId: z.id,
+          x: rawX,
+          y: rawY,
+          width: nextW,
+          height: nextH,
+          canvasWidth: layout?.canvasWidth || 1920,
+          canvasHeight: layout?.canvasHeight || 1080,
+          otherLayers,
+          threshold: Math.max(6, Math.round(8 / (scale || 1))),
+        });
+
+        setSnapGuides({ x: snapped.guideX, y: snapped.guideY });
+
         setLayers((prev) =>
           prev.map((layer) =>
             layer.id === z.id
-              ? { ...layer, width: nextW, height: nextH, x: nextX, y: nextY }
+              ? { ...layer, width: nextW, height: nextH, x: snapped.x, y: snapped.y }
               : layer
           )
         );
       }}
       onResizeStop={(e, direction, ref, delta, position) => {
+        setSnapGuides({ x: null, y: null });
         const nextW = Math.round(ref.offsetWidth / scale);
         const nextH = Math.round(ref.offsetHeight / scale);
         const nextX = Math.round(position.x / scale);
