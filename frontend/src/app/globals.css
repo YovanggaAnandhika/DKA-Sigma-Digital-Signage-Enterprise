@@ -2,36 +2,36 @@
 
 :root {
   /* ==========================================================================
-     HDR+ PRO MASTERING DARK THEME (DEFAULT)
-     High Dynamic Range: Deep Obsidian Substrate + Specular Micro-Contrast
-     Precision Hardware Console Grade — Zero AI Glassmorphism Blur
+     MODERN SMOOTH HDR+ DARK THEME (DEFAULT)
+     Deep space obsidian + velvety surfaces + silky atmospheric glow
      ========================================================================== */
   color-scheme: dark;
 
-  /* HDR Substrate Planes */
-  --bg-primary: #030508;           /* Deepest pitch carbon canvas */
-  --bg-secondary: #070a10;         /* Obsidian shell: navbar & sidebars */
-  --bg-surface: #0c111a;           /* Calibrated workstation workspace panels */
-  --bg-surface-elevated: #131a27;  /* High-contrast elevated chips & cards */
-  --bg-base: #070a10;              /* Solid neutral base */
-  --bg-glass: #0c111a;             /* Solid pro-grade opaque panel, no mushy blur */
+  /* Surfaces & Canvas */
+  --bg-primary: #0a0d14;           /* Deep velvety dark space canvas */
+  --bg-secondary: #0f131d;         /* Sleek navigation shell */
+  --bg-surface: #131824;           /* Refined workspace panels & cards */
+  --bg-surface-elevated: #1a2233;  /* Smooth elevated chips & inspectors */
+  --bg-base: #0c1018;              /* Soft dark base */
+  --bg-glass: #131824;             /* Solid sleek dark panel */
 
-  /* Razor Structural Hairline Borders */
-  --border-subtle: #1c2436;
-  --border-strong: #2e3a52;
+  /* Silky Smooth Delicate Hairlines (never harsh wireframe outlines) */
+  --border-subtle: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.18);
   --border-focus: #3b82f6;
 
-  /* Tactile Specular Inset & Hardware Shadows */
-  --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.75), inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
-  --specular-highlight: rgba(255, 255, 255, 0.09);
-  --input-inset-shadow: rgba(0, 0, 0, 0.5);
-  --focus-ring-glow: rgba(59, 130, 246, 0.28);
+  /* Atmospheric Soft Dark Shadows & Depth */
+  --card-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.07);
+  --card-shadow-hover: 0 8px 28px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(59, 130, 246, 0.35);
+  --specular-highlight: rgba(255, 255, 255, 0.08);
+  --input-inset-shadow: rgba(0, 0, 0, 0.3);
+  --focus-ring-glow: rgba(59, 130, 246, 0.25);
 
   /* Inputs */
-  --input-bg: #070a12;
-  --input-border: #1e273a;
+  --input-bg: #0b0f17;
+  --input-border: rgba(255, 255, 255, 0.12);
 
-  /* Rec.709 / Display P3 High Chroma Accents */
+  /* High-Vibrance Accents */
   --primary-50: #eff6ff;
   --primary-100: #dbeafe;
   --primary-400: #38bdf8;
@@ -43,73 +43,76 @@
   --accent-amber: #f59e0b;
   --accent-rose: #f43f5e;
   --accent-cyan: #06b6d4;
+  --accent-violet: #a855f7;
 
-  /* Peak Luminance Typography */
-  --text-primary: #ffffff;
+  /* Typography */
+  --text-primary: #f8fafc;
   --text-secondary: #cbd5e1;
   --text-muted: #798ba3;
 
   --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --radius-sm: 6px;
+  --radius-sm: 7px;
   --radius-md: 10px;
-  --radius-lg: 16px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
   --radius-full: 9999px;
 
   --sidebar-width: 256px;
   --sidebar-width-collapsed: 68px;
-  --hover-surface: #172033;
+  --hover-surface: rgba(255, 255, 255, 0.05);
 }
 
 [data-theme="light"] {
   /* ==========================================================================
-     HDR+ ULTRA HIGH-DYNAMIC LIGHT THEME
-     Pro Studio Mastering Display: Deep Slate Studio Canvas + Pure Ceramic White
-     Crisp Graphic Ink Contrast — Zero AI Glassmorphism Blur
+     MODERN SMOOTH HDR+ LIGHT THEME
+     Velvety studio canvas + pure silky surfaces + smooth atmospheric depth
      ========================================================================== */
   color-scheme: light;
 
-  /* Luminance Separation: Canvas vs Ceramic Surfaces */
-  --bg-primary: #eef2f6;           /* Architectural neutral studio canvas */
-  --bg-secondary: #ffffff;         /* 100% Peak White for Sidebar/Navbar */
-  --bg-surface: #ffffff;           /* 100% Pure White for Cards & Workspace */
-  --bg-surface-elevated: #f6f8fb;  /* Micro-elevated control surfaces */
-  --bg-base: #f1f5f9;              /* Solid neutral base */
-  --bg-glass: #ffffff;             /* Solid pure white, no mushy blur */
+  /* Surfaces & Canvas */
+  --bg-primary: #f8fafc;           /* Silky smooth airy canvas */
+  --bg-secondary: #ffffff;         /* Pure white navigation & headers */
+  --bg-surface: #ffffff;           /* Pure white workspace cards & panels */
+  --bg-surface-elevated: #f1f5f9;  /* Micro-elevated control surfaces & chips */
+  --bg-base: #f8fafc;              /* Soft base */
+  --bg-glass: #ffffff;             /* Clean solid white, no AI mush */
 
-  /* Razor Structural Hairline Borders */
-  --border-subtle: #cbd5e1;        /* High-definition structural borders */
-  --border-strong: #94a3b8;        /* Emphasis borders */
-  --border-focus: #0066ff;
+  /* Silky Smooth Delicate Hairlines (dissolves cleanly, never harsh or "hambar") */
+  --border-subtle: rgba(15, 23, 42, 0.08);
+  --border-strong: rgba(15, 23, 42, 0.16);
+  --border-focus: #2563eb;
 
-  /* Tactile Specular Inset & Shadows */
-  --card-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 6px 18px -3px rgba(15, 23, 42, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  --specular-highlight: rgba(255, 255, 255, 0.9);
-  --input-inset-shadow: rgba(15, 23, 42, 0.05);
-  --focus-ring-glow: rgba(0, 102, 255, 0.18);
+  /* Atmospheric Soft Shadows & Micro-Depth */
+  --card-shadow: 0 1px 3px rgba(15, 23, 42, 0.03), 0 6px 18px -3px rgba(15, 23, 42, 0.05);
+  --card-shadow-hover: 0 4px 12px rgba(15, 23, 42, 0.04), 0 16px 32px -4px rgba(15, 23, 42, 0.08);
+  --specular-highlight: rgba(255, 255, 255, 0.85);
+  --input-inset-shadow: rgba(15, 23, 42, 0.03);
+  --focus-ring-glow: rgba(37, 99, 235, 0.15);
 
   /* Inputs */
   --input-bg: #ffffff;
-  --input-border: #cbd5e1;
+  --input-border: rgba(15, 23, 42, 0.12);
 
-  /* Vibrant Rec.709 High Gamut Primaries */
+  /* Rich Smooth Primary Palette */
   --primary-50: #eff6ff;
   --primary-100: #dbeafe;
-  --primary-400: #0284c7;
-  --primary-500: #0066ff;
-  --primary-600: #0052cc;
-  --primary-700: #003fa3;
+  --primary-400: #60a5fa;
+  --primary-500: #3b82f6;
+  --primary-600: #2563eb;
+  --primary-700: #1d4ed8;
 
-  --accent-emerald: #059669;
-  --accent-amber: #d97706;
-  --accent-rose: #e11d48;
-  --accent-cyan: #0891b2;
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-rose: #f43f5e;
+  --accent-cyan: #06b6d4;
+  --accent-violet: #8b5cf6;
 
-  /* Ink-Black Dense Typography (18:1 Contrast Ratio) */
-  --text-primary: #090e17;
-  --text-secondary: #2d3b52;
-  --text-muted: #57657a;
+  /* Typography: Rich Navy Charcoal (sharp yet warm, not stark harsh black) */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
 
-  --hover-surface: #f0f4f9;
+  --hover-surface: rgba(15, 23, 42, 0.04);
 }
 
 /* ==========================================================================
@@ -124,12 +127,13 @@
     --accent-cyan: color(display-p3 0 0.8 0.95);
     --accent-amber: color(display-p3 0.98 0.62 0.05);
     --accent-rose: color(display-p3 0.98 0.22 0.38);
+    --accent-violet: color(display-p3 0.65 0.32 0.98);
   }
 
   [data-theme="light"] {
-    --primary-500: color(display-p3 0.05 0.46 1);
-    --primary-600: color(display-p3 0.02 0.38 0.95);
-    --border-focus: color(display-p3 0.02 0.38 0.95);
+    --primary-500: color(display-p3 0.08 0.48 1);
+    --primary-600: color(display-p3 0.04 0.4 0.96);
+    --border-focus: color(display-p3 0.04 0.4 0.96);
   }
 }
 
@@ -141,6 +145,7 @@
 
 html {
   color-scheme: dark light;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -149,11 +154,17 @@ body {
   color: var(--text-primary);
   min-height: 100vh;
   line-height: 1.5;
-  letter-spacing: -0.011em;
+  letter-spacing: -0.012em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: geometricPrecision;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+::selection {
+  background: rgba(37, 99, 235, 0.18);
+  color: inherit;
 }
 
 a {
@@ -161,20 +172,23 @@ a {
   text-decoration: none;
 }
 
-/* Precision Hardware Card Elevation (Zero Glassmorphism) */
+/* Modern Silky Card Elevation */
 .card-elevated {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--card-shadow);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  transition: border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .card-elevated:hover {
   border-color: var(--border-strong);
+  box-shadow: var(--card-shadow-hover);
 }
 
-/* Custom Precision Scrollbar */
+/* Custom Smooth Pill Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -183,20 +197,21 @@ a {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #3f4d63;
-  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #5b6f8c;
+  background: rgba(100, 116, 139, 0.65);
 }
-[data-theme="light"] ::-webkit-scrollbar-thumb {
-  background: #94a3b8;
+:root ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
 }
-[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+:root ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
 }
 
-/* High-Contrast Precision Inputs */
+/* Smooth Modern Inputs */
 .form-input, .form-select, .form-textarea {
   width: 100%;
   padding: 8px 12px;
@@ -206,17 +221,24 @@ a {
   color: var(--text-primary);
   font-size: 0.875rem;
   font-family: inherit;
-  box-shadow: inset 0 1px 2px var(--input-inset-shadow);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 1px 2px var(--input-inset-shadow);
+  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.form-input:hover, .form-select:hover, .form-textarea:hover {
+  border-color: var(--border-strong);
 }
 
 .form-input:focus, .form-select:focus, .form-textarea:focus {
   outline: none;
+  background-color: var(--bg-surface);
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 1px var(--border-focus), 0 0 0 3.5px var(--focus-ring-glow);
+  box-shadow: 0 0 0 3px var(--focus-ring-glow), 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-/* Dynamic Range Buttons */
+/* Smooth Modern Tactile Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -228,37 +250,45 @@ a {
   font-size: 0.8125rem;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   font-family: inherit;
   letter-spacing: -0.01em;
+  user-select: none;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0.5px) scale(0.985);
 }
 
 .btn-primary {
-  background: linear-gradient(180deg, var(--primary-500) 0%, var(--primary-600) 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, var(--primary-600) 50%, var(--primary-700) 100%);
   color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 0 14px -2px rgba(0, 102, 255, 0.35);
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 4px 14px -1px rgba(37, 99, 235, 0.35);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
 }
+
 .btn-primary:hover {
-  background: linear-gradient(180deg, var(--primary-400) 0%, var(--primary-500) 100%);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 0 20px 0 rgba(0, 102, 255, 0.5);
-}
-.btn-primary:active {
-  transform: translateY(0.5px);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), inset 0 1px 2px rgba(0, 0, 0, 0.25);
+  background: linear-gradient(135deg, #60a5fa 0%, var(--primary-500) 50%, var(--primary-600) 100%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1), 0 8px 24px -2px rgba(37, 99, 235, 0.45);
 }
 
 .btn-secondary {
-  background: var(--bg-surface-elevated);
+  background: var(--bg-surface);
   color: var(--text-primary);
   border: 1px solid var(--border-subtle);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), inset 0 1px 0 var(--specular-highlight);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
+
 .btn-secondary:hover {
   background: var(--hover-surface);
-  border-color: var(--border-strong);
+  border-color: rgba(37, 99, 235, 0.25);
   color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .btn-outline {
@@ -266,24 +296,28 @@ a {
   color: var(--text-secondary);
   border: 1px solid var(--border-subtle);
 }
+
 .btn-outline:hover {
   background: var(--hover-surface);
-  border-color: var(--border-strong);
+  border-color: rgba(37, 99, 235, 0.3);
   color: var(--text-primary);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
 .btn-danger {
-  background: rgba(244, 63, 94, 0.15);
+  background: rgba(244, 63, 94, 0.1);
   color: var(--accent-rose);
-  border: 1px solid rgba(244, 63, 94, 0.35);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-.btn-danger:hover {
-  background: rgba(244, 63, 94, 0.25);
-  border-color: var(--accent-rose);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  box-shadow: 0 1px 2px rgba(244, 63, 94, 0.05);
 }
 
-/* Precision Data Table */
+.btn-danger:hover {
+  background: rgba(244, 63, 94, 0.18);
+  border-color: rgba(244, 63, 94, 0.4);
+  box-shadow: 0 3px 10px rgba(244, 63, 94, 0.2);
+}
+
+/* Precision Smooth Data Table */
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -307,7 +341,8 @@ a {
   border-bottom: 1px solid var(--border-subtle);
   color: var(--text-secondary);
   vertical-align: middle;
-  transition: background-color 0.1s ease, color 0.1s ease;
+  transition: background-color 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+              color 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .data-table tr:hover td {
