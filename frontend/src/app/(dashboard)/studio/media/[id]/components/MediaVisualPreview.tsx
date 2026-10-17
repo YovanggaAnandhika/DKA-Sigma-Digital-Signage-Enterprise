@@ -93,9 +93,9 @@ export default function MediaVisualPreview({
               Pratinjau Visual Tidak Dapat Dimuat
             </div>
             <p style={{ color: '#94a3b8', fontSize: '0.8125rem', lineHeight: 1.5, margin: '0 0 16px 0' }}>
-              {media.publicUrl.startsWith('blob:')
+              {media.publicUrl?.startsWith('blob:')
                 ? 'Tautan ini sebelumnya tersimpan sebagai memori sementara (blob:) dan telah kedaluwarsa setelah refresh. Silakan unggah berkas baru agar tersimpan permanen di server.'
-                : `Berkas pada alamat "${media.publicUrl}" tidak dapat diakses atau tidak ditemukan.`}
+                : `Berkas pada alamat "${media.publicUrl || ''}" tidak dapat diakses atau tidak ditemukan.`}
             </p>
             <Link href="/studio/media/create" className="btn btn-primary" style={{ fontSize: '0.8125rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
               <UploadCloud size={16} />

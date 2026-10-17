@@ -155,6 +155,8 @@ export function QueueEditorProvider({
           ...found,
           canvasWidth: found.canvasWidth || 1920,
           canvasHeight: found.canvasHeight || 1080,
+          backgroundColor: found.backgroundColor || '#f8fafc',
+          themePreset: found.themePreset || 'clean-light',
           items: sanitizedItems,
           counters: found.counters && found.counters.length > 0 ? found.counters : [
             { id: 'cnt-1', counterNumber: 1, counterName: found.currentCounter || 'LOKET 01', operatorName: 'Petugas 1', isActive: true },

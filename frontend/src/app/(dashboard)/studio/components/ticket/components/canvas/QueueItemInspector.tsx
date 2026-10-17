@@ -118,13 +118,13 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <input
                 type="color"
-                value={queue.backgroundColor.startsWith('#') ? queue.backgroundColor : '#f8fafc'}
+                value={(queue.backgroundColor || '#f8fafc').startsWith('#') ? (queue.backgroundColor || '#f8fafc') : '#f8fafc'}
                 onChange={(e) => updateField('backgroundColor', e.target.value)}
                 style={{ width: '32px', height: '32px', borderRadius: '6px', border: 'none', cursor: 'pointer', padding: 0 }}
               />
               <input
                 type="text"
-                value={queue.backgroundColor}
+                value={queue.backgroundColor || ''}
                 onChange={(e) => updateField('backgroundColor', e.target.value)}
                 className="form-input"
                 style={{ flex: 1, padding: '5px 8px', fontSize: '0.78rem' }}
@@ -557,13 +557,13 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <input
                   type="color"
-                  value={selectedItem.textColor}
+                  value={(selectedItem.textColor || '#ffffff').startsWith('#') ? selectedItem.textColor : '#ffffff'}
                   onChange={(e) => updateLayoutItem(selectedItem.id, { textColor: e.target.value })}
                   style={{ width: '28px', height: '28px', borderRadius: '4px', border: 'none', cursor: 'pointer', padding: 0 }}
                 />
                 <input
                   type="text"
-                  value={selectedItem.textColor}
+                  value={selectedItem.textColor || ''}
                   onChange={(e) => updateLayoutItem(selectedItem.id, { textColor: e.target.value })}
                   className="form-input"
                   style={{ flex: 1, padding: '4px 6px', fontSize: '0.72rem' }}
@@ -687,13 +687,13 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <input
                     type="color"
-                    value={selectedItem.backgroundColor.startsWith('#') ? selectedItem.backgroundColor : '#ffffff'}
+                    value={(selectedItem.backgroundColor || '#ffffff').startsWith('#') ? selectedItem.backgroundColor : '#ffffff'}
                     onChange={(e) => updateLayoutItem(selectedItem.id, { backgroundColor: e.target.value })}
                     style={{ width: '28px', height: '28px', borderRadius: '4px', border: 'none', cursor: 'pointer', padding: 0 }}
                   />
                   <input
                     type="text"
-                    value={selectedItem.backgroundColor}
+                    value={selectedItem.backgroundColor || ''}
                     onChange={(e) => updateLayoutItem(selectedItem.id, { backgroundColor: e.target.value })}
                     className="form-input"
                     style={{ flex: 1, padding: '4px 6px', fontSize: '0.72rem' }}
