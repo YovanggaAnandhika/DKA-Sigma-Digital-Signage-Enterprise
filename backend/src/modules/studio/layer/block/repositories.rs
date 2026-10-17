@@ -18,14 +18,20 @@ impl LayerBlockRepository {
         let block = sqlx::query_as::<_, LayerBlockEntity>(
             r#"
             INSERT INTO layer_blocks (
-                layer_id, playlist_id, media_item_id, start_time_seconds, duration_seconds, order_index, trim_start_seconds, trim_end_seconds, transition_id, visual_filter_id
-            ) VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 0), $8, $9, $10)
+                layer_id, playlist_id, media_item_id, ticker_id, clock_id, webview_id, queue_id, album_id,
+                start_time_seconds, duration_seconds, order_index, trim_start_seconds, trim_end_seconds, transition_id, visual_filter_id
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE($12, 0), $13, $14, $15)
             RETURNING *
             "#
         )
         .bind(dto.layer_id)
         .bind(dto.playlist_id)
         .bind(dto.media_item_id)
+        .bind(dto.ticker_id)
+        .bind(dto.clock_id)
+        .bind(dto.webview_id)
+        .bind(dto.queue_id)
+        .bind(dto.album_id)
         .bind(dto.start_time_seconds)
         .bind(dto.duration_seconds)
         .bind(next_order)

@@ -14,6 +14,7 @@ export default function LayerBlockList() {
     updateSelectedLayer,
     setPickerZoneId,
     setMediaPickerZoneId,
+    setComponentPickerZoneId,
     isPlaylistCollapsed,
     setIsPlaylistCollapsed,
     selectedBlockId,
@@ -116,13 +117,19 @@ export default function LayerBlockList() {
         <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
           {(selectedZone.blocksList || []).length > 0 ? (
             (selectedZone.blocksList || []).map((block, index) => {
-              const isMediaBlock = !!block.mediaItemId;
+              const isWidgetBlock = !!block.widgetType;
+              const isMediaBlock = !block.playlistId && !!block.mediaItemId && !isWidgetBlock;
               let name = 'Loading...';
               let detail1 = '';
               let detail2 = '';
               let icon = <ListMusic size={14} />;
 
-              if (isMediaBlock) {
+              if (isWidgetBlock) {
+                name = block.widgetData?.name || `Komponen ${block.widgetType}`;
+                detail1 = block.widgetType?.toUpperCase() || 'WIDGET';
+                detail2 = `${block.durationSeconds || 30}s`;
+                icon = <LayoutGrid size={14} />;
+              } else if (isMediaBlock) {
                 const m = mediaList.find(m => m.id === block.mediaItemId);
                 name = m?.name || 'Media';
                 detail1 = m?.mediaType === 2 ? 'Video' : 'Image';
@@ -199,22 +206,22 @@ export default function LayerBlockList() {
           
           <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
             <button
-              onClick={() => setPickerZoneId(selectedZone.id)}
-              style={{ flex: 1, padding: '6px 8px', fontSize: '0.6875rem', fontWeight: 600, backgroundColor: 'var(--bg-surface-elevated)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+              onClick={() => setMediaPickerZoneId(selectedZone.id)}
+              style={{ flex: 1, padding: '7px 8px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'var(--bg-surface-elevated)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-50)'; e.currentTarget.style.borderColor = 'var(--primary-300)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
-              title="Tambah Playlist ke Layer Ini"
+              title="Tambah File Media Langsung (Gambar, Video)"
             >
-              <ListMusic size={13} /> + Playlist
+              <Film size={14} /> + Media
             </button>
             <button
-              onClick={() => setMediaPickerZoneId(selectedZone.id)}
-              style={{ flex: 1, padding: '6px 8px', fontSize: '0.6875rem', fontWeight: 600, backgroundColor: 'var(--bg-surface-elevated)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-50)'; e.currentTarget.style.borderColor = 'var(--primary-300)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
-              title="Tambah Media Langsung ke Layer Ini"
+              onClick={() => setComponentPickerZoneId(selectedZone.id)}
+              style={{ flex: 1, padding: '7px 8px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'var(--primary-50)', border: '1px dashed var(--primary-400)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-100)'; e.currentTarget.style.borderColor = 'var(--primary-500)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-50)'; e.currentTarget.style.borderColor = 'var(--primary-400)'; }}
+              title="Tambah Komponen Layar (Daftar Putar, Web View, Teks Berjalan, Jam, Antrian, Album)"
             >
-              <Film size={13} /> + Media
+              <LayoutGrid size={14} /> + Komponen
             </button>
           </div>
         </div>

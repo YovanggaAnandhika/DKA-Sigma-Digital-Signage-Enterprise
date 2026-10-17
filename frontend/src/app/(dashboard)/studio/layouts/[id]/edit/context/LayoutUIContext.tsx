@@ -8,6 +8,8 @@ interface LayoutUIContextType {
   setPickerZoneId: React.Dispatch<React.SetStateAction<string | null>>;
   mediaPickerZoneId: string | null;
   setMediaPickerZoneId: React.Dispatch<React.SetStateAction<string | null>>;
+  componentPickerZoneId: string | null;
+  setComponentPickerZoneId: React.Dispatch<React.SetStateAction<string | null>>;
   hiddenZones: string[];
   toggleZoneVisibility: (layerId: string) => void;
   isTimelineExpanded: boolean;
@@ -46,6 +48,7 @@ const LayoutUIContext = createContext<LayoutUIContextType | undefined>(undefined
 export function LayoutUIProvider({ children }: { children: ReactNode }) {
   const [pickerZoneId, setPickerZoneId] = useState<string | null>(null);
   const [mediaPickerZoneId, setMediaPickerZoneId] = useState<string | null>(null);
+  const [componentPickerZoneId, setComponentPickerZoneId] = useState<string | null>(null);
   const [hiddenZones, setHiddenZones] = useState<string[]>([]);
   const [isTimelineExpanded, setIsTimelineExpanded] = useState(true);
   const [isLayoutMetaExpanded, setIsLayoutMetaExpanded] = useState(true);
@@ -115,6 +118,8 @@ export function LayoutUIProvider({ children }: { children: ReactNode }) {
         setPickerZoneId,
         mediaPickerZoneId,
         setMediaPickerZoneId,
+        componentPickerZoneId,
+        setComponentPickerZoneId,
         hiddenZones,
         toggleZoneVisibility,
         isTimelineExpanded,

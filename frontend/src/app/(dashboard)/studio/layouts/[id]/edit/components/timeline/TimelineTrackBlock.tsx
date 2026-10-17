@@ -22,11 +22,16 @@ export default function TimelineTrackBlock({ layer, block, color }: TimelineTrac
 
   const isSelected = selectedBlockId === block.id;
 
-  const isMediaBlock = !block.playlistId && !!block.mediaItemId;
+  const isWidgetBlock = !!block.widgetType;
+  const isMediaBlock = !block.playlistId && !!block.mediaItemId && !isWidgetBlock;
   const media = isMediaBlock ? mediaList.find((m) => m.id === block.mediaItemId) : null;
-  const playlist = !isMediaBlock ? availablePlaylists.find((p) => p.id === block.playlistId) : null;
+  const playlist = !isMediaBlock && !isWidgetBlock ? availablePlaylists.find((p) => p.id === block.playlistId) : null;
 
-  const title = isMediaBlock ? media?.name || 'Media Single' : playlist?.name || 'Playlist Block';
+  const title = isWidgetBlock
+    ? block.widgetData?.name || `Widget ${block.widgetType}`
+    : isMediaBlock
+    ? media?.name || 'Media Single'
+    : playlist?.name || 'Playlist Block';
 
   const leftPx = (block.startTimeSeconds || 0) * (pxPerSecond || 20);
   const widthPx = (block.durationSeconds || 10) * (pxPerSecond || 20);

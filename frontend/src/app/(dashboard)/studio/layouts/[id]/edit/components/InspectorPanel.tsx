@@ -21,6 +21,7 @@ import {
   Sparkles,
   Layers,
   Scissors,
+  LayoutGrid,
 } from 'lucide-react';
 import { updatePlaylistBlock, addPlaylistBlock, addMediaBlock, removePlaylistBlock } from '@/lib/services/studio/layout.service';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
@@ -70,6 +71,7 @@ export default function InspectorPanel() {
     visualFiltersList,
     setPickerZoneId,
     setMediaPickerZoneId,
+    setComponentPickerZoneId,
     isInspectorCollapsed,
     setIsInspectorCollapsed,
     selectedBlockId,
@@ -723,18 +725,18 @@ export default function InspectorPanel() {
                 </span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
-                    onClick={() => setPickerZoneId(selectedZone.id)}
-                    style={{ flex: 1, padding: '6px 8px', fontSize: '0.6875rem', fontWeight: 600, backgroundColor: 'var(--bg-base)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
-                    title="Tambah Playlist"
+                    onClick={() => setMediaPickerZoneId(selectedZone.id)}
+                    style={{ flex: 1, padding: '7px 10px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'var(--bg-base)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    title="Tambah File Media Langsung (Gambar, Video)"
                   >
-                    <ListMusic size={13} /> + Playlist
+                    <Film size={14} /> + Media
                   </button>
                   <button
-                    onClick={() => setMediaPickerZoneId(selectedZone.id)}
-                    style={{ flex: 1, padding: '6px 8px', fontSize: '0.6875rem', fontWeight: 600, backgroundColor: 'var(--bg-base)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
-                    title="Tambah Media"
+                    onClick={() => setComponentPickerZoneId(selectedZone.id)}
+                    style={{ flex: 1, padding: '7px 10px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'var(--primary-50)', border: '1px dashed var(--primary-400)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    title="Tambah Komponen Layar (Daftar Putar, Web View, Teks Berjalan, Jam, Antrian, Album)"
                   >
-                    <Film size={13} /> + Media
+                    <LayoutGrid size={14} /> + Komponen
                   </button>
                 </div>
               </div>

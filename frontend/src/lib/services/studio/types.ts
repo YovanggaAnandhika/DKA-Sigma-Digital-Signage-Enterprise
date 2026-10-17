@@ -46,6 +46,9 @@ export interface LayerPlaylist {
   itemOverridesList: LayerPlaylistItemOverride[];
   isMuted?: boolean;
   volumeLevel?: number;
+  widgetType?: 'webview' | 'ticker' | 'clock' | 'queue' | 'album';
+  widgetId?: string;
+  widgetData?: any;
   createdAt: string;
 }
 

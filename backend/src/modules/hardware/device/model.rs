@@ -7,10 +7,11 @@ use uuid::Uuid;
 pub struct DeviceEntity {
     pub id: Uuid,
     pub name: String,
-    pub pairing_code: String,
     pub is_paired: bool,
     #[serde(skip_serializing)]
     pub device_token_hash: Option<String>,
+    pub resolution_id: Option<Uuid>,
+    pub orientation_id: Option<Uuid>,
     pub screen_width: i32,
     pub screen_height: i32,
     pub orientation: String,
@@ -29,6 +30,18 @@ pub struct DeviceEntity {
     pub last_heartbeat_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct DevicePairingEntity {
+    pub id: Uuid,
+    pub device_id: Uuid,
+    pub pairing_code: String,
+    pub status: String,
+    pub expires_at: DateTime<Utc>,
+    pub approved_by_user_id: Option<Uuid>,
+    pub paired_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize)]

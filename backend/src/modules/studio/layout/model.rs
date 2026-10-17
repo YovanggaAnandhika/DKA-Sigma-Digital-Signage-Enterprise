@@ -11,6 +11,7 @@ pub struct LayoutEntity {
     pub id: Uuid,
     pub name: String,
     pub description: Option<String>,
+    pub resolution_id: Option<Uuid>,
     pub canvas_width: i32,
     pub canvas_height: i32,
     pub orientation_id: Uuid,

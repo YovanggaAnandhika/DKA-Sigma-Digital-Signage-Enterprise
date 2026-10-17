@@ -23,6 +23,7 @@ const InspectorPanel = dynamic(() => import('./components/InspectorPanel'), { ss
 const LayerBlockList = dynamic(() => import('./components/layers/LayerBlockList'), { ssr: false, loading: () => <LayerBlockListPlaceholder /> });
 const PlaylistPickerModal = dynamic(() => import('./components/PlaylistPickerModal'), { ssr: false });
 const MediaPickerModal = dynamic(() => import('./components/MediaPickerModal'), { ssr: false });
+const ComponentPickerModal = dynamic(() => import('./components/ComponentPickerModal'), { ssr: false });
 
 function EditorContent() {
   const {
@@ -312,6 +313,7 @@ function EditorContent() {
 
       <PlaylistPickerModal />
       <MediaPickerModal />
+      <ComponentPickerModal />
 
       {/* Toast Notification — rendered inside container, safe for fullscreen */}
       {toast && (

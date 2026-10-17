@@ -230,26 +230,14 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
           justifyContent: 'center',
         }}
       >
-        {/* Visual Media Rendering */}
+        {/* Visual Media or Widget Rendering */}
         <div style={{ opacity: active ? 1 : 0, transition: 'opacity 0.2s', width: '100%', height: '100%', position: 'absolute', inset: 0 }}>
-          {activeMedia?.publicUrl && (
-            activeMedia.mediaType === 2 ? (
-              <div style={{ filter: filterCssString, width: '100%', height: '100%' }}>
-                <SynchronizedVideo
-                  src={activeMedia.publicUrl}
-                  isPlaying={isPlaying}
-                  active={active}
-                  isMuted={isEffectiveMuted}
-                  volumeLevel={currentVolumeLevel}
-                  targetTimeSec={itemOffsetSec}
-                  onBufferUpdate={reportBuffer}
-                  timelineStartSec={absoluteStartSec}
-                />
-              </div>
-            ) : activeMedia.mediaType === 3 ? (
+          {/* 1. WIDGET RENDERING */}
+          {activeBlock?.widgetType ? (
+            activeBlock.widgetType === 'webview' ? (
               <iframe
-                src={activeMedia.publicUrl || activeMedia.originalFilename}
-                title={activeMedia.name || z.name}
+                src={activeBlock.widgetData?.url || 'about:blank'}
+                title={activeBlock.widgetData?.name || z.name}
                 style={{
                   position: 'absolute',
                   top: 0,
@@ -261,10 +249,89 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
                   pointerEvents: isPlaying ? 'auto' : 'none',
                 }}
               />
-            ) : (
+            ) : activeBlock.widgetType === 'ticker' ? (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  backgroundColor: activeBlock.widgetData?.theme === 'blue' ? '#1e3a8a' : activeBlock.widgetData?.theme === 'red' ? '#991b1b' : '#111827',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  overflow: 'hidden',
+                  padding: '0 12px',
+                  gap: '12px',
+                }}
+              >
+                {activeBlock.widgetData?.badge && (
+                  <span
+                    style={{
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontWeight: 800,
+                      fontSize: '0.75rem',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {activeBlock.widgetData.badge}
+                  </span>
+                )}
+                <div style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                  <span style={{ display: 'inline-block', fontSize: `${activeBlock.widgetData?.fontSize || 16}px`, fontWeight: 600 }}>
+                    {(activeBlock.widgetData?.messages || [' DKASigma Teks Berjalan ']).join('  •  ')}
+                  </span>
+                </div>
+              </div>
+            ) : activeBlock.widgetType === 'clock' ? (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'linear-gradient(135deg, #0f172a, #1e293b)',
+                  color: '#ffffff',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '12px',
+                }}
+              >
+                <div style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '0.05em', fontFamily: 'monospace' }}>
+                  {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: activeBlock.widgetData?.showSeconds ? '2-digit' : undefined })}
+                </div>
+                <div style={{ fontSize: '0.75rem', opacity: 0.8, marginTop: '4px' }}>
+                  {activeBlock.widgetData?.city || 'Makassar'} &bull; Cerah 31°C
+                </div>
+              </div>
+            ) : activeBlock.widgetType === 'queue' ? (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  backgroundColor: '#0f172a',
+                  color: '#ffffff',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '12px',
+                }}
+              >
+                <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#38bdf8', textTransform: 'uppercase' }}>
+                  {activeBlock.widgetData?.name || 'Nomor Antrian'}
+                </div>
+                <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#facc15', letterSpacing: '0.05em' }}>
+                  {activeBlock.widgetData?.currentNumber || 'A-001'}
+                </div>
+                <div style={{ fontSize: '0.75rem', backgroundColor: 'rgba(255,255,255,0.15)', padding: '2px 8px', borderRadius: '4px', marginTop: '4px' }}>
+                  {activeBlock.widgetData?.currentCounter || 'LOKET 01'}
+                </div>
+              </div>
+            ) : activeBlock.widgetType === 'album' && (activeBlock.widgetData?.photos?.length || 0) > 0 ? (
               <img
-                src={activeMedia.publicUrl}
-                alt={activeMedia.name || z.name}
+                src={activeBlock.widgetData.photos[0].url}
+                alt="Album photo"
                 style={{
                   position: 'absolute',
                   top: 0,
@@ -274,16 +341,67 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
                   objectFit: 'cover',
                   filter: filterCssString,
                 }}
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
               />
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                Komponen {activeBlock.widgetType}
+              </div>
+            )
+          ) : (
+            /* 2. REGULAR MEDIA RENDERING */
+            activeMedia?.publicUrl && (
+              activeMedia.mediaType === 2 ? (
+                <div style={{ filter: filterCssString, width: '100%', height: '100%' }}>
+                  <SynchronizedVideo
+                    src={activeMedia.publicUrl}
+                    isPlaying={isPlaying}
+                    active={active}
+                    isMuted={isEffectiveMuted}
+                    volumeLevel={currentVolumeLevel}
+                    targetTimeSec={itemOffsetSec}
+                    onBufferUpdate={reportBuffer}
+                    timelineStartSec={absoluteStartSec}
+                  />
+                </div>
+              ) : activeMedia.mediaType === 3 ? (
+                <iframe
+                  src={activeMedia.publicUrl || activeMedia.originalFilename}
+                  title={activeMedia.name || z.name}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    border: 'none',
+                    filter: filterCssString,
+                    pointerEvents: isPlaying ? 'auto' : 'none',
+                  }}
+                />
+              ) : (
+                <img
+                  src={activeMedia.publicUrl}
+                  alt={activeMedia.name || z.name}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    filter: filterCssString,
+                  }}
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              )
             )
           )}
         </div>
 
         {/* Non-intrusive metadata rendering */}
-        {activeMedia?.publicUrl ? (
+        {(activeMedia?.publicUrl || activeBlock?.widgetType) ? (
           <>
             {/* Unobtrusive minimal corner tag */}
             <div
@@ -327,7 +445,11 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
                     paddingLeft: '4px',
                   }}
                 >
-                  🎬 {z.blocksList[0].mediaItemId ? 'Media' : (availablePlaylists.find(p => p.id === z.blocksList[0].playlistId)?.name || 'Playlist')}
+                  {z.blocksList[0].widgetType
+                    ? `🧩 ${z.blocksList[0].widgetData?.name || z.blocksList[0].widgetType}`
+                    : z.blocksList[0].mediaItemId
+                    ? '🎬 Media'
+                    : `🎵 ${availablePlaylists.find(p => p.id === z.blocksList[0].playlistId)?.name || 'Playlist'}`}
                 </span>
               )}
               {activeMedia?.mediaType === 2 && (
