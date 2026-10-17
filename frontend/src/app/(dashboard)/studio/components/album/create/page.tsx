@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Images, Plus, Trash2, Check, Sparkles } from 'lucide-react';
+import { ArrowLeft, Images, Plus, Trash2, Check, Sparkles, FolderOpen } from 'lucide-react';
 import { ALBUM_STORAGE_KEY, DEFAULT_ALBUMS, PhotoAlbum, PhotoItem } from '../types';
+import AlbumMediaPickerModal from '../components/AlbumMediaPickerModal';
 
 export default function CreatePhotoAlbumPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function CreatePhotoAlbumPage() {
   const [description, setDescription] = useState('');
   const [transitionEffect, setTransitionEffect] = useState<'ken-burns' | 'fade' | 'slide' | 'zoom'>('ken-burns');
   const [duration, setDuration] = useState(4);
+  const [isMediaPickerOpen, setIsMediaPickerOpen] = useState(false);
 
   // Photos List in Album
   const [photos, setPhotos] = useState<PhotoItem[]>([
@@ -24,33 +26,6 @@ export default function CreatePhotoAlbumPage() {
       priceTag: 'Rp 35.000',
     },
   ]);
-
-  // New photo input fields
-  const [newUrl, setNewUrl] = useState('');
-  const [newTitle, setNewTitle] = useState('');
-  const [newBadge, setNewBadge] = useState('');
-  const [newPrice, setNewPrice] = useState('');
-
-  const handleAddPhoto = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newUrl.trim() || !newTitle.trim()) return;
-
-    setPhotos([
-      ...photos,
-      {
-        id: `p-${Date.now()}`,
-        url: newUrl.trim(),
-        title: newTitle.trim(),
-        promoBadge: newBadge.trim() || undefined,
-        priceTag: newPrice.trim() || undefined,
-      },
-    ]);
-
-    setNewUrl('');
-    setNewTitle('');
-    setNewBadge('');
-    setNewPrice('');
-  };
 
   const handleRemovePhoto = (id: string) => {
     if (photos.length <= 1) {
@@ -188,54 +163,26 @@ export default function CreatePhotoAlbumPage() {
             </h2>
           </div>
 
-          {/* Add photo inline form */}
-          <div style={{ padding: '16px', borderRadius: '10px', backgroundColor: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-              + Tambah Foto ke Album
-            </span>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <input
-                type="text"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="Judul / Nama Produk"
-                className="form-input"
-              />
-              <input
-                type="text"
-                value={newUrl}
-                onChange={(e) => setNewUrl(e.target.value)}
-                placeholder="URL Gambar (https://...)"
-                className="form-input"
-              />
+          {/* Add photo via Media Library Picker */}
+          <div style={{ padding: '16px 20px', borderRadius: '10px', backgroundColor: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Images size={16} color="var(--primary-400)" /> Tambah Foto dari Pustaka Media
+              </span>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                Pilih gambar produk atau poster promosi dari pustaka aset digital signage.
+              </p>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px' }}>
-              <input
-                type="text"
-                value={newBadge}
-                onChange={(e) => setNewBadge(e.target.value)}
-                placeholder="Badge Promo (Contoh: DISKON 20%)"
-                className="form-input"
-              />
-              <input
-                type="text"
-                value={newPrice}
-                onChange={(e) => setNewPrice(e.target.value)}
-                placeholder="Label Harga (Contoh: Rp 45.000)"
-                className="form-input"
-              />
-              <button
-                type="button"
-                onClick={handleAddPhoto}
-                className="btn btn-secondary"
-                style={{ alignSelf: 'flex-end', padding: '10px 16px' }}
-              >
-                <Plus size={14} />
-                <span>Tambahkan</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setIsMediaPickerOpen(true)}
+              className="btn btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <FolderOpen size={16} />
+              <span>Buka Pustaka Media</span>
+            </button>
           </div>
 
           {/* Photos Table/List */}
@@ -288,6 +235,25 @@ export default function CreatePhotoAlbumPage() {
           </div>
         </div>
       </form>
+
+      {/* Media Picker Modal */}
+      <AlbumMediaPickerModal
+        isOpen={isMediaPickerOpen}
+        onClose={() => setIsMediaPickerOpen(false)}
+        onSelectPhoto={(photo) => {
+          setPhotos((prev) => [
+            ...prev,
+            {
+              id: `p-${Date.now()}`,
+              mediaItemId: photo.mediaItemId,
+              url: photo.url,
+              title: photo.title,
+              promoBadge: photo.promoBadge,
+              priceTag: photo.priceTag,
+            },
+          ]);
+        }}
+      />
     </div>
   );
 }

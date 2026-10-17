@@ -1,5 +1,6 @@
 export interface PhotoItem {
   id: string;
+  mediaItemId?: string;
   url: string;
   title: string;
   promoBadge?: string;
