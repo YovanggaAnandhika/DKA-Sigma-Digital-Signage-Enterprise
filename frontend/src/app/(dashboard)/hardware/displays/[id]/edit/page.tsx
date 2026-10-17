@@ -127,10 +127,10 @@ export default function EditDisplayPage() {
                 onChange={(e) => setFormData({ ...formData, resolution: e.target.value })}
                 className="form-select"
               >
-                <option value="1920x1080">1920 × 1080 (FHD)</option>
-                <option value="3840x2160">3840 × 2160 (4K UHD)</option>
-                <option value="1280x720">1280 × 720 (HD)</option>
-                <option value="1080x1920">1080 × 1920 (Portrait FHD)</option>
+                <option value="1920x1080">1920 × 1080</option>
+                <option value="3840x2160">3840 × 2160</option>
+                <option value="1280x720">1280 × 720</option>
+                <option value="1080x1920">1080 × 1920</option>
               </select>
             </div>
 
@@ -143,8 +143,8 @@ export default function EditDisplayPage() {
                 onChange={(e) => setFormData({ ...formData, orientation: e.target.value })}
                 className="form-select"
               >
-                <option value="landscape">Landscape (Mendatar)</option>
-                <option value="portrait">Portrait (Tegak)</option>
+                <option value="landscape">Landscape</option>
+                <option value="portrait">Portrait</option>
               </select>
             </div>
           </div>
@@ -159,9 +159,9 @@ export default function EditDisplayPage() {
                 onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
                 className="form-select"
               >
-                <option value="Asia/Jakarta">WIB (Asia/Jakarta)</option>
-                <option value="Asia/Makassar">WITA (Asia/Makassar)</option>
-                <option value="Asia/Jayapura">WIT (Asia/Jayapura)</option>
+                <option value="Asia/Jakarta">WIB · Asia/Jakarta</option>
+                <option value="Asia/Makassar">WITA · Asia/Makassar</option>
+                <option value="Asia/Jayapura">WIT · Asia/Jayapura</option>
                 <option value="UTC">UTC</option>
               </select>
             </div>

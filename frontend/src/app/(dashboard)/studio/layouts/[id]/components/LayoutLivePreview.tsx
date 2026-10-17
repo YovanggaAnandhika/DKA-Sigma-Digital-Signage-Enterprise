@@ -160,7 +160,7 @@ export default function LayoutLivePreview({
                   </span>
                   {assignedPlName && (
                     <span style={{ fontSize: '0.5rem', color: '#fef08a', fontWeight: 600, borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: '4px', whiteSpace: 'nowrap' }}>
-                      🎬 {assignedPlName}
+                      {assignedPlName}
                     </span>
                   )}
                 </div>

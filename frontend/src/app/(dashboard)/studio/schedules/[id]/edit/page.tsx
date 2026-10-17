@@ -174,7 +174,7 @@ export default function EditSchedulePage() {
 
         {/* Daftar Event */}
         <div className="card-elevated" style={{ padding: '24px' }}>
-          <h3 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '16px' }}>Daftar Event (Timeline)</h3>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '16px' }}>Timeline Event</h3>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
             {(!schedule.eventsList || schedule.eventsList.length === 0) ? (

@@ -95,7 +95,7 @@ export function Navbar() {
           }}
         >
           <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'currentColor' }} />
-          Sistem: Online
+          Online
         </div>
       </div>
 
@@ -115,7 +115,7 @@ export function Navbar() {
             alignItems: 'center',
             justifyContent: 'center',
           }}
-          title="Ganti Tema (Terang / Gelap)"
+          title="Ganti Tema"
         >
           {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
         </button>

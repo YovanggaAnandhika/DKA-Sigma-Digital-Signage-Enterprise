@@ -153,7 +153,7 @@ export default function LayoutsPage() {
                           border: '1px solid rgba(59, 130, 246, 0.3)',
                         }}
                       >
-                        {(l.layersList || l.layersList)?.length || 0} Lapisan Kotak
+                        {(l.layersList || l.layersList)?.length || 0} Layer
                       </span>
                     </td>
                     <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>

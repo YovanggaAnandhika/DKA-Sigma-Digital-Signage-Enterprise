@@ -255,7 +255,7 @@ export default function CreateMediaPage() {
           }}
         >
           <UploadCloud size={16} />
-          <span>Unggah Berkas (Upload File)</span>
+          <span>Unggah Berkas</span>
         </button>
         <button
           type="button"

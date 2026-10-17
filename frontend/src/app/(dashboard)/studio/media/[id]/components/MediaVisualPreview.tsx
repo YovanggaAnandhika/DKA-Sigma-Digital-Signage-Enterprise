@@ -38,7 +38,7 @@ export default function MediaVisualPreview({
               border: `1px solid ${media.mediaType === 2 ? 'rgba(6, 182, 212, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
             }}
           >
-            {media.mediaType === 2 ? '🎬 Video MP4' : media.mediaType === 3 ? '🌐 Web URL' : '🖼️ Gambar'}
+            {media.mediaType === 2 ? 'Video MP4' : media.mediaType === 3 ? 'Web URL' : 'Gambar'}
           </span>
         </div>
 

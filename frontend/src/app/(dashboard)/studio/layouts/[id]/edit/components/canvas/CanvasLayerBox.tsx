@@ -599,10 +599,10 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                   }}
                 >
                   {z.blocksList[0].widgetType
-                    ? `🧩 ${z.blocksList[0].widgetData?.name || z.blocksList[0].widgetType}`
+                    ? (z.blocksList[0].widgetData?.name || z.blocksList[0].widgetType)
                     : z.blocksList[0].mediaItemId
-                    ? '🎬 Media'
-                    : `🎵 ${availablePlaylists.find(p => p.id === z.blocksList[0].playlistId)?.name || 'Playlist'}`}
+                    ? 'Media'
+                    : (availablePlaylists.find(p => p.id === z.blocksList[0].playlistId)?.name || 'Playlist')}
                 </span>
               )}
               {activeMedia?.mediaType === 2 && (
@@ -616,7 +616,7 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                     borderLeft: '1px solid rgba(255,255,255,0.2)',
                     paddingLeft: '4px',
                   }}
-                  title={isEffectiveMuted ? 'Suara dibisukan (Muted)' : 'Suara aktif (Unmuted)'}
+                  title={isEffectiveMuted ? 'Audio dibisukan' : 'Audio aktif'}
                 >
                   {isEffectiveMuted ? <VolumeX size={11} /> : <Volume2 size={11} />}
                 </span>

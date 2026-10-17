@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, X, Check, Image as ImageIcon, Sparkles, FolderOpen, Tag, DollarSign, Type } from 'lucide-react';
+import { Search, X, Check, Image as ImageIcon, Plus, FolderOpen, Tag, DollarSign, Type } from 'lucide-react';
 import { api, MediaItem } from '@/lib/services';
 
 interface AlbumMediaPickerModalProps {
@@ -425,7 +425,7 @@ export default function AlbumMediaPickerModal({ isOpen, onClose, onSelectPhoto }
                 className="btn btn-primary"
                 style={{ flex: 1.5 }}
               >
-                <Sparkles size={16} />
+                <Plus size={16} />
                 <span>Tambahkan ke Album</span>
               </button>
             </div>

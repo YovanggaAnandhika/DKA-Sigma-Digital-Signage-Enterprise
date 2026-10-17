@@ -115,7 +115,7 @@ export default function CreateWebViewPage() {
                 onChange={(e) => setInterval(Number(e.target.value))}
                 className="form-input"
               >
-                <option value={0}>Nonaktif (Manual)</option>
+                <option value={0}>Manual</option>
                 <option value={15}>15 Detik</option>
                 <option value={30}>30 Detik</option>
                 <option value={60}>1 Menit</option>
@@ -134,12 +134,12 @@ export default function CreateWebViewPage() {
                 onChange={(e) => setZoom(Number(e.target.value))}
                 className="form-input"
               >
-                <option value={75}>75% (Kecil)</option>
+                <option value={75}>75%</option>
                 <option value={90}>90%</option>
-                <option value={100}>100% (Normal)</option>
+                <option value={100}>100%</option>
                 <option value={110}>110%</option>
                 <option value={125}>125%</option>
-                <option value={150}>150% (Besar)</option>
+                <option value={150}>150%</option>
               </select>
             </div>
           </div>

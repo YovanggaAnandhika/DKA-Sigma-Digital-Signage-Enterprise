@@ -127,9 +127,9 @@ export default function CreateTickerPage() {
                 onChange={(e) => setSpeed(e.target.value as any)}
                 className="form-input"
               >
-                <option value="slow">Lambat (25s)</option>
-                <option value="normal">Normal (15s)</option>
-                <option value="fast">Cepat (8s)</option>
+                <option value="slow">Lambat</option>
+                <option value="normal">Sedang</option>
+                <option value="fast">Cepat</option>
               </select>
             </div>
 

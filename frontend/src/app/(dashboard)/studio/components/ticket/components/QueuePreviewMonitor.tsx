@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Volume2, PhoneCall, RefreshCw, Monitor, Sparkles } from 'lucide-react';
+import { Volume2, PhoneCall, RefreshCw, Monitor } from 'lucide-react';
 import { useQueueEditor } from '../context/QueueEditorContext';
 import { injectQueueVariables } from '../types';
 
@@ -22,7 +22,7 @@ export default function QueuePreviewMonitor() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
           <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-            Pratinjau Layar Monitor Antrian (Live 16:9 Canvas)
+            Pratinjau Layar Antrian
           </h4>
         </div>
 

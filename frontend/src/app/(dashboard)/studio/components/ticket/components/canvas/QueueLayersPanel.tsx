@@ -60,7 +60,7 @@ export default function QueueLayersPanel({
       newItem = {
         id: newId,
         itemType: 'counter_loket',
-        name: 'Badge Meja / Loket',
+        name: 'Badge Loket',
         x: 710,
         y: 680,
         width: 500,
@@ -289,7 +289,7 @@ export default function QueueLayersPanel({
                     {item.name}
                   </div>
                   <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                    Z:{item.zIndex} &bull; {item.width}×{item.height}px
+                    {item.width} × {item.height} · Z:{item.zIndex}
                   </div>
                 </div>
               </div>

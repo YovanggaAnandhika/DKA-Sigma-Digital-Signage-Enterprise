@@ -28,11 +28,11 @@ export default function TabCountersTab() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Users size={18} color="var(--primary-500)" />
               <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Daftar Meja / Loket Pelayanan ({queue.counters.length} Loket)
+                Daftar Loket
               </h4>
             </div>
             <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              Kelola loket yang dapat memanggil antrian dan ditampilkan pada layar monitor.
+              Kelola daftar loket pemanggil antrian.
             </p>
           </div>
 

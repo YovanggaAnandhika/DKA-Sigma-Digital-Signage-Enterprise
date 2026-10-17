@@ -104,7 +104,7 @@ export default function RolesPage() {
                 <th>Nama Role</th>
                 <th>Slug Sistem</th>
                 <th>Deskripsi</th>
-                <th>Jumlah Izin (Permissions)</th>
+                <th>Jumlah Izin</th>
                 <th>Dibuat Pada</th>
                 <th style={{ textAlign: 'right' }}>Aksi</th>
               </tr>

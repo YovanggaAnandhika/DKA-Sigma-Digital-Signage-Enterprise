@@ -14,7 +14,6 @@ import {
   ArrowUpToLine,
   ArrowDownToLine,
   PhoneCall,
-  Sparkles,
 } from 'lucide-react';
 import { useQueueEditor } from '../../context/QueueEditorContext';
 import { QueueLayoutItem, injectQueueVariables } from '../../types';

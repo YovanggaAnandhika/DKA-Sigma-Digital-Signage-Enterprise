@@ -85,9 +85,9 @@ export default function CreateLayoutPage() {
               onChange={(e: any) => setPreset(e.target.value)}
               className="form-select"
             >
-              <option value="1080p_land">1920 × 1080 px (Landscape FHD)</option>
-              <option value="1080p_port">1080 × 1920 px (Portrait / Totem FHD)</option>
-              <option value="4k_land">3840 × 2160 px (Landscape 4K UHD)</option>
+              <option value="1080p_land">1920 × 1080 · Landscape</option>
+              <option value="1080p_port">1080 × 1920 · Portrait</option>
+              <option value="4k_land">3840 × 2160 · 4K UHD</option>
             </select>
           </div>
 

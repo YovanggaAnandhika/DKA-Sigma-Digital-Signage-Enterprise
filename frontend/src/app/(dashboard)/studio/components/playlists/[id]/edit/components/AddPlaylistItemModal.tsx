@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, Film, Image as ImageIcon, Plus } from 'lucide-react';
+import { FolderOpen, Film, Image as ImageIcon, Plus } from 'lucide-react';
 import { MediaItem } from '@/lib/services';
 
 interface AddPlaylistItemModalProps {
@@ -50,7 +50,7 @@ export default function AddPlaylistItemModal({
       >
         <div style={{ padding: '24px 24px 16px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Sparkles size={20} color="var(--primary-500)" /> Pilih & Tambah Media ke Playlist
+            <FolderOpen size={18} color="var(--primary-500)" /> Tambah Media ke Playlist
           </h3>
           <button
             type="button"
@@ -198,7 +198,7 @@ export default function AddPlaylistItemModal({
                         />
                         {isVideo && selMedia.durationSeconds > 0 && (
                           <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                            ✅ Durasi video asli: <strong>{selMedia.durationSeconds} detik</strong>
+                            Durasi video asli: <strong>{selMedia.durationSeconds} detik</strong>
                           </p>
                         )}
                       </div>
@@ -215,7 +215,7 @@ export default function AddPlaylistItemModal({
                           <option value="fade">Fade Smooth</option>
                           <option value="slide_left">Slide Left</option>
                           <option value="slide_right">Slide Right</option>
-                          <option value="none">Cut (Tanpa Transisi)</option>
+                          <option value="none">Cut</option>
                         </select>
                       </div>
                     </div>

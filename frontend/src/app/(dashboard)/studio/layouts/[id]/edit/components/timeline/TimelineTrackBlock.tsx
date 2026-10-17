@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Rnd } from 'react-rnd';
-import { Film, Image as ImageIcon, Volume2, VolumeX, Sparkles, Blend } from 'lucide-react';
+import { Film, Image as ImageIcon, Volume2, VolumeX, Sliders, Blend } from 'lucide-react';
 import { updatePlaylistBlock } from '@/lib/services/studio/layout.service';
 import { LayerPlaylist } from '@/lib/services/studio/types';
 import { useLayoutState, Layer } from '../../context/LayoutStateContext';
@@ -170,7 +170,7 @@ export default function TimelineTrackBlock({ layer, block, color }: TimelineTrac
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           {hasTransition && <Blend size={10} color="#60a5fa" />}
-          {hasFilter && <Sparkles size={10} color="#f472b6" />}
+          {hasFilter && <Sliders size={10} color="#f472b6" />}
           <span style={{ fontSize: '0.625rem', opacity: 0.9, fontFamily: 'monospace' }}>
             {block.durationSeconds}s
           </span>

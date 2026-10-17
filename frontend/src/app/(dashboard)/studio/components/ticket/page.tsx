@@ -378,7 +378,7 @@ export default function TicketPage() {
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
                   <Volume2 size={16} />
-                  <span>Panggil Ulang (Chime)</span>
+                  <span>Panggil Ulang</span>
                 </button>
                 <button
                   onClick={handleCallNext}

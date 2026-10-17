@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { MessageSquareText, Plus, Search, Eye, Edit, Trash2, X, Sparkles } from 'lucide-react';
+import { MessageSquareText, Plus, Search, Eye, Edit, Trash2, X } from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
 import { modal } from '@/components/ui/ModalDialog';
 import { TickerConfig, TICKER_STORAGE_KEY, DEFAULT_TICKERS, THEME_STYLES } from './types';
@@ -60,10 +60,10 @@ export default function TickerPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-            Komponen Teks Berjalan (Ticker)
+            Komponen Teks Berjalan
           </h2>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Banner pengumuman teks horizontal (marquee) dengan badge promo, pilihan palet warna ritel, dan pengaturan kecepatan.
+            Kelola banner pengumuman teks berjalan dengan kustomisasi gaya dan kecepatan.
           </p>
         </div>
 

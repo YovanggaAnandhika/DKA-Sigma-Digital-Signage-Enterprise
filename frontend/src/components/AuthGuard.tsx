@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getStoredSession, UserSession } from '../lib/auth';
-import { Sparkles } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<UserSession | null>(null);
@@ -34,7 +34,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
           gap: '10px',
         }}
       >
-        <Sparkles size={20} className="animate-spin" style={{ color: 'var(--primary-500)' }} />
+        <Loader2 size={20} className="animate-spin" style={{ color: 'var(--primary-500)' }} />
         <span>Memvalidasi sesi pengguna...</span>
       </div>
     );

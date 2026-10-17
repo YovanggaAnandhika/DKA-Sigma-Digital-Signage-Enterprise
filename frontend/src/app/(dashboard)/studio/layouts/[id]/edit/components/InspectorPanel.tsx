@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Film,
   Volume2,
+  Sliders,
   VolumeX,
   Clock,
   ChevronLeft,
@@ -32,12 +33,12 @@ import { updatePlaylistBlock, addPlaylistBlock, addMediaBlock, removePlaylistBlo
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 
 
-function VolumeSlider({ 
-  initialVolume, 
-  onCommit 
-}: { 
-  initialVolume: number; 
-  onCommit: (val: number) => void; 
+function VolumeSlider({
+  initialVolume,
+  onCommit
+}: {
+  initialVolume: number;
+  onCommit: (val: number) => void;
 }) {
   const [localVol, setLocalVol] = React.useState(initialVolume);
 
@@ -120,7 +121,7 @@ export default function InspectorPanel() {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedBlock.id);
     if ((updates.isMuted !== undefined || updates.volumeLevel !== undefined || 'transitionId' in updates || 'visualFilterId' in updates) && isUuid) {
       try {
-        await updatePlaylistBlock(selectedBlock.id, { 
+        await updatePlaylistBlock(selectedBlock.id, {
           isMuted: updates.isMuted !== undefined ? updates.isMuted : selectedBlock.isMuted,
           volumeLevel: updates.volumeLevel !== undefined ? updates.volumeLevel : selectedBlock.volumeLevel,
           transitionId: updates.transitionId,
@@ -164,12 +165,12 @@ export default function InspectorPanel() {
       setSelectedBlockId(null);
       setInspectorTarget('layer');
       showToast('Item berhasil dihapus dari alokasi');
-      
+
       // Attempt API deletion if it was already saved
       if (!selectedBlock.id.startsWith('temp-')) {
         try {
           removePlaylistBlock(selectedBlock.id);
-        } catch (err) {}
+        } catch (err) { }
       }
     }
   };
@@ -186,7 +187,7 @@ export default function InspectorPanel() {
       // 1. Durasi block asli dikurangi
       const newDur1 = Math.floor(cutOffset);
       const newDur2 = Math.floor(blockDur - cutOffset);
-      
+
       // Update first block
       handleUpdateBlock({ durationSeconds: newDur1 });
 
@@ -210,7 +211,7 @@ export default function InspectorPanel() {
           return z;
         })
       );
-      
+
       // If it's a real block, try creating in DB
       if (!selectedBlock.id.startsWith('temp-')) {
         try {
@@ -219,7 +220,7 @@ export default function InspectorPanel() {
           } else if (newBlock.playlistId) {
             await addPlaylistBlock(blockZone.id, newBlock.playlistId, newBlock.startTimeSeconds, newBlock.durationSeconds);
           }
-        } catch (e) {}
+        } catch (e) { }
       }
 
       showToast('Berhasil dipotong!');
@@ -299,7 +300,7 @@ export default function InspectorPanel() {
     headerIcon = <Clock size={14} />;
   } else if (inspectorTarget === 'layout' || (!selectedZone && !selectedBlock)) {
     headerTitle = 'Properti Layout';
-    headerIcon = <Sparkles size={14} />;
+    headerIcon = <Layers size={14} />;
   }
 
   return (
@@ -497,7 +498,7 @@ export default function InspectorPanel() {
                     {isBlockMuted ? 'Unmute' : 'Mute'}
                   </button>
                 </div>
-                
+
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <label style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
@@ -507,9 +508,9 @@ export default function InspectorPanel() {
                       {selectedBlock.volumeLevel ?? 100}%
                     </span>
                   </div>
-                  <VolumeSlider 
-                    initialVolume={selectedBlock.volumeLevel ?? 100} 
-                    onCommit={(val) => handleUpdateBlock({ volumeLevel: val })} 
+                  <VolumeSlider
+                    initialVolume={selectedBlock.volumeLevel ?? 100}
+                    onCommit={(val) => handleUpdateBlock({ volumeLevel: val })}
                   />
                 </div>
               </div>
@@ -517,9 +518,9 @@ export default function InspectorPanel() {
               {/* NLE & Visual Effects */}
               <div style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface-elevated)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Sparkles size={13} /> Visual Effects & Trimming
+                  <Sliders size={13} /> Efek Visual
                 </span>
-                
+
                 {/* Transitions */}
                 <div>
                   <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
@@ -531,7 +532,7 @@ export default function InspectorPanel() {
                     value={selectedBlock.transitionId || ''}
                     onChange={(e) => handleUpdateBlock({ transitionId: e.target.value || undefined })}
                   >
-                    <option value="">(Tidak ada transisi)</option>
+                    <option value="">Tanpa Transisi</option>
                     {transitionsList.map((t) => (
                       <option key={t.id} value={t.id}>{t.name} ({t.durationMs}ms)</option>
                     ))}
@@ -697,7 +698,7 @@ export default function InspectorPanel() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  NAMA KOTAK / LAYER
+                  Nama Layer
                 </label>
                 <input
                   type="text"
@@ -711,7 +712,7 @@ export default function InspectorPanel() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                    POSISI X (PX)
+                    Posisi X
                   </label>
                   <input
                     type="number"
@@ -723,7 +724,7 @@ export default function InspectorPanel() {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                    POSISI Y (PX)
+                    Posisi Y
                   </label>
                   <input
                     type="number"
@@ -738,7 +739,7 @@ export default function InspectorPanel() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                    LEBAR (PX)
+                    Lebar
                   </label>
                   <input
                     type="number"
@@ -750,7 +751,7 @@ export default function InspectorPanel() {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                    TINGGI (PX)
+                    Tinggi
                   </label>
                   <input
                     type="number"
@@ -764,7 +765,7 @@ export default function InspectorPanel() {
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  TUMPUKAN (Z-INDEX)
+                  Z-Index
                 </label>
                 <input
                   type="number"
@@ -778,7 +779,7 @@ export default function InspectorPanel() {
               {/* Quick alignment and position presets */}
               <div>
                 <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                  PRESETS & PERATAAN CEPAT
+                  Preset Posisi
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
                   <button
@@ -827,7 +828,7 @@ export default function InspectorPanel() {
                     style={{ fontSize: '0.6875rem', padding: '5px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
                     title="Banner Running Ticker di Bawah"
                   >
-                    Banner Bwh
+                    Banner Bawah
                   </button>
                   <button
                     type="button"
@@ -844,7 +845,7 @@ export default function InspectorPanel() {
               {/* Quick block allocation button inside layer */}
               <div style={{ marginTop: '8px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
                 <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                  TAMBAH KONTEN KE LAYER INI
+                  Tambah Konten
                 </span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button

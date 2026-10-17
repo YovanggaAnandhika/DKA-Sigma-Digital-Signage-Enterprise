@@ -83,11 +83,11 @@ function TimelineTrackHeaderRow({
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>
-              {z.blocksList?.length || 0} block(s)
+              {z.blocksList?.length || 0} item
             </span>
             {active && (
               <span style={{ fontSize: '0.5625rem', padding: '1px 4px', borderRadius: '4px', backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#10b981', fontWeight: 700 }}>
-                ACTIVE
+                Aktif
               </span>
             )}
           </div>

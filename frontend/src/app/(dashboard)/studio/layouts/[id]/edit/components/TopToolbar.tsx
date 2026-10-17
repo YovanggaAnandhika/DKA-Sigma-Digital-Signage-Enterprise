@@ -16,13 +16,10 @@ export default function TopToolbar() {
         <Link href={`/studio/layouts/${params.id}`} className="btn btn-outline" style={{ width: '30px', height: '30px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Kembali ke Detail Layout">
           <ArrowLeft size={15} />
         </Link>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-          <h1 style={{ fontSize: '1.0625rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <h1 style={{ fontSize: '1.0625rem', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>
             Layout Designer
           </h1>
-          <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-            Multi-kotak display signage
-          </span>
         </div>
       </div>
 

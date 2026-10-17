@@ -112,10 +112,10 @@ export default function CreateClockWeatherPage() {
               onChange={(e) => setTheme(e.target.value as any)}
               className="form-input"
             >
-              <option value="glass">Glassmorphism Transparan (Rekomendasi)</option>
-              <option value="dark">Hitam Minimalis Elegan</option>
-              <option value="emerald">Hijau Emerald Ritel</option>
-              <option value="gold">Emas Mewah (Luxury)</option>
+              <option value="glass">Glassmorphism Transparan</option>
+              <option value="dark">Hitam Minimalis</option>
+              <option value="emerald">Hijau Emerald</option>
+              <option value="gold">Emas Mewah</option>
             </select>
           </div>
 

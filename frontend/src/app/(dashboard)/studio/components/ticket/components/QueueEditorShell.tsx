@@ -57,10 +57,10 @@ export default function QueueEditorShell({ activeTab }: { activeTab: string }) {
     : `/studio/components/ticket/${queue.id}/edit`;
 
   const tabs = [
-    { id: 'layout', label: 'Tata Letak & Variabel', icon: Layout },
-    { id: 'marquee', label: 'Running Text (Marquee)', icon: MessageSquare },
+    { id: 'layout', label: 'Tata Letak', icon: Layout },
+    { id: 'marquee', label: 'Running Text', icon: MessageSquare },
     { id: 'counters', label: `Daftar Loket (${queue.counters.length})`, icon: Users },
-    { id: 'audio', label: 'Audio & Chime Bel', icon: Volume2 },
+    { id: 'audio', label: 'Audio & Chime', icon: Volume2 },
   ];
 
   if (loading) {
@@ -122,7 +122,7 @@ export default function QueueEditorShell({ activeTab }: { activeTab: string }) {
               />
             </div>
             <p style={{ margin: '2px 0 0 10px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              {isNew ? 'Konfigurasi layar pemanggil antrian baru' : `ID: ${queue.id}`} &bull; Resolusi {queue.canvasWidth}x{queue.canvasHeight}
+              {isNew ? 'Layar antrian baru' : queue.id} · {queue.canvasWidth} × {queue.canvasHeight} px
             </p>
           </div>
         </div>

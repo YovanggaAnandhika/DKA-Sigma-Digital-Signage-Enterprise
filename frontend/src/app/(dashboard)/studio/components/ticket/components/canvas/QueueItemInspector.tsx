@@ -236,7 +236,7 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
               lineHeight: 1.5,
             }}
           >
-            💡 <strong>Tips:</strong> Klik elemen di kanvas atau panel Lapisan di kiri untuk menyesuaikan font, warna, dan posisi tanpa batas kotak.
+            Pilih elemen pada kanvas atau panel lapisan untuk mengatur tipografi, warna, dan dimensi.
           </div>
         </div>
       </div>
@@ -366,7 +366,7 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
             <div>
-              <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>X (Kiri)</label>
+              <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>X</label>
               <input
                 type="number"
                 value={selectedItem.x}
@@ -376,7 +376,7 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
               />
             </div>
             <div>
-              <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Y (Atas)</label>
+              <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Y</label>
               <input
                 type="number"
                 value={selectedItem.y}
@@ -386,7 +386,7 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
               />
             </div>
             <div>
-              <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Lebar (W)</label>
+              <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Lebar</label>
               <input
                 type="number"
                 value={selectedItem.width}
@@ -396,7 +396,7 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
               />
             </div>
             <div>
-              <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Tinggi (H)</label>
+              <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Tinggi</label>
               <input
                 type="number"
                 value={selectedItem.height}
@@ -509,7 +509,7 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
             <div>
-              <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Ukuran Font (px)</label>
+              <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Ukuran Font</label>
               <input
                 type="number"
                 min={10}
@@ -529,10 +529,10 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
                 className="form-select"
                 style={{ padding: '5px 8px', fontSize: '0.78rem' }}
               >
-                <option value="normal">Normal (400)</option>
-                <option value="bold">Bold (700)</option>
-                <option value="800">Extra Bold (800)</option>
-                <option value="900">Black (900)</option>
+                <option value="normal">Normal</option>
+                <option value="bold">Bold</option>
+                <option value="800">Extra Bold</option>
+                <option value="900">Black</option>
               </select>
             </div>
           </div>
@@ -597,10 +597,10 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
         <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-              Gaya Latar / Kotak
+              Latar Belakang
             </span>
             <span style={{ fontSize: '0.6875rem', color: isTransparent ? 'var(--text-muted)' : 'var(--primary-500)', fontWeight: 600 }}>
-              {isTransparent ? 'Teks Murni Bebas' : 'Ada Kotak / Card'}
+              {isTransparent ? 'Transparan' : 'Solid Card'}
             </span>
           </div>
 
@@ -660,7 +660,7 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
                 transition: 'all 0.15s ease',
               }}
             >
-              Kotak / Card
+              Card
             </button>
           </div>
 
@@ -676,13 +676,13 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
                 lineHeight: 1.4,
               }}
             >
-              ✓ Elemen tampil bebas langsung di atas kanvas/wallpaper tanpa kotak kartu.
+              Elemen tampil transparan langsung di atas kanvas.
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div>
                 <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
-                  Warna Kotak / Card
+                  Warna Card
                 </label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <input
@@ -703,7 +703,7 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>
-                  <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Radius Sudut (px)</label>
+                  <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Radius Sudut</label>
                   <input
                     type="number"
                     min={0}
@@ -720,7 +720,7 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Tebal Border (px)</label>
+                  <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Tebal Border</label>
                   <input
                     type="number"
                     min={0}

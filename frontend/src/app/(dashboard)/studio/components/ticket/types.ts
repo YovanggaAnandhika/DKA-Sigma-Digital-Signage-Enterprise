@@ -153,7 +153,7 @@ export function createDefaultQueueLayoutItems(theme: 'clean-light' | 'solid-dark
     {
       id: 'item-counter-badge',
       itemType: 'counter_loket',
-      name: 'Label Meja / Loket',
+      name: 'Label Loket',
       x: 710,
       y: 680,
       width: 500,
@@ -174,7 +174,7 @@ export function createDefaultQueueLayoutItems(theme: 'clean-light' | 'solid-dark
     {
       id: 'item-marquee-footer',
       itemType: 'marquee',
-      name: 'Teks Informasi Berjalan (Marquee)',
+      name: 'Running Text',
       x: 0,
       y: 990,
       width: 1920,

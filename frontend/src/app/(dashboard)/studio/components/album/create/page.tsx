@@ -109,9 +109,9 @@ export default function CreatePhotoAlbumPage() {
                 onChange={(e) => setTransitionEffect(e.target.value as any)}
                 className="form-input"
               >
-                <option value="ken-burns">Ken Burns (Rekomendasi)</option>
-                <option value="fade">Halus (Fade)</option>
-                <option value="slide">Geser (Slide)</option>
+                <option value="ken-burns">Ken Burns</option>
+                <option value="fade">Fade</option>
+                <option value="slide">Slide</option>
                 <option value="zoom">Zoom Pulse</option>
               </select>
             </div>

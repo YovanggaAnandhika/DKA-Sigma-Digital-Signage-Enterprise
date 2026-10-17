@@ -148,7 +148,7 @@ export default function TimelineControls() {
           onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--primary-600)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
         >
-          SIMULASI TIMELINE LAYER
+          Simulasi Timeline
         </div>
       </div>
     </div>

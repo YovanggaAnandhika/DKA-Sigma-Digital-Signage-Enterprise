@@ -257,7 +257,7 @@ export default function AlbumPage() {
             {/* Header bar */}
             <div style={{ padding: '16px 20px', backgroundColor: 'rgba(15, 23, 42, 0.8)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Sparkles size={18} color="#ec4899" />
+                <Images size={18} color="var(--primary-500)" />
                 <span style={{ fontWeight: 700, fontSize: '1rem', color: '#ffffff' }}>
                   {previewAlbum.name}
                 </span>

@@ -113,13 +113,13 @@ export function Sidebar() {
           <Zap size={20} />
         </div>
         {!collapsed && (
-          <div style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}>
-            <div style={{ fontWeight: 800, fontSize: '0.95rem', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-              DKASigma PRO
-            </div>
-            <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-              Sistem Retail Signage
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+            <span style={{ fontWeight: 700, fontSize: '0.95rem', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+              DKASigma
+            </span>
+            <span style={{ fontSize: '0.625rem', fontWeight: 600, padding: '1px 5px', borderRadius: '4px', backgroundColor: 'rgba(37, 99, 235, 0.12)', color: 'var(--primary-400)' }}>
+              PRO
+            </span>
           </div>
         )}
       </div>
@@ -183,13 +183,8 @@ export function Sidebar() {
                 >
                   <Icon size={18} style={{ flexShrink: 0, color: isActive ? 'var(--primary-500)' : 'inherit' }} />
                   {!collapsed && (
-                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', flex: 1, overflow: 'hidden' }}>
                       <span style={{ whiteSpace: 'nowrap', lineHeight: 1.2 }}>{item.name}</span>
-                      {item.desc && (
-                        <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px', whiteSpace: 'nowrap' }}>
-                          {item.desc}
-                        </span>
-                      )}
                     </div>
                   )}
                   {!collapsed && item.badge && (

@@ -90,7 +90,7 @@ export default function WebViewPage() {
             <thead>
               <tr>
                 <th>Nama Komponen</th>
-                <th>Alamat Web (URL)</th>
+                <th>URL Web</th>
                 <th>Auto-Refresh</th>
                 <th>Zoom Skala</th>
                 <th>Bypass Cache</th>

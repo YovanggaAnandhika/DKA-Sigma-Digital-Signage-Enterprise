@@ -250,7 +250,7 @@ export default function CanvasContextMenu({ state, onClose }: CanvasContextMenuP
           </div>
           <MenuItem
             icon={<PlusCircle size={14} color="#10b981" />}
-            label="Tambah Kotak Lapisan Baru"
+            label="Tambah Layer Baru"
             onClick={() => handleAction(() => handleAddLayer(state.canvasCoords))}
           />
           <MenuItem

@@ -197,15 +197,15 @@ export default function EditTickerPage() {
                 onChange={(e) => setSpeed(e.target.value as any)}
                 className="form-select"
               >
-                <option value="slow">Lambat (Halus)</option>
-                <option value="normal">Sedang (Standar)</option>
+                <option value="slow">Lambat</option>
+                <option value="normal">Sedang</option>
                 <option value="fast">Cepat</option>
               </select>
             </div>
 
             <div>
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                Ukuran Teks ({fontSize}px)
+                Ukuran Teks
               </label>
               <input
                 type="range"
