@@ -246,6 +246,21 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
                   timelineStartSec={absoluteStartSec}
                 />
               </div>
+            ) : activeMedia.mediaType === 3 ? (
+              <iframe
+                src={activeMedia.publicUrl || activeMedia.originalFilename}
+                title={activeMedia.name || z.name}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  border: 'none',
+                  filter: filterCssString,
+                  pointerEvents: isPlaying ? 'auto' : 'none',
+                }}
+              />
             ) : (
               <img
                 src={activeMedia.publicUrl}

@@ -107,6 +107,7 @@ impl ManifestService {
 
         for dto_zone in zones {
             let mut mapped_blocks = Vec::new();
+            for block in dto_zone.blocks {
                 if let Some(pl_id) = block.block.playlist_id {
                     if let Ok(pl) = PlaylistService::get_playlist_by_id(pool, pl_id).await {
                         for item in &pl.items {
@@ -146,6 +147,7 @@ impl ManifestService {
                         mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto { block: block.block.clone(), item_overrides: block.item_overrides.clone() });
                     }
                 }
+            }
 
             enriched_zones.push(LayerWithBlocksDto { layer: dto_zone.layer.clone(), blocks: mapped_blocks });
         }
