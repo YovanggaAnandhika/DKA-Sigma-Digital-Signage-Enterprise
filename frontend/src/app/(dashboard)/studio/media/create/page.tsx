@@ -194,7 +194,7 @@ export default function CreateMediaPage() {
       if (res && res.id) {
         router.push(`/studio/media/${res.id}`);
       } else {
-        router.push('/media');
+        router.push('/studio/media');
       }
     } catch (err: any) {
       if (err.message?.includes('dibatalkan')) {
@@ -213,14 +213,14 @@ export default function CreateMediaPage() {
     if (loading && abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-    router.push('/media');
+    router.push('/studio/media');
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <Link href="/media" className="btn btn-outline" style={{ padding: '8px' }}>
+        <Link href="/studio/media" className="btn btn-outline" style={{ padding: '8px' }}>
           <ArrowLeft size={16} />
         </Link>
         <div>
