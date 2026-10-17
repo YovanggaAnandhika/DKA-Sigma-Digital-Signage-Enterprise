@@ -46,8 +46,9 @@ export default function TimelineTrackBlock({ layer, block, color }: TimelineTrac
   const handleToggleBlockMute = async (e: React.MouseEvent) => {
     e.stopPropagation();
     const nextMuted = !isBlockMuted;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(block.id);
     try {
-      if (!block.id.startsWith('temp-')) {
+      if (isUuid) {
         await updatePlaylistBlock(block.id, { isMuted: nextMuted });
       }
       setLayers((prev) =>

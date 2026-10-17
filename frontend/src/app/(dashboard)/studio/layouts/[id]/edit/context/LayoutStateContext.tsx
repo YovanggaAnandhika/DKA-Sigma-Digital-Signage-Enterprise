@@ -153,12 +153,16 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
           });
         }
 
+        const isUuid = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
         for (const b of (z.blocksList || [])) {
-          if (b.id.startsWith('temp-')) {
-            if (b.mediaItemId) {
-              await api.addMediaBlock(realLayerId, b.mediaItemId, b.startTimeSeconds, b.durationSeconds);
-            } else {
-              await api.addPlaylistBlock(realLayerId, b.playlistId, b.startTimeSeconds, b.durationSeconds);
+          if (b.id.startsWith('temp-') || b.id.startsWith('wb-') || !isUuid(b.id)) {
+            if (b.widgetType && b.widgetId && isUuid(b.widgetId)) {
+              await api.addWidgetBlock(realLayerId, b.widgetType, b.widgetId, b.startTimeSeconds, b.durationSeconds).catch(() => null);
+            } else if (b.mediaItemId && isUuid(b.mediaItemId)) {
+              await api.addMediaBlock(realLayerId, b.mediaItemId, b.startTimeSeconds, b.durationSeconds).catch(() => null);
+            } else if (b.playlistId && isUuid(b.playlistId)) {
+              await api.addPlaylistBlock(realLayerId, b.playlistId, b.startTimeSeconds, b.durationSeconds).catch(() => null);
             }
           } else {
             const blockMuted = b.isMuted ?? b.itemOverridesList?.find((o: any) => o.playlistItemId === b.id)?.isMuted;
@@ -168,7 +172,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
               transitionId: b.transitionId,
               isMuted: blockMuted !== undefined ? blockMuted : false,
               volumeLevel: b.volumeLevel !== undefined ? b.volumeLevel : 100,
-            });
+            }).catch(() => null);
           }
         }
       }

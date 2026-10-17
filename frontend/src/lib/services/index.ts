@@ -63,6 +63,7 @@ export const api = {
   updatePlaylistBlock: studioModule.updatePlaylistBlock,
   removePlaylistBlock: studioModule.removePlaylistBlock,
   addMediaBlock: studioModule.addMediaBlock,
+  addWidgetBlock: studioModule.addWidgetBlock,
   setPlaylistItemOverride: studioModule.setPlaylistItemOverride,
 
   // Studio — Schedules

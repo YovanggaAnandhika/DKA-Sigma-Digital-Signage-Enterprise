@@ -82,6 +82,27 @@ export async function addMediaBlock(layer_id: string, media_id: string, startTim
   return await invokeApi<any>('/api/grpc/studio/layer_block/CreateLayerBlock', { layer_id, media_item_id: media_id, startTimeSeconds, durationSeconds });
 }
 
+export async function addWidgetBlock(
+  layer_id: string,
+  widgetType: 'ticker' | 'clock' | 'webview' | 'queue' | 'album',
+  widgetId: string,
+  startTimeSeconds: number,
+  durationSeconds: number
+): Promise<any> {
+  const payload: any = {
+    layer_id,
+    startTimeSeconds,
+    durationSeconds,
+  };
+  if (widgetType === 'ticker') payload.ticker_id = widgetId;
+  else if (widgetType === 'clock') payload.clock_id = widgetId;
+  else if (widgetType === 'webview') payload.webview_id = widgetId;
+  else if (widgetType === 'queue') payload.queue_id = widgetId;
+  else if (widgetType === 'album') payload.album_id = widgetId;
+
+  return await invokeApi<any>('/api/grpc/studio/layer_block/CreateLayerBlock', payload);
+}
+
 export async function updatePlaylistBlock(id: string, data: { startTimeSeconds?: number; durationSeconds?: number; transitionId?: string; isMuted?: boolean; orderIndex?: number; volumeLevel?: number; visualFilterId?: string; }): Promise<any> {
   return await invokeApi<any>('/api/grpc/studio/layer_block/UpdateLayerBlock', {
     id,

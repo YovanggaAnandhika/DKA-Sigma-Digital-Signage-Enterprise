@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Globe, Type, Clock, Users, Images, Plus, Sparkles, Check, ListMusic } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
-import { addMediaBlock, addPlaylistBlock, createLayer } from '@/lib/services/studio/layout.service';
+import { addMediaBlock, addPlaylistBlock, addWidgetBlock, createLayer } from '@/lib/services/studio/layout.service';
 import { DEFAULT_WEBVIEWS, WEBVIEW_STORAGE_KEY, WebViewConfig } from '@/app/(dashboard)/studio/components/webview/types';
 import { DEFAULT_TICKERS, TICKER_STORAGE_KEY, TickerConfig } from '@/app/(dashboard)/studio/components/ticker/types';
 import { DEFAULT_CLOCKS, CLOCK_STORAGE_KEY, ClockWeatherConfig } from '@/app/(dashboard)/studio/components/clock/types';
@@ -85,13 +85,13 @@ export default function ComponentPickerModal() {
         realZoneId = newZ.id;
       }
 
-      // Gunakan null/empty UUID placeholder untuk backend block
-      const dummyMediaId = '00000000-0000-0000-0000-000000000000';
-      const res = await addMediaBlock(realZoneId, dummyMediaId, start_time_seconds, duration_seconds).catch(() => ({
-        id: `widget-block-${Date.now()}`,
-      }));
+      // Simpan block komponen ke backend via addWidgetBlock (atau fallback jika item ID belum di DB)
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.id);
+      const res = isUuid
+        ? await addWidgetBlock(realZoneId, widgetType, item.id, start_time_seconds, duration_seconds).catch(() => null)
+        : null;
 
-      const createdBlock = res.block || res;
+      const createdBlock = res?.block || res || {};
 
       const newBlock: any = {
         ...createdBlock,
