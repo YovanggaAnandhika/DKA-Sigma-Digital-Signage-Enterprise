@@ -103,7 +103,7 @@ class PairingActivity : AppCompatActivity() {
                     }
                     is PairingUiState.WaitingForAdmin -> {
                         progressBar.visibility = android.view.View.VISIBLE
-                        codeTextView.text = state.pairingCode
+                        codeTextView.text = state.pairingCode.uppercase()
                         statusTextView.text = "Layar terdaftar! Menunggu persetujuan admin CMS..."
                     }
                     is PairingUiState.PairedSuccess -> {

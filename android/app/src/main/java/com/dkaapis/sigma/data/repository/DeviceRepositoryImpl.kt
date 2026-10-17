@@ -43,7 +43,7 @@ class DeviceRepositoryImpl(
             // Simulasi RPC call jika server belum siap / test offline
             // Saat proto terkompilasi, stub.registerDevice() akan dipanggil langsung
             val generatedPairingCode = "DKA-" + (100..999).random()
-            val deviceId = "dev-" + info.macAddress.replace(":", "").takeLast(6).ifEmpty { "123456" }
+            val deviceId = ("DEV-" + info.macAddress.replace(":", "").takeLast(6).ifEmpty { "123456" }).uppercase()
 
             Result.success(
                 PairingResult(
