@@ -21,7 +21,7 @@ class StreamRepositoryImpl(
         deviceId: String,
         deviceToken: String,
         heartbeatFlow: Flow<HeartbeatMetrics>
-    ): Flow<ServerCommand> = flow {
+    ): Flow<ServerCommand> = flow<ServerCommand> {
         Log.i("StreamRepo", "Membuka DisplayStream gRPC untuk device: $deviceId")
 
         // Mempertahankan loop stream aktif
@@ -37,8 +37,9 @@ class StreamRepositoryImpl(
         }
     }.flowOn(Dispatchers.IO)
 
-    override suspend fun sendCommandAck(messageId: String, success: Boolean, errorMessage: String?) = withContext(Dispatchers.IO) {
+    override suspend fun sendCommandAck(messageId: String, success: Boolean, errorMessage: String?): Unit = withContext(Dispatchers.IO) {
         Log.d("StreamRepo", "Kirim CommandAck: msgId=$messageId, success=$success")
+        Unit
     }
 
     override suspend fun uploadScreenshot(requestId: String, imageBytes: ByteArray, mimeType: String): Result<Unit> = withContext(Dispatchers.IO) {

@@ -63,7 +63,7 @@ class ClockZoneRenderer(
         container.addView(dateText)
 
         val timeFormat = SimpleDateFormat(if (showSeconds) "HH:mm:ss" else "HH:mm", Locale.getDefault())
-        val dateFormat = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale("id", "ID"))
+        val dateFormat = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.forLanguageTag("id-ID"))
 
         val runnable = object : Runnable {
             override fun run() {
