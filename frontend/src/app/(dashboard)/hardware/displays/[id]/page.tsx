@@ -20,7 +20,7 @@ export default function ViewDisplayPage() {
         setDevice(data);
       } catch (err: any) {
         alert(err.message || 'Gagal memuat detail display');
-        router.push('/displays');
+        router.push('/hardware/displays');
       } finally {
         setLoading(false);
       }
@@ -42,7 +42,7 @@ export default function ViewDisplayPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Link href="/displays" className="btn btn-outline" style={{ padding: '8px' }}>
+          <Link href="/hardware/displays" className="btn btn-outline" style={{ padding: '8px' }}>
             <ArrowLeft size={16} />
           </Link>
           <div>

@@ -23,7 +23,7 @@ export default function DashboardDeviceList({
             Status Layar Retail Terkini
           </h3>
         </div>
-        <Link href="/displays" style={{ fontSize: '0.75rem', color: 'var(--primary-400)', fontWeight: 600 }}>
+        <Link href="/hardware/displays" style={{ fontSize: '0.75rem', color: 'var(--primary-400)', fontWeight: 600 }}>
           Lihat Semua →
         </Link>
       </div>

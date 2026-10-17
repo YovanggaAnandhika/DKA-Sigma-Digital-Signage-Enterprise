@@ -25,7 +25,7 @@ export default function ViewPlaylistPage() {
         setMediaList(mData.data || []);
       } catch (err: any) {
         alert(err.message || 'Gagal memuat playlist');
-        router.push('/playlists');
+        router.push('/studio/components/playlists');
       } finally {
         setLoading(false);
       }
@@ -48,7 +48,7 @@ export default function ViewPlaylistPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Link href="/playlists" className="btn btn-outline" style={{ padding: '8px' }}>
+          <Link href="/studio/components/playlists" className="btn btn-outline" style={{ padding: '8px' }}>
             <ArrowLeft size={16} />
           </Link>
           <div>

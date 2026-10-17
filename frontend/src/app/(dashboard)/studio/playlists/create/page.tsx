@@ -31,7 +31,7 @@ export default function CreatePlaylistPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <Link href="/playlists" className="btn btn-outline" style={{ padding: '8px' }}>
+        <Link href="/studio/components/playlists" className="btn btn-outline" style={{ padding: '8px' }}>
           <ArrowLeft size={16} />
         </Link>
         <div>
@@ -87,7 +87,7 @@ export default function CreatePlaylistPage() {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-            <Link href="/playlists" className="btn btn-secondary">
+            <Link href="/studio/components/playlists" className="btn btn-secondary">
               Batal
             </Link>
             <button type="submit" disabled={loading} className="btn btn-primary">
