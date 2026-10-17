@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Clock, Check, CloudSun, Calendar, MapPin, Droplets, Wind, Save, RefreshCw } from 'lucide-react';
 import { CLOCK_STORAGE_KEY, DEFAULT_CLOCKS, CITY_PRESETS, ClockWeatherConfig } from '../../types';
+import { modal } from '@/components/ui/ModalDialog';
 
 export default function EditClockWeatherPage() {
   const params = useParams() as { id: string };
