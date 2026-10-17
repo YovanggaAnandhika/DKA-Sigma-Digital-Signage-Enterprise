@@ -7,6 +7,8 @@ import { useLayoutEditor } from '../../context/LayoutEditorContext';
 import SynchronizedVideo from './SynchronizedVideo';
 import { Layer } from '../../context/LayoutStateContext';
 
+const Marquee = 'marquee' as any;
+
 interface CanvasLayerBoxProps {
   layer: Layer;
   idx: number;
@@ -202,7 +204,7 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
         boxShadow: isSelected ? '0 0 0 1px rgba(56, 189, 248, 0.5), 0 4px 12px rgba(0,0,0,0.4)' : 'none',
         opacity: hiddenZones.includes(z.id) ? 0 : (isSelected ? 1 : active ? 1 : 0.35),
         pointerEvents: hiddenZones.includes(z.id) ? 'none' : 'auto',
-        zIndex: isSelected ? 999 : z.zIndex || 1,
+        zIndex: Number(z.zIndex) || 1,
         userSelect: 'none',
       }}
       resizeHandleStyles={{
@@ -254,7 +256,16 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  backgroundColor: activeBlock.widgetData?.theme === 'blue' ? '#1e3a8a' : activeBlock.widgetData?.theme === 'red' ? '#991b1b' : '#111827',
+                  backgroundColor:
+                    activeBlock.widgetData?.theme === 'blue'
+                      ? '#1e3a8a'
+                      : activeBlock.widgetData?.theme === 'red'
+                      ? '#991b1b'
+                      : activeBlock.widgetData?.theme === 'emerald'
+                      ? '#065f46'
+                      : activeBlock.widgetData?.theme === 'amber'
+                      ? '#92400e'
+                      : '#111827',
                   color: '#ffffff',
                   display: 'flex',
                   alignItems: 'center',
@@ -272,15 +283,31 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
                       fontWeight: 800,
                       fontSize: '0.75rem',
                       whiteSpace: 'nowrap',
+                      flexShrink: 0,
                     }}
                   >
                     {activeBlock.widgetData.badge}
                   </span>
                 )}
-                <div style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden' }}>
-                  <span style={{ display: 'inline-block', fontSize: `${activeBlock.widgetData?.fontSize || 16}px`, fontWeight: 600 }}>
-                    {(activeBlock.widgetData?.messages || [' DKASigma Teks Berjalan ']).join('  •  ')}
-                  </span>
+                <div style={{ flex: 1, overflow: 'hidden', display: 'flex', alignItems: 'center' }}>
+                  <Marquee
+                    scrollamount={
+                      activeBlock.widgetData?.speed === 'fast'
+                        ? 12
+                        : activeBlock.widgetData?.speed === 'slow'
+                        ? 4
+                        : 7
+                    }
+                    style={{
+                      fontSize: `${activeBlock.widgetData?.fontSize || 16}px`,
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    {(activeBlock.widgetData?.messages || ['DKASigma Teks Berjalan']).join('  ✦  ')}
+                  </Marquee>
                 </div>
               </div>
             ) : activeBlock.widgetType === 'clock' ? (
@@ -316,6 +343,7 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
                   alignItems: 'center',
                   justifyContent: 'center',
                   padding: '12px',
+                  overflow: 'hidden',
                 }}
               >
                 <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#38bdf8', textTransform: 'uppercase' }}>
@@ -327,6 +355,25 @@ export default function CanvasLayerBox({ layer: z, idx }: CanvasLayerBoxProps) {
                 <div style={{ fontSize: '0.75rem', backgroundColor: 'rgba(255,255,255,0.15)', padding: '2px 8px', borderRadius: '4px', marginTop: '4px' }}>
                   {activeBlock.widgetData?.currentCounter || 'LOKET 01'}
                 </div>
+                {activeBlock.widgetData?.marqueeText && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      padding: '3px 8px',
+                      backgroundColor: 'rgba(0,0,0,0.5)',
+                      overflow: 'hidden',
+                      fontSize: '0.6875rem',
+                      color: '#94a3b8',
+                    }}
+                  >
+                    <Marquee scrollamount={5}>
+                      {activeBlock.widgetData.marqueeText}
+                    </Marquee>
+                  </div>
+                )}
               </div>
             ) : activeBlock.widgetType === 'album' && (activeBlock.widgetData?.photos?.length || 0) > 0 ? (
               <img
