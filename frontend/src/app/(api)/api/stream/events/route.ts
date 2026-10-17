@@ -23,10 +23,16 @@ export async function GET(req: NextRequest) {
 
       // 2. Poll fleet status every 4 seconds and push SSE events
       const interval = setInterval(() => {
+        if (!token) return;
         const request = new ListDevicesRequest();
 
         client.listDevices(request, getGrpcMetadata(token), (err: any, response: any) => {
-          if (err || !response) return;
+          if (err || !response) {
+            if (err?.code === 16) {
+              clearInterval(interval);
+            }
+            return;
+          }
 
           try {
             const data = response.toObject();

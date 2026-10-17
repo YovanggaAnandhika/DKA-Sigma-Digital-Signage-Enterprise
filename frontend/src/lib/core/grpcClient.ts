@@ -28,6 +28,11 @@ export function getTokenFromRequest(req: Request): string | undefined {
   if (authHeader && authHeader.startsWith('Bearer ')) {
     return authHeader.substring(7);
   }
+  try {
+    const url = new URL(req.url);
+    const tokenQuery = url.searchParams.get('token');
+    if (tokenQuery) return tokenQuery;
+  } catch (_) {}
   return undefined;
 }
 

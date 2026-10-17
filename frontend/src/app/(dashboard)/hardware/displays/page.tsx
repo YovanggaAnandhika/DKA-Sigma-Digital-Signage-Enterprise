@@ -36,7 +36,13 @@ export default function DisplaysPage() {
   useEffect(() => {
     let es: EventSource | null = null;
     try {
-      es = new EventSource('/api/stream/events');
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('dkasigma_session') : null;
+      let token = '';
+      if (raw) {
+        try { token = JSON.parse(raw)?.token || ''; } catch (_) {}
+      }
+      const sseUrl = token ? `/api/stream/events?token=${encodeURIComponent(token)}` : '/api/stream/events';
+      es = new EventSource(sseUrl);
 
       es.addEventListener('connected', () => {
         setIsSseConnected(true);

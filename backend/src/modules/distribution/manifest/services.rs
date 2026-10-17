@@ -97,9 +97,18 @@ impl ManifestService {
         let base_layout_id = match active_layout_id {
             Some(id) => id,
             None => {
-                return Err(AppError::BadRequest(
-                    "No layout is assigned to this device yet (including fallback layout)".into(),
-                ));
+                if let Ok(Some(fallback_id)) = sqlx::query_scalar::<_, Uuid>(
+                    "SELECT id FROM layouts ORDER BY created_at ASC LIMIT 1"
+                )
+                .fetch_optional(pool)
+                .await {
+                    fallback_id
+                } else {
+                    return Ok(ManifestSyncResponseDto {
+                        is_up_to_date: true,
+                        manifest: None,
+                    });
+                }
             }
         };
 
