@@ -37,6 +37,7 @@ import kotlinx.coroutines.launch
 class PlayerActivity : AppCompatActivity() {
 
     private lateinit var viewModel: PlayerViewModel
+    private lateinit var deviceRepo: DeviceRepositoryImpl
     private lateinit var storageRepo: MediaStorageRepositoryImpl
     private lateinit var canvasLayout: SignageCanvasLayout
     private lateinit var loadingOverlay: FrameLayout
@@ -51,7 +52,14 @@ class PlayerActivity : AppCompatActivity() {
         override fun run() {
             // Beri sinyal ke WatchdogService bahwa UI thread aktif dan sehat
             WatchdogService.pingFromPlayer(this@PlayerActivity)
-            watchdogHandler.postDelayed(this, 5000)
+            lifecycleScope.launch {
+                try {
+                    if (::deviceRepo.isInitialized) {
+                        deviceRepo.sendHeartbeat()
+                    }
+                } catch (_: Exception) {}
+            }
+            watchdogHandler.postDelayed(this, 15000)
         }
     }
 
@@ -91,8 +99,8 @@ class PlayerActivity : AppCompatActivity() {
         val manifestStorage = ManifestStorage(this)
         val diskCache = MediaDiskCache(this)
 
-        val deviceRepo = DeviceRepositoryImpl(this, tokenStorage, channelFactory)
-        val manifestRepo = ManifestRepositoryImpl(manifestStorage, channelFactory)
+        deviceRepo = DeviceRepositoryImpl(this, tokenStorage, channelFactory)
+        val manifestRepo = ManifestRepositoryImpl(this, manifestStorage, channelFactory)
         storageRepo = MediaStorageRepositoryImpl(diskCache)
 
         val registerUseCase = RegisterAndPairUseCase(deviceRepo)

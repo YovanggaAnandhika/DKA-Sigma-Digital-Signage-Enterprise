@@ -213,6 +213,47 @@ class DeviceRepositoryImpl(
 
     override fun isPaired(): Boolean = tokenStorage.isPaired()
 
+    override suspend fun sendHeartbeat(
+        currentMediaId: String?,
+        activeLayoutId: String?,
+        manifestHash: String?
+    ): Result<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val deviceId = getSavedDeviceId() ?: return@withContext Result.failure(Exception("Device ID not found"))
+            val deviceToken = getSavedDeviceToken() ?: ""
+            val baseUrl = try {
+                context.getString(R.string.server_http_base_url)
+            } catch (_: Exception) {
+                "http://192.168.1.46:80"
+            }
+
+            val stat = android.os.StatFs(context.filesDir.absolutePath)
+            val freeBytes = stat.availableBytes
+            val totalBytes = stat.totalBytes
+
+            val jsonBody = JSONObject().apply {
+                put("deviceId", deviceId)
+                put("deviceToken", deviceToken)
+                put("storageFreeBytes", freeBytes)
+                put("storageTotalBytes", totalBytes)
+                put("memoryUsagePercent", 30)
+                if (!currentMediaId.isNullOrEmpty()) put("currentPlayingMediaId", currentMediaId)
+                if (!activeLayoutId.isNullOrEmpty()) put("activeLayoutId", activeLayoutId)
+                if (!manifestHash.isNullOrEmpty()) put("activeManifestHash", manifestHash)
+            }.toString()
+
+            val request = Request.Builder()
+                .url("$baseUrl/api/grpc/hardware/device/SendHeartbeat")
+                .post(jsonBody.toRequestBody("application/json".toMediaType()))
+                .build()
+
+            val response = httpClient.newCall(request).execute()
+            Result.success(response.isSuccessful)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     private fun getMacAddress(): String {
         try {
             val all = Collections.list(NetworkInterface.getNetworkInterfaces())

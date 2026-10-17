@@ -1,37 +1,97 @@
 package com.dkaapis.sigma.data.repository
 
+import android.content.Context
+import com.dkaapis.sigma.R
 import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
 import com.dkaapis.sigma.data.local.ManifestStorage
 import com.dkaapis.sigma.domain.model.*
 import com.dkaapis.sigma.domain.repository.ManifestRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import java.util.concurrent.TimeUnit
 
 class ManifestRepositoryImpl(
+    private val context: Context,
     private val manifestStorage: ManifestStorage,
     private val channelFactory: GrpcChannelFactory
 ) : ManifestRepository {
 
+    private val httpClient = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(20, TimeUnit.SECONDS)
+        .build()
+
     override suspend fun fetchActiveManifest(deviceId: String, currentHash: String): Result<Manifest?> = withContext(Dispatchers.IO) {
         try {
-            // Jika ada cache lokal, coba gunakan sementara sambil menunggu response gRPC
-            val localJson = manifestStorage.getActiveManifestJson()
-            if (localJson != null) {
-                val parsed = parseManifestJson(localJson)
-                Result.success(parsed)
+            val baseUrl = try {
+                context.getString(R.string.server_http_base_url)
+            } catch (_: Exception) {
+                "http://192.168.1.46:80"
+            }
+
+            val jsonBody = JSONObject().apply {
+                put("deviceId", deviceId)
+                put("clientCurrentHash", currentHash)
+            }.toString()
+
+            val request = Request.Builder()
+                .url("$baseUrl/api/grpc/distribution/manifest/GetActiveManifest")
+                .post(jsonBody.toRequestBody("application/json".toMediaType()))
+                .build()
+
+            val response = httpClient.newCall(request).execute()
+            if (response.isSuccessful) {
+                val bodyStr = response.body?.string() ?: ""
+                val root = JSONObject(bodyStr)
+
+                val isUpToDate = root.optBoolean("isUpToDate", false)
+                if (isUpToDate) {
+                    val cached = getLocalCachedManifest()
+                    return@withContext Result.success(cached)
+                }
+
+                val manifestObj = root.optJSONObject("manifest")
+                if (manifestObj != null) {
+                    val parsed = parseManifestJson(manifestObj, baseUrl)
+                    manifestStorage.saveManifest(manifestObj.toString())
+                    Result.success(parsed)
+                } else {
+                    // Coba fallback ke lokal jika server belum menyediakan manifest baru
+                    val cached = getLocalCachedManifest()
+                    Result.success(cached)
+                }
             } else {
-                Result.success(null)
+                val cached = getLocalCachedManifest()
+                if (cached != null) {
+                    Result.success(cached)
+                } else {
+                    Result.failure(Exception("HTTP error ${response.code} saat mengambil manifest"))
+                }
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            val cached = getLocalCachedManifest()
+            if (cached != null) {
+                Result.success(cached)
+            } else {
+                Result.failure(e)
+            }
         }
     }
 
     override suspend fun getLocalCachedManifest(): Manifest? = withContext(Dispatchers.IO) {
         val json = manifestStorage.getActiveManifestJson() ?: return@withContext null
         try {
-            parseManifestJson(json)
+            val baseUrl = try {
+                context.getString(R.string.server_http_base_url)
+            } catch (_: Exception) {
+                "http://192.168.1.46:80"
+            }
+            parseManifestJson(JSONObject(json), baseUrl)
         } catch (_: Exception) {
             null
         }
@@ -52,23 +112,27 @@ class ManifestRepositoryImpl(
         Result.success(Unit)
     }
 
-    private fun parseManifestJson(jsonStr: String): Manifest {
-        val root = JSONObject(jsonStr)
+    private fun parseManifestJson(root: JSONObject, baseUrl: String): Manifest {
         val manifestId = root.optString("manifestId", "")
         val deviceId = root.optString("deviceId", "")
         val versionHash = root.optString("versionHash", "")
-        val layoutId = root.optString("layoutId", "")
-        val layoutName = root.optString("layoutName", "Layout Default")
-        val canvasWidth = root.optInt("canvasWidth", 1920)
-        val canvasHeight = root.optInt("canvasHeight", 1080)
+
+        val layoutObj = root.optJSONObject("layout")
+        val layoutId = layoutObj?.optString("id") ?: root.optString("layoutId", "")
+        val layoutName = layoutObj?.optString("name") ?: root.optString("layoutName", "Layout Default")
+        val canvasWidth = layoutObj?.optInt("canvasWidth") ?: root.optInt("canvasWidth", 1920)
+        val canvasHeight = layoutObj?.optInt("canvasHeight") ?: root.optInt("canvasHeight", 1080)
 
         val zonesList = mutableListOf<LayerZone>()
-        val zonesArr = root.optJSONArray("zones")
-        if (zonesArr != null) {
-            for (i in 0 until zonesArr.length()) {
-                val zObj = zonesArr.getJSONObject(i)
+        val layersArr = layoutObj?.optJSONArray("layersList")
+            ?: layoutObj?.optJSONArray("layers")
+            ?: root.optJSONArray("zones")
+
+        if (layersArr != null) {
+            for (i in 0 until layersArr.length()) {
+                val zObj = layersArr.getJSONObject(i)
                 val blocksList = mutableListOf<LayerBlock>()
-                val blocksArr = zObj.optJSONArray("blocks")
+                val blocksArr = zObj.optJSONArray("blocksList") ?: zObj.optJSONArray("blocks")
                 if (blocksArr != null) {
                     for (j in 0 until blocksArr.length()) {
                         val bObj = blocksArr.getJSONObject(j)
@@ -112,14 +176,20 @@ class ManifestRepositoryImpl(
         }
 
         val assetsList = mutableListOf<MediaAsset>()
-        val assetsArr = root.optJSONArray("requiredAssets")
+        val assetsArr = root.optJSONArray("requiredAssetsList") ?: root.optJSONArray("requiredAssets")
         if (assetsArr != null) {
             for (i in 0 until assetsArr.length()) {
                 val aObj = assetsArr.getJSONObject(i)
+                var rawUrl = aObj.optString("url", "")
+                if (rawUrl.startsWith("/")) {
+                    val trimmedBase = baseUrl.trimEnd('/')
+                    rawUrl = "$trimmedBase$rawUrl"
+                }
+
                 assetsList.add(
                     MediaAsset(
                         mediaId = aObj.optString("mediaId"),
-                        url = aObj.optString("url"),
+                        url = rawUrl,
                         sha256Hash = aObj.optString("sha256Hash"),
                         fileSizeBytes = aObj.optLong("fileSizeBytes", 0L),
                         localFilename = aObj.optString("localFilename", "media_$i"),
