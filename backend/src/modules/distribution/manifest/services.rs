@@ -112,14 +112,18 @@ impl ManifestService {
                     if let Ok(pl) = PlaylistService::get_playlist_by_id(pool, pl_id).await {
                         for item in &pl.items {
                             if !required_assets_map.contains_key(&item.media_item_id) {
+                                let (sha256, size_bytes) = match MediaRepository::find_by_id(pool, item.media_item_id).await {
+                                    Ok(Some(media)) => (media.sha256_hash, media.file_size_bytes),
+                                    _ => ("".to_string(), 0),
+                                };
                                 required_assets_map.insert(
                                     item.media_item_id,
                                     ManifestAssetDto {
                                         media_id: item.media_item_id,
                                         name: item.media_name.clone(),
                                         url: item.media_url.clone(),
-                                        sha256_hash: "hash_placeholder".to_string(),
-                                        file_size_bytes: 0,
+                                        sha256_hash: sha256,
+                                        file_size_bytes: size_bytes,
                                         local_filename: format!("{}_{}", item.media_item_id, item.media_name),
                                         media_type: item.media_type.clone(),
                                     },
