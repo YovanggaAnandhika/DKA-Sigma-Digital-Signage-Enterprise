@@ -46,7 +46,8 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          minHeight: '620px',
+          minHeight: 0,
+          flexShrink: 0,
           overflowY: 'auto',
         }}
       >
@@ -302,7 +303,8 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        minHeight: '620px',
+        minHeight: 0,
+        flexShrink: 0,
         overflowY: 'auto',
       }}
     >

@@ -140,7 +140,7 @@ export default function QueueCanvasWorkspace({
         backgroundColor: 'var(--bg-primary)',
         backgroundImage: 'radial-gradient(var(--border-subtle) 1px, transparent 0)',
         backgroundSize: '20px 20px',
-        minHeight: '620px',
+        minHeight: 0,
         height: '100%',
       }}
       onClick={() => onSelectItem(null)}

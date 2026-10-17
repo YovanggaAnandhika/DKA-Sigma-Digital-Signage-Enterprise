@@ -1,12 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { ArrowLeft, Save, Layout, MessageSquare, Users, Volume2, RefreshCw, Maximize, Minimize } from 'lucide-react';
 import { useAppContext } from '@/components/AppContext';
 import { useQueueEditor } from '../context/QueueEditorContext';
-import QueuePreviewMonitor from './QueuePreviewMonitor';
 
 function TabLoadingSkeleton({ label }: { label: string }) {
   return (
@@ -52,6 +51,11 @@ export default function QueueEditorShell({ activeTab }: { activeTab: string }) {
   const { queue, updateField, saveQueue, saving, isNew, loading } = useQueueEditor();
   const { isFullscreen, setFullscreen } = useAppContext();
 
+  useEffect(() => {
+    setFullscreen(true);
+    return () => setFullscreen(false);
+  }, [setFullscreen]);
+
   const basePath = isNew
     ? '/studio/components/ticket/create'
     : `/studio/components/ticket/${queue.id}/edit`;
@@ -59,7 +63,7 @@ export default function QueueEditorShell({ activeTab }: { activeTab: string }) {
   const tabs = [
     { id: 'layout', label: 'Tata Letak', icon: Layout },
     { id: 'marquee', label: 'Running Text', icon: MessageSquare },
-    { id: 'counters', label: `Daftar Loket (${queue.counters.length})`, icon: Users },
+    { id: 'counters', label: 'Daftar Loket', icon: Users },
     { id: 'audio', label: 'Audio & Chime', icon: Volume2 },
   ];
 
@@ -75,77 +79,125 @@ export default function QueueEditorShell({ activeTab }: { activeTab: string }) {
     <div
       style={{
         width: '100%',
-        padding: isFullscreen ? '14px 20px' : '20px 28px',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: isFullscreen ? '12px' : '18px',
         flex: 1,
         minHeight: 0,
+        overflow: 'hidden',
+        backgroundColor: 'var(--bg-primary)',
       }}
     >
-      {/* Top Header Bar */}
+      {/* Top Header & Tabs Bar */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '16px',
+          padding: '8px 16px',
+          backgroundColor: 'var(--bg-surface)',
+          borderBottom: '1px solid var(--border-subtle)',
+          flexShrink: 0,
+          zIndex: 10,
+          gap: '12px',
+          minHeight: '48px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: '280px' }}>
+        {/* Left: Back button & Title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
           <Link
             href="/studio/components/ticket"
-            className="btn btn-secondary"
-            style={{ padding: '8px', borderRadius: '10px' }}
-            title="Kembali ke Daftar Komponen Antrian"
+            className="btn btn-outline"
+            style={{ width: '30px', height: '30px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', flexShrink: 0 }}
+            title="Kembali ke Daftar Komponen"
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft size={15} />
           </Link>
 
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input
-                type="text"
-                value={queue.name}
-                onChange={(e) => updateField('name', e.target.value)}
-                placeholder="Nama Layar Antrian..."
-                className="form-input"
-                style={{
-                  fontSize: '1.25rem',
-                  fontWeight: 700,
-                  padding: '4px 10px',
-                  maxWidth: '480px',
-                  backgroundColor: 'transparent',
-                  borderColor: 'transparent',
-                }}
-              />
-            </div>
-            <p style={{ margin: '2px 0 0 10px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-              {isNew ? 'Layar antrian baru' : queue.id} · {queue.canvasWidth} × {queue.canvasHeight} px
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+            <input
+              type="text"
+              value={queue.name}
+              onChange={(e) => updateField('name', e.target.value)}
+              placeholder="Nama Layar Antrian..."
+              className="form-input"
+              style={{
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                padding: '3px 8px',
+                width: 'auto',
+                minWidth: '160px',
+                maxWidth: '320px',
+                backgroundColor: 'transparent',
+                borderColor: 'transparent',
+                color: 'var(--text-primary)',
+              }}
+            />
+            <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+              {queue.canvasWidth} × {queue.canvasHeight} px
+            </span>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Center: Sleek Segmented Route Tabs */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '2px',
+            backgroundColor: 'var(--bg-surface-elevated)',
+            padding: '2px',
+            borderRadius: '8px',
+            border: '1px solid var(--border-subtle)',
+          }}
+        >
+          {tabs.map((t) => {
+            const Icon = t.icon;
+            const isActive = activeTab === t.id;
+            return (
+              <Link
+                key={t.id}
+                href={`${basePath}/${t.id}`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '5px 12px',
+                  borderRadius: '6px',
+                  fontSize: '0.75rem',
+                  fontWeight: isActive ? 600 : 500,
+                  color: isActive ? 'var(--primary-400)' : 'var(--text-secondary)',
+                  backgroundColor: isActive ? 'rgba(37, 99, 235, 0.12)' : 'transparent',
+                  border: isActive ? '1px solid rgba(59, 130, 246, 0.35)' : '1px solid transparent',
+                  textDecoration: 'none',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <Icon size={13} />
+                <span>{t.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Right: Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           <button
             type="button"
             onClick={() => setFullscreen(!isFullscreen)}
             className="btn btn-outline"
             style={{
-              padding: '9px 14px',
-              fontSize: '0.8125rem',
-              display: 'inline-flex',
+              padding: '5px 10px',
+              fontSize: '0.75rem',
+              display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              borderColor: isFullscreen ? 'var(--primary-500)' : undefined,
-              color: isFullscreen ? 'var(--primary-500)' : undefined,
+              gap: '5px',
             }}
             title={isFullscreen ? 'Keluar Fullscreen (Esc)' : 'Mode Layar Penuh Fokus Editor'}
           >
-            {isFullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
-            <span>{isFullscreen ? 'Keluar Layar Penuh' : 'Layar Penuh'}</span>
+            {isFullscreen ? <Minimize size={13} /> : <Maximize size={13} />}
+            <span>{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
           </button>
 
           <button
@@ -153,70 +205,41 @@ export default function QueueEditorShell({ activeTab }: { activeTab: string }) {
             onClick={saveQueue}
             disabled={saving}
             className="btn btn-primary"
-            style={{ padding: '10px 24px', fontSize: '0.875rem' }}
+            style={{ padding: '5px 12px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             {saving ? (
               <>
-                <RefreshCw size={16} className="animate-spin" />
-                Menyimpan...
+                <RefreshCw size={13} className="animate-spin" />
+                <span>Menyimpan...</span>
               </>
             ) : (
               <>
-                <Save size={16} />
-                Simpan Perubahan
+                <Save size={13} />
+                <span>Simpan Perubahan</span>
               </>
             )}
           </button>
         </div>
       </div>
 
-      {/* Modern Dynamic Tab Route Navigation Bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          borderBottom: '1px solid var(--border-subtle)',
-          paddingBottom: '12px',
-          overflowX: 'auto',
-        }}
-      >
-        {tabs.map((t) => {
-          const Icon = t.icon;
-          const isActive = activeTab === t.id;
-          return (
-            <Link
-              key={t.id}
-              href={`${basePath}/${t.id}`}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                fontSize: '0.875rem',
-                fontWeight: isActive ? 700 : 500,
-                color: isActive ? '#ffffff' : 'var(--text-secondary)',
-                backgroundColor: isActive ? 'var(--primary-600)' : 'transparent',
-                border: isActive ? '1px solid var(--primary-600)' : '1px solid transparent',
-                textDecoration: 'none',
-                transition: 'all 0.15s ease',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <Icon size={16} />
-              {t.label}
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* Main Full-Width Content */}
-      <div style={{ width: '100%' }}>
+      {/* Main Full-Width Content Workspace */}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: activeTab === 'layout' ? 'hidden' : 'auto', width: '100%', height: '100%' }}>
         {activeTab === 'layout' && <TabLayoutTab />}
-        {activeTab === 'marquee' && <TabMarqueeTab />}
-        {activeTab === 'counters' && <TabCountersTab />}
-        {activeTab === 'audio' && <TabAudioTab />}
+        {activeTab === 'marquee' && (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '24px', maxWidth: '1200px', width: '100%', margin: '0 auto' }}>
+            <TabMarqueeTab />
+          </div>
+        )}
+        {activeTab === 'counters' && (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '24px', maxWidth: '1200px', width: '100%', margin: '0 auto' }}>
+            <TabCountersTab />
+          </div>
+        )}
+        {activeTab === 'audio' && (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '24px', maxWidth: '1200px', width: '100%', margin: '0 auto' }}>
+            <TabAudioTab />
+          </div>
+        )}
         {!['layout', 'marquee', 'counters', 'audio'].includes(activeTab) && <TabLayoutTab />}
       </div>
     </div>

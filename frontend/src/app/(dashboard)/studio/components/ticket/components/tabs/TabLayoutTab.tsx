@@ -17,38 +17,34 @@ export default function TabLayoutTab() {
     : null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', flex: 1, minHeight: 0 }}>
-      {/* 3-Panel Integrated Studio IDE Workspace (Seamless Edge-to-Edge) */}
-      <div
-        style={{
-          width: '100%',
-          display: 'flex',
-          border: '1px solid var(--border-subtle)',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          backgroundColor: 'var(--bg-surface)',
-          minHeight: '660px',
-          height: 'calc(100vh - 190px)',
-        }}
-      >
-        {/* Panel Kiri: Lapisan & Tambah Elemen */}
-        <QueueLayersPanel
-          selectedItemId={currentSelected?.id || null}
-          onSelectItem={setSelectedItem}
-        />
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flex: 1,
+        minHeight: 0,
+        overflow: 'hidden',
+        backgroundColor: 'var(--bg-surface)',
+      }}
+    >
+      {/* Panel Kiri: Lapisan & Tambah Elemen */}
+      <QueueLayersPanel
+        selectedItemId={currentSelected?.id || null}
+        onSelectItem={setSelectedItem}
+      />
 
-        {/* Panel Tengah: Kanvas Interaktif + Magnet Snapping */}
-        <QueueCanvasWorkspace
-          selectedItemId={currentSelected?.id || null}
-          onSelectItem={setSelectedItem}
-        />
+      {/* Panel Tengah: Kanvas Interaktif + Magnet Snapping */}
+      <QueueCanvasWorkspace
+        selectedItemId={currentSelected?.id || null}
+        onSelectItem={setSelectedItem}
+      />
 
-        {/* Panel Kanan: Inspektor Properti (Kanvas & Tema jika null, atau Elemen jika dipilih) */}
-        <QueueItemInspector
-          selectedItem={currentSelected}
-          onSelect={setSelectedItem}
-        />
-      </div>
+      {/* Panel Kanan: Inspektor Properti */}
+      <QueueItemInspector
+        selectedItem={currentSelected}
+        onSelect={setSelectedItem}
+      />
     </div>
   );
 }

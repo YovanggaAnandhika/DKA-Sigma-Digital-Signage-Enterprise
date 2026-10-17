@@ -163,7 +163,8 @@ export default function QueueLayersPanel({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        minHeight: '620px',
+        minHeight: 0,
+        flexShrink: 0,
       }}
     >
       {/* Header */}
