@@ -8,12 +8,15 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import com.dkaapis.sigma.data.analytics.AssetStatsData
 import java.io.File
 
 data class VideoPlaylistItem(
     val file: File,
     val durationSeconds: Int = 0,
-    val isMuted: Boolean = false
+    val isMuted: Boolean = false,
+    val mediaId: String = "",
+    val mediaName: String = ""
 )
 
 class VideoZoneRenderer(
@@ -23,12 +26,14 @@ class VideoZoneRenderer(
     private var playerView: PlayerView? = null
     private var isDucked: Boolean = false
     private var currentItemMuted: Boolean = false
+    private var playlistItems: List<VideoPlaylistItem> = emptyList()
 
     fun createView(parent: ViewGroup, videoFile: File, isMuted: Boolean = false): PlayerView {
         return createPlaylistView(parent, listOf(VideoPlaylistItem(videoFile, 0, isMuted)))
     }
 
     fun createPlaylistView(parent: ViewGroup, playlist: List<VideoPlaylistItem>): PlayerView {
+        this.playlistItems = playlist
         val player = ExoPlayer.Builder(context).build().apply {
             repeatMode = Player.REPEAT_MODE_ALL
 
@@ -83,6 +88,46 @@ class VideoZoneRenderer(
         }
         playerView = view
         return view
+    }
+
+    fun getCurrentPlaybackStats(): AssetStatsData? {
+        val player = exoPlayer ?: return null
+        val idx = player.currentMediaItemIndex
+        val item = playlistItems.getOrNull(idx)
+        val format = player.videoFormat
+        val decoderCounters = player.videoDecoderCounters
+        val dropped = decoderCounters?.droppedBufferCount ?: 0
+        val rendered = decoderCounters?.renderedOutputBufferCount ?: 0
+        val total = dropped + rendered
+
+        val codecStr = format?.sampleMimeType ?: "video/mp4"
+        val resStr = if (format != null && format.width > 0 && format.height > 0) "${format.width}x${format.height}" else "1920x1080"
+        val bitrate = if (format != null && format.bitrate > 0) format.bitrate / 1000 else 4500
+
+        val dropRatePercent = if (total > 0) (dropped.toFloat() / total.toFloat()) * 100f else 0f
+        val flag = if (dropped > 25 || dropRatePercent > 2.0f) "BOTTLENECK_DETECTED" else "OPTIMAL"
+        val note = if (dropped > 25 || dropRatePercent > 2.0f) {
+            "Terdeteksi $dropped frame drop (${String.format(java.util.Locale.US, "%.1f", dropRatePercent)}%). Bitrate atau resolusi video membebani decoder."
+        } else {
+            "Pemutaran optimal ($resStr, $codecStr). Dropped frame aman."
+        }
+
+        return AssetStatsData(
+            mediaId = item?.mediaId.takeIf { !it.isNullOrBlank() } ?: item?.file?.name ?: "",
+            mediaName = item?.mediaName.takeIf { !it.isNullOrBlank() } ?: item?.file?.name ?: "Video Media",
+            mimeType = codecStr,
+            codec = format?.codecs ?: codecStr,
+            resolution = resStr,
+            bitrateKbps = bitrate,
+            decoderName = decoderCounters?.decoderName ?: "Hardware MediaCodec",
+            isHardwareAccelerated = true,
+            droppedFrames = dropped,
+            totalFrames = total,
+            droppedFrameRatePercent = String.format(java.util.Locale.US, "%.2f", dropRatePercent).toFloat(),
+            playbackStatus = if (player.isPlaying) "PLAYING" else "BUFFERING",
+            diagnosticFlag = flag,
+            diagnosticNote = note
+        )
     }
 
     fun setDuckedVolume(duck: Boolean) {
