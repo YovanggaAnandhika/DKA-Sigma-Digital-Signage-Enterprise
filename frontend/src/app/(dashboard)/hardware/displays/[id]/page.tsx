@@ -270,9 +270,6 @@ export default function ViewDisplayPage() {
               <CheckCircle2 size={16} />
               <span>{approving ? 'Menyetujui...' : 'Setujui & Hubungkan Layar'}</span>
             </button>
-            <Link href="/hardware/displays/create" className="btn btn-secondary" style={{ padding: '10px 16px' }}>
-              Input Kode Manual
-            </Link>
           </div>
         </div>
       )}

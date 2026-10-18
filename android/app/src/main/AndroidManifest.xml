@@ -32,7 +32,7 @@
             android:name="com.dkaapis.sigma.presentation.player.PlayerActivity"
             android:exported="true"
             android:launchMode="singleInstance"
-            android:screenOrientation="unspecified"
+            android:screenOrientation="sensorLandscape"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
             android:theme="@style/Theme.DKASigmaPlayer.Fullscreen">
             <intent-filter>
@@ -46,6 +46,8 @@
             android:name="com.dkaapis.sigma.presentation.pairing.PairingActivity"
             android:exported="false"
             android:launchMode="singleTop"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
             android:theme="@style/Theme.DKASigmaPlayer.Fullscreen" />
 
         <!-- Foreground stream connection daemon -->

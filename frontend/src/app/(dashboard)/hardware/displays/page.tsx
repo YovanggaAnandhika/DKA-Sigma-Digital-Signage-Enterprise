@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { api, Device } from '@/lib/services';
 import { Pagination } from '@/components/ui/Pagination';
-import { Tv, Plus, Search, RefreshCw, Edit, Trash2, Eye } from 'lucide-react';
+import { Tv, Search, RefreshCw, Edit, Trash2, Eye, CheckCircle2 } from 'lucide-react';
 
 export default function DisplaysPage() {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -14,6 +14,7 @@ export default function DisplaysPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [isSseConnected, setIsSseConnected] = useState(false);
+  const [pairingId, setPairingId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -84,6 +85,26 @@ export default function DisplaysPage() {
     };
   }, []);
 
+  const handleAccept = async (d: Device) => {
+    if (!d.pairingCode) {
+      alert('Perangkat tidak memiliki kode pairing yang valid');
+      return;
+    }
+    if (!confirm(`Setujui dan aktifkan layar "${d.name}" (Kode: ${d.pairingCode})?`)) return;
+    try {
+      setPairingId(d.id);
+      await api.pairDevice({
+        pairingCode: d.pairingCode,
+        deviceName: d.name,
+      });
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || 'Gagal menyetujui pairing perangkat');
+    } finally {
+      setPairingId(null);
+    }
+  };
+
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Hapus display player "${name}"?`)) return;
     try {
@@ -150,11 +171,8 @@ export default function DisplaysPage() {
 
           <button onClick={loadData} className="btn btn-secondary" title="Segarkan data manual">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <span>Segarkan</span>
           </button>
-          <Link href="/hardware/displays/create" className="btn btn-primary">
-            <Plus size={16} />
-            <span>Tambah Layar Baru</span>
-          </Link>
         </div>
       </div>
 
@@ -224,19 +242,35 @@ export default function DisplaysPage() {
                       {d.displayGroupId ? 'Tergabung' : '-'}
                     </td>
                     <td>
-                      <span
-                        style={{
-                          padding: '2px 8px',
-                          borderRadius: '9999px',
-                          fontSize: '0.6875rem',
-                          fontWeight: 700,
-                          backgroundColor: d.isOnline ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
-                          color: d.isOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
-                          border: d.isOnline ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
-                        }}
-                      >
-                        {d.isOnline ? 'ONLINE' : 'OFFLINE'}
-                      </span>
+                      {!d.isPaired ? (
+                        <span
+                          style={{
+                            padding: '3px 8px',
+                            borderRadius: '9999px',
+                            fontSize: '0.6875rem',
+                            fontWeight: 700,
+                            backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                            color: 'var(--accent-amber)',
+                            border: '1px solid rgba(245, 158, 11, 0.3)',
+                          }}
+                        >
+                          MENUNGGU PERSETUJUAN
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            padding: '3px 8px',
+                            borderRadius: '9999px',
+                            fontSize: '0.6875rem',
+                            fontWeight: 700,
+                            backgroundColor: d.isOnline ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
+                            color: d.isOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
+                            border: d.isOnline ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
+                          }}
+                        >
+                          {d.isOnline ? 'ONLINE' : 'OFFLINE'}
+                        </span>
+                      )}
                     </td>
                     <td>
                       {d.screenWidth + "x" + d.screenHeight} ({d.orientation})
@@ -244,6 +278,18 @@ export default function DisplaysPage() {
                     <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{d.ipAddress || '127.0.0.1'}</td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        {!d.isPaired && (
+                          <button
+                            onClick={() => handleAccept(d)}
+                            disabled={pairingId === d.id}
+                            className="btn btn-primary"
+                            style={{ padding: '4px 10px', fontSize: '0.75rem', gap: '4px' }}
+                            title="Setujui dan Aktifkan Layar Android"
+                          >
+                            <CheckCircle2 size={13} />
+                            <span>{pairingId === d.id ? 'Memproses...' : 'Setujui'}</span>
+                          </button>
+                        )}
                         <Link href={`/hardware/displays/${d.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Lihat Detail">
                           <Eye size={14} />
                         </Link>
