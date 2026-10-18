@@ -11,6 +11,8 @@ import { DEFAULT_QUEUES, QUEUE_STORAGE_KEY, QueueDisplayConfig } from '@/app/(da
 import { DEFAULT_ALBUMS, ALBUM_STORAGE_KEY, PhotoAlbum } from '@/app/(dashboard)/studio/components/album/types';
 import { ensureUuid } from '@/lib/services/studio/widgetHelper';
 
+import { invokeApi } from '@/lib/core/invokeApi';
+
 export default function ComponentPickerModal() {
   const {
     componentPickerZoneId,
@@ -29,36 +31,41 @@ export default function ComponentPickerModal() {
   const [albums, setAlbums] = useState<PhotoAlbum[]>(DEFAULT_ALBUMS);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const storedWv = localStorage.getItem(WEBVIEW_STORAGE_KEY);
-      if (storedWv) {
-        const parsed = JSON.parse(storedWv);
-        setWebviews(parsed.map((item: any) => ({ ...item, id: ensureUuid(item.id) })));
+    let isMounted = true;
+    async function loadBackendComponents() {
+      try {
+        const [qRes, tRes, cRes, wRes] = await Promise.all([
+          invokeApi<any>('/api/grpc/studio/queue/ListQueueDisplays', {}).catch(() => null),
+          invokeApi<any>('/api/grpc/studio/ticker/ListTickers', {}).catch(() => null),
+          invokeApi<any>('/api/grpc/studio/clock/ListClocks', {}).catch(() => null),
+          invokeApi<any>('/api/grpc/studio/webview/ListWebviews', {}).catch(() => null),
+        ]);
+
+        if (!isMounted) return;
+
+        if (qRes?.itemsList?.length) {
+          setQueues(qRes.itemsList.map((item: any) => ({ ...item, id: ensureUuid(item.id) })));
+        }
+        if (tRes?.itemsList?.length) {
+          setTickers(tRes.itemsList.map((item: any) => ({
+            ...item,
+            id: ensureUuid(item.id),
+            messages: item.messagesList || item.messages || [],
+          })));
+        }
+        if (cRes?.itemsList?.length) {
+          setClocks(cRes.itemsList.map((item: any) => ({ ...item, id: ensureUuid(item.id) })));
+        }
+        if (wRes?.itemsList?.length) {
+          setWebviews(wRes.itemsList.map((item: any) => ({ ...item, id: ensureUuid(item.id) })));
+        }
+      } catch (e) {
+        console.warn('Gagal memuat komponen dari backend', e);
       }
-      const storedTk = localStorage.getItem(TICKER_STORAGE_KEY);
-      if (storedTk) {
-        const parsed = JSON.parse(storedTk);
-        setTickers(parsed.map((item: any) => ({ ...item, id: ensureUuid(item.id) })));
-      }
-      const storedCk = localStorage.getItem(CLOCK_STORAGE_KEY);
-      if (storedCk) {
-        const parsed = JSON.parse(storedCk);
-        setClocks(parsed.map((item: any) => ({ ...item, id: ensureUuid(item.id) })));
-      }
-      const storedQu = localStorage.getItem(QUEUE_STORAGE_KEY);
-      if (storedQu) {
-        const parsed = JSON.parse(storedQu);
-        setQueues(parsed.map((item: any) => ({ ...item, id: ensureUuid(item.id) })));
-      }
-      const storedAl = localStorage.getItem(ALBUM_STORAGE_KEY);
-      if (storedAl) {
-        const parsed = JSON.parse(storedAl);
-        setAlbums(parsed.map((item: any) => ({ ...item, id: ensureUuid(item.id) })));
-      }
-    } catch (e) {
-      console.warn('Gagal memuat local storage komponen', e);
     }
+
+    loadBackendComponents();
+    return () => { isMounted = false; };
   }, []);
 
   if (!componentPickerZoneId) return null;

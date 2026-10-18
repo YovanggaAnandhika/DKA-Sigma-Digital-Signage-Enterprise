@@ -197,4 +197,21 @@ export function createDefaultQueueLayoutItems(theme: 'clean-light' | 'solid-dark
   ];
 }
 
-export const DEFAULT_QUEUES: QueueDisplayConfig[] = [];
+export const DEFAULT_QUEUES: QueueDisplayConfig[] = [
+  {
+    id: '76a3e570-9807-40a5-ad74-e7bb28e382dc',
+    name: 'Layar Antrian Baru',
+    prefix: 'A',
+    currentNumber: 'A-001',
+    currentCounter: 'LOKET 01',
+    audioChimeEnabled: true,
+    marqueeText: 'PENGUMUMAN: Silakan menuju LOKET 01 saat nomor A-001 dipanggil.',
+    canvasWidth: 1920,
+    canvasHeight: 1080,
+    backgroundColor: '#0f172a',
+    themePreset: 'medical-green',
+    items: createDefaultQueueLayoutItems('medical-green'),
+    counters: [],
+    audios: [],
+  },
+];

@@ -11,3 +11,8 @@ SET name = 'Layar Antrian Baru',
     theme_preset = 'medical-green', 
     background_color = '#0f172a' 
 WHERE id = '76a3e570-9807-40a5-ad74-e7bb28e382dc';
+
+UPDATE clocks 
+SET name = 'Widget Jam Utama Makassar' 
+WHERE id = 'd0000000-0000-0000-0000-000000000001';
+
