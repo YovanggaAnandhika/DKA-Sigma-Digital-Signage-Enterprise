@@ -285,9 +285,9 @@ export default function ViewDisplayPage() {
         color: 'var(--text-muted)',
         bg: 'var(--bg-surface-elevated)',
         border: 'var(--border-subtle)',
-        icon: <Film size={18} style={{ color: 'var(--text-muted)' }} />,
-        title: 'Player Siaga (Standby / Idle)',
-        desc: 'Tidak ada video streaming yang sedang aktif diputar pada zone ini.',
+        icon: <Film size={15} style={{ color: 'var(--text-muted)' }} />,
+        title: 'Siaga',
+        desc: 'Tidak ada video aktif.',
       };
     }
     if (droppedFrames > 10) {
@@ -296,20 +296,20 @@ export default function ViewDisplayPage() {
           type: 'danger',
           color: 'var(--accent-rose)',
           bg: 'rgba(244, 63, 94, 0.08)',
-          border: 'rgba(244, 63, 94, 0.3)',
-          icon: <AlertTriangle size={18} color="var(--accent-rose)" />,
-          title: `Bottleneck Hardware Overload pada "${mediaName}"`,
-          desc: `Terjadi ${droppedFrames} frame drop pada video ini karena beban CPU sistem mencapai ${currentCpu.toFixed(1)}%. Kapasitas komputasi prosesor Android jenuh memproses multi-layer/multi-video.`,
+          border: 'rgba(244, 63, 94, 0.25)',
+          icon: <AlertTriangle size={15} color="var(--accent-rose)" />,
+          title: 'Beban Komputasi Tinggi',
+          desc: `Terjadi ${droppedFrames} frame drop (CPU ${currentCpu.toFixed(0)}%).`,
         };
       } else {
         return {
           type: 'warning',
           color: 'var(--accent-amber)',
           bg: 'rgba(234, 179, 8, 0.08)',
-          border: 'rgba(234, 179, 8, 0.3)',
-          icon: <AlertTriangle size={18} color="var(--accent-amber)" />,
-          title: `Bottleneck Bitrate/Codec pada "${mediaName}"`,
-          desc: `Terjadi ${droppedFrames} frame drop pada video ini meskipun CPU normal (${currentCpu.toFixed(1)}%). Pipeline decoder video (${codecName}, ${(bitrateKbps / 1000).toFixed(1)} Mbps, resolusi ${asset.resolution || '1080p'}) melebihi batas throughput MediaCodec perangkat. Disarankan kompresi bitrate lebih rendah.`,
+          border: 'rgba(234, 179, 8, 0.25)',
+          icon: <AlertTriangle size={15} color="var(--accent-amber)" />,
+          title: 'Bitrate Tinggi',
+          desc: `Terjadi ${droppedFrames} frame drop (${(bitrateKbps / 1000).toFixed(1)} Mbps).`,
         };
       }
     }
@@ -318,10 +318,10 @@ export default function ViewDisplayPage() {
         type: 'warning',
         color: 'var(--accent-amber)',
         bg: 'rgba(234, 179, 8, 0.08)',
-        border: 'rgba(234, 179, 8, 0.3)',
-        icon: <AlertTriangle size={18} color="var(--accent-amber)" />,
-        title: `Frame Drop Minor (${droppedFrames} Frame Drop) pada "${mediaName}"`,
-        desc: `Terjadi ${droppedFrames} frame drop sesaat saat inisialisasi buffering file "${mediaName}". Throughput decoder saat ini telah kembali sinkron.`,
+        border: 'rgba(234, 179, 8, 0.25)',
+        icon: <AlertTriangle size={15} color="var(--accent-amber)" />,
+        title: 'Jeda Buffering',
+        desc: `Terjadi ${droppedFrames} frame drop saat inisialisasi awal.`,
       };
     }
     if (!isHw) {
@@ -329,20 +329,20 @@ export default function ViewDisplayPage() {
         type: 'warning',
         color: 'var(--accent-amber)',
         bg: 'rgba(234, 179, 8, 0.08)',
-        border: 'rgba(234, 179, 8, 0.3)',
-        icon: <AlertTriangle size={18} color="var(--accent-amber)" />,
-        title: `Software Decoding pada "${mediaName}"`,
-        desc: 'Akselerasi hardware MediaCodec tidak aktif untuk codec ini. Pemutaran software membebani CPU lebih besar.',
+        border: 'rgba(234, 179, 8, 0.25)',
+        icon: <AlertTriangle size={15} color="var(--accent-amber)" />,
+        title: 'Software Decoding',
+        desc: 'Akselerasi hardware tidak aktif untuk format ini.',
       };
     }
     return {
       type: 'success',
-      color: 'var(--accent-emerald)',
-      bg: 'rgba(16, 185, 129, 0.08)',
-      border: 'rgba(16, 185, 129, 0.3)',
-      icon: <CheckCircle2 size={18} color="var(--accent-emerald)" />,
-      title: `Pemutaran Optimal pada "${mediaName}"`,
-      desc: `Video diproses sempurna oleh ${asset.decoder_name || 'Hardware MediaCodec'} tanpa frame drop (0 drop). Throughput decoder bekerja stabil.`,
+      color: 'var(--text-muted)',
+      bg: 'var(--bg-surface)',
+      border: 'var(--border-subtle)',
+      icon: <CheckCircle2 size={15} style={{ opacity: 0.6 }} />,
+      title: 'Optimal',
+      desc: 'Pemutaran stabil tanpa kendala.',
     };
   };
 
@@ -515,101 +515,98 @@ export default function ViewDisplayPage() {
       )}
 
       {/* Overview Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-        <div className="card-elevated" style={{ padding: '18px' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>KODE PAIRING AKTIF</div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--primary-400)', marginTop: '6px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+        <div className="card-elevated" style={{ padding: '14px 16px' }}>
+          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>Kode Pairing</div>
+          <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--text-primary)', marginTop: '4px' }}>
             {device.pairingCode}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {device.isPaired ? 'Status: Terpasang ke Player' : 'Menunggu input di Player'}
+          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+            {device.isPaired ? 'Terhubung' : 'Menunggu input'}
           </div>
         </div>
 
-        <div className="card-elevated" style={{ padding: '18px' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>RESOLUSI & LAYAR</div>
-          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '6px' }}>
+        <div className="card-elevated" style={{ padding: '14px 16px' }}>
+          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>Resolusi</div>
+          <div style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px' }}>
             {device.screenWidth && device.screenHeight ? `${device.screenWidth} × ${device.screenHeight}` : '1920 × 1080'}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', textTransform: 'capitalize' }}>
-            Orientasi: {device.orientation}
+          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px', textTransform: 'capitalize' }}>
+            {device.orientation}
           </div>
         </div>
 
-        <div className="card-elevated" style={{ padding: '18px' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>ALAMAT IP JARINGAN</div>
-          <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--text-primary)', marginTop: '6px' }}>
+        <div className="card-elevated" style={{ padding: '14px 16px' }}>
+          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>Alamat IP</div>
+          <div style={{ fontSize: '1.125rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--text-primary)', marginTop: '4px' }}>
             {device.ipAddress || '127.0.0.1'}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Protokol: Stream (Bi-directional)
+          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+            Stream Aktif
           </div>
         </div>
 
-        <div className="card-elevated" style={{ padding: '18px' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>HEARTBEAT TERAKHIR</div>
-          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '6px' }}>
+        <div className="card-elevated" style={{ padding: '14px 16px' }}>
+          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>Heartbeat</div>
+          <div style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px' }}>
             {device.lastHeartbeatAt ? new Date(device.lastHeartbeatAt).toLocaleTimeString('id-ID') : 'Baru saja'}
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Interval telemetri: 15 detik
+          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+            Sinkron
           </div>
         </div>
       </div>
 
       {/* Fleet Observability: Real-time Telemetry & Live Screenshot Preview */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
         {/* Hardware & Resource Gauge */}
-        <div className="card-elevated" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+        <div className="card-elevated" style={{ padding: '18px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Cpu size={18} style={{ color: 'var(--accent-cyan)' }} />
-              <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Metrik Hardware & Penyimpanan Player
+              <Cpu size={16} style={{ color: 'var(--text-secondary)' }} />
+              <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Metrik Perangkat
               </h3>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span
                 style={{
                   display: 'inline-block',
-                  width: '8px',
-                  height: '8px',
+                  width: '7px',
+                  height: '7px',
                   borderRadius: '50%',
-                  backgroundColor: isLiveConnected ? 'var(--accent-emerald)' : 'var(--accent-amber)',
-                  boxShadow: isLiveConnected ? '0 0 8px var(--accent-emerald)' : 'none',
+                  backgroundColor: isLiveConnected ? 'var(--accent-emerald)' : 'var(--text-muted)',
                 }}
               />
-              <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: isLiveConnected ? 'var(--accent-emerald)' : 'var(--text-muted)' }}>
-                {isLiveConnected ? 'REALTIME ONLINE' : 'OFFLINE BUFFER'}
+              <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                {isLiveConnected ? 'Online' : 'Offline'}
               </span>
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {/* CPU Bar */}
-            <div style={{ padding: '12px 14px', borderRadius: '12px', backgroundColor: 'var(--bg-surface-elevated)' }}>
+            <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--bg-surface-elevated)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-cyan)' }}>
-                  <Activity size={15} />
-                  <span style={{ fontWeight: 600, fontSize: '0.8125rem' }}>Beban CPU Sistem</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
+                  <Activity size={14} />
+                  <span style={{ fontWeight: 500, fontSize: '0.75rem' }}>CPU</span>
                 </div>
-                <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                   {realtimeMetrics?.io?.cpu_percent ?? realtimeMetrics?.io?.cpuPercent ?? 24.5}%
-                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginLeft: '4px', fontWeight: 500 }}>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginLeft: '4px', fontWeight: 400 }}>
                     ({realtimeMetrics?.io?.cpu_cores ?? realtimeMetrics?.io?.cpuCores ?? 8} Cores)
                   </span>
                 </span>
               </div>
-              <div style={{ width: '100%', height: '8px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+              <div style={{ width: '100%', height: '6px', borderRadius: '3px', backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
                 <div
                   style={{
                     width: `${Math.min(100, Math.max(5, realtimeMetrics?.io?.cpu_percent ?? realtimeMetrics?.io?.cpuPercent ?? 24.5))}%`,
                     height: '100%',
                     backgroundColor: (realtimeMetrics?.io?.cpu_percent ?? realtimeMetrics?.io?.cpuPercent ?? 24.5) > 80
                       ? 'var(--accent-rose)'
-                      : (realtimeMetrics?.io?.cpu_percent ?? realtimeMetrics?.io?.cpuPercent ?? 24.5) > 60
-                      ? 'var(--accent-amber)'
-                      : 'var(--accent-cyan)',
+                      : 'var(--primary-500)',
                     transition: 'width 0.4s ease',
                   }}
                 />
@@ -617,27 +614,27 @@ export default function ViewDisplayPage() {
             </div>
 
             {/* RAM Bar */}
-            <div style={{ padding: '12px 14px', borderRadius: '12px', backgroundColor: 'var(--bg-surface-elevated)' }}>
+            <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--bg-surface-elevated)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-emerald)' }}>
-                  <Cpu size={15} />
-                  <span style={{ fontWeight: 600, fontSize: '0.8125rem' }}>Penggunaan Memori RAM</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
+                  <Cpu size={14} />
+                  <span style={{ fontWeight: 500, fontSize: '0.75rem' }}>RAM</span>
                 </div>
-                <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                   {realtimeMetrics?.io?.ram_percent ?? realtimeMetrics?.io?.ramPercent ?? telemetry?.memoryPercent ?? 30}%
                   {realtimeMetrics?.io?.ram_used_bytes && realtimeMetrics?.io?.ram_total_bytes ? (
-                    <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginLeft: '4px', fontWeight: 500 }}>
+                    <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginLeft: '4px', fontWeight: 400 }}>
                       ({(realtimeMetrics.io.ram_used_bytes / (1024 * 1024 * 1024)).toFixed(1)} / {(realtimeMetrics.io.ram_total_bytes / (1024 * 1024 * 1024)).toFixed(1)} GB)
                     </span>
                   ) : null}
                 </span>
               </div>
-              <div style={{ width: '100%', height: '8px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+              <div style={{ width: '100%', height: '6px', borderRadius: '3px', backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
                 <div
                   style={{
                     width: `${Math.min(100, Math.max(5, realtimeMetrics?.io?.ram_percent ?? realtimeMetrics?.io?.ramPercent ?? telemetry?.memoryPercent ?? 30))}%`,
                     height: '100%',
-                    backgroundColor: (realtimeMetrics?.io?.ram_percent ?? realtimeMetrics?.io?.ramPercent ?? telemetry?.memoryPercent ?? 30) > 85 ? 'var(--accent-rose)' : 'var(--accent-emerald)',
+                    backgroundColor: (realtimeMetrics?.io?.ram_percent ?? realtimeMetrics?.io?.ramPercent ?? telemetry?.memoryPercent ?? 30) > 85 ? 'var(--accent-rose)' : 'var(--primary-500)',
                     transition: 'width 0.4s ease',
                   }}
                 />
@@ -645,13 +642,13 @@ export default function ViewDisplayPage() {
             </div>
 
             {/* Storage & Suhu Tiles */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <div style={{ padding: '10px 12px', borderRadius: '10px', backgroundColor: 'var(--bg-surface-elevated)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-amber)', marginBottom: '4px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--bg-surface-elevated)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', marginBottom: '4px' }}>
                   <HardDrive size={13} />
-                  <span style={{ fontSize: '0.6875rem', fontWeight: 600 }}>Penyimpanan Sisa</span>
+                  <span style={{ fontSize: '0.6875rem', fontWeight: 500 }}>Penyimpanan</span>
                 </div>
-                <div style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                   {realtimeMetrics?.io?.storage_free_bytes
                     ? `${(realtimeMetrics.io.storage_free_bytes / (1024 * 1024 * 1024)).toFixed(1)} GB Free`
                     : telemetry?.storageFreeBytes
@@ -662,14 +659,14 @@ export default function ViewDisplayPage() {
                 </div>
               </div>
 
-              <div style={{ padding: '10px 12px', borderRadius: '10px', backgroundColor: 'var(--bg-surface-elevated)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-rose)', marginBottom: '4px' }}>
+              <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--bg-surface-elevated)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', marginBottom: '4px' }}>
                   <Thermometer size={13} />
-                  <span style={{ fontSize: '0.6875rem', fontWeight: 600 }}>Suhu & Koneksi</span>
+                  <span style={{ fontSize: '0.6875rem', fontWeight: 500 }}>Suhu & Jaringan</span>
                 </div>
-                <div style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                   {realtimeMetrics?.io?.battery_temp_celsius ?? realtimeMetrics?.io?.batteryTempCelsius ?? 34.2}°C
-                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginLeft: '6px', fontWeight: 600 }}>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginLeft: '6px', fontWeight: 400 }}>
                     {realtimeMetrics?.io?.network_type ?? realtimeMetrics?.io?.networkType ?? 'WIFI'}
                   </span>
                 </div>
@@ -679,12 +676,12 @@ export default function ViewDisplayPage() {
         </div>
 
         {/* Live Visual Screenshot Audit */}
-        <div className="card-elevated" style={{ padding: '24px' }}>
+        <div className="card-elevated" style={{ padding: '18px 20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ImageIcon size={16} style={{ color: 'var(--accent-indigo)' }} />
-              <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Tangkapan Layar Live (Audit Visual)
+              <ImageIcon size={16} style={{ color: 'var(--text-secondary)' }} />
+              <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Tangkapan Layar
               </h3>
             </div>
             {screenshots.length > 0 && (
@@ -697,7 +694,7 @@ export default function ViewDisplayPage() {
           {screenshots.length === 0 ? (
             <div style={{
               height: '140px',
-              borderRadius: '10px',
+              borderRadius: '8px',
               backgroundColor: 'var(--bg-surface-elevated)',
               border: '1px dashed var(--border-subtle)',
               display: 'flex',
@@ -708,25 +705,25 @@ export default function ViewDisplayPage() {
               color: 'var(--text-muted)',
               fontSize: '0.75rem',
             }}>
-              <Camera size={24} style={{ opacity: 0.5 }} />
-              <span>Belum ada screenshot yang diunggah player.</span>
+              <Camera size={22} style={{ opacity: 0.5 }} />
+              <span>Belum ada screenshot dari player.</span>
               <button
                 onClick={() => handleSendCommand(ServerCommandType.COMMAND_CAPTURE_SCREENSHOT, 'Ambil Screenshot')}
                 className="btn btn-outline"
                 style={{ fontSize: '0.6875rem', padding: '4px 8px', marginTop: '4px' }}
               >
-                Minta Screenshot Sekarang
+                Ambil Sekarang
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div
                 onClick={() => setSelectedScreenshot(`${getMediaStreamUrl(screenshots[0].fileUrl)}&t=${new Date(screenshots[0].capturedAt).getTime()}`)}
                 style={{
                   position: 'relative',
                   width: '100%',
                   height: '140px',
-                  borderRadius: '10px',
+                  borderRadius: '8px',
                   overflow: 'hidden',
                   cursor: 'pointer',
                   border: '1px solid var(--border-subtle)',
@@ -752,67 +749,67 @@ export default function ViewDisplayPage() {
                 onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>
-                    <Eye size={16} />
-                    <span>Perbesar Layar</span>
+                    <Eye size={15} />
+                    <span>Perbesar</span>
                   </div>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                <span>Klik gambar untuk melihat resolusi penuh</span>
-                <span>Tersedia {screenshots.length} arsip</span>
+                <span>Klik untuk memperbesar</span>
+                <span>{screenshots.length} arsip</span>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Audit Beban & Diagnostik Pemutaran Media (Live Multi-Asset Profiling) */}
-      <div className="card-elevated" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+      {/* Diagnostik Pemutaran Media */}
+      <div className="card-elevated" style={{ padding: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Film size={18} style={{ color: 'var(--accent-indigo)' }} />
-              <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Audit Beban & Diagnostik Pemutaran Media (Live Profiling Multi-Aset)
+              <Film size={16} style={{ color: 'var(--text-secondary)' }} />
+              <h2 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Diagnostik Pemutaran Media
               </h2>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Pemantauan granular per-video/per-zone: mendeteksi video spesifik mana yang mengalami frame drop, status hardware decoder, dan bitrate.
+              Status decoder, bitrate, dan performa pemutaran video aktif.
             </p>
           </div>
           <span
             style={{
-              padding: '4px 10px',
-              borderRadius: '9999px',
+              padding: '2px 8px',
+              borderRadius: '4px',
               fontSize: '0.6875rem',
-              fontWeight: 700,
-              backgroundColor: 'rgba(59, 130, 246, 0.12)',
-              color: 'var(--primary-400)',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
+              fontWeight: 600,
+              backgroundColor: 'var(--bg-surface-elevated)',
+              color: 'var(--text-secondary)',
+              border: '1px solid var(--border-subtle)',
             }}
           >
-            {activeAssetsList.length} MEDIA AKTIF
+            {activeAssetsList.length} Aktif
           </span>
         </div>
 
         {activeAssetsList.length === 0 ? (
           <div style={{
-            padding: '28px',
-            borderRadius: '12px',
+            padding: '24px',
+            borderRadius: '8px',
             backgroundColor: 'var(--bg-surface-elevated)',
             border: '1px dashed var(--border-subtle)',
             textAlign: 'center',
             color: 'var(--text-muted)',
-            fontSize: '0.875rem',
+            fontSize: '0.8125rem',
           }}>
-            <Film size={28} style={{ margin: '0 auto 8px auto', opacity: 0.5 }} />
-            <div style={{ fontWeight: 600 }}>Player dalam kondisi Siaga (Standby)</div>
-            <p style={{ fontSize: '0.75rem', marginTop: '4px' }}>
-              Tidak ada video streaming yang aktif diputar saat ini atau player sedang menampilkan layout statis/gambar.
+            <Film size={24} style={{ margin: '0 auto 6px auto', opacity: 0.5 }} />
+            <div style={{ fontWeight: 600 }}>Siaga (Standby)</div>
+            <p style={{ fontSize: '0.75rem', marginTop: '2px' }}>
+              Tidak ada video aktif yang sedang diputar.
             </p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {activeAssetsList.map((asset, idx) => {
               const rawTitle = asset.media_name || asset.mediaName;
               const cleanTitle = cleanMediaTitle(rawTitle);
@@ -822,51 +819,48 @@ export default function ViewDisplayPage() {
               const codec = asset.codec || 'H.264 / AVC';
               const resolution = asset.resolution || (device.screenWidth ? `${device.screenWidth}x${device.screenHeight}` : '1920x1080');
               const verdict = getAssetVerdict(asset);
-              const zoneLabel = asset.zone_name || asset.zoneName || (activeAssetsList.length === 1 ? 'Zone Layar Penuh' : `Video Player #${idx + 1}`);
+              const zoneLabel = asset.zone_name || asset.zoneName || (activeAssetsList.length === 1 ? 'Layar Penuh' : `Player #${idx + 1}`);
 
               return (
                 <div
                   key={`${asset.media_id || idx}-${idx}`}
                   style={{
-                    padding: '16px',
-                    borderRadius: '12px',
+                    padding: '14px',
+                    borderRadius: '8px',
                     backgroundColor: 'var(--bg-surface-elevated)',
-                    border: dropped > 10 ? '1px solid rgba(244, 63, 94, 0.4)' : dropped > 0 ? '1px solid rgba(234, 179, 8, 0.3)' : '1px solid var(--border-subtle)',
+                    border: dropped > 10 ? '1px solid rgba(244, 63, 94, 0.3)' : '1px solid var(--border-subtle)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '12px',
+                    gap: '10px',
                   }}
                 >
                   {/* Zone Header & Title */}
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                     <div style={{ flex: '1', minWidth: '240px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
                         <span style={{
-                          padding: '2px 8px',
-                          borderRadius: '6px',
+                          padding: '1px 6px',
+                          borderRadius: '4px',
                           fontSize: '0.6875rem',
-                          fontWeight: 700,
-                          backgroundColor: 'rgba(255,255,255,0.08)',
-                          color: 'var(--accent-cyan)',
-                          letterSpacing: '0.02em',
+                          fontWeight: 600,
+                          backgroundColor: 'var(--bg-surface)',
+                          color: 'var(--text-secondary)',
+                          border: '1px solid var(--border-subtle)',
                         }}>
                           {zoneLabel}
                         </span>
                         <span style={{
-                          padding: '2px 8px',
-                          borderRadius: '6px',
                           fontSize: '0.6875rem',
-                          fontWeight: 700,
-                          backgroundColor: asset.playback_status === 'PLAYING' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(234, 179, 8, 0.12)',
-                          color: asset.playback_status === 'PLAYING' ? 'var(--accent-emerald)' : 'var(--accent-amber)',
+                          fontWeight: 500,
+                          color: 'var(--text-muted)',
                         }}>
                           ● {asset.playback_status || 'PLAYING'}
                         </span>
                       </div>
                       <div
                         style={{
-                          fontSize: '1rem',
-                          fontWeight: 800,
+                          fontSize: '0.9375rem',
+                          fontWeight: 700,
                           color: 'var(--text-primary)',
                           wordBreak: 'break-word',
                           lineHeight: 1.35,
@@ -880,96 +874,84 @@ export default function ViewDisplayPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span
                         style={{
-                          padding: '4px 10px',
-                          borderRadius: '9999px',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
                           fontSize: '0.6875rem',
-                          fontWeight: 700,
-                          backgroundColor: isHw ? 'rgba(16, 185, 129, 0.12)' : 'rgba(234, 179, 8, 0.12)',
-                          color: isHw ? 'var(--accent-emerald)' : 'var(--accent-amber)',
-                          border: isHw ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(234, 179, 8, 0.3)',
+                          fontWeight: 600,
+                          backgroundColor: 'var(--bg-surface)',
+                          color: 'var(--text-secondary)',
+                          border: '1px solid var(--border-subtle)',
                         }}
                       >
-                        {isHw ? '⚡ HARDWARE ACCELERATED' : '⚠️ SOFTWARE DECODING'}
+                        {isHw ? 'Hardware' : 'Software'}
                       </span>
                     </div>
                   </div>
 
                   {/* Profiler Metrics Strip */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
-                    <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--bg-surface)' }}>
-                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>RESOLUSI & CODEC</div>
-                      <div style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '8px' }}>
+                    <div style={{ padding: '8px 10px', borderRadius: '6px', backgroundColor: 'var(--bg-surface)' }}>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 500 }}>Resolusi & Codec</div>
+                      <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>
                         {resolution}
                       </div>
-                      <div style={{ fontSize: '0.6875rem', color: 'var(--accent-cyan)', fontWeight: 600, marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                         {codec}
                       </div>
                     </div>
 
-                    <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--bg-surface)' }}>
-                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>STREAM BITRATE</div>
-                      <div style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--accent-cyan)', marginTop: '2px' }}>
+                    <div style={{ padding: '8px 10px', borderRadius: '6px', backgroundColor: 'var(--bg-surface)' }}>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 500 }}>Bitrate</div>
+                      <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>
                         {bitrateKbps > 0 ? (bitrateKbps >= 1000 ? `${(bitrateKbps / 1000).toFixed(1)} Mbps` : `${bitrateKbps} Kbps`) : 'N/A'}
                       </div>
-                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        Data rate decoding
-                      </div>
                     </div>
 
-                    <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--bg-surface)' }}>
-                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>DECODER ENGINE</div>
-                      <div style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
+                    <div style={{ padding: '8px 10px', borderRadius: '6px', backgroundColor: 'var(--bg-surface)' }}>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 500 }}>Decoder</div>
+                      <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>
                         {asset.decoder_name || 'Hardware MediaCodec'}
                       </div>
-                      <div style={{ fontSize: '0.6875rem', color: isHw ? 'var(--accent-emerald)' : 'var(--accent-amber)', marginTop: '2px', fontWeight: 600 }}>
-                        {isHw ? 'GPU / DSP Dedicated' : 'CPU Software'}
-                      </div>
                     </div>
 
-                    <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--bg-surface)' }}>
-                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>FRAME DROP & INTEGRITAS</div>
+                    <div style={{ padding: '8px 10px', borderRadius: '6px', backgroundColor: 'var(--bg-surface)' }}>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 500 }}>Frame Drop</div>
                       <div style={{
-                        fontSize: '0.875rem',
-                        fontWeight: 800,
-                        color: dropped > 10 ? 'var(--accent-rose)' : dropped > 0 ? 'var(--accent-amber)' : 'var(--accent-emerald)',
+                        fontSize: '0.8125rem',
+                        fontWeight: 700,
+                        color: dropped > 10 ? 'var(--accent-rose)' : 'var(--text-primary)',
                         marginTop: '2px'
                       }}>
-                        {dropped} Frame Drop
+                        {dropped} Drop
                         {asset.dropped_frame_rate_percent ? ` (${asset.dropped_frame_rate_percent}%)` : ''}
-                      </div>
-                      <div style={{
-                        fontSize: '0.6875rem',
-                        color: dropped > 10 ? 'var(--accent-rose)' : dropped > 0 ? 'var(--accent-amber)' : 'var(--accent-emerald)',
-                        marginTop: '2px',
-                        fontWeight: 600
-                      }}>
-                        {dropped > 10 ? '🚨 LAG / STUTTERING' : dropped > 0 ? '⚠️ Jeda Minor Terdeteksi' : '✅ 100% Mulus'}
                       </div>
                     </div>
                   </div>
 
-                  {/* Dedicated Bottleneck Diagnostic Banner */}
-                  <div
-                    style={{
-                      padding: '10px 14px',
-                      borderRadius: '8px',
-                      backgroundColor: verdict.bg,
-                      border: `1px solid ${verdict.border}`,
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '10px',
-                    }}
-                  >
-                    <div style={{ marginTop: '2px' }}>{verdict.icon}</div>
-                    <div>
-                      <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: verdict.color }}>
-                        {verdict.title}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px', lineHeight: 1.4 }}>
-                        {verdict.desc}
-                      </div>
+                  {/* Diagnostic Banner */}
+                  {verdict.type !== 'success' ? (
+                    <div
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        backgroundColor: verdict.bg,
+                        border: `1px solid ${verdict.border}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '0.75rem',
+                      }}
+                    >
+                      {verdict.icon}
+                      <span style={{ fontWeight: 600, color: verdict.color }}>{verdict.title}:</span>
+                      <span style={{ color: 'var(--text-secondary)' }}>{verdict.desc}</span>
                     </div>
-                  </div>
+                  ) : (
+                    <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', paddingTop: '2px' }}>
+                      <CheckCircle2 size={13} style={{ opacity: 0.6 }} />
+                      <span>Pemutaran stabil tanpa kendala decoder.</span>
+                    </div>
+                  )}
                 </div>
               );
             })}

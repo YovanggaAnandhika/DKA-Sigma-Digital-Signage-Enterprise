@@ -278,10 +278,8 @@ class DeviceRepositoryImpl(
                 val hasReload = pendingCmd?.contains("Reload", ignoreCase = true) == true
                 val needsSync = json.optBoolean("needsManifestSync", false) || json.optBoolean("needs_manifest_sync", false) || hasReload
                 Result.success(com.dkaapis.sigma.domain.repository.HeartbeatResult(needsManifestSync = needsSync, pendingCommand = pendingCmd))
-            } else if (response.code == 404 || response.code == 401) {
-                clearCredentials()
-                Result.failure(IllegalStateException("Perangkat telah dihapus dari CMS (HTTP ${response.code})"))
             } else {
+                android.util.Log.w("DeviceRepository", "Heartbeat status non-200 (HTTP ${response.code}), skipping cycle without clearing credentials")
                 Result.success(com.dkaapis.sigma.domain.repository.HeartbeatResult(needsManifestSync = false, pendingCommand = null))
             }
         } catch (e: Exception) {

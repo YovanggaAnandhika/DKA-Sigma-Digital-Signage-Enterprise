@@ -108,10 +108,10 @@ class PlayerViewModel(
                     }
                 } else {
                     val err = result.exceptionOrNull()
-                    if (err is IllegalStateException || !registerAndPairUseCase.isAlreadyPaired()) {
+                    if (!registerAndPairUseCase.isAlreadyPaired()) {
                         _uiState.value = PlayerUiState.NotPaired
                     } else {
-                        _uiState.value = PlayerUiState.Error(err?.message ?: "Gagal sinkronisasi")
+                        _uiState.value = PlayerUiState.Error(err?.message ?: "Gagal sinkronisasi manifest")
                     }
                 }
             } catch (e: Exception) {

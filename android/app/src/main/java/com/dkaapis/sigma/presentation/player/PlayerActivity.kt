@@ -122,9 +122,10 @@ class PlayerActivity : AppCompatActivity() {
                         val currentHash = viewModel.getActiveManifestHash()
                         val res = deviceRepo.sendHeartbeat(manifestHash = currentHash)
                         if (res.isFailure) {
-                            val ex = res.exceptionOrNull()
-                            if (!deviceRepo.isPaired() || ex is IllegalStateException) {
+                            if (!deviceRepo.isPaired()) {
                                 viewModel.onDeviceUnpaired()
+                            } else {
+                                android.util.Log.w("PlayerActivity", "Heartbeat sementara gagal: ${res.exceptionOrNull()?.message}")
                             }
                         } else {
                             val hb = res.getOrNull()
@@ -140,6 +141,10 @@ class PlayerActivity : AppCompatActivity() {
                                     }
                                     cmd.contains("Reboot", ignoreCase = true) -> {
                                         handleRebootCommand()
+                                    }
+                                    cmd.contains("Unpair", ignoreCase = true) || cmd.contains("Decommission", ignoreCase = true) -> {
+                                        deviceRepo.clearCredentials()
+                                        viewModel.onDeviceUnpaired()
                                     }
                                 }
                             }
@@ -955,7 +960,8 @@ class PlayerActivity : AppCompatActivity() {
                                         durationSeconds = item.durationSeconds,
                                         isMuted = item.isMuted || block.isMuted,
                                         mediaId = mediaId,
-                                        mediaName = asset?.localFilename ?: file.name
+                                        mediaName = asset?.localFilename ?: file.name,
+                                        volumeLevel = item.volumeLevel
                                     )
                                 )
                             } else if (firstImageFile == null) {
@@ -978,7 +984,8 @@ class PlayerActivity : AppCompatActivity() {
                                     durationSeconds = block.durationSeconds,
                                     isMuted = block.isMuted,
                                     mediaId = mediaId,
-                                    mediaName = asset?.localFilename ?: file.name
+                                    mediaName = asset?.localFilename ?: file.name,
+                                    volumeLevel = block.volumeLevel
                                 )
                             )
                         } else if (firstImageFile == null) {
@@ -1189,6 +1196,10 @@ class PlayerActivity : AppCompatActivity() {
                 }
                 "REBOOT" -> {
                     handleRebootCommand()
+                }
+                "UNPAIR", "DECOMMISSION" -> {
+                    deviceRepo.clearCredentials()
+                    viewModel.onDeviceUnpaired()
                 }
                 "CALL_QUEUE", "QUEUE_CALL" -> {
                     val targetQueueId = data.optString("queueId", data.optString("queue_id", ""))

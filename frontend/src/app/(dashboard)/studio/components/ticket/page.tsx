@@ -643,20 +643,20 @@ export default function TicketPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Ticket size={24} color="var(--primary-400)" />
+            <Ticket size={22} color="var(--text-secondary)" />
             <h2 style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-              Komponen Nomor Antrian / Tiket
+              Nomor Antrian
             </h2>
           </div>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Layar pemanggil nomor antrian ritel otomatis, audio chime Ding-Dong Web Audio, dan kontrol kasir loket.
+            Kelola dan panggil nomor antrian loket.
           </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Link href="/studio/components/ticket/create" className="btn btn-primary">
-            <Plus size={16} />
-            <span>Tambah Layar Antrian Baru</span>
+          <Link href="/studio/components/ticket/create" className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '0.8125rem' }}>
+            <Plus size={15} />
+            <span>Tambah Antrian</span>
           </Link>
         </div>
       </div>
@@ -686,9 +686,9 @@ export default function TicketPage() {
           }}
         >
           {/* Search Box */}
-          <div className="card-elevated" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="card-elevated" style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ position: 'relative', flex: 1 }}>
-              <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
               <input
                 type="text"
                 value={search}
@@ -696,9 +696,9 @@ export default function TicketPage() {
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                placeholder="Cari layar antrian berdasarkan nama, awalan, atau loket..."
+                placeholder="Cari antrian..."
                 className="form-input"
-                style={{ paddingLeft: '36px' }}
+                style={{ paddingLeft: '34px', fontSize: '0.8125rem', padding: '7px 12px 7px 34px' }}
               />
             </div>
           </div>
@@ -709,19 +709,19 @@ export default function TicketPage() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Nama Komponen Antrian</th>
+                    <th>Nama</th>
                     <th>Awalan</th>
-                    <th>Nomor Terakhir</th>
-                    <th>Loket Saat Ini</th>
-                    <th>Audio Chime</th>
+                    <th>Nomor</th>
+                    <th>Loket</th>
+                    <th>Audio</th>
                     <th style={{ textAlign: 'right' }}>Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginated.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                        Belum ada antrian tersimpan. Klik tombol Tambah untuk membuat baru.
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
+                        Belum ada antrian. Klik tombol Tambah untuk membuat baru.
                       </td>
                     </tr>
                   ) : (
@@ -733,47 +733,31 @@ export default function TicketPage() {
                           onClick={() => setSelectedQueueId(q.id)}
                           style={{
                             cursor: 'pointer',
-                            backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.08)' : undefined,
-                            borderLeft: isSelected ? '4px solid var(--primary-500)' : '4px solid transparent',
+                            backgroundColor: isSelected ? 'var(--bg-surface-elevated)' : undefined,
+                            borderLeft: isSelected ? '3px solid var(--primary-500)' : '3px solid transparent',
                             transition: 'background-color 0.15s ease',
                           }}
                         >
                           <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <Link
-                                href={`/studio/components/ticket/${q.id}/edit`}
-                                onClick={(e) => e.stopPropagation()}
-                                style={{ textDecoration: 'none', color: 'inherit' }}
-                              >
-                                {q.name}
-                              </Link>
-                              {isSelected && (
-                                <span
-                                  style={{
-                                    fontSize: '0.6875rem',
-                                    fontWeight: 700,
-                                    padding: '2px 6px',
-                                    borderRadius: '4px',
-                                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                                    color: 'var(--primary-400)',
-                                    letterSpacing: '0.02em',
-                                  }}
-                                >
-                                  AKTIF DI KANAN
-                                </span>
-                              )}
-                            </div>
+                            <Link
+                              href={`/studio/components/ticket/${q.id}/edit`}
+                              onClick={(e) => e.stopPropagation()}
+                              style={{ textDecoration: 'none', color: 'inherit' }}
+                            >
+                              {q.name}
+                            </Link>
                           </td>
                           <td>
                             <span
                               style={{
-                                padding: '2px 10px',
-                                borderRadius: '6px',
-                                fontSize: '0.8125rem',
-                                fontWeight: 800,
-                                backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                                color: 'var(--primary-400)',
-                                border: '1px solid rgba(59, 130, 246, 0.3)',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                fontFamily: 'monospace',
+                                backgroundColor: 'var(--bg-surface-elevated)',
+                                color: 'var(--text-primary)',
+                                border: '1px solid var(--border-subtle)',
                               }}
                             >
                               {q.prefix}
@@ -782,19 +766,17 @@ export default function TicketPage() {
                           <td>
                             <span
                               style={{
-                                fontSize: '0.9375rem',
-                                fontWeight: 800,
-                                color: '#f59e0b',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
+                                fontSize: '0.875rem',
+                                fontWeight: 700,
+                                fontFamily: 'monospace',
+                                color: 'var(--text-primary)',
                               }}
                             >
                               {q.currentNumber}
                             </span>
                           </td>
                           <td>
-                            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                            <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
                               {q.currentCounter}
                             </span>
                           </td>
@@ -806,59 +788,45 @@ export default function TicketPage() {
                                   style={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
-                                    gap: '4px',
+                                    gap: '5px',
                                     fontSize: '0.75rem',
-                                    color: q.audioChimeEnabled ? 'var(--accent-emerald)' : 'var(--text-muted)',
+                                    color: 'var(--text-muted)',
                                     maxWidth: '180px',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap',
                                   }}
-                                  title={customAud ? `Audio: ${customAud.name}` : (q.audioChimeEnabled ? 'Chime Ding-Dong' : 'Mute')}
+                                  title={customAud ? customAud.name : (q.audioChimeEnabled ? 'Ding-Dong' : 'Mute')}
                                 >
-                                  <Volume2 size={12} style={{ flexShrink: 0 }} />
+                                  <Volume2 size={13} style={{ flexShrink: 0, opacity: 0.7 }} />
                                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {customAud ? customAud.name : (q.audioChimeEnabled ? 'Chime Ding-Dong' : 'Mute')}
+                                    {customAud ? customAud.name : (q.audioChimeEnabled ? 'Ding-Dong' : 'Mute')}
                                   </span>
                                 </span>
                               );
                             })()}
                           </td>
                           <td style={{ textAlign: 'right' }}>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedQueueId(q.id);
-                                }}
-                                className={isSelected ? 'btn btn-primary' : 'btn btn-outline'}
-                                style={{ padding: '5px 9px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                                title="Picu dan Kontrol Antrian Ini di Panel Kanan"
-                              >
-                                <Bell size={14} />
-                                <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>
-                                  {isSelected ? 'Terpilih' : 'Picu'}
-                                </span>
-                              </button>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                               <Link
                                 href={`/studio/components/ticket/${q.id}/edit`}
                                 onClick={(e) => e.stopPropagation()}
-                                className="btn btn-secondary"
-                                style={{ padding: '5px 8px' }}
-                                title="Edit Layar Antrian"
+                                className="btn btn-outline"
+                                style={{ padding: '5px 7px' }}
+                                title="Edit"
                               >
-                                <Edit size={14} />
+                                <Edit size={13} />
                               </Link>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleDelete(q.id, q.name);
                                 }}
-                                className="btn btn-danger"
-                                style={{ padding: '5px 8px' }}
+                                className="btn btn-outline"
+                                style={{ padding: '5px 7px', color: 'var(--text-muted)' }}
                                 title="Hapus"
                               >
-                                <Trash2 size={14} />
+                                <Trash2 size={13} />
                               </button>
                             </div>
                           </td>
@@ -944,20 +912,20 @@ export default function TicketPage() {
                 {/* Header Title */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Radio size={16} color="var(--primary-400)" />
-                    <span style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                      Kontrol Pemanggil Antrian
+                    <Radio size={15} style={{ color: 'var(--text-secondary)' }} />
+                    <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      Pemanggil Antrian
                     </span>
                   </div>
                   <span
                     style={{
                       fontSize: '0.75rem',
-                      fontWeight: 700,
+                      fontWeight: 600,
                       padding: '2px 8px',
                       borderRadius: '4px',
-                      backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                      color: 'var(--primary-400)',
-                      border: '1px solid rgba(59, 130, 246, 0.25)',
+                      backgroundColor: 'var(--bg-surface-elevated)',
+                      color: 'var(--text-secondary)',
+                      border: '1px solid var(--border-subtle)',
                     }}
                   >
                     {selectedQueue.name} ({selectedQueue.prefix})
@@ -968,25 +936,26 @@ export default function TicketPage() {
                 <div
                   style={{
                     backgroundColor: 'var(--bg-primary)',
-                    borderRadius: '14px',
-                    padding: '20px 16px',
+                    borderRadius: '12px',
+                    padding: '18px 14px',
                     textAlign: 'center',
-                    border: isChiming ? '2px solid var(--primary-400)' : '1px solid var(--border-subtle)',
-                    boxShadow: isChiming ? '0 0 24px rgba(56, 189, 248, 0.35)' : 'none',
-                    transition: 'all 0.25s ease',
+                    border: isChiming ? '2px solid var(--primary-500)' : '1px solid var(--border-subtle)',
+                    boxShadow: isChiming ? '0 0 20px rgba(59, 130, 246, 0.25)' : 'none',
+                    transition: 'all 0.2s ease',
                     position: 'relative',
                     overflow: 'hidden',
                   }}
                 >
-                  <div style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.1em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                    NOMOR ANTRIAN
+                  <div style={{ fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                    Nomor Antrian
                   </div>
                   <div
                     style={{
-                      fontSize: '3.5rem',
-                      fontWeight: 900,
-                      letterSpacing: '0.04em',
-                      color: 'var(--primary-400)',
+                      fontSize: '3.25rem',
+                      fontWeight: 800,
+                      letterSpacing: '0.02em',
+                      fontFamily: 'monospace',
+                      color: 'var(--text-primary)',
                       lineHeight: 1.1,
                       margin: '6px 0',
                     }}
@@ -996,13 +965,13 @@ export default function TicketPage() {
                   <div
                     style={{
                       display: 'inline-block',
-                      padding: '4px 16px',
-                      borderRadius: '8px',
-                      backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                      border: '1px solid rgba(245, 158, 11, 0.3)',
-                      color: '#fbbf24',
-                      fontSize: '1rem',
-                      fontWeight: 800,
+                      padding: '4px 14px',
+                      borderRadius: '6px',
+                      backgroundColor: 'var(--bg-surface-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      color: 'var(--text-secondary)',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
                     }}
                   >
                     {selectedQueue.currentCounter}
@@ -1015,9 +984,9 @@ export default function TicketPage() {
                       overflow: 'hidden',
                       whiteSpace: 'nowrap',
                       backgroundColor: 'var(--bg-surface-elevated)',
-                      padding: '6px 12px',
+                      padding: '6px 10px',
                       borderRadius: '6px',
-                      color: 'var(--text-secondary)',
+                      color: 'var(--text-muted)',
                       fontSize: '0.75rem',
                     }}
                   >
@@ -1026,9 +995,9 @@ export default function TicketPage() {
                 </div>
 
                 {/* Configuration / Selectors */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Target Layar:</label>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)' }}>Layar:</label>
                     <select
                       value={targetDeviceId}
                       onChange={(e) => setTargetDeviceId(e.target.value)}
@@ -1037,7 +1006,7 @@ export default function TicketPage() {
                         color: 'var(--text-primary)',
                         border: '1px solid var(--input-border)',
                         borderRadius: '6px',
-                        padding: '5px 10px',
+                        padding: '5px 8px',
                         fontSize: '0.75rem',
                         maxWidth: '220px',
                       }}
@@ -1052,7 +1021,7 @@ export default function TicketPage() {
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Meja / Loket:</label>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)' }}>Loket:</label>
                     <select
                       value={selectedQueue.currentCounter}
                       onChange={(e) => handleCounterChange(e.target.value)}
@@ -1061,7 +1030,7 @@ export default function TicketPage() {
                         color: 'var(--text-primary)',
                         border: '1px solid var(--input-border)',
                         borderRadius: '6px',
-                        padding: '5px 10px',
+                        padding: '5px 8px',
                         fontSize: '0.75rem',
                         maxWidth: '220px',
                       }}
@@ -1076,7 +1045,7 @@ export default function TicketPage() {
                 </div>
 
                 {/* Action Buttons */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '8px', marginTop: '4px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '8px', marginTop: '2px' }}>
                   <button
                     onClick={handleRepeatCall}
                     className="btn btn-secondary"
@@ -1085,11 +1054,11 @@ export default function TicketPage() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '6px',
-                      padding: '9px 12px',
+                      padding: '8px 12px',
                       fontSize: '0.8125rem',
                     }}
                   >
-                    <Volume2 size={16} />
+                    <Volume2 size={15} />
                     <span>Panggil Ulang</span>
                   </button>
                   <button
@@ -1100,13 +1069,13 @@ export default function TicketPage() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '6px',
-                      padding: '9px 12px',
+                      padding: '8px 12px',
                       fontSize: '0.8125rem',
-                      fontWeight: 800,
+                      fontWeight: 700,
                     }}
                   >
-                    <Bell size={16} />
-                    <span>Panggil Selanjutnya (+1)</span>
+                    <Bell size={15} />
+                    <span>Panggil Selanjutnya</span>
                   </button>
                 </div>
               </div>
@@ -1115,29 +1084,28 @@ export default function TicketPage() {
               <div
                 className="card-elevated"
                 style={{
-                  padding: '16px',
+                  padding: '14px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '10px',
+                  gap: '8px',
                   backgroundColor: 'var(--bg-surface)',
                   border: '1px solid var(--border-subtle)',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <History size={16} color="var(--primary-400)" />
-                    <span style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                      Riwayat Pemanggilan
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <History size={14} style={{ color: 'var(--text-muted)' }} />
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      Riwayat
                     </span>
                     <span
                       style={{
                         fontSize: '0.6875rem',
-                        fontWeight: 700,
-                        padding: '1px 6px',
-                        borderRadius: '10px',
+                        fontWeight: 600,
+                        padding: '1px 5px',
+                        borderRadius: '4px',
                         backgroundColor: 'var(--bg-surface-elevated)',
                         color: 'var(--text-muted)',
-                        border: '1px solid var(--border-subtle)',
                       }}
                     >
                       {callHistory.length}
@@ -1159,7 +1127,7 @@ export default function TicketPage() {
                       }}
                       title="Bersihkan riwayat panggilan"
                     >
-                      <RotateCcw size={12} />
+                      <RotateCcw size={11} />
                       <span>Bersihkan</span>
                     </button>
                   )}
@@ -1172,13 +1140,13 @@ export default function TicketPage() {
                     overflowY: 'auto',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '6px',
-                    paddingRight: '4px',
+                    gap: '4px',
+                    paddingRight: '2px',
                   }}
                 >
                   {callHistory.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '24px 12px', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
-                      Belum ada riwayat panggilan tiket hari ini.
+                    <div style={{ textAlign: 'center', padding: '20px 10px', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                      Belum ada riwayat panggilan.
                     </div>
                   ) : (
                     callHistory.map((h) => {
@@ -1191,48 +1159,38 @@ export default function TicketPage() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            padding: '8px 10px',
-                            borderRadius: '8px',
-                            backgroundColor: 'var(--bg-primary)',
+                            padding: '6px 8px',
+                            borderRadius: '6px',
+                            backgroundColor: 'var(--bg-surface-elevated)',
                             border: '1px solid var(--border-subtle)',
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Clock size={12} style={{ color: 'var(--text-muted)' }} />
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Clock size={11} style={{ color: 'var(--text-muted)' }} />
+                            <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
                               {h.calledAt}
                             </span>
-                            <span style={{ fontWeight: 800, fontSize: '0.875rem', color: 'var(--primary-400)' }}>
+                            <span style={{ fontWeight: 700, fontSize: '0.8125rem', fontFamily: 'monospace', color: 'var(--text-primary)' }}>
                               {h.ticketNumber}
                             </span>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                            <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
                               {h.counterName}
                             </span>
                           </div>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span
-                              style={{
-                                fontSize: '0.6875rem',
-                                fontWeight: 700,
-                                padding: '1px 6px',
-                                borderRadius: '4px',
-                                backgroundColor: isPlayerTap
-                                  ? 'rgba(168, 85, 247, 0.15)'
-                                  : isRecall
-                                  ? 'rgba(245, 158, 11, 0.15)'
-                                  : 'rgba(16, 185, 129, 0.15)',
-                                color: isPlayerTap ? '#c084fc' : isRecall ? '#fbbf24' : '#34d399',
-                                border: isPlayerTap
-                                  ? '1px solid rgba(168, 85, 247, 0.3)'
-                                  : isRecall
-                                  ? '1px solid rgba(245, 158, 11, 0.3)'
-                                  : '1px solid rgba(16, 185, 129, 0.3)',
-                              }}
-                            >
-                              {isPlayerTap ? 'Sentuh Player' : isRecall ? 'Panggil Ulang' : 'Panggilan Baru'}
-                            </span>
-                          </div>
+                          <span
+                            style={{
+                              fontSize: '0.625rem',
+                              fontWeight: 600,
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              backgroundColor: 'var(--bg-surface)',
+                              color: 'var(--text-muted)',
+                              border: '1px solid var(--border-subtle)',
+                            }}
+                          >
+                            {isPlayerTap ? 'Player' : isRecall ? 'Ulang' : 'Baru'}
+                          </span>
                         </div>
                       );
                     })

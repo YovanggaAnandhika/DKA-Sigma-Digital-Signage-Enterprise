@@ -13,7 +13,8 @@ data class LayerPlaylistItem(
     val mediaItemId: String = "",
     val position: Int = 0,
     val durationSeconds: Int = 0,
-    val isMuted: Boolean = false
+    val isMuted: Boolean = false,
+    val volumeLevel: Int = 100
 )
 
 data class LayerBlock(
@@ -25,6 +26,7 @@ data class LayerBlock(
     val startTimeSeconds: Int = 0,
     val durationSeconds: Int = 10,
     val isMuted: Boolean = false,
+    val volumeLevel: Int = 100,
     val playlistItems: List<LayerPlaylistItem> = emptyList()
 )
 

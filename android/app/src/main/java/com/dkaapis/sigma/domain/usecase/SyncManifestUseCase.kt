@@ -27,25 +27,13 @@ class SyncManifestUseCase(
         }
 
         val err = remoteResult.exceptionOrNull()
-        val errMsg = err?.message ?: ""
 
-        // Jika device telah dihapus atau ditolak dari CMS (404/401/Device not found)
-        if (errMsg.contains("Device not found", ignoreCase = true) ||
-            errMsg.contains("404") ||
-            errMsg.contains("Unauthorized", ignoreCase = true) ||
-            errMsg.contains("401") ||
-            errMsg.contains("tidak ditemukan", ignoreCase = true)
-        ) {
-            deviceRepository.clearCredentials()
-            manifestRepository.clearManifestCache()
-            return Result.failure(IllegalStateException("Perangkat telah dihapus dari CMS. Silakan lakukan pairing ulang."))
-        }
-
-        // Jika offline murni / timeout, fallback ke manifest lokal yang sudah dicache
+        // Fallback offline-first: jika remote fetch gagal (network timeout, 404, 401, atau server restart),
+        // gunakan manifest lokal yang tersimpan agar player tetap beroperasi normal tanpa logout otomatis.
         return if (cached != null) {
             Result.success(cached)
         } else {
-            Result.failure(err ?: Exception("Gagal sinkronisasi manifest"))
+            Result.failure(err ?: Exception("Gagal sinkronisasi manifest dan belum ada cache lokal"))
         }
     }
 }

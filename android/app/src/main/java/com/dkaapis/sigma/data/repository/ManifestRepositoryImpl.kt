@@ -66,9 +66,6 @@ class ManifestRepositoryImpl(
                     val cached = getLocalCachedManifest()
                     Result.success(cached)
                 }
-            } else if (response.code == 404 || response.code == 401) {
-                manifestStorage.clear()
-                Result.failure(IllegalStateException("HTTP error ${response.code}: Perangkat telah dihapus dari CMS"))
             } else {
                 val cached = getLocalCachedManifest()
                 if (cached != null) {
@@ -153,23 +150,49 @@ class ManifestRepositoryImpl(
                             hasWebview -> ZoneWidgetType.WEBVIEW
                             else -> ZoneWidgetType.NONE
                         }
+                        val blockVol = if (bObj.has("volumeLevel")) bObj.optInt("volumeLevel", 100) else bObj.optInt("volume_level", 100)
                         val playlistItems = mutableListOf<LayerPlaylistItem>()
                         val plObj = bObj.optJSONObject("playlist")
                         val itemsArr = plObj?.optJSONArray("itemsList")
                             ?: plObj?.optJSONArray("items")
                             ?: bObj.optJSONArray("playlistItems")
+
+                        val overrideMap = mutableMapOf<String, Pair<Boolean?, Int?>>()
+                        val overridesArr = bObj.optJSONArray("itemOverridesList")
+                            ?: bObj.optJSONArray("item_overrides")
+                        if (overridesArr != null) {
+                            for (oIdx in 0 until overridesArr.length()) {
+                                val oObj = overridesArr.getJSONObject(oIdx)
+                                val pItemId = oObj.optString("playlistItemId").ifEmpty { oObj.optString("playlist_item_id") }
+                                if (pItemId.isNotEmpty()) {
+                                    val ovMuted = if (oObj.has("isMuted")) oObj.optBoolean("isMuted")
+                                        else if (oObj.has("is_muted")) oObj.optBoolean("is_muted")
+                                        else null
+                                    val ovVol = if (oObj.has("volumeLevel")) oObj.optInt("volumeLevel")
+                                        else if (oObj.has("volume_level")) oObj.optInt("volume_level")
+                                        else null
+                                    overrideMap[pItemId] = Pair(ovMuted, ovVol)
+                                }
+                            }
+                        }
+
                         if (itemsArr != null) {
                             for (k in 0 until itemsArr.length()) {
                                 val itm = itemsArr.getJSONObject(k)
                                 val mId = itm.optString("mediaItemId").ifEmpty { itm.optString("media_item_id") }
                                 if (mId.isNotEmpty()) {
+                                    val itemId = itm.optString("id", "pl-item-$k")
+                                    val ov = overrideMap[itemId]
+                                    val itmMuted = ov?.first ?: itm.optBoolean("isMuted", itm.optBoolean("is_muted", false))
+                                    val itmVol = ov?.second ?: (if (itm.has("volumeLevel")) itm.optInt("volumeLevel") else itm.optInt("volume_level", blockVol))
                                     playlistItems.add(
                                         LayerPlaylistItem(
-                                            id = itm.optString("id", "pl-item-$k"),
+                                            id = itemId,
                                             mediaItemId = mId,
                                             position = itm.optInt("position", k),
                                             durationSeconds = itm.optInt("durationSeconds", itm.optInt("duration_seconds", 0)),
-                                            isMuted = itm.optBoolean("isMuted", itm.optBoolean("is_muted", false))
+                                            isMuted = itmMuted,
+                                            volumeLevel = itmVol
                                         )
                                     )
                                 }
@@ -188,6 +211,7 @@ class ManifestRepositoryImpl(
                                 startTimeSeconds = bObj.optInt("startTimeSeconds", 0),
                                 durationSeconds = bObj.optInt("durationSeconds", 10),
                                 isMuted = bObj.optBoolean("isMuted", false),
+                                volumeLevel = blockVol,
                                 playlistItems = playlistItems
                             )
                         )

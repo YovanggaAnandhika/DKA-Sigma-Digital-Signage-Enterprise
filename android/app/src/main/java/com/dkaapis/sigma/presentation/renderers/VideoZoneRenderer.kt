@@ -17,7 +17,8 @@ data class VideoPlaylistItem(
     val durationSeconds: Int = 0,
     val isMuted: Boolean = false,
     val mediaId: String = "",
-    val mediaName: String = ""
+    val mediaName: String = "",
+    val volumeLevel: Int = 100
 )
 
 class VideoZoneRenderer(
@@ -34,8 +35,8 @@ class VideoZoneRenderer(
     private var lastTrackIndex: Int = -1
     private var currentTrackStartTimeMs: Long = 0L
 
-    fun createView(parent: ViewGroup, videoFile: File, isMuted: Boolean = false): PlayerView {
-        return createPlaylistView(parent, listOf(VideoPlaylistItem(videoFile, 0, isMuted)))
+    fun createView(parent: ViewGroup, videoFile: File, isMuted: Boolean = false, volumeLevel: Int = 100): PlayerView {
+        return createPlaylistView(parent, listOf(VideoPlaylistItem(videoFile, 0, isMuted, volumeLevel = volumeLevel)))
     }
 
     fun createPlaylistView(parent: ViewGroup, playlist: List<VideoPlaylistItem>): PlayerView {
@@ -74,9 +75,11 @@ class VideoZoneRenderer(
                 addMediaItem(mediaItemBuilder.build())
             }
 
-            val firstMuted = playlist.firstOrNull()?.isMuted ?: false
+            val firstItem = playlist.firstOrNull()
+            val firstMuted = firstItem?.isMuted ?: false
+            val firstBaseVol = (firstItem?.volumeLevel ?: 100).coerceIn(0, 100) / 100f
             currentItemMuted = firstMuted
-            volume = if (firstMuted) 0f else (if (isDucked) 0.15f else 1.0f)
+            volume = if (firstMuted) 0f else (if (isDucked) 0f else firstBaseVol)
             lastTrackIndex = 0
             currentTrackStartTimeMs = System.currentTimeMillis()
 
@@ -99,8 +102,9 @@ class VideoZoneRenderer(
                     if (idx in playlist.indices) {
                         val current = playlist[idx]
                         currentItemMuted = current.isMuted
-                        volume = if (current.isMuted) 0f else (if (isDucked) 0.15f else 1.0f)
-                        android.util.Log.i("VideoZoneRenderer", "Track transitioned to item $idx: ${current.file.name}, isMuted=${current.isMuted}")
+                        val itemBaseVol = current.volumeLevel.coerceIn(0, 100) / 100f
+                        volume = if (current.isMuted) 0f else (if (isDucked) 0f else itemBaseVol)
+                        android.util.Log.i("VideoZoneRenderer", "Track transitioned to item $idx: ${current.file.name}, isMuted=${current.isMuted}, volumeLevel=${current.volumeLevel}")
                     }
                 }
 
@@ -184,11 +188,13 @@ class VideoZoneRenderer(
 
     fun setDuckedVolume(duck: Boolean) {
         isDucked = duck
-        if (currentItemMuted) {
+        val current = playlistItems.getOrNull(exoPlayer?.currentMediaItemIndex ?: 0)
+        if (current?.isMuted == true || currentItemMuted) {
             exoPlayer?.volume = 0f
         } else {
-            // Mute total (0f) saat speech panggilan antrian aktif, lalu pulihkan (1.0f) saat selesai
-            exoPlayer?.volume = if (duck) 0f else 1.0f
+            val baseVol = (current?.volumeLevel ?: 100).coerceIn(0, 100) / 100f
+            // Mute total (0f) saat speech panggilan antrian aktif, lalu pulihkan baseVol saat selesai
+            exoPlayer?.volume = if (duck) 0f else baseVol
         }
     }
 
