@@ -199,7 +199,7 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             .await
             .map_err(Status::from)?;
 
-        let needs_manifest_sync = match crate::modules::distribution::manifest::services::ManifestService::get_manifest_for_device(&self.pool, device_id, client_hash).await {
+        let mut needs_manifest_sync = match crate::modules::distribution::manifest::services::ManifestService::get_manifest_for_device(&self.pool, device_id, client_hash).await {
             Ok(res) => !res.is_up_to_date,
             Err(_) => false,
         };
@@ -219,6 +219,11 @@ impl DeviceServiceTrait for DeviceServiceImpl {
                     .bind(cid)
                     .execute(&self.pool)
                     .await;
+            }
+            if let Some(ref c) = cmd_type {
+                if c.to_lowercase().contains("reload") {
+                    needs_manifest_sync = true;
+                }
             }
             cmd_type
         } else {

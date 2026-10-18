@@ -272,7 +272,9 @@ class DeviceRepositoryImpl(
             val response = httpClient.newCall(request).execute()
             if (response.isSuccessful) {
                 val json = JSONObject(response.body?.string() ?: "")
-                val needsSync = json.optBoolean("needsManifestSync", false) || json.optBoolean("needs_manifest_sync", false)
+                val pendingCmd = json.optString("pendingCommand", "").ifBlank { json.optString("pending_command", "") }
+                val hasReload = pendingCmd.contains("Reload", ignoreCase = true)
+                val needsSync = json.optBoolean("needsManifestSync", false) || json.optBoolean("needs_manifest_sync", false) || hasReload
                 Result.success(needsSync)
             } else if (response.code == 404 || response.code == 401) {
                 clearCredentials()

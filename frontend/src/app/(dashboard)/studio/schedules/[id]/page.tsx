@@ -78,9 +78,9 @@ export default function ViewSchedulePage() {
   const [uploadLogs, setUploadLogs] = useState<UploadLogItem[]>([]);
   const [uploadErrors, setUploadErrors] = useState<ChunkErrorItem[]>([]);
 
-  const fetchScheduleData = async () => {
+  const fetchScheduleData = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const [sched, devRes, grpRes, allMediaRes] = await Promise.all([
         api.getSchedule(params.id),
         api.getDevices({ limit: 1000 }),
@@ -122,10 +122,12 @@ export default function ViewSchedulePage() {
         }
       }
     } catch (err: any) {
-      alert(err.message || 'Gagal memuat jadwal tayang');
-      router.push('/studio/schedules');
+      if (!silent) {
+        alert(err.message || 'Gagal memuat jadwal tayang');
+        router.push('/studio/schedules');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -187,7 +189,7 @@ export default function ViewSchedulePage() {
         },
         ...prev,
       ]);
-      fetchScheduleData();
+      await fetchScheduleData(true);
     } catch (err: any) {
       setUploadLogs((prev) => [
         {
@@ -456,7 +458,7 @@ export default function ViewSchedulePage() {
 
         setSelectedUploadFile(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
-        fetchScheduleData();
+        await fetchScheduleData(true);
       }
     } catch (err: any) {
       if (err.message?.includes('dibatalkan')) {
@@ -546,7 +548,7 @@ export default function ViewSchedulePage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button onClick={fetchScheduleData} className="btn btn-outline" style={{ padding: '8px 12px' }} title="Muat Ulang">
+          <button onClick={() => fetchScheduleData()} className="btn btn-outline" style={{ padding: '8px 12px' }} title="Muat Ulang">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
           <button
