@@ -2,15 +2,14 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { api, Layout, Device, DisplayGroup } from '@/lib/services';
 import { Pagination } from '@/components/ui/Pagination';
 import {
   Plus,
   Search,
   RefreshCw,
-  Edit,
   Trash2,
-  Eye,
   Send,
   Calendar,
   Clock,
@@ -22,6 +21,7 @@ import {
 } from 'lucide-react';
 
 export default function LayoutsDataPage() {
+  const router = useRouter();
   const [layouts, setLayouts] = useState<Layout[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -195,7 +195,7 @@ export default function LayoutsDataPage() {
       {/* Layout Table */}
       <div className="card-elevated" style={{ overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+          <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface-elevated)' }}>
                 <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-secondary)' }}>NAMA TEMPLATE LAYOUT</th>
@@ -222,9 +222,21 @@ export default function LayoutsDataPage() {
                 </tr>
               ) : (
                 layouts.map((l) => (
-                  <tr key={l.id} style={{ borderBottom: '1px solid var(--border-subtle)', transition: 'background-color 0.15s ease' }}>
+                  <tr
+                    key={l.id}
+                    onClick={() => router.push(`/studio/layouts/data/${l.id}/edit`)}
+                    style={{
+                      borderBottom: '1px solid var(--border-subtle)',
+                      transition: 'background-color 0.15s ease',
+                      cursor: 'pointer',
+                    }}
+                  >
                     <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      <Link href={`/studio/layouts/data/${l.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <Link
+                        href={`/studio/layouts/data/${l.id}/edit`}
+                        style={{ textDecoration: 'none', color: 'inherit' }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {l.name}
                       </Link>
                     </td>
@@ -240,7 +252,10 @@ export default function LayoutsDataPage() {
                     <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
                       {l.createdAt ? new Date(l.createdAt).toLocaleDateString('id-ID', { dateStyle: 'medium' }) : '-'}
                     </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                    <td
+                      style={{ padding: '12px 16px', textAlign: 'right' }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div style={{ display: 'inline-flex', gap: '6px' }}>
                         {!l.isScheduleSynced && (
                           <button
@@ -259,13 +274,12 @@ export default function LayoutsDataPage() {
                             <Send size={13} />
                           </button>
                         )}
-                        <Link href={`/studio/layouts/data/${l.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Preview Canvas">
-                          <Eye size={14} />
-                        </Link>
-                        <Link href={`/studio/layouts/data/${l.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit Canvas Designer">
-                          <Edit size={14} />
-                        </Link>
-                        <button onClick={() => handleDelete(l.id, l.name)} className="btn btn-outline" style={{ padding: '5px 8px', color: 'var(--accent-rose)' }} title="Hapus Template">
+                        <button
+                          onClick={() => handleDelete(l.id, l.name)}
+                          className="btn btn-outline"
+                          style={{ padding: '5px 8px', color: 'var(--accent-rose)' }}
+                          title="Hapus Template"
+                        >
                           <Trash2 size={14} />
                         </button>
                       </div>

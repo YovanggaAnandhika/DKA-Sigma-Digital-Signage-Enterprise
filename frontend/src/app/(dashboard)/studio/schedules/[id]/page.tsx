@@ -684,11 +684,11 @@ export default function ViewSchedulePage() {
 
                   {primaryEvent?.layoutId && (
                     <Link
-                      href={`/studio/layouts/data/${primaryEvent.layoutId}`}
+                      href={`/studio/layouts/data/${primaryEvent.layoutId}/edit`}
                       className="btn btn-outline"
                       style={{ padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem' }}
                     >
-                      <span>Preview</span>
+                      <span>Buka Editor Layout</span>
                       <ExternalLink size={12} />
                     </Link>
                   )}

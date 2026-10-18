@@ -139,7 +139,7 @@ export default function LayoutHistoryPage() {
                   return (
                     <tr key={item.id} style={{ borderBottom: '1px solid var(--border-subtle)', transition: 'background-color 0.15s ease' }}>
                       <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                        <Link href={`/studio/layouts/data/${item.layoutId}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                        <Link href={`/studio/layouts/data/${item.layoutId}/edit`} style={{ textDecoration: 'none', color: 'inherit' }}>
                           {item.layoutName || 'Layout'}
                         </Link>
                       </td>
