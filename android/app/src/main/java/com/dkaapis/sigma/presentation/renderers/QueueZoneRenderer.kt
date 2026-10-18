@@ -129,7 +129,7 @@ class QueueZoneRenderer(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            setBackgroundColor(Color.parseColor(bgColor))
+            setBackgroundColor(parseColor(bgColor, Color.parseColor("#0f172a")))
         }
 
         val parsedItems = mutableListOf<QueueItemMeta>()
@@ -225,7 +225,7 @@ class QueueZoneRenderer(
             val textView = TextView(context).apply {
                 tag = meta
                 text = textContent
-                setTextColor(Color.parseColor(meta.textColor))
+                setTextColor(parseColor(meta.textColor, Color.WHITE))
                 gravity = when (meta.textAlign.lowercase()) {
                     "left", "start" -> Gravity.START or Gravity.CENTER_VERTICAL
                     "right", "end" -> Gravity.END or Gravity.CENTER_VERTICAL
@@ -240,12 +240,12 @@ class QueueZoneRenderer(
                 if (meta.backgroundColor != "transparent" && meta.backgroundColor.isNotBlank()) {
                     val gd = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
-                        setColor(Color.parseColor(meta.backgroundColor))
+                        setColor(parseColor(meta.backgroundColor, Color.TRANSPARENT))
                         if (meta.borderRadius > 0f) {
                             cornerRadius = meta.borderRadius * density
                         }
-                        if (meta.borderWidth > 0 && meta.borderColor != "#00000000") {
-                            setStroke((meta.borderWidth * density).toInt(), Color.parseColor(meta.borderColor))
+                        if (meta.borderWidth > 0 && meta.borderColor != "#00000000" && meta.borderColor != "transparent") {
+                            setStroke((meta.borderWidth * density).toInt(), parseColor(meta.borderColor, Color.TRANSPARENT))
                         }
                     }
                     background = gd
@@ -287,5 +287,26 @@ class QueueZoneRenderer(
         numberTextView?.postDelayed({
             onCallAudioFinished()
         }, 3000)
+    }
+
+    private fun parseColor(colorStr: String, fallback: Int): Int {
+        if (colorStr.isBlank() || colorStr.equals("transparent", ignoreCase = true)) return Color.TRANSPARENT
+        val trimmed = colorStr.trim()
+        if (trimmed.startsWith("#")) {
+            return try { Color.parseColor(trimmed) } catch (_: Exception) { fallback }
+        }
+        if (trimmed.startsWith("rgba", ignoreCase = true)) {
+            try {
+                val parts = trimmed.substringAfter("(").substringBefore(")").split(",")
+                if (parts.size >= 4) {
+                    val r = parts[0].trim().toInt()
+                    val g = parts[1].trim().toInt()
+                    val b = parts[2].trim().toInt()
+                    val a = (parts[3].trim().toFloat() * 255).toInt().coerceIn(0, 255)
+                    return Color.argb(a, r, g, b)
+                }
+            } catch (_: Exception) {}
+        }
+        return try { Color.parseColor(trimmed) } catch (_: Exception) { fallback }
     }
 }

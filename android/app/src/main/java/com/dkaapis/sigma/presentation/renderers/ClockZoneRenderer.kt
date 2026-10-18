@@ -26,15 +26,19 @@ class ClockZoneRenderer(
         parent: ViewGroup,
         city: String = "Makassar",
         showSeconds: Boolean = true,
-        backgroundColorHex: String = "#0f172a",
-        textColorHex: String = "#ffffff",
-        subtitleColorHex: String = "#94a3b8",
-        borderColorHex: String = "#1e3a8a",
-        borderRadiusDp: Int = 12,
-        timeFontSizeSp: Float = 52f,
+        backgroundColorHex: String = "#ffffff",
+        textColorHex: String = "#0f172a",
+        subtitleColorHex: String = "#64748b",
+        borderColorHex: String = "transparent",
+        borderRadiusDp: Int = 0,
+        timeFontSizeSp: Float = 56f,
         dateFontSizeSp: Float = 14f
     ): View {
         val density = context.resources.displayMetrics.density
+        val bgColor = parseColor(backgroundColorHex, Color.WHITE)
+        val textColor = parseColor(textColorHex, Color.parseColor("#0f172a"))
+        val subColor = parseColor(subtitleColorHex, Color.parseColor("#64748b"))
+        val hasBorder = borderColorHex.isNotBlank() && !borderColorHex.equals("transparent", ignoreCase = true)
 
         val container = LinearLayout(context).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -45,52 +49,51 @@ class ClockZoneRenderer(
             gravity = Gravity.CENTER
             setPadding((16 * density).toInt(), (16 * density).toInt(), (16 * density).toInt(), (16 * density).toInt())
 
-            val bgDrawable = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                setColor(Color.parseColor(backgroundColorHex.ifBlank { "#0f172a" }))
-                if (borderRadiusDp > 0) {
-                    cornerRadius = borderRadiusDp * density
+            if (borderRadiusDp > 0 || hasBorder) {
+                val bgDrawable = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setColor(bgColor)
+                    if (borderRadiusDp > 0) {
+                        cornerRadius = borderRadiusDp * density
+                    }
+                    if (hasBorder) {
+                        setStroke((1 * density).toInt(), parseColor(borderColorHex, Color.TRANSPARENT))
+                    }
                 }
-                if (borderColorHex.isNotBlank() && borderColorHex != "transparent") {
-                    setStroke((1 * density).toInt(), Color.parseColor(borderColorHex))
-                }
+                background = bgDrawable
+            } else {
+                setBackgroundColor(bgColor)
             }
-            background = bgDrawable
         }
 
-        val cityText = TextView(context).apply {
-            text = "📍 $city • Cerah Berawan 31°C"
-            setTextColor(Color.parseColor(subtitleColorHex.ifBlank { "#94a3b8" }))
-            textSize = if (dateFontSizeSp > 0f) dateFontSizeSp else 14f
-            gravity = Gravity.CENTER
-        }
-
+        // Line 1: Time (matches Web Studio layout order)
         val timeText = TextView(context).apply {
-            setTextColor(Color.parseColor(textColorHex.ifBlank { "#ffffff" }))
-            textSize = if (timeFontSizeSp > 0f) timeFontSizeSp else 52f
+            setTextColor(textColor)
+            textSize = if (timeFontSizeSp > 0f) timeFontSizeSp else 56f
             typeface = Typeface.MONOSPACE
             gravity = Gravity.CENTER
             setTypeface(typeface, Typeface.BOLD)
+            letterSpacing = 0.05f
         }
 
-        val dateText = TextView(context).apply {
-            setTextColor(Color.parseColor(subtitleColorHex.ifBlank { "#94a3b8" }))
+        // Line 2: City / Weather Subtitle (matches Web Studio line 445: City • Cerah 31°C)
+        val cityText = TextView(context).apply {
+            text = "$city • Cerah 31°C"
+            setTextColor(subColor)
             textSize = if (dateFontSizeSp > 0f) dateFontSizeSp else 14f
             gravity = Gravity.CENTER
+            setPadding(0, (4 * density).toInt(), 0, 0)
         }
 
-        container.addView(cityText)
         container.addView(timeText)
-        container.addView(dateText)
+        container.addView(cityText)
 
-        val timeFormat = SimpleDateFormat(if (showSeconds) "HH:mm:ss" else "HH:mm", Locale.getDefault())
-        val dateFormat = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.forLanguageTag("id-ID"))
+        // Web Studio uses toLocaleTimeString('id-ID') which formats with dots (e.g. 17.40.07)
+        val timeFormat = SimpleDateFormat(if (showSeconds) "HH.mm.ss" else "HH.mm", Locale.getDefault())
 
         val runnable = object : Runnable {
             override fun run() {
-                val now = Date()
-                timeText.text = timeFormat.format(now)
-                dateText.text = dateFormat.format(now)
+                timeText.text = timeFormat.format(Date())
                 handler.postDelayed(this, 1000)
             }
         }
@@ -103,5 +106,26 @@ class ClockZoneRenderer(
     fun release() {
         updateRunnable?.let { handler.removeCallbacks(it) }
         updateRunnable = null
+    }
+
+    private fun parseColor(colorStr: String, fallback: Int): Int {
+        if (colorStr.isBlank() || colorStr.equals("transparent", ignoreCase = true)) return Color.TRANSPARENT
+        val trimmed = colorStr.trim()
+        if (trimmed.startsWith("#")) {
+            return try { Color.parseColor(trimmed) } catch (_: Exception) { fallback }
+        }
+        if (trimmed.startsWith("rgba", ignoreCase = true)) {
+            try {
+                val parts = trimmed.substringAfter("(").substringBefore(")").split(",")
+                if (parts.size >= 4) {
+                    val r = parts[0].trim().toInt()
+                    val g = parts[1].trim().toInt()
+                    val b = parts[2].trim().toInt()
+                    val a = (parts[3].trim().toFloat() * 255).toInt().coerceIn(0, 255)
+                    return Color.argb(a, r, g, b)
+                }
+            } catch (_: Exception) {}
+        }
+        return try { Color.parseColor(trimmed) } catch (_: Exception) { fallback }
     }
 }

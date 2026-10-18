@@ -22,12 +22,17 @@ class TickerZoneRenderer(
         fontSize: Float = 16f,
         backgroundColorHex: String = "#1e3a8a",
         textColorHex: String = "#ffffff",
-        badgeBackgroundColorHex: String = "#2563eb",
+        badgeBackgroundColorHex: String = "rgba(255, 255, 255, 0.2)",
         badgeTextColorHex: String = "#ffffff",
-        borderColorHex: String = "#60a5fa",
-        borderRadiusDp: Int = 8
+        borderColorHex: String = "transparent",
+        borderRadiusDp: Int = 0
     ): View {
         val density = context.resources.displayMetrics.density
+        val bgColor = parseColor(backgroundColorHex, Color.parseColor("#1e3a8a"))
+        val textColor = parseColor(textColorHex, Color.WHITE)
+        val badgeBg = parseColor(badgeBackgroundColorHex, Color.parseColor("#33ffffff"))
+        val badgeTextCol = parseColor(badgeTextColorHex, Color.WHITE)
+        val hasBorder = borderColorHex.isNotBlank() && !borderColorHex.equals("transparent", ignoreCase = true)
 
         val container = LinearLayout(context).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -36,35 +41,39 @@ class TickerZoneRenderer(
             )
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
+            setPadding((12 * density).toInt(), 0, (12 * density).toInt(), 0)
 
-            val bgDrawable = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                setColor(Color.parseColor(backgroundColorHex.ifBlank { "#1e3a8a" }))
-                if (borderRadiusDp > 0) {
-                    cornerRadius = borderRadiusDp * density
+            if (borderRadiusDp > 0 || hasBorder) {
+                val bgDrawable = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setColor(bgColor)
+                    if (borderRadiusDp > 0) {
+                        cornerRadius = borderRadiusDp * density
+                    }
+                    if (hasBorder) {
+                        setStroke((1 * density).toInt(), parseColor(borderColorHex, Color.TRANSPARENT))
+                    }
                 }
-                if (borderColorHex.isNotBlank() && borderColorHex != "transparent") {
-                    setStroke((1 * density).toInt(), Color.parseColor(borderColorHex))
-                }
+                background = bgDrawable
+            } else {
+                setBackgroundColor(bgColor)
             }
-            background = bgDrawable
-            setPadding((16 * density).toInt(), 0, (16 * density).toInt(), 0)
         }
 
         if (badgeText.isNotBlank()) {
             val badge = TextView(context).apply {
                 text = badgeText
-                setTextColor(Color.parseColor(badgeTextColorHex.ifBlank { "#ffffff" }))
+                setTextColor(badgeTextCol)
                 textSize = 12f
                 setTypeface(null, Typeface.BOLD)
-                setPadding((12 * density).toInt(), (4 * density).toInt(), (12 * density).toInt(), (4 * density).toInt())
+                setPadding((8 * density).toInt(), (2 * density).toInt(), (8 * density).toInt(), (2 * density).toInt())
 
-                val badgeBg = GradientDrawable().apply {
+                val badgeDrawable = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
                     cornerRadius = 4f * density
-                    setColor(Color.parseColor(badgeBackgroundColorHex.ifBlank { "#2563eb" }))
+                    setColor(badgeBg)
                 }
-                background = badgeBg
+                background = badgeDrawable
                 gravity = Gravity.CENTER
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -78,7 +87,7 @@ class TickerZoneRenderer(
 
         val marqueeText = TextView(context).apply {
             text = textMessage.ifBlank { "DKASigma Teks Berjalan" }
-            setTextColor(Color.parseColor(textColorHex.ifBlank { "#ffffff" }))
+            setTextColor(textColor)
             textSize = if (fontSize > 0f) fontSize else 16f
             setTypeface(null, Typeface.BOLD)
             isSingleLine = true
@@ -94,5 +103,26 @@ class TickerZoneRenderer(
         container.addView(marqueeText)
 
         return container
+    }
+
+    private fun parseColor(colorStr: String, fallback: Int): Int {
+        if (colorStr.isBlank() || colorStr.equals("transparent", ignoreCase = true)) return Color.TRANSPARENT
+        val trimmed = colorStr.trim()
+        if (trimmed.startsWith("#")) {
+            return try { Color.parseColor(trimmed) } catch (_: Exception) { fallback }
+        }
+        if (trimmed.startsWith("rgba", ignoreCase = true)) {
+            try {
+                val parts = trimmed.substringAfter("(").substringBefore(")").split(",")
+                if (parts.size >= 4) {
+                    val r = parts[0].trim().toInt()
+                    val g = parts[1].trim().toInt()
+                    val b = parts[2].trim().toInt()
+                    val a = (parts[3].trim().toFloat() * 255).toInt().coerceIn(0, 255)
+                    return Color.argb(a, r, g, b)
+                }
+            } catch (_: Exception) {}
+        }
+        return try { Color.parseColor(trimmed) } catch (_: Exception) { fallback }
     }
 }
