@@ -14,6 +14,7 @@ data class LayerBlock(
     val playlistId: String? = null,
     val widgetType: ZoneWidgetType = ZoneWidgetType.NONE,
     val widgetDataJson: String? = null,
+    val startTimeSeconds: Int = 0,
     val durationSeconds: Int = 10,
     val isMuted: Boolean = false
 )

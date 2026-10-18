@@ -8,8 +8,8 @@ impl LayerBlockRepository {
     pub async fn create(pool: &PgPool, dto: CreateLayerBlockDto) -> Result<LayerBlockEntity, sqlx::Error> {
         if let Some(qid) = dto.queue_id {
             sqlx::query(
-                "INSERT INTO queue_displays (id, name, prefix)
-                 VALUES ($1, 'Antrian Kasir & Layanan', 'A')
+                "INSERT INTO queue_displays (id, name, prefix, theme_preset, background_color)
+                 VALUES ($1, 'Layar Antrian Baru', 'A', 'medical-green', '#0f172a')
                  ON CONFLICT (id) DO NOTHING"
             )
             .bind(qid)
@@ -18,8 +18,8 @@ impl LayerBlockRepository {
         }
         if let Some(tid) = dto.ticker_id {
             sqlx::query(
-                "INSERT INTO tickers (id, name, badge, speed, theme, font_size)
-                 VALUES ($1, 'Teks Berjalan', 'INFO', 'normal', 'blue', 16)
+                "INSERT INTO tickers (id, name, badge, messages, speed, theme, font_size)
+                 VALUES ($1, 'Pengumuman Promo Kasir & Diskon Member', 'PROMO HARI INI', ARRAY['Dapatkan diskon 20% untuk semua produk segar buah & sayur setiap hari Jumat hingga Minggu!', 'Gunakan kartu member DKASigma Point untuk mendapatkan poin ganda di seluruh kasir.'], 'normal', 'blue', 16)
                  ON CONFLICT (id) DO NOTHING"
             )
             .bind(tid)

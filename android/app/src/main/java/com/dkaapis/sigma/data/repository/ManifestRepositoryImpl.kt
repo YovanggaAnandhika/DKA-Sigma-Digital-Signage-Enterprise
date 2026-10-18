@@ -162,6 +162,7 @@ class ManifestRepositoryImpl(
                                 widgetDataJson = bObj.optString("widgetDataJson").ifEmpty {
                                     bObj.optJSONObject("widgetData")?.toString()
                                 },
+                                startTimeSeconds = bObj.optInt("startTimeSeconds", 0),
                                 durationSeconds = bObj.optInt("durationSeconds", 10),
                                 isMuted = bObj.optBoolean("isMuted", false)
                             )
