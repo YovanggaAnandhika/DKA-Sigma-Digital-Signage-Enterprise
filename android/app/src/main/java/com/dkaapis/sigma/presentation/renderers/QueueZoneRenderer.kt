@@ -3,6 +3,9 @@ package com.dkaapis.sigma.presentation.renderers
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Color
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
@@ -112,18 +115,18 @@ class QueueZoneRenderer(
 ) {
     private var numberTextView: TextView? = null
     private var counterTextView: TextView? = null
-    private var flashOverlayView: View? = null
     private var currentPrefix: String = "A"
     private var currentName: String = "Layar Antrian"
     private var currentSequence: Int = 1
     private var currentCounter: String = "LOKET 01"
     private val countersList = mutableListOf<String>()
 
+    private var parentZoneView: ViewGroup? = null
+    private var canvasView: QueueCanvasView? = null
     private var isCallingActive = false
-    private var numberPulseAnimator: ValueAnimator? = null
-    private var counterPulseAnimator: ValueAnimator? = null
-    private var bgPulseAnimator: ValueAnimator? = null
-    private var originalTextColor: Int? = null
+    private var invertAnimator: ValueAnimator? = null
+    private var currentInvertProgress = 0f
+    private val invertPaint = Paint()
 
     fun createView(
         parent: ViewGroup,
@@ -188,37 +191,8 @@ class QueueZoneRenderer(
             }
         }
 
-        // Overlay untuk efek kedip background saat ada panggilan
-        val parsedBg = parseColor(bgColor, Color.WHITE)
-        val bgR = Color.red(parsedBg)
-        val bgG = Color.green(parsedBg)
-        val bgB = Color.blue(parsedBg)
-        val isDarkBg = (0.299 * bgR + 0.587 * bgG + 0.114 * bgB) / 255.0 < 0.5
-        val flashColor = if (isDarkBg) Color.parseColor("#38BDF8") else Color.parseColor("#2563EB")
-
-        flashOverlayView = View(context).apply {
-            tag = QueueItemMeta(
-                id = "queue-flash-overlay",
-                itemType = "overlay_scrim",
-                x = 0,
-                y = 0,
-                width = canvasW,
-                height = canvasH,
-                zIndex = 0,
-                backgroundColor = "transparent",
-                textColor = "transparent",
-                fontSize = 0f,
-                fontWeight = "normal",
-                textAlign = "left",
-                templateContent = "",
-                opacity = 0f
-            )
-            setBackgroundColor(flashColor)
-            alpha = 0f
-            isClickable = false
-            isFocusable = false
-        }
-        canvasView.addView(flashOverlayView)
+        this.parentZoneView = parent
+        this.canvasView = canvasView
 
         val parsedItems = mutableListOf<QueueItemMeta>()
 
@@ -407,7 +381,6 @@ class QueueZoneRenderer(
 
             if (meta.itemType == "ticket_number") {
                 numberTextView = textView
-                originalTextColor = parseColor(meta.textColor, Color.BLACK)
                 textView.isClickable = true
                 textView.setOnClickListener {
                     callNext()
@@ -469,101 +442,55 @@ class QueueZoneRenderer(
         onCallAudioStarted()
     }
 
-    fun startCallEffect(ticketNumber: String, counterName: String) {
-        stopCallEffect()
-        isCallingActive = true
+    private fun getTargetView(): View? = parentZoneView ?: canvasView
 
+    private fun applyColorInversion(target: View, t: Float) {
+        currentInvertProgress = t
+        if (t <= 0.001f) {
+            target.setLayerType(View.LAYER_TYPE_NONE, null)
+            target.invalidate()
+            return
+        }
+
+        val scale = 1.0f - 2.0f * t
+        val offset = 255.0f * t
+        val matrix = ColorMatrix(floatArrayOf(
+            scale, 0f, 0f, 0f, offset,
+            0f, scale, 0f, 0f, offset,
+            0f, 0f, scale, 0f, offset,
+            0f, 0f, 0f, 1f, 0f
+        ))
+        invertPaint.colorFilter = ColorMatrixColorFilter(matrix)
+        target.setLayerType(View.LAYER_TYPE_HARDWARE, invertPaint)
+        target.invalidate()
+    }
+
+    fun startCallEffect(ticketNumber: String, counterName: String) {
+        isCallingActive = true
         numberTextView?.text = ticketNumber
         counterTextView?.text = counterName
 
-        if (originalTextColor == null) {
-            originalTextColor = (numberTextView?.tag as? QueueItemMeta)?.let {
-                parseColor(it.textColor, Color.BLACK)
-            } ?: Color.BLACK
-        }
-        val origColor = originalTextColor ?: Color.BLACK
+        val target = getTargetView() ?: return
+        invertAnimator?.cancel()
 
-        // Deteksi kontras background/teks untuk aksen modern
-        val r = Color.red(origColor)
-        val g = Color.green(origColor)
-        val b = Color.blue(origColor)
-        val isDarkText = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0 < 0.5
-
-        // Aksen modern & mencolok: Royal Blue (#2563EB) untuk teks gelap, Sky Blue (#38BDF8) untuk teks terang
-        val accentColor = if (isDarkText) Color.parseColor("#2563EB") else Color.parseColor("#38BDF8")
-        val glowColor = if (isDarkText) Color.argb(140, 37, 99, 235) else Color.argb(160, 56, 189, 248)
-
-        numberTextView?.setTextColor(accentColor)
-        numberTextView?.setShadowLayer(18f, 0f, 3f, glowColor)
-
-        // 1. Double Strobe Flash awal yang intens & mencolok, lalu transisi ke denyut ambient berulang sampai speech berhenti
-        flashOverlayView?.let { flash ->
-            flash.animate()?.cancel()
-            flash.alpha = 0f
-            flash.animate()
-                ?.alpha(0.55f)
-                ?.setDuration(120)
-                ?.withEndAction {
-                    flash.animate()
-                        ?.alpha(0.08f)
-                        ?.setDuration(100)
-                        ?.withEndAction {
-                            flash.animate()
-                                ?.alpha(0.55f)
-                                ?.setDuration(120)
-                                ?.withEndAction {
-                                    // Masuk ke denyut ambient breathing yang terus berdenyut sampai speech berhenti
-                                    if (isCallingActive) {
-                                        bgPulseAnimator = ValueAnimator.ofFloat(0.12f, 0.35f).apply {
-                                            duration = 750
-                                            repeatMode = ValueAnimator.REVERSE
-                                            repeatCount = ValueAnimator.INFINITE
-                                            interpolator = AccelerateDecelerateInterpolator()
-                                            addUpdateListener { va ->
-                                                flash.alpha = va.animatedValue as Float
-                                            }
-                                            start()
-                                        }
-                                    } else {
-                                        flash.animate()?.alpha(0f)?.setDuration(250)?.start()
-                                    }
-                                }
-                                ?.start()
-                        }
-                        ?.start()
-                }
-                ?.start()
-        }
-
-        // 2. Denyut tipografi nomor tiket yang terus berulang (1.00x - 1.12x) sampai speech berhenti
-        numberTextView?.let { numTv ->
-            numTv.animate()?.cancel()
-            numberPulseAnimator = ValueAnimator.ofFloat(1.0f, 1.12f).apply {
-                duration = 700
-                repeatMode = ValueAnimator.REVERSE
-                repeatCount = ValueAnimator.INFINITE
+        // Jika sebelumnya sudah dalam status ter-invers (misal dipanggil berturut-turut),
+        // berikan efek micro-shutter 120ms (dip ke normal lalu kembali invers) sebagai konfirmasi tiket baru
+        if (currentInvertProgress > 0.8f) {
+            invertAnimator = ValueAnimator.ofFloat(1.0f, 0.0f, 1.0f).apply {
+                duration = 120
                 interpolator = AccelerateDecelerateInterpolator()
                 addUpdateListener { va ->
-                    val s = va.animatedValue as Float
-                    numTv.scaleX = s
-                    numTv.scaleY = s
+                    applyColorInversion(target, va.animatedValue as Float)
                 }
                 start()
             }
-        }
-
-        // 3. Denyut badge loket (1.00x - 1.07f) sampai speech berhenti
-        counterTextView?.let { cntTv ->
-            cntTv.animate()?.cancel()
-            counterPulseAnimator = ValueAnimator.ofFloat(1.0f, 1.07f).apply {
-                duration = 700
-                repeatMode = ValueAnimator.REVERSE
-                repeatCount = ValueAnimator.INFINITE
-                interpolator = AccelerateDecelerateInterpolator()
+        } else {
+            // Transisi bersih & rapi (140ms) menuju warna terinversi
+            invertAnimator = ValueAnimator.ofFloat(currentInvertProgress, 1.0f).apply {
+                duration = 140
+                interpolator = DecelerateInterpolator()
                 addUpdateListener { va ->
-                    val s = va.animatedValue as Float
-                    cntTv.scaleX = s
-                    cntTv.scaleY = s
+                    applyColorInversion(target, va.animatedValue as Float)
                 }
                 start()
             }
@@ -571,38 +498,21 @@ class QueueZoneRenderer(
     }
 
     fun stopCallEffect() {
-        if (!isCallingActive) return
+        if (!isCallingActive && currentInvertProgress <= 0.001f) return
         isCallingActive = false
 
-        bgPulseAnimator?.cancel()
-        bgPulseAnimator = null
-        flashOverlayView?.animate()?.cancel()
-        flashOverlayView?.animate()
-            ?.alpha(0f)
-            ?.setDuration(300)
-            ?.start()
+        val target = getTargetView() ?: return
+        invertAnimator?.cancel()
 
-        numberPulseAnimator?.cancel()
-        numberPulseAnimator = null
-        numberTextView?.animate()?.cancel()
-        numberTextView?.animate()
-            ?.scaleX(1.0f)
-            ?.scaleY(1.0f)
-            ?.setDuration(300)
-            ?.withEndAction {
-                originalTextColor?.let { numberTextView?.setTextColor(it) }
-                numberTextView?.setShadowLayer(0f, 0f, 0f, 0)
+        // Kembalikan warna ke normal secara mulus (180ms)
+        invertAnimator = ValueAnimator.ofFloat(currentInvertProgress, 0.0f).apply {
+            duration = 180
+            interpolator = AccelerateDecelerateInterpolator()
+            addUpdateListener { va ->
+                applyColorInversion(target, va.animatedValue as Float)
             }
-            ?.start()
-
-        counterPulseAnimator?.cancel()
-        counterPulseAnimator = null
-        counterTextView?.animate()?.cancel()
-        counterTextView?.animate()
-            ?.scaleX(1.0f)
-            ?.scaleY(1.0f)
-            ?.setDuration(300)
-            ?.start()
+            start()
+        }
     }
 
     private fun updateDisplay(ticketNumber: String, counterName: String) {
