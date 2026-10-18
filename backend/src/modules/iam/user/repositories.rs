@@ -183,4 +183,32 @@ impl UserRepository {
 
         Ok(result.rows_affected() > 0)
     }
+
+    pub async fn get_user_roles(pool: &DbPool, user_id: Uuid) -> Result<Vec<crate::modules::iam::role::model::RoleEntity>, sqlx::Error> {
+        sqlx::query_as::<_, crate::modules::iam::role::model::RoleEntity>(
+            r#"
+            SELECT r.id, r.name, r.slug, r.description, r.is_system, r.created_at, r.updated_at
+            FROM roles r
+            JOIN user_roles ur ON ur.role_id = r.id
+            WHERE ur.user_id = $1
+            "#,
+        )
+        .bind(user_id)
+        .fetch_all(pool)
+        .await
+    }
+
+    pub async fn get_user_role_groups(pool: &DbPool, user_id: Uuid) -> Result<Vec<crate::modules::iam::role_group::model::RoleGroupEntity>, sqlx::Error> {
+        sqlx::query_as::<_, crate::modules::iam::role_group::model::RoleGroupEntity>(
+            r#"
+            SELECT rg.id, rg.name, rg.slug, rg.description, rg.created_at, rg.updated_at
+            FROM role_groups rg
+            JOIN user_role_groups urg ON urg.role_group_id = rg.id
+            WHERE urg.user_id = $1
+            "#,
+        )
+        .bind(user_id)
+        .fetch_all(pool)
+        .await
+    }
 }

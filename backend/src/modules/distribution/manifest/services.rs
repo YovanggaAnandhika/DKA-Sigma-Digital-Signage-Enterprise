@@ -140,9 +140,9 @@ impl ManifestService {
                     if let Ok(pl) = PlaylistService::get_playlist_by_id(pool, pl_id).await {
                         for item in &pl.items {
                             if !required_assets_map.contains_key(&item.media_item_id) {
-                                let (sha256, size_bytes) = match MediaRepository::find_by_id(pool, item.media_item_id).await {
-                                    Ok(Some(media)) => (media.sha256_hash, media.file_size_bytes),
-                                    _ => ("".to_string(), 0),
+                                let (sha256, size_bytes, orig_name) = match MediaRepository::find_by_id(pool, item.media_item_id).await {
+                                    Ok(Some(media)) => (media.sha256_hash, media.file_size_bytes, media.original_filename),
+                                    _ => ("".to_string(), 0, item.media_name.clone()),
                                 };
                                 required_assets_map.insert(
                                     item.media_item_id,
@@ -152,7 +152,7 @@ impl ManifestService {
                                         url: item.media_url.clone(),
                                         sha256_hash: sha256,
                                         file_size_bytes: size_bytes,
-                                        local_filename: format!("{}_{}", item.media_item_id, item.media_name),
+                                        local_filename: format!("{}_{}", item.media_item_id, orig_name),
                                         media_type: item.media_type.clone(),
                                     },
                                 );
@@ -178,8 +178,39 @@ impl ManifestService {
                         }
                         mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto { block: block.block.clone(), item_overrides: block.item_overrides.clone() });
                     }
+                } else if let Some(album_id) = block.block.album_id {
+                    // Enrich album photo assets for offline-first player caching
+                    if let Ok(photos) = sqlx::query!(
+                        "SELECT media_item_id FROM album_photos WHERE album_id = $1 ORDER BY position ASC",
+                        album_id
+                    )
+                    .fetch_all(pool)
+                    .await {
+                        for p in photos {
+                            if !required_assets_map.contains_key(&p.media_item_id) {
+                                if let Ok(Some(media)) = MediaRepository::find_by_id(pool, p.media_item_id).await {
+                                    required_assets_map.insert(
+                                        p.media_item_id,
+                                        ManifestAssetDto {
+                                            media_id: p.media_item_id,
+                                            name: media.name.clone(),
+                                            url: media.public_url.clone(),
+                                            sha256_hash: media.sha256_hash.clone(),
+                                            file_size_bytes: media.file_size_bytes,
+                                            local_filename: format!("{}_{}", media.id, media.original_filename),
+                                            media_type: media.media_type.clone(),
+                                        },
+                                    );
+                                }
+                            }
+                        }
+                    }
+                    mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto {
+                        block: block.block.clone(),
+                        item_overrides: block.item_overrides.clone(),
+                    });
                 } else {
-                    // Studio Component Widgets (Queue, Clock, Ticker, WebView, Album)
+                    // Studio Component Widgets (Queue, Clock, Ticker, WebView)
                     mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto {
                         block: block.block.clone(),
                         item_overrides: block.item_overrides.clone(),
@@ -191,15 +222,40 @@ impl ManifestService {
         }
 
         let total_size: i64 = required_assets_map.values().map(|a| a.file_size_bytes).sum();
-        let assets_vec: Vec<ManifestAssetDto> = required_assets_map.into_values().collect();
+        let mut assets_vec: Vec<ManifestAssetDto> = required_assets_map.into_values().collect();
+        // Deterministic asset ordering by media_id to guarantee identical version_hash
+        assets_vec.sort_by(|a, b| a.media_id.cmp(&b.media_id));
 
-        // Compute checksum of the entire manifest structure
+        // Compute checksum of the entire manifest structure (visuals, layers, blocks, and assets)
         let mut hasher = Sha256::new();
-        hasher.update(format!("{}:{}:{:?}", effective_layout_id, enriched_zones.len(), assets_vec.len()).as_bytes());
+        hasher.update(format!(
+            "{}:{}:{:?}:{}:{}:{}",
+            effective_layout_id,
+            layout.background_color,
+            layout.background_image_url,
+            layout.canvas_width,
+            layout.canvas_height,
+            enriched_zones.len()
+        ).as_bytes());
+
         for z in &enriched_zones {
-            hasher.update(format!("{}:{}:{}:{}:{}", z.layer.id, z.layer.x, z.layer.y, z.layer.width, z.layer.height).as_bytes());
+            hasher.update(format!("{}:{}:{}:{}:{}:{}", z.layer.id, z.layer.x, z.layer.y, z.layer.width, z.layer.height, z.layer.z_index).as_bytes());
             for b in &z.blocks {
-                hasher.update(format!("{}:{}:{:?}:{:?}:{:?}", b.block.id, b.block.duration_seconds, b.block.media_item_id, b.block.playlist_id, b.block.queue_id).as_bytes());
+                hasher.update(format!(
+                    "{}:{}:{:?}:{:?}:{:?}:{:?}:{:?}:{:?}:{:?}:{}:{}:{}",
+                    b.block.id,
+                    b.block.duration_seconds,
+                    b.block.media_item_id,
+                    b.block.playlist_id,
+                    b.block.queue_id,
+                    b.block.ticker_id,
+                    b.block.clock_id,
+                    b.block.webview_id,
+                    b.block.album_id,
+                    b.block.order_index,
+                    b.block.is_muted,
+                    b.block.volume_level
+                ).as_bytes());
             }
         }
         for a in &assets_vec {

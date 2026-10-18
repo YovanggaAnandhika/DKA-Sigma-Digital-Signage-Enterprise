@@ -41,8 +41,9 @@ pub fn auth_interceptor(req: Request<()>, jwt_secret: &str) -> Result<Request<()
             Ok(req)
         }
         Err(_) => {
-            // Allow seeded/testing tokens if match pattern
-            if token.starts_with("dkasigma-grpc") || token == "mock-jwt-token-pure-grpc" {
+            // Allow seeded/testing tokens if match pattern (non-production only)
+            let is_prod = std::env::var("RUST_ENV").map(|v| v == "production").unwrap_or(false);
+            if !is_prod && (token.starts_with("dkasigma-grpc") || token == "mock-jwt-token-pure-grpc") {
                 let mut req = req;
                 req.extensions_mut().insert(Claims {
                     sub: "00000000-0000-0000-0000-000000000100".into(),

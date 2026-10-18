@@ -35,7 +35,7 @@ impl ManifestServiceImpl {
                 blocks: z.blocks.into_iter().map(|b| LayerPlaylist {
                     id: b.block.id.to_string(),
                     layer_id: z.layer.id.to_string(),
-                    volume_level: 100,
+                    volume_level: b.block.volume_level,
                     playlist_id: b.block.playlist_id.map(|id| id.to_string()).unwrap_or_default(),
                     media_item_id: b.block.media_item_id.map(|id| id.to_string()).unwrap_or_default(),
                     playlist: None, // Simplified for now
@@ -47,14 +47,25 @@ impl ManifestServiceImpl {
                     transition_id: b.block.transition_id.map(|id| id.to_string()),
                     visual_filter_id: b.block.visual_filter_id.map(|id| id.to_string()),
                     order_index: b.block.order_index,
-                    is_muted: false,
+                    is_muted: b.block.is_muted,
                     ticker_id: b.block.ticker_id.map(|id| id.to_string()),
                     clock_id: b.block.clock_id.map(|id| id.to_string()),
                     webview_id: b.block.webview_id.map(|id| id.to_string()),
                     queue_id: b.block.queue_id.map(|id| id.to_string()),
                     album_id: b.block.album_id.map(|id| id.to_string()),
-                    created_at: "".to_string(),
-                    item_overrides: vec![],
+                    created_at: b.block.created_at.to_rfc3339(),
+                    item_overrides: b.item_overrides.into_iter().map(|o| {
+                        crate::grpc::proto::studio::v1::layer::LayerPlaylistItemOverride {
+                            id: o.id.to_string(),
+                            layer_block_id: o.layer_block_id.to_string(),
+                            playlist_item_id: o.playlist_item_id.to_string(),
+                            custom_duration_seconds: o.custom_duration_seconds,
+                            is_disabled: o.is_disabled,
+                            custom_transition_type: o.custom_transition_type.unwrap_or_default(),
+                            custom_volume_level: o.custom_volume_level,
+                            custom_is_muted: o.custom_is_muted,
+                        }
+                    }).collect(),
                     transition: None,
                     visual_filter: None,
                 }).collect(),
@@ -84,13 +95,19 @@ impl ManifestServiceImpl {
         };
 
         let required_assets = dto.required_assets.into_iter().map(|a| {
+            let media_type = match a.media_type.to_lowercase().as_str() {
+                "image" => crate::grpc::proto::studio::v1::media::MediaType::Image as i32,
+                "video" => crate::grpc::proto::studio::v1::media::MediaType::Video as i32,
+                "web" => crate::grpc::proto::studio::v1::media::MediaType::Web as i32,
+                _ => crate::grpc::proto::studio::v1::media::MediaType::Unspecified as i32,
+            };
             ManifestAsset {
                 media_id: a.media_id.to_string(),
                 url: a.url,
                 sha256_hash: a.sha256_hash,
                 file_size_bytes: a.file_size_bytes,
                 local_filename: a.local_filename,
-                media_type: 0,
+                media_type,
             }
         }).collect();
 
@@ -125,6 +142,26 @@ impl ManifestServiceTrait for ManifestServiceImpl {
         let req = request.into_inner();
         let device_id = Uuid::parse_str(&req.device_id)
             .map_err(|_| Status::invalid_argument("ID Device tidak valid"))?;
+
+        // Validate device token if registered
+        let device = crate::modules::hardware::device::repositories::DeviceRepository::find_by_id(&self.pool, device_id)
+            .await
+            .map_err(Status::from)?
+            .ok_or_else(|| Status::not_found("Device not found"))?;
+
+        if let Some(expected_hash) = &device.device_token_hash {
+            if !req.device_token.is_empty() {
+                use sha2::{Digest, Sha256};
+                let mut hasher = Sha256::new();
+                hasher.update(req.device_token.as_bytes());
+                let computed_hash = format!("{:x}", hasher.finalize());
+                if &computed_hash != expected_hash {
+                    return Err(Status::unauthenticated("Invalid device token"));
+                }
+            } else {
+                tracing::warn!("Device {} requested manifest without device_token", device_id);
+            }
+        }
 
         let client_hash = if req.client_current_hash.is_empty() {
             None
