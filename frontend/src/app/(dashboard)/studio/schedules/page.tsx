@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { api } from '@/lib/services';
 import type { Schedule } from '@/lib/services/studio/schedule.types';
 import { Pagination } from '@/components/ui/Pagination';
-import { CalendarDays, Search, RefreshCw, Trash2, Eye, Clock, Layers, ArrowRight } from 'lucide-react';
+import { CalendarDays, Search, RefreshCw, Trash2, Eye, Clock, Layers, ArrowRight, ShieldAlert } from 'lucide-react';
+import EmergencyBroadcastModal from '@/components/ui/EmergencyBroadcastModal';
 
 export default function SchedulesPage() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -14,6 +15,7 @@ export default function SchedulesPage() {
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [emergencyOpen, setEmergencyOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -87,6 +89,28 @@ export default function SchedulesPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            onClick={() => setEmergencyOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+              color: 'var(--accent-rose)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              cursor: 'pointer',
+              fontSize: '0.8125rem',
+              fontWeight: 700,
+              transition: 'all 0.2s ease',
+            }}
+            title="Siarkan Peringatan Darurat Langsung ke Display Player"
+          >
+            <ShieldAlert size={15} />
+            <span>Siaran Darurat</span>
+          </button>
+
           <button onClick={loadData} className="btn btn-outline" style={{ padding: '8px 12px' }} title="Segarkan data">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -244,6 +268,11 @@ export default function SchedulesPage() {
           }}
         />
       </div>
+
+      <EmergencyBroadcastModal
+        isOpen={emergencyOpen}
+        onClose={() => setEmergencyOpen(false)}
+      />
     </div>
   );
 }
