@@ -30,11 +30,12 @@ class QueueZoneRenderer(
         val isDark = themePreset == "solid-dark" || themePreset == "executive-blue"
         val isMedical = themePreset == "medical-green"
 
-        val bgColor = backgroundColorHex?.ifBlank { null } ?: if (isDark) "#0f172a" else if (isMedical) "#f0fdf4" else "#f8fafc"
-        val primaryColor = if (isMedical) "#059669" else if (isDark) "#38bdf8" else "#0284c7"
-        val subtitleColor = if (isDark) "#94a3b8" else "#64748b"
-        val borderColor = if (isDark) "#1e3a8a" else "#e2e8f0"
-        val footerBg = if (isDark) "#020617" else if (isMedical) "#065f46" else "#0369a1"
+        val bgColor = backgroundColorHex?.ifBlank { null } ?: if (isDark || isMedical) "#0f172a" else "#f8fafc"
+        val primaryColor = if (isMedical) "#10b981" else if (isDark) "#38bdf8" else "#0284c7"
+        val subtitleColor = if (isMedical) "#10b981" else if (isDark) "#94a3b8" else "#64748b"
+        val borderColor = if (isMedical) "#059669" else if (isDark) "#1e3a8a" else "#e2e8f0"
+        val badgeBgColor = if (isMedical) "#059669" else "#f59e0b"
+        val footerBg = if (isMedical) "#064e3b" else if (isDark) "#020617" else "#0369a1"
 
         // Outer container with background matching Web Studio theme
         val root = LinearLayout(context).apply {
@@ -77,7 +78,7 @@ class QueueZoneRenderer(
         }
         numberTextView = number
 
-        // Counter Badge (Amber Pill matching Web Studio)
+        // Counter Badge (Pill matching Web Studio)
         val counterBadge = TextView(context).apply {
             text = data.queueCounter.ifBlank { "LOKET 01" }
             textSize = 24f
@@ -88,7 +89,7 @@ class QueueZoneRenderer(
             val badgeBg = android.graphics.drawable.GradientDrawable().apply {
                 shape = android.graphics.drawable.GradientDrawable.RECTANGLE
                 cornerRadius = 9999f
-                setColor(Color.parseColor("#f59e0b"))
+                setColor(Color.parseColor(badgeBgColor))
             }
             background = badgeBg
             gravity = Gravity.CENTER

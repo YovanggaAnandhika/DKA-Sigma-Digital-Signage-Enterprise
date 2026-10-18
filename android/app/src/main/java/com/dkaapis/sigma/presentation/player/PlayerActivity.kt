@@ -34,7 +34,10 @@ import com.dkaapis.sigma.presentation.player.canvas.ZoneContainerView
 import com.dkaapis.sigma.presentation.renderers.*
 import com.dkaapis.sigma.service.PlayerForegroundService
 import com.dkaapis.sigma.service.WatchdogService
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -50,6 +53,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private val videoRenderers = mutableListOf<VideoZoneRenderer>()
     private val clockRenderers = mutableListOf<ClockZoneRenderer>()
+    private var timelineJob: Job? = null
 
     private val watchdogHandler = Handler(Looper.getMainLooper())
     private val watchdogHeartbeatRunnable = object : Runnable {
@@ -227,10 +231,13 @@ class PlayerActivity : AppCompatActivity() {
         canvasLayout.virtualWidth = manifest.canvasWidth
         canvasLayout.virtualHeight = manifest.canvasHeight
 
+        val zoneViewPairs = mutableListOf<Pair<LayerZone, ZoneContainerView>>()
+
         for (zone in manifest.zones) {
             val zoneView = ZoneContainerView(this).apply {
                 bindZone(zone)
             }
+            zoneViewPairs.add(Pair(zone, zoneView))
 
             val widgetBlock = zone.blocks.find { it.widgetType != ZoneWidgetType.NONE }
             if (widgetBlock != null) {
@@ -374,6 +381,24 @@ class PlayerActivity : AppCompatActivity() {
 
             canvasLayout.addView(zoneView)
         }
+
+        val layoutDuration = manifest.zones.flatMap { it.blocks }.maxOfOrNull {
+            it.startTimeSeconds + it.durationSeconds
+        }?.coerceAtLeast(1) ?: 10
+
+        val playStartTime = System.currentTimeMillis()
+        timelineJob = lifecycleScope.launch {
+            while (isActive) {
+                val elapsed = ((System.currentTimeMillis() - playStartTime) / 1000) % layoutDuration
+                for ((z, zView) in zoneViewPairs) {
+                    val hasActiveBlock = z.blocks.any { b ->
+                        elapsed >= b.startTimeSeconds && elapsed < (b.startTimeSeconds + b.durationSeconds)
+                    }
+                    zView.visibility = if (hasActiveBlock) View.VISIBLE else View.INVISIBLE
+                }
+                delay(500)
+            }
+        }
     }
 
     private fun isVideoFile(file: File): Boolean {
@@ -394,6 +419,8 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun releaseRenderers() {
+        timelineJob?.cancel()
+        timelineJob = null
         videoRenderers.forEach { it.release() }
         videoRenderers.clear()
         clockRenderers.forEach { it.release() }
