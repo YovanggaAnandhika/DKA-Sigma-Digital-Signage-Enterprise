@@ -137,3 +137,50 @@ message CheckPairingStatusResponse {
   string device_id = 2;
   string device_token = 3;
 }
+
+message AnalyticsSnapshot {
+  string id = 1;
+  string input_output_json = 2;
+  string assets_stats_json = 3;
+  string recorded_at = 4;
+}
+
+message IngestDeviceAnalyticsRequest {
+  string device_id = 1;
+  string device_token = 2;
+  AnalyticsSnapshot snapshot = 3;
+}
+
+message IngestDeviceAnalyticsResponse {
+  bool success = 1;
+}
+
+message IngestDeviceAnalyticsBatchRequest {
+  string device_id = 1;
+  string device_token = 2;
+  repeated AnalyticsSnapshot snapshots = 3;
+}
+
+message IngestDeviceAnalyticsBatchResponse {
+  bool success = 1;
+  int32 inserted_count = 2;
+}
+
+message GetDeviceAnalyticsHistoryRequest {
+  string device_id = 1;
+  string time_range = 2; // "15m", "1h", "6h", "24h"
+  int32 limit = 3;
+}
+
+message DeviceAnalyticsRecord {
+  string id = 1;
+  string device_id = 2;
+  string input_output_json = 3;
+  string assets_stats_json = 4;
+  string recorded_at = 5;
+}
+
+message GetDeviceAnalyticsHistoryResponse {
+  repeated DeviceAnalyticsRecord records = 1;
+}
+

@@ -16,4 +16,9 @@ service DeviceService {
   rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse);
   rpc UpdateDevice(UpdateDeviceRequest) returns (Device);
   rpc DeleteDevice(DeleteDeviceRequest) returns (DeleteDeviceResponse);
+
+  // Realtime Device Analytics & Playback Diagnostics
+  rpc IngestDeviceAnalytics(IngestDeviceAnalyticsRequest) returns (IngestDeviceAnalyticsResponse);
+  rpc IngestDeviceAnalyticsBatch(IngestDeviceAnalyticsBatchRequest) returns (IngestDeviceAnalyticsBatchResponse);
+  rpc GetDeviceAnalyticsHistory(GetDeviceAnalyticsHistoryRequest) returns (GetDeviceAnalyticsHistoryResponse);
 }
