@@ -159,7 +159,9 @@ class ManifestRepositoryImpl(
                                 mediaItemId = bObj.optString("mediaItemId").ifEmpty { null },
                                 playlistId = bObj.optString("playlistId").ifEmpty { null },
                                 widgetType = wType,
-                                widgetDataJson = bObj.optString("widgetDataJson").ifEmpty { null },
+                                widgetDataJson = bObj.optString("widgetDataJson").ifEmpty {
+                                    bObj.optJSONObject("widgetData")?.toString()
+                                },
                                 durationSeconds = bObj.optInt("durationSeconds", 10),
                                 isMuted = bObj.optBoolean("isMuted", false)
                             )

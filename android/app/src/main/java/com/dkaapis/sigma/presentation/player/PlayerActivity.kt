@@ -237,12 +237,46 @@ class PlayerActivity : AppCompatActivity() {
                     ZoneWidgetType.CLOCK -> {
                         val renderer = ClockZoneRenderer(this)
                         clockRenderers.add(renderer)
-                        val view = renderer.createView(zoneView)
+                        var city = "Makassar"
+                        var showSeconds = true
+                        if (!widgetBlock.widgetDataJson.isNullOrBlank()) {
+                            try {
+                                val json = org.json.JSONObject(widgetBlock.widgetDataJson)
+                                city = json.optString("city", "Makassar")
+                                showSeconds = json.optBoolean("showSeconds", true)
+                            } catch (_: Exception) {}
+                        }
+                        val view = renderer.createView(zoneView, city, showSeconds)
                         zoneView.addView(view)
                     }
                     ZoneWidgetType.TICKER -> {
                         val renderer = TickerZoneRenderer(this)
-                        val view = renderer.createView(zoneView)
+                        var textMessage = ""
+                        var badgeText = ""
+                        var theme = "blue"
+                        var fontSize = 16f
+                        if (!widgetBlock.widgetDataJson.isNullOrBlank()) {
+                            try {
+                                val json = org.json.JSONObject(widgetBlock.widgetDataJson)
+                                badgeText = json.optString("badge", "")
+                                theme = json.optString("theme", "blue")
+                                fontSize = json.optInt("fontSize", 16).toFloat()
+                                val msgArr = json.optJSONArray("messagesList") ?: json.optJSONArray("messages")
+                                val msgs = mutableListOf<String>()
+                                if (msgArr != null) {
+                                    for (m in 0 until msgArr.length()) {
+                                        val s = msgArr.optString(m)
+                                        if (s.isNotBlank()) msgs.add(s)
+                                    }
+                                }
+                                textMessage = if (msgs.isNotEmpty()) {
+                                    msgs.joinToString("  ✦  ")
+                                } else {
+                                    json.optString("name", "DKASigma Teks Berjalan")
+                                }
+                            } catch (_: Exception) {}
+                        }
+                        val view = renderer.createView(zoneView, textMessage, badgeText, theme, fontSize)
                         zoneView.addView(view)
                     }
                     ZoneWidgetType.QUEUE -> {
@@ -255,12 +289,45 @@ class PlayerActivity : AppCompatActivity() {
                                 videoRenderers.forEach { it.setDuckedVolume(false) }
                             }
                         )
-                        val view = renderer.createView(zoneView)
+                        var queueData = QueueDisplayData()
+                        var themePreset = "clean-light"
+                        var bgColor: String? = null
+                        if (!widgetBlock.widgetDataJson.isNullOrBlank()) {
+                            try {
+                                val json = org.json.JSONObject(widgetBlock.widgetDataJson)
+                                val prefix = json.optString("prefix", "A")
+                                val name = json.optString("name", "Antrian")
+                                val latestNum = json.optString("latestCalledNumber").ifEmpty { "$prefix-001" }
+                                themePreset = json.optString("themePreset", "clean-light")
+                                bgColor = json.optString("backgroundColor").ifEmpty { null }
+                                val countersArr = json.optJSONArray("countersList") ?: json.optJSONArray("counters")
+                                val counterName = if (countersArr != null && countersArr.length() > 0) {
+                                    countersArr.getJSONObject(0).optString("counterName", "LOKET 01")
+                                } else "LOKET 01"
+
+                                queueData = QueueDisplayData(
+                                    queueNumber = latestNum,
+                                    queueCounter = counterName,
+                                    queuePrefix = prefix,
+                                    queueName = name
+                                )
+                            } catch (_: Exception) {}
+                        }
+                        val view = renderer.createView(zoneView, queueData, themePreset, bgColor)
                         zoneView.addView(view)
                     }
                     ZoneWidgetType.WEBVIEW -> {
                         val renderer = WebviewZoneRenderer(this)
-                        val view = renderer.createView(zoneView, "https://google.com")
+                        var url = "https://google.com"
+                        var zoomPercent = 100
+                        if (!widgetBlock.widgetDataJson.isNullOrBlank()) {
+                            try {
+                                val json = org.json.JSONObject(widgetBlock.widgetDataJson)
+                                url = json.optString("url", "https://google.com")
+                                zoomPercent = json.optInt("zoomPercent", 100)
+                            } catch (_: Exception) {}
+                        }
+                        val view = renderer.createView(zoneView, url, zoomPercent)
                         zoneView.addView(view)
                     }
                     else -> Unit

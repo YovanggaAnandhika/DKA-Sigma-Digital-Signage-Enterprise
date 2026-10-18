@@ -16,10 +16,19 @@ class TickerZoneRenderer(
 ) {
     fun createView(
         parent: ViewGroup,
-        textMessage: String = "Dapatkan diskon 20% untuk semua transaksi member hari ini di seluruh cabang DKASigma.",
-        badgeText: String = "PROMO HARI INI",
-        bgColorHex: String = "#1e3a8a"
+        textMessage: String = "",
+        badgeText: String = "",
+        theme: String = "blue",
+        fontSize: Float = 16f
     ): View {
+        val (bgStart, bgEnd, badgeBgColor, badgeStrokeColor) = when (theme.lowercase()) {
+            "red" -> Quadruple("#7f1d1d", "#991b1b", "#dc2626", "#ef4444")
+            "dark" -> Quadruple("#0f172a", "#1e293b", "#334155", "#475569")
+            "emerald" -> Quadruple("#064e3b", "#065f46", "#059669", "#10b981")
+            "amber" -> Quadruple("#78350f", "#92400e", "#d97706", "#f59e0b")
+            else -> Quadruple("#1e3a8a", "#1d4ed8", "#2563eb", "#60a5fa") // blue
+        }
+
         val container = LinearLayout(context).apply {
             layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -29,7 +38,7 @@ class TickerZoneRenderer(
             gravity = Gravity.CENTER_VERTICAL
             val bgDrawable = android.graphics.drawable.GradientDrawable(
                 android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
-                intArrayOf(Color.parseColor("#1e3a8a"), Color.parseColor("#1d4ed8"))
+                intArrayOf(Color.parseColor(bgStart), Color.parseColor(bgEnd))
             )
             background = bgDrawable
             setPadding(24, 0, 24, 0)
@@ -45,10 +54,10 @@ class TickerZoneRenderer(
                 val badgeBg = android.graphics.drawable.GradientDrawable().apply {
                     shape = android.graphics.drawable.GradientDrawable.RECTANGLE
                     cornerRadius = 8f * context.resources.displayMetrics.density
-                    setColor(Color.parseColor("#2563eb"))
+                    setColor(Color.parseColor(badgeBgColor))
                     setStroke(
                         (1 * context.resources.displayMetrics.density).toInt(),
-                        Color.parseColor("#60a5fa")
+                        Color.parseColor(badgeStrokeColor)
                     )
                 }
                 background = badgeBg
@@ -58,9 +67,9 @@ class TickerZoneRenderer(
         }
 
         val marqueeText = TextView(context).apply {
-            text = textMessage
+            text = textMessage.ifBlank { "DKASigma Teks Berjalan" }
             setTextColor(Color.WHITE)
-            textSize = 18f
+            textSize = if (fontSize > 0f) fontSize else 16f
             setTypeface(null, Typeface.BOLD)
             setPadding(20, 0, 20, 0)
             isSingleLine = true
@@ -72,4 +81,6 @@ class TickerZoneRenderer(
 
         return container
     }
+
+    private data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
 }
