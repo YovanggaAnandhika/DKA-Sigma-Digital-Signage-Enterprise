@@ -249,11 +249,11 @@ class PlayerActivity : AppCompatActivity() {
                         clockRenderers.add(renderer)
                         var city = "Makassar"
                         var showSeconds = true
-                        var bgColor = "#0f172a"
+                        var bgColor = "transparent"
                         var textColor = "#ffffff"
                         var subtitleColor = "#94a3b8"
-                        var borderColor = "#1e3a8a"
-                        var borderRadius = 12
+                        var borderColor = "transparent"
+                        var borderRadius = 0
                         var timeFontSize = 52f
                         var dateFontSize = 14f
                         if (!widgetBlock.widgetDataJson.isNullOrBlank()) {
@@ -261,11 +261,11 @@ class PlayerActivity : AppCompatActivity() {
                                 val json = org.json.JSONObject(widgetBlock.widgetDataJson)
                                 city = json.optString("city", "Makassar")
                                 showSeconds = json.optBoolean("showSeconds", true)
-                                bgColor = json.optString("backgroundColor", "#0f172a").ifBlank { "#0f172a" }
+                                bgColor = json.optString("backgroundColor", "transparent").ifBlank { "transparent" }
                                 textColor = json.optString("textColor", "#ffffff").ifBlank { "#ffffff" }
                                 subtitleColor = json.optString("subtitleColor", "#94a3b8").ifBlank { "#94a3b8" }
-                                borderColor = json.optString("borderColor", "#1e3a8a").ifBlank { "#1e3a8a" }
-                                borderRadius = json.optInt("borderRadius", 12)
+                                borderColor = json.optString("borderColor", "transparent").ifBlank { "transparent" }
+                                borderRadius = json.optInt("borderRadius", 0)
                                 timeFontSize = json.optDouble("timeFontSize", 52.0).toFloat()
                                 dateFontSize = json.optDouble("dateFontSize", 14.0).toFloat()
                             } catch (_: Exception) {}
@@ -289,23 +289,23 @@ class PlayerActivity : AppCompatActivity() {
                         var textMessage = ""
                         var badgeText = ""
                         var fontSize = 16f
-                        var bgColor = "#1e3a8a"
+                        var bgColor = "transparent"
                         var textColor = "#ffffff"
-                        var badgeBgColor = "#2563eb"
+                        var badgeBgColor = "transparent"
                         var badgeTextColor = "#ffffff"
-                        var borderColor = "#60a5fa"
-                        var borderRadius = 8
+                        var borderColor = "transparent"
+                        var borderRadius = 0
                         if (!widgetBlock.widgetDataJson.isNullOrBlank()) {
                             try {
                                 val json = org.json.JSONObject(widgetBlock.widgetDataJson)
                                 badgeText = json.optString("badge", "")
                                 fontSize = json.optDouble("fontSize", 16.0).toFloat()
-                                bgColor = json.optString("backgroundColor", "#1e3a8a").ifBlank { "#1e3a8a" }
+                                bgColor = json.optString("backgroundColor", "transparent").ifBlank { "transparent" }
                                 textColor = json.optString("textColor", "#ffffff").ifBlank { "#ffffff" }
-                                badgeBgColor = json.optString("badgeBackgroundColor", "#2563eb").ifBlank { "#2563eb" }
+                                badgeBgColor = json.optString("badgeBackgroundColor", "transparent").ifBlank { "transparent" }
                                 badgeTextColor = json.optString("badgeTextColor", "#ffffff").ifBlank { "#ffffff" }
-                                borderColor = json.optString("borderColor", "#60a5fa").ifBlank { "#60a5fa" }
-                                borderRadius = json.optInt("borderRadius", 8)
+                                borderColor = json.optString("borderColor", "transparent").ifBlank { "transparent" }
+                                borderRadius = json.optInt("borderRadius", 0)
 
                                 val msgArr = json.optJSONArray("messagesList") ?: json.optJSONArray("messages")
                                 val msgs = mutableListOf<String>()

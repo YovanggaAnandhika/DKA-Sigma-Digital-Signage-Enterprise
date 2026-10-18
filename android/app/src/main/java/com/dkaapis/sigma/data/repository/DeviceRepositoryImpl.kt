@@ -38,7 +38,7 @@ class DeviceRepositoryImpl(
         var realHeight = dm.heightPixels
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && wm != null) {
-            val bounds = wm.currentWindowMetrics.bounds
+            val bounds = wm.maximumWindowMetrics.bounds
             realWidth = bounds.width()
             realHeight = bounds.height()
         } else if (wm != null) {

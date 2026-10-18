@@ -20,17 +20,17 @@ class TickerZoneRenderer(
         textMessage: String = "",
         badgeText: String = "",
         fontSize: Float = 16f,
-        backgroundColorHex: String = "#1e3a8a",
+        backgroundColorHex: String = "transparent",
         textColorHex: String = "#ffffff",
-        badgeBackgroundColorHex: String = "rgba(255, 255, 255, 0.2)",
+        badgeBackgroundColorHex: String = "transparent",
         badgeTextColorHex: String = "#ffffff",
         borderColorHex: String = "transparent",
         borderRadiusDp: Int = 0
     ): View {
         val density = context.resources.displayMetrics.density
-        val bgColor = parseColor(backgroundColorHex, Color.parseColor("#1e3a8a"))
+        val bgColor = parseColor(backgroundColorHex, Color.TRANSPARENT)
         val textColor = parseColor(textColorHex, Color.WHITE)
-        val badgeBg = parseColor(badgeBackgroundColorHex, Color.parseColor("#33ffffff"))
+        val badgeBg = parseColor(badgeBackgroundColorHex, Color.TRANSPARENT)
         val badgeTextCol = parseColor(badgeTextColorHex, Color.WHITE)
         val hasBorder = borderColorHex.isNotBlank() && !borderColorHex.equals("transparent", ignoreCase = true)
 

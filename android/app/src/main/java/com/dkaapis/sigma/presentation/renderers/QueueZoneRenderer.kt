@@ -102,7 +102,10 @@ class QueueZoneRenderer(
     ): View {
         var canvasW = 1920
         var canvasH = 1080
-        var bgColor = "#0f172a"
+        var bgColor = "transparent"
+        var canvasOpacity = 1.0f
+        var overlayColor = ""
+        var overlayOpacity = 0.0f
         var latestNumber = "A-001"
         var counterName = "LOKET 01"
         var itemsJsonArray: JSONArray? = null
@@ -115,7 +118,10 @@ class QueueZoneRenderer(
                 currentPrefix = json.optString("prefix", "A")
                 currentName = json.optString("name", "Layar Antrian")
                 latestNumber = json.optString("latestCalledNumber", "$currentPrefix-001")
-                bgColor = json.optString("backgroundColor", "#0f172a").ifBlank { "#0f172a" }
+                bgColor = json.optString("backgroundColor", "transparent").ifBlank { "transparent" }
+                canvasOpacity = (if (json.has("opacity")) json.optDouble("opacity", 1.0) else 1.0).toFloat()
+                overlayColor = json.optString("overlayColor", "").ifEmpty { json.optString("overlay_color", "") }
+                overlayOpacity = (if (json.has("overlayOpacity")) json.optDouble("overlayOpacity", 0.0) else json.optDouble("overlay_opacity", 0.0)).toFloat()
 
                 val countersArr = json.optJSONArray("countersList") ?: json.optJSONArray("counters")
                 if (countersArr != null && countersArr.length() > 0) {
@@ -131,27 +137,48 @@ class QueueZoneRenderer(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            setBackgroundColor(parseColor(bgColor, Color.parseColor("#0f172a")))
+            setBackgroundColor(parseColor(bgColor, Color.TRANSPARENT))
+            alpha = canvasOpacity.coerceIn(0.0f, 1.0f)
         }
 
         val parsedItems = mutableListOf<QueueItemMeta>()
+
+        // Scrim overlay item if defined
+        if (overlayOpacity > 0f && overlayColor.isNotBlank() && !overlayColor.equals("transparent", ignoreCase = true)) {
+            parsedItems.add(
+                QueueItemMeta(
+                    id = "queue-overlay-scrim",
+                    itemType = "overlay_scrim",
+                    x = 0, y = 0, width = canvasW, height = canvasH, zIndex = 0,
+                    backgroundColor = overlayColor,
+                    textColor = "transparent", fontSize = 0f,
+                    fontWeight = "normal", textAlign = "left", templateContent = "",
+                    opacity = overlayOpacity
+                )
+            )
+        }
 
         if (itemsJsonArray != null && itemsJsonArray.length() > 0) {
             for (i in 0 until itemsJsonArray.length()) {
                 val itemObj = itemsJsonArray.optJSONObject(i) ?: continue
                 if (!itemObj.optBoolean("isVisible", true)) continue
 
-                var br = 0f
-                var bw = 0
-                var bc = "#00000000"
+                var itemOpacity = (if (itemObj.has("opacity")) itemObj.optDouble("opacity", 1.0) else 1.0).toFloat()
+                var br = if (itemObj.has("borderRadius")) itemObj.optDouble("borderRadius", 0.0).toFloat()
+                         else itemObj.optDouble("border_radius", 0.0).toFloat()
+                var bw = if (itemObj.has("borderWidth")) itemObj.optInt("borderWidth", 0)
+                         else itemObj.optInt("border_width", 0)
+                var bc = if (itemObj.has("borderColor") && itemObj.optString("borderColor").isNotBlank()) itemObj.optString("borderColor")
+                         else itemObj.optString("border_color", "transparent")
                 var spd = "normal"
                 val configStr = itemObj.optString("configJson", "")
                 if (configStr.isNotBlank()) {
                     try {
                         val cfg = JSONObject(configStr)
-                        br = cfg.optDouble("borderRadius", 0.0).toFloat()
-                        bw = cfg.optInt("borderWidth", 0)
-                        bc = cfg.optString("borderColor", "#00000000")
+                        if (!itemObj.has("borderRadius") && !itemObj.has("border_radius")) br = cfg.optDouble("borderRadius", 0.0).toFloat()
+                        if (!itemObj.has("borderWidth") && !itemObj.has("border_width")) bw = cfg.optInt("borderWidth", 0)
+                        if (!itemObj.has("borderColor") && !itemObj.has("border_color")) bc = cfg.optString("borderColor", "transparent")
+                        if (!itemObj.has("opacity")) itemOpacity = cfg.optDouble("opacity", 1.0).toFloat()
                         spd = cfg.optString("speed", "normal")
                     } catch (_: Exception) {}
                 }
@@ -174,7 +201,8 @@ class QueueZoneRenderer(
                         borderRadius = br,
                         borderWidth = bw,
                         borderColor = bc,
-                        speed = spd
+                        speed = spd,
+                        opacity = itemOpacity
                     )
                 )
             }
@@ -224,16 +252,26 @@ class QueueZoneRenderer(
         parsedItems.sortBy { it.zIndex }
 
         for (meta in parsedItems) {
+            if (meta.itemType == "overlay_scrim") {
+                val scrimView = View(context).apply {
+                    tag = meta
+                    setBackgroundColor(parseColor(meta.backgroundColor, Color.TRANSPARENT))
+                    alpha = meta.opacity.coerceIn(0.0f, 1.0f)
+                }
+                canvasView.addView(scrimView)
+                continue
+            }
+
             val textContent = interpolate(meta.templateContent, latestNumber, counterName)
             val isBold = meta.fontWeight == "800" || meta.fontWeight == "900" || meta.fontWeight.equals("bold", ignoreCase = true)
             val density = context.resources.displayMetrics.density
 
             val textView = if (meta.itemType == "marquee") {
                 MarqueeTextView(context).apply {
-                    speedPixelsPerSec = when (meta.speed.lowercase()) {
-                        "fast" -> 160f
-                        "slow" -> 60f
-                        else -> 100f
+                    cycleDurationMs = when (meta.speed.lowercase()) {
+                        "fast" -> 12_000L
+                        "slow" -> 25_000L
+                        else -> 18_000L
                     }
                 }
             } else {
@@ -241,6 +279,7 @@ class QueueZoneRenderer(
             }.apply {
                 tag = meta
                 text = textContent
+                alpha = meta.opacity.coerceIn(0.0f, 1.0f)
                 setTextColor(parseColor(meta.textColor, Color.WHITE))
                 gravity = when (meta.textAlign.lowercase()) {
                     "left", "start" -> Gravity.START or Gravity.CENTER_VERTICAL
@@ -257,18 +296,23 @@ class QueueZoneRenderer(
                     letterSpacing = 0.02f
                 }
 
-                if (meta.backgroundColor != "transparent" && meta.backgroundColor.isNotBlank()) {
+                val hasBg = meta.backgroundColor.isNotBlank() && !meta.backgroundColor.equals("transparent", ignoreCase = true)
+                val hasBorder = meta.borderWidth > 0 && meta.borderColor.isNotBlank() && !meta.borderColor.equals("transparent", ignoreCase = true) && !meta.borderColor.equals("#00000000", ignoreCase = true)
+
+                if (hasBg || hasBorder || meta.borderRadius > 0f) {
                     val gd = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
-                        setColor(parseColor(meta.backgroundColor, Color.TRANSPARENT))
+                        setColor(if (hasBg) parseColor(meta.backgroundColor, Color.TRANSPARENT) else Color.TRANSPARENT)
                         if (meta.borderRadius > 0f) {
                             cornerRadius = meta.borderRadius * density
                         }
-                        if (meta.borderWidth > 0 && meta.borderColor != "#00000000" && meta.borderColor != "transparent") {
+                        if (hasBorder) {
                             setStroke((meta.borderWidth * density).toInt(), parseColor(meta.borderColor, Color.TRANSPARENT))
                         }
                     }
                     background = gd
+                } else {
+                    background = null
                 }
 
                 if (meta.itemType == "marquee") {

@@ -26,18 +26,18 @@ class ClockZoneRenderer(
         parent: ViewGroup,
         city: String = "Makassar",
         showSeconds: Boolean = true,
-        backgroundColorHex: String = "#ffffff",
-        textColorHex: String = "#0f172a",
-        subtitleColorHex: String = "#64748b",
+        backgroundColorHex: String = "transparent",
+        textColorHex: String = "#ffffff",
+        subtitleColorHex: String = "#94a3b8",
         borderColorHex: String = "transparent",
         borderRadiusDp: Int = 0,
         timeFontSizeSp: Float = 56f,
         dateFontSizeSp: Float = 14f
     ): View {
         val density = context.resources.displayMetrics.density
-        val bgColor = parseColor(backgroundColorHex, Color.WHITE)
-        val textColor = parseColor(textColorHex, Color.parseColor("#0f172a"))
-        val subColor = parseColor(subtitleColorHex, Color.parseColor("#64748b"))
+        val bgColor = parseColor(backgroundColorHex, Color.TRANSPARENT)
+        val textColor = parseColor(textColorHex, Color.WHITE)
+        val subColor = parseColor(subtitleColorHex, Color.parseColor("#94a3b8"))
         val hasBorder = borderColorHex.isNotBlank() && !borderColorHex.equals("transparent", ignoreCase = true)
 
         val container = LinearLayout(context).apply {
