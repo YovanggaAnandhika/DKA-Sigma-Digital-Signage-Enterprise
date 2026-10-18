@@ -37,6 +37,8 @@ impl LayoutServiceImpl {
                 id: o.id.to_string(),
                 name: o.name,
                 value: o.value,
+                created_at: o.created_at.to_rfc3339(),
+                updated_at: o.updated_at.to_rfc3339(),
             }),
             background_color: dto.layout.background_color,
             background_image_url: dto.layout.background_image_url.unwrap_or_default(),

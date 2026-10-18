@@ -6,7 +6,7 @@ use std::str::FromStr;
 use crate::grpc::proto::common::v1::resolution::{
     resolution_service_server::ResolutionService as ResolutionServiceTrait,
     ListResolutionsRequest, ListResolutionsResponse, GetResolutionRequest,
-    CreateResolutionRequest, DeleteResolutionRequest, DeleteResolutionResponse, Resolution,
+    CreateResolutionRequest, UpdateResolutionRequest, DeleteResolutionRequest, DeleteResolutionResponse, Resolution,
 };
 
 pub struct ResolutionServiceImpl {
@@ -104,6 +104,42 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
         }))
     }
 
+    async fn update_resolution(
+        &self,
+        request: Request<UpdateResolutionRequest>,
+    ) -> Result<Response<Resolution>, Status> {
+        let req = request.into_inner();
+        let id = Uuid::from_str(&req.id).map_err(|_| Status::invalid_argument("Invalid id"))?;
+
+        let row = sqlx::query!(
+            r#"
+            UPDATE resolutions
+            SET name = $1, width = $2, height = $3, aspect_ratio = $4, updated_at = NOW()
+            WHERE id = $5
+            RETURNING id, name, width, height, aspect_ratio, created_at, updated_at
+            "#,
+            req.name,
+            req.width,
+            req.height,
+            if req.aspect_ratio.is_empty() { "16:9" } else { &req.aspect_ratio },
+            id,
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?
+        .ok_or_else(|| Status::not_found("Resolution not found"))?;
+
+        Ok(Response::new(Resolution {
+            id: row.id.to_string(),
+            name: row.name,
+            width: row.width,
+            height: row.height,
+            aspect_ratio: row.aspect_ratio,
+            created_at: row.created_at.to_rfc3339(),
+            updated_at: row.updated_at.to_rfc3339(),
+        }))
+    }
+
     async fn delete_resolution(
         &self,
         request: Request<DeleteResolutionRequest>,
@@ -116,3 +152,4 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
         Ok(Response::new(DeleteResolutionResponse { success: true }))
     }
 }
+

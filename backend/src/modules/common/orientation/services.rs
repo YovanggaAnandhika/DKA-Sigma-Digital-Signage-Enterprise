@@ -14,4 +14,17 @@ impl OrientationService {
     pub async fn get_orientation_by_id(pool: &PgPool, id: Uuid) -> Result<OrientationEntity, AppError> {
         OrientationRepository::find_by_id(pool, id).await
     }
+
+    pub async fn create_orientation(pool: &PgPool, name: &str, value: &str) -> Result<OrientationEntity, AppError> {
+        OrientationRepository::create(pool, name, value).await
+    }
+
+    pub async fn update_orientation(pool: &PgPool, id: Uuid, name: &str, value: &str) -> Result<OrientationEntity, AppError> {
+        OrientationRepository::update(pool, id, name, value).await
+    }
+
+    pub async fn delete_orientation(pool: &PgPool, id: Uuid) -> Result<bool, AppError> {
+        OrientationRepository::delete(pool, id).await
+    }
 }
+

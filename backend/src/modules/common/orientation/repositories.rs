@@ -29,4 +29,52 @@ impl OrientationRepository {
 
         Ok(item)
     }
+
+    pub async fn create(pool: &PgPool, name: &str, value: &str) -> Result<OrientationEntity, AppError> {
+        let item = sqlx::query_as::<_, OrientationEntity>(
+            r#"
+            INSERT INTO orientations (name, value)
+            VALUES ($1, $2)
+            RETURNING id, name, value, created_at, updated_at
+            "#
+        )
+        .bind(name)
+        .bind(value)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| AppError::Database(e))?;
+
+        Ok(item)
+    }
+
+    pub async fn update(pool: &PgPool, id: Uuid, name: &str, value: &str) -> Result<OrientationEntity, AppError> {
+        let item = sqlx::query_as::<_, OrientationEntity>(
+            r#"
+            UPDATE orientations
+            SET name = $1, value = $2, updated_at = NOW()
+            WHERE id = $3
+            RETURNING id, name, value, created_at, updated_at
+            "#
+        )
+        .bind(name)
+        .bind(value)
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| AppError::Database(e))?
+        .ok_or_else(|| AppError::NotFound("Orientation not found".into()))?;
+
+        Ok(item)
+    }
+
+    pub async fn delete(pool: &PgPool, id: Uuid) -> Result<bool, AppError> {
+        sqlx::query("DELETE FROM orientations WHERE id = $1")
+            .bind(id)
+            .execute(pool)
+            .await
+            .map_err(|e| AppError::Database(e))?;
+
+        Ok(true)
+    }
 }
+

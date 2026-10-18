@@ -75,6 +75,8 @@ impl ManifestServiceImpl {
             id: String::new(),
             name: dto.orientation.clone(),
             value: dto.orientation.clone(),
+            created_at: String::new(),
+            updated_at: String::new(),
         });
 
         let layout = Layout {

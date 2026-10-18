@@ -8,5 +8,6 @@ service ResolutionService {
   rpc ListResolutions(ListResolutionsRequest) returns (ListResolutionsResponse);
   rpc GetResolution(GetResolutionRequest) returns (Resolution);
   rpc CreateResolution(CreateResolutionRequest) returns (Resolution);
+  rpc UpdateResolution(UpdateResolutionRequest) returns (Resolution);
   rpc DeleteResolution(DeleteResolutionRequest) returns (DeleteResolutionResponse);
 }
