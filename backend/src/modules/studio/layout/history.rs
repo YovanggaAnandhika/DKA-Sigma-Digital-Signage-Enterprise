@@ -222,20 +222,22 @@ impl LayoutHistoryRepository {
 
             for block_dto in &layer_dto.blocks {
                 let b = &block_dto.block;
+                let block_id = Uuid::new_v4();
                 sqlx::query(
                     r#"
-                    INSERT INTO layer_playlists (
+                    INSERT INTO layer_blocks (
                         id, layer_id, playlist_id, media_item_id, start_time_seconds,
                         duration_seconds, trim_start_seconds, trim_end_seconds,
                         transition_id, visual_filter_id, order_index, is_muted,
                         volume_level, ticker_id, clock_id, webview_id, queue_id,
                         album_id, created_at, updated_at
                     ) VALUES (
-                        gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9,
-                        $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW()
+                        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                        $11, $12, $13, $14, $15, $16, $17, $18, NOW(), NOW()
                     )
                     "#,
                 )
+                .bind(block_id)
                 .bind(layer_id)
                 .bind(b.playlist_id)
                 .bind(b.media_item_id)
@@ -256,6 +258,26 @@ impl LayoutHistoryRepository {
                 .execute(&mut *tx)
                 .await
                 .map_err(AppError::Database)?;
+
+                for item_override in &block_dto.item_overrides {
+                    sqlx::query(
+                        r#"
+                        INSERT INTO layer_playlist_item_overrides (
+                            id, layer_block_id, playlist_item_id, is_muted, volume_level,
+                            created_at, updated_at
+                        ) VALUES (
+                            gen_random_uuid(), $1, $2, $3, $4, NOW(), NOW()
+                        )
+                        "#,
+                    )
+                    .bind(block_id)
+                    .bind(item_override.playlist_item_id)
+                    .bind(item_override.is_muted)
+                    .bind(item_override.volume_level)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(AppError::Database)?;
+                }
             }
         }
 
