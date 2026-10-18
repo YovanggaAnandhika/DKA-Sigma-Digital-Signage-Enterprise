@@ -354,106 +354,51 @@ export default function ViewSchedulePage() {
           throw new Error('Finalisasi berkas di server backend gagal.');
         }
 
-        const isVideo = file.type.startsWith('video/') || file.name.endsWith('.mp4') || file.name.endsWith('.webm');
-        const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' ');
-
-        const newMedia = await api.createMedia({
-          name: cleanName,
-          originalFilename: file.name,
-          filePath: finalResult.filePath,
-          publicUrl: finalResult.publicUrl,
-          fileSizeBytes: finalResult.fileSizeBytes,
-          mimeType: file.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
-          sha256Hash: finalResult.sha256Hash,
-          mediaType: isVideo ? 2 : 1,
-          width: 1920,
-          height: 1080,
-          durationSeconds: isVideo ? 30 : 10,
-        });
-
         setUploadLogs((prev) => [
           {
             id: `success-${Date.now()}`,
             time: new Date().toLocaleTimeString(),
             type: 'success',
-            message: `1. Berkas terdaftar di Server sebagai "${newMedia.name}" (${formatBytes(finalResult.fileSizeBytes)}). SHA256: ${finalResult.sha256Hash?.substring(0, 16)}...`,
+            message: `1. Uji transmisi chunk selesai! File "${file.name}" (${formatBytes(finalResult.fileSizeBytes)}) berhasil digabung di server (SHA-256: ${finalResult.sha256Hash?.substring(0, 16)}...).`,
           },
           ...prev,
         ]);
 
-        // 2. Sematkan berkas baru ke layer pertama layout jadwal ini
-        const primaryLayoutId = schedule.eventsList?.[0]?.layoutId;
-        if (primaryLayoutId && layoutDetails?.layersList && layoutDetails.layersList.length > 0) {
-          const targetLayerId = layoutDetails.layersList[0].id;
+        // Pengujian pengiriman ke player tanpa membuat data di Pustaka Media / Layout
+        if (assignedDevices.length > 0) {
           setUploadLogs((prev) => [
             {
-              id: `attach-${Date.now()}`,
+              id: `test-push-${Date.now()}`,
               time: new Date().toLocaleTimeString(),
               type: 'info',
-              message: `2. Menyematkan media ke Layout "${layoutDetails.name}" (Layer: ${layoutDetails.layersList[0].name})...`,
+              message: `2. Mengirim sinyal distribusi (COMMAND_RELOAD_MANIFEST) secara real-time ke ${assignedDevices.length} layar terhubung (${assignedDevices.map((d) => d.name).join(', ')})...`,
             },
             ...prev,
           ]);
 
-          await api.addMediaBlock(targetLayerId, newMedia.id, 0, newMedia.durationSeconds || 10).catch(() => null);
-
-          // 3. Simpan layout untuk kalkulasi version_hash baru
-          const updatedLayout = await api.updateLayout(primaryLayoutId, {
-            name: layoutDetails.name,
-            canvasWidth: layoutDetails.canvasWidth,
-            canvasHeight: layoutDetails.canvasHeight,
-          }).catch(() => null);
-
-          // 4. Update version_hash di schedule_events
-          if (updatedLayout?.versionHash) {
-            await api.pushLayoutToSchedule({
-              layoutId: primaryLayoutId,
-              scheduleId: schedule.id,
-              priority: primaryEvent?.priority ?? 0,
-              startTime: primaryEvent?.startTime || '00:00:00',
-              endTime: primaryEvent?.endTime || '23:59:59',
-              daysOfWeek: primaryEvent?.daysOfWeek || '1,2,3,4,5,6,7',
-              deviceIds: assignedDevices.map((d) => d.id),
-              displayGroupIds: assignedGroups.map((g) => g.id),
-            }).catch(() => null);
+          for (const dev of assignedDevices) {
+            await api.pushDeviceCommand(dev.id, 1).catch(() => null);
           }
 
-          // 5. Kirim perintah reload manifest ke seluruh perangkat layar yang ditugaskan
-          if (assignedDevices.length > 0) {
-            setUploadLogs((prev) => [
-              {
-                id: `push-cmd-${Date.now()}`,
-                time: new Date().toLocaleTimeString(),
-                type: 'info',
-                message: `3. Mengirim sinyal distribusi (COMMAND_RELOAD_MANIFEST) ke ${assignedDevices.length} layar terhubung (${assignedDevices.map((d) => d.name).join(', ')})...`,
-              },
-              ...prev,
-            ]);
-
-            for (const dev of assignedDevices) {
-              await api.pushDeviceCommand(dev.id, 1).catch(() => null);
-            }
-
-            setUploadLogs((prev) => [
-              {
-                id: `push-done-${Date.now()}`,
-                time: new Date().toLocaleTimeString(),
-                type: 'success',
-                message: `4. Selesai! Sinyal gRPC terkirim ke Layar (${assignedDevices.map((d) => d.name).join(', ')}). Player Android segera mengunduh berkas baru via HTTP Range Chunk dan memverifikasi hash SHA-256.`,
-              },
-              ...prev,
-            ]);
-          } else {
-            setUploadLogs((prev) => [
-              {
-                id: `push-warn-${Date.now()}`,
-                time: new Date().toLocaleTimeString(),
-                type: 'info',
-                message: `Catatan: Saat ini 0 Layar Aktif terikat ke jadwal ini. Silakan tugaskan layar agar media langsung otomatis diunduh oleh Android player.`,
-              },
-              ...prev,
-            ]);
-          }
+          setUploadLogs((prev) => [
+            {
+              id: `test-done-${Date.now()}`,
+              time: new Date().toLocaleTimeString(),
+              type: 'success',
+              message: `3. Uji coba berhasil! Sinyal gRPC push terkirim ke player (${assignedDevices.map((d) => d.name).join(', ')}). (Mode Uji Coba: File tidak disimpan ke Pustaka Media atau merubah layout).`,
+            },
+            ...prev,
+          ]);
+        } else {
+          setUploadLogs((prev) => [
+            {
+              id: `test-warn-${Date.now()}`,
+              time: new Date().toLocaleTimeString(),
+              type: 'info',
+              message: `Catatan: Saat ini 0 Layar Aktif terikat. Tugaskan layar jika ingin menguji transmisi langsung ke device Android.`,
+            },
+            ...prev,
+          ]);
         }
 
         setSelectedUploadFile(null);
