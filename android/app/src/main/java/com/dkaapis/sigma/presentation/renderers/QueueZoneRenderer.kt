@@ -96,7 +96,6 @@ class QueueZoneRenderer(
 ) {
     private var numberTextView: TextView? = null
     private var counterTextView: TextView? = null
-    private var callingPillView: TextView? = null
     private var currentPrefix: String = "A"
     private var currentName: String = "Layar Antrian"
     private var currentSequence: Int = 1
@@ -362,45 +361,6 @@ class QueueZoneRenderer(
             canvasView.addView(textView)
         }
 
-        val density = context.resources.displayMetrics.density
-        // Dynamic Call Announcement Pill Banner
-        callingPillView = TextView(context).apply {
-            tag = QueueItemMeta(
-                id = "queue-calling-pill",
-                itemType = "calling_pill",
-                x = ((canvasW - 740) / 2).coerceAtLeast(0),
-                y = 40,
-                width = 740,
-                height = 76,
-                zIndex = 999,
-                backgroundColor = "#0f172a",
-                textColor = "#fde047",
-                fontSize = 28f,
-                fontWeight = "800",
-                textAlign = "center",
-                templateContent = "",
-                borderRadius = 38f,
-                borderWidth = 2,
-                borderColor = "#f59e0b"
-            )
-            text = "🔔  PANGGILAN NOMOR ANTRIAN  🔔"
-            setTextColor(Color.parseColor("#FDE047"))
-            gravity = Gravity.CENTER
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-            visibility = View.GONE
-            alpha = 0f
-
-            val gd = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = 38f * density
-                setColor(Color.parseColor("#E60F172A"))
-                setStroke((2 * density).toInt(), Color.parseColor("#F59E0B"))
-            }
-            background = gd
-            setPadding((24 * density).toInt(), (8 * density).toInt(), (24 * density).toInt(), (8 * density).toInt())
-        }
-        canvasView.addView(callingPillView)
-
         return canvasView
     }
 
@@ -457,114 +417,55 @@ class QueueZoneRenderer(
         numberTextView?.text = ticketNumber
         counterTextView?.text = counterName
 
-        // 1. Calling Pill Banner Animation (Pop-down with Overshoot)
-        callingPillView?.let { pill ->
-            pill.visibility = View.VISIBLE
-            pill.alpha = 0f
-            pill.scaleX = 0.7f
-            pill.scaleY = 0.7f
-            pill.animate()
-                ?.alpha(1f)
-                ?.scaleX(1.0f)
-                ?.scaleY(1.0f)
-                ?.setInterpolator(OvershootInterpolator(2.2f))
-                ?.setDuration(350)
-                ?.withEndAction {
-                    pill.animate()
-                        ?.scaleX(1.04f)
-                        ?.scaleY(1.04f)
-                        ?.setDuration(400)
-                        ?.withEndAction {
-                            pill.animate()?.scaleX(1.0f)?.scaleY(1.0f)?.setDuration(400)?.start()
-                        }
-                        ?.start()
-                }
-                ?.start()
-        }
-
-        // 2. High-impact Glowing Ticket Number Animation
+        // Animasi Modern, Minimalis & Rapi (Tanpa Emot / Tanpa Overlapping Element)
         val originalTextColor = (numberTextView?.tag as? QueueItemMeta)?.let {
-            parseColor(it.textColor, Color.WHITE)
-        } ?: Color.WHITE
+            parseColor(it.textColor, Color.BLACK)
+        } ?: Color.BLACK
 
-        val accentGlowColor = Color.parseColor("#38BDF8") // Vivid cyan aura
-        val highlightColor = Color.parseColor("#FDE047") // Bright gold
+        // Deteksi kontras warna teks untuk pulse aksen elegan
+        val r = Color.red(originalTextColor)
+        val g = Color.green(originalTextColor)
+        val b = Color.blue(originalTextColor)
+        val isDarkText = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0 < 0.5
 
-        numberTextView?.setTextColor(highlightColor)
-        numberTextView?.setShadowLayer(45f, 0f, 0f, accentGlowColor)
+        // Aksen modern: Royal Blue (#2563EB) untuk teks gelap, Sky Blue (#38BDF8) untuk teks terang
+        val accentColor = if (isDarkText) Color.parseColor("#2563EB") else Color.parseColor("#38BDF8")
 
+        // 1. Subtle, silky-smooth typography scale & color highlight
+        numberTextView?.setTextColor(accentColor)
         numberTextView?.animate()
-            ?.scaleX(1.26f)
-            ?.scaleY(1.26f)
-            ?.setInterpolator(OvershootInterpolator(2.5f))
-            ?.setDuration(350)
+            ?.scaleX(1.08f)
+            ?.scaleY(1.08f)
+            ?.setInterpolator(DecelerateInterpolator())
+            ?.setDuration(220)
             ?.withEndAction {
-                // Heartbeat pulse 1
                 numberTextView?.animate()
-                    ?.scaleX(1.12f)
-                    ?.scaleY(1.12f)
-                    ?.setDuration(280)
+                    ?.scaleX(1.0f)
+                    ?.scaleY(1.0f)
+                    ?.setInterpolator(DecelerateInterpolator())
+                    ?.setDuration(400)
                     ?.withEndAction {
-                        // Heartbeat pulse 2
-                        numberTextView?.animate()
-                            ?.scaleX(1.22f)
-                            ?.scaleY(1.22f)
-                            ?.setDuration(280)
-                            ?.withEndAction {
-                                // Settle back smoothly
-                                numberTextView?.animate()
-                                    ?.scaleX(1.0f)
-                                    ?.scaleY(1.0f)
-                                    ?.setInterpolator(DecelerateInterpolator())
-                                    ?.setDuration(450)
-                                    ?.withEndAction {
-                                        numberTextView?.setTextColor(originalTextColor)
-                                        numberTextView?.setShadowLayer(0f, 0f, 0f, 0)
-                                    }
-                                    ?.start()
-                            }
-                            ?.start()
+                        numberTextView?.setTextColor(originalTextColor)
                     }
                     ?.start()
             }
             ?.start()
 
-        // 3. Counter Loket Badge Attention Pop & Wobble
+        // 2. Subtle pulse pada badge loket
         counterTextView?.animate()
-            ?.scaleX(1.20f)
-            ?.scaleY(1.20f)
-            ?.rotation(-3.5f)
-            ?.setInterpolator(OvershootInterpolator(2.0f))
-            ?.setDuration(280)
+            ?.scaleX(1.05f)
+            ?.scaleY(1.05f)
+            ?.setInterpolator(DecelerateInterpolator())
+            ?.setDuration(180)
             ?.withEndAction {
                 counterTextView?.animate()
-                    ?.rotation(3.5f)
-                    ?.setDuration(180)
-                    ?.withEndAction {
-                        counterTextView?.animate()
-                            ?.rotation(0f)
-                            ?.scaleX(1.0f)
-                            ?.scaleY(1.0f)
-                            ?.setInterpolator(DecelerateInterpolator())
-                            ?.setDuration(300)
-                            ?.start()
-                    }
+                    ?.scaleX(1.0f)
+                    ?.scaleY(1.0f)
+                    ?.setInterpolator(DecelerateInterpolator())
+                    ?.setDuration(300)
                     ?.start()
             }
             ?.start()
-
-        // 4. Fade out calling pill after announcement (3.8 seconds)
-        callingPillView?.postDelayed({
-            callingPillView?.animate()
-                ?.alpha(0f)
-                ?.scaleX(0.8f)
-                ?.scaleY(0.8f)
-                ?.setDuration(350)
-                ?.withEndAction {
-                    callingPillView?.visibility = View.GONE
-                }
-                ?.start()
-        }, 3800)
     }
 
     fun getCurrentTicketNumber(): String = "$currentPrefix-${String.format(java.util.Locale.US, "%03d", currentSequence)}"
