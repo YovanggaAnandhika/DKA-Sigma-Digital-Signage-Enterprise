@@ -188,7 +188,11 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
       }
 
       // Always commit layout update after layers are saved to record layout_history and new version hash
-      const updatedLayout = await api.updateLayout(params.id, { name: layoutName });
+      const updatedLayout = await api.updateLayout(params.id, {
+        name: layoutName,
+        canvasWidth: layout.canvasWidth,
+        canvasHeight: layout.canvasHeight,
+      });
       const data = updatedLayout || (await api.getLayout(params.id));
       setLayout(data);
       setLayoutName(data.name);

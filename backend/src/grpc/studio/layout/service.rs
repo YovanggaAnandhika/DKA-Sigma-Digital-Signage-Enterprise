@@ -212,8 +212,8 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         let dto = UpdateLayoutDto {
             name: if req.name.is_empty() { None } else { Some(req.name) },
             description: if req.description.is_empty() { None } else { Some(req.description) },
-            canvas_width: Some(req.canvas_width),
-            canvas_height: Some(req.canvas_height),
+            canvas_width: if req.canvas_width > 0 { Some(req.canvas_width) } else { None },
+            canvas_height: if req.canvas_height > 0 { Some(req.canvas_height) } else { None },
             orientation_id,
             background_color: if req.background_color.is_empty() { None } else { Some(req.background_color) },
             background_image_url: if req.background_image_url.is_empty() { None } else { Some(req.background_image_url) },
