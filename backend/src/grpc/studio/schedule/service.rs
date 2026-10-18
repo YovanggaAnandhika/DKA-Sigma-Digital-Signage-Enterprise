@@ -14,6 +14,21 @@ use crate::grpc::proto::studio::v1::schedule::{
     PushLayoutToScheduleRequest, PushLayoutToScheduleResponse,
 };
 
+#[derive(sqlx::FromRow)]
+struct ScheduleEventWithLayoutRow {
+    id: Uuid,
+    schedule_id: Uuid,
+    layout_id: Uuid,
+    layout_name: Option<String>,
+    start_time: chrono::NaiveTime,
+    end_time: chrono::NaiveTime,
+    days_of_week: String,
+    priority: i32,
+    start_date: Option<chrono::NaiveDate>,
+    end_date: Option<chrono::NaiveDate>,
+    created_at: chrono::DateTime<chrono::Utc>,
+}
+
 pub struct ScheduleServiceImpl {
     pub pool: DbPool,
 }
@@ -21,6 +36,41 @@ pub struct ScheduleServiceImpl {
 impl ScheduleServiceImpl {
     pub fn new(pool: DbPool) -> Self {
         Self { pool }
+    }
+
+    async fn fetch_events(&self, schedule_id: Uuid) -> Vec<ScheduleEvent> {
+        let rows = sqlx::query_as::<_, ScheduleEventWithLayoutRow>(
+            r#"
+            SELECT 
+                se.id, se.schedule_id, se.layout_id, l.name AS layout_name,
+                se.start_time, se.end_time, se.days_of_week, se.priority,
+                se.start_date, se.end_date, se.created_at
+            FROM schedule_events se
+            LEFT JOIN layouts l ON l.id = se.layout_id
+            WHERE se.schedule_id = $1
+            ORDER BY se.priority DESC, se.start_time ASC
+            "#,
+        )
+        .bind(schedule_id)
+        .fetch_all(&self.pool)
+        .await
+        .unwrap_or_default();
+
+        rows.into_iter()
+            .map(|r| ScheduleEvent {
+                id: r.id.to_string(),
+                schedule_id: r.schedule_id.to_string(),
+                layout_id: r.layout_id.to_string(),
+                layout_name: r.layout_name.unwrap_or_else(|| "Layout".to_string()),
+                start_time: r.start_time.format("%H:%M:%S").to_string(),
+                end_time: r.end_time.format("%H:%M:%S").to_string(),
+                days_of_week: r.days_of_week,
+                priority: r.priority,
+                created_at: r.created_at.to_rfc3339(),
+                start_date: r.start_date.map(|d| d.format("%Y-%m-%d").to_string()),
+                end_date: r.end_date.map(|d| d.format("%Y-%m-%d").to_string()),
+            })
+            .collect()
     }
 
     fn map_entity(entity: ScheduleEntity) -> Schedule {
@@ -59,7 +109,6 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
     ) -> Result<Response<Schedule>, Status> {
         let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
         let req = request.into_inner();
-
         let dto = CreateScheduleDto {
             name: req.name,
             description: if req.description.is_empty() { None } else { Some(req.description) },
@@ -86,7 +135,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
             .map_err(Status::from)?;
 
         let mut proto_schedule = Self::map_entity(schedule_with_events.schedule);
-        proto_schedule.events = schedule_with_events.events.into_iter().map(Self::map_event_entity).collect();
+        proto_schedule.events = self.fetch_events(id).await;
 
         Ok(Response::new(proto_schedule))
     }
@@ -100,7 +149,13 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
             .await
             .map_err(Status::from)?;
 
-        let items = schedules.into_iter().map(Self::map_entity).collect();
+        let mut items = Vec::new();
+        for s in schedules {
+            let id = s.id;
+            let mut proto_s = Self::map_entity(s);
+            proto_s.events = self.fetch_events(id).await;
+            items.push(proto_s);
+        }
 
         Ok(Response::new(ListSchedulesResponse {
             items,
