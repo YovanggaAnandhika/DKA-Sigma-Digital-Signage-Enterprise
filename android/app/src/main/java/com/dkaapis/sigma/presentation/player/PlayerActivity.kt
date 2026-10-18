@@ -7,6 +7,7 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
+import android.media.ToneGenerator
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import java.util.Locale
@@ -291,27 +292,35 @@ class PlayerActivity : AppCompatActivity() {
     private fun playChimeTone(onChimeDone: () -> Unit) {
         Thread {
             var track: AudioTrack? = null
+            var playedSuccessfully = false
             try {
                 val sampleRate = 44100
-                val dur1 = 0.35 // Ding (880 Hz)
-                val dur2 = 0.55 // Dong (587.33 Hz)
-                val total = ((dur1 + dur2) * sampleRate).toInt()
-                val samples = ShortArray(total)
+                val dur1 = 0.40 // Ding (880 Hz / A5)
+                val dur2 = 0.60 // Dong (587.33 Hz / D5)
+                val totalSamples = ((dur1 + dur2) * sampleRate).toInt()
+                val samples = ShortArray(totalSamples)
 
                 val dingLen = (dur1 * sampleRate).toInt()
                 for (i in 0 until dingLen) {
                     val t = i.toDouble() / sampleRate
-                    val decay = Math.exp(-5.0 * (t / dur1))
+                    val decay = Math.exp(-4.2 * (t / dur1))
                     val wave = Math.sin(2.0 * Math.PI * 880.0 * t)
-                    samples[i] = (wave * decay * 32767 * 0.75).toInt().toShort()
+                    samples[i] = (wave * decay * 32767 * 0.90).toInt().toShort()
                 }
 
-                for (i in 0 until (total - dingLen)) {
+                for (i in 0 until (totalSamples - dingLen)) {
                     val t = i.toDouble() / sampleRate
-                    val decay = Math.exp(-3.8 * (t / dur2))
+                    val decay = Math.exp(-3.5 * (t / dur2))
                     val wave = Math.sin(2.0 * Math.PI * 587.33 * t)
-                    samples[dingLen + i] = (wave * decay * 32767 * 0.85).toInt().toShort()
+                    samples[dingLen + i] = (wave * decay * 32767 * 0.95).toInt().toShort()
                 }
+
+                val minBuf = AudioTrack.getMinBufferSize(
+                    sampleRate,
+                    AudioFormat.CHANNEL_OUT_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT
+                )
+                val bufferSize = maxOf(minBuf * 2, 8192)
 
                 track = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     AudioTrack.Builder()
@@ -328,8 +337,8 @@ class PlayerActivity : AppCompatActivity() {
                                 .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                                 .build()
                         )
-                        .setBufferSizeInBytes(samples.size * 2)
-                        .setTransferMode(AudioTrack.MODE_STATIC)
+                        .setBufferSizeInBytes(bufferSize)
+                        .setTransferMode(AudioTrack.MODE_STREAM)
                         .build()
                 } else {
                     @Suppress("DEPRECATION")
@@ -338,20 +347,33 @@ class PlayerActivity : AppCompatActivity() {
                         sampleRate,
                         AudioFormat.CHANNEL_OUT_MONO,
                         AudioFormat.ENCODING_PCM_16BIT,
-                        samples.size * 2,
-                        AudioTrack.MODE_STATIC
+                        bufferSize,
+                        AudioTrack.MODE_STREAM
                     )
                 }
 
-                track.write(samples, 0, samples.size)
                 track.play()
-                Thread.sleep(((dur1 + dur2) * 1000).toLong() + 100)
-            } catch (_: Exception) {
+                track.write(samples, 0, samples.size)
+                playedSuccessfully = true
+                Thread.sleep(((dur1 + dur2) * 1000).toLong() + 150)
+            } catch (e: Exception) {
+                android.util.Log.w("PlayerActivity", "AudioTrack DingDong error: ${e.message}, fallback ke ToneGenerator...")
             } finally {
                 try {
                     track?.stop()
                     track?.release()
                 } catch (_: Exception) {}
+
+                // Fallback jika AudioTrack gagal
+                if (!playedSuccessfully) {
+                    try {
+                        val toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 100)
+                        toneGen.startTone(ToneGenerator.TONE_PROP_BEEP2, 500)
+                        Thread.sleep(550)
+                        toneGen.release()
+                    } catch (_: Exception) {}
+                }
+
                 runOnUiThread {
                     onChimeDone()
                 }
@@ -359,7 +381,7 @@ class PlayerActivity : AppCompatActivity() {
         }.start()
     }
 
-    fun speakQueueTicket(ticketNumber: String, counterName: String) {
+    fun speakQueueTicket(ticketNumber: String, counterName: String, isRecall: Boolean = false) {
         runOnUiThread {
             try {
                 // Mute seluruh audio pemutar video & minta audio focus sistem seketika
@@ -390,10 +412,11 @@ class PlayerActivity : AppCompatActivity() {
                     .replace("LOKET 0", "Loket ")
                     .replace("LOKET ", "Loket ")
 
-                val utteranceText = "Nomor antrian... $prefix... $spokenDigits... Silakan menuju... $counterSpoken"
-                android.util.Log.i("PlayerActivity", "Chime & TTS: $utteranceText")
+                val prefixIntro = if (isRecall) "Panggilan ulang... Nomor antrian... " else "Nomor antrian... "
+                val utteranceText = "$prefixIntro$prefix... $spokenDigits... Silakan menuju... $counterSpoken"
+                android.util.Log.i("PlayerActivity", "Chime & TTS: $utteranceText (isRecall=$isRecall)")
 
-                // Putar Chime Ding-Dong dulu, lalu lanjutkan pengucapan suara TTS
+                // Putar Bell Chime Ding-Dong dulu, lalu lanjutkan pengucapan suara TTS
                 playChimeTone {
                     if (textToSpeech != null && isTtsReady) {
                         val params = Bundle().apply {
@@ -978,6 +1001,8 @@ class PlayerActivity : AppCompatActivity() {
                     val targetQueueId = data.optString("queueId", data.optString("queue_id", ""))
                     val ticketNumber = data.optString("ticketNumber", data.optString("ticket_number", ""))
                     val counterName = data.optString("counterName", data.optString("counter_name", "LOKET 01"))
+                    val callType = data.optString("callType", data.optString("call_type", "next"))
+                    val isRecall = callType.equals("recall", ignoreCase = true) || callType.equals("repeat", ignoreCase = true)
                     val source = data.optString("source", "")
                     val sourceDeviceId = data.optString("sourceDeviceId", "")
                     val currentDevId = deviceRepo.getSavedDeviceId() ?: ""
@@ -999,7 +1024,7 @@ class PlayerActivity : AppCompatActivity() {
 
                     if (ticketNumber.isNotBlank()) {
                         queueRenderer.updateCall(ticketNumber, counterName)
-                        speakQueueTicket(ticketNumber, counterName)
+                        speakQueueTicket(ticketNumber, counterName, isRecall)
                     }
                 }
             }
