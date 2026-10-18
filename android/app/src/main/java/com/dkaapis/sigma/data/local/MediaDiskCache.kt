@@ -56,6 +56,15 @@ class MediaDiskCache(context: Context) {
         }
     }
 
+    fun clearAllCache() {
+        val files = assetsDir.listFiles() ?: return
+        for (file in files) {
+            try {
+                file.delete()
+            } catch (_: Exception) {}
+        }
+    }
+
     fun getFreeSpaceBytes(): Long {
         val stat = StatFs(assetsDir.path)
         return stat.availableBlocksLong * stat.blockSizeLong

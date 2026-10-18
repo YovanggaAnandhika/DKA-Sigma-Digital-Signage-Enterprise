@@ -99,6 +99,19 @@ export default function ViewDisplayPage() {
       await pushDeviceCommand(params.id, cmdType);
       setCmdFeedback(`Perintah "${label}" berhasil dikirim ke player.`);
       setTimeout(() => setCmdFeedback(null), 4000);
+
+      if (cmdType === ServerCommandType.COMMAND_CAPTURE_SCREENSHOT) {
+        setTimeout(() => {
+          api.listDeviceScreenshots(params.id, 10).then(res => {
+            if (res && res.length > 0) setScreenshots(res);
+          }).catch(() => {});
+        }, 3500);
+        setTimeout(() => {
+          api.listDeviceScreenshots(params.id, 10).then(res => {
+            if (res && res.length > 0) setScreenshots(res);
+          }).catch(() => {});
+        }, 6500);
+      }
     } catch (err: any) {
       alert(`Gagal mengirim perintah: ${err.message}`);
     } finally {

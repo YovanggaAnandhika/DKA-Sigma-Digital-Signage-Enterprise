@@ -239,7 +239,7 @@ class DeviceRepositoryImpl(
         currentMediaId: String?,
         activeLayoutId: String?,
         manifestHash: String?
-    ): Result<Boolean> = withContext(Dispatchers.IO) {
+    ): Result<com.dkaapis.sigma.domain.repository.HeartbeatResult> = withContext(Dispatchers.IO) {
         try {
             val deviceId = getSavedDeviceId() ?: return@withContext Result.failure(Exception("Device ID not found"))
             val deviceToken = getSavedDeviceToken() ?: ""
@@ -272,15 +272,17 @@ class DeviceRepositoryImpl(
             val response = httpClient.newCall(request).execute()
             if (response.isSuccessful) {
                 val json = JSONObject(response.body?.string() ?: "")
-                val pendingCmd = json.optString("pendingCommand", "").ifBlank { json.optString("pending_command", "") }
-                val hasReload = pendingCmd.contains("Reload", ignoreCase = true)
+                val pendingCmd = json.optString("pendingCommand", "")
+                    .ifBlank { json.optString("pending_command", "") }
+                    .takeIf { it.isNotBlank() }
+                val hasReload = pendingCmd?.contains("Reload", ignoreCase = true) == true
                 val needsSync = json.optBoolean("needsManifestSync", false) || json.optBoolean("needs_manifest_sync", false) || hasReload
-                Result.success(needsSync)
+                Result.success(com.dkaapis.sigma.domain.repository.HeartbeatResult(needsManifestSync = needsSync, pendingCommand = pendingCmd))
             } else if (response.code == 404 || response.code == 401) {
                 clearCredentials()
                 Result.failure(IllegalStateException("Perangkat telah dihapus dari CMS (HTTP ${response.code})"))
             } else {
-                Result.success(false)
+                Result.success(com.dkaapis.sigma.domain.repository.HeartbeatResult(needsManifestSync = false, pendingCommand = null))
             }
         } catch (e: Exception) {
             Result.failure(e)

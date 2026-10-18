@@ -2,10 +2,15 @@ package com.dkaapis.sigma.presentation.player
 
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Base64
+import android.view.PixelCopy
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -14,6 +19,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.dkaapis.sigma.R
 import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
 import com.dkaapis.sigma.data.local.ManifestStorage
 import com.dkaapis.sigma.data.local.MediaDiskCache
@@ -42,9 +48,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -86,10 +95,28 @@ class PlayerActivity : AppCompatActivity() {
                             if (!deviceRepo.isPaired() || ex is IllegalStateException) {
                                 viewModel.onDeviceUnpaired()
                             }
-                        } else if (res.getOrDefault(false)) {
-                            val currentState = viewModel.uiState.value
-                            if (currentState !is PlayerUiState.DownloadingAssets && currentState !is PlayerUiState.SyncingManifest) {
-                                viewModel.syncManifest()
+                        } else {
+                            val hb = res.getOrNull()
+                            val cmd = hb?.pendingCommand
+                            if (!cmd.isNullOrBlank()) {
+                                android.util.Log.i("PlayerActivity", "Menerima pending command via Heartbeat: $cmd")
+                                when {
+                                    cmd.contains("ClearCache", ignoreCase = true) -> {
+                                        handleClearCacheCommand()
+                                    }
+                                    cmd.contains("CaptureScreenshot", ignoreCase = true) || cmd.contains("Screenshot", ignoreCase = true) -> {
+                                        handleCaptureScreenshotCommand()
+                                    }
+                                    cmd.contains("Reboot", ignoreCase = true) -> {
+                                        handleRebootCommand()
+                                    }
+                                }
+                            }
+                            if (hb?.needsManifestSync == true) {
+                                val currentState = viewModel.uiState.value
+                                if (currentState !is PlayerUiState.DownloadingAssets && currentState !is PlayerUiState.SyncingManifest) {
+                                    viewModel.syncManifest()
+                                }
                             }
                         }
                     }
@@ -659,6 +686,174 @@ class PlayerActivity : AppCompatActivity() {
                 "RELOAD" -> {
                     viewModel.syncManifest(force = true)
                 }
+                "CLEAR_CACHE" -> {
+                    handleClearCacheCommand()
+                }
+                "SCREENSHOT" -> {
+                    handleCaptureScreenshotCommand()
+                }
+                "REBOOT" -> {
+                    handleRebootCommand()
+                }
+            }
+        }
+    }
+
+    private var isCapturingScreenshot = false
+
+    private fun handleClearCacheCommand() {
+        runOnUiThread {
+            try {
+                android.util.Log.i("PlayerActivity", "Menerima perintah ClearCache. Membersihkan penyimpanan lokal...")
+                val diskCache = MediaDiskCache(this)
+                diskCache.clearAllCache()
+
+                val manifestStorage = ManifestStorage(this)
+                manifestStorage.clear()
+
+                loadingOverlay.visibility = View.VISIBLE
+                progressBar.isIndeterminate = true
+                badgeText.text = "● BERSIHKAN CACHE"
+                badgeText.setTextColor(Color.parseColor("#F59E0B"))
+                loadingText.text = "Membersihkan Cache Media Lokal..."
+                loadingText.setTextColor(Color.WHITE)
+                subDetailText.text = "Seluruh cache berkas media dihapus. Mengunduh ulang manifest dan konten..."
+                subDetailText.setTextColor(Color.parseColor("#94A3B8"))
+
+                watchdogHandler.postDelayed({
+                    viewModel.syncManifest(force = true)
+                }, 1000)
+            } catch (e: Exception) {
+                android.util.Log.e("PlayerActivity", "Gagal membersihkan cache: ${e.message}")
+            }
+        }
+    }
+
+    private fun handleCaptureScreenshotCommand() {
+        if (isCapturingScreenshot) return
+        isCapturingScreenshot = true
+        android.util.Log.i("PlayerActivity", "Menerima perintah CaptureScreenshot. Mengambil screenshot tampilan layar...")
+
+        captureScreen { imageBytes ->
+            if (imageBytes != null && imageBytes.isNotEmpty()) {
+                uploadScreenshot(imageBytes)
+            } else {
+                isCapturingScreenshot = false
+                android.util.Log.e("PlayerActivity", "Gagal menghasilkan byte screenshot")
+            }
+        }
+    }
+
+    private fun captureScreen(onCaptured: (ByteArray?) -> Unit) {
+        try {
+            val decorView = window.decorView
+            val width = decorView.width.coerceAtLeast(1)
+            val height = decorView.height.coerceAtLeast(1)
+
+            val maxDim = 1280f
+            val currentMax = maxOf(width, height).toFloat()
+            val scale = if (currentMax > maxDim) maxDim / currentMax else 1.0f
+            val targetW = (width * scale).toInt().coerceAtLeast(1)
+            val targetH = (height * scale).toInt().coerceAtLeast(1)
+
+            val bitmap = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                PixelCopy.request(
+                    window,
+                    bitmap,
+                    { copyResult ->
+                        if (copyResult == PixelCopy.SUCCESS) {
+                            val stream = ByteArrayOutputStream()
+                            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream)
+                            onCaptured(stream.toByteArray())
+                        } else {
+                            captureWithCanvas(decorView, targetW, targetH, onCaptured)
+                        }
+                    },
+                    Handler(Looper.getMainLooper())
+                )
+            } else {
+                captureWithCanvas(decorView, targetW, targetH, onCaptured)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("PlayerActivity", "Gagal captureScreen: ${e.message}")
+            onCaptured(null)
+        }
+    }
+
+    private fun captureWithCanvas(view: View, targetW: Int, targetH: Int, onCaptured: (ByteArray?) -> Unit) {
+        try {
+            val srcW = view.width.coerceAtLeast(1)
+            val srcH = view.height.coerceAtLeast(1)
+            val bitmap = Bitmap.createBitmap(srcW, srcH, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            view.draw(canvas)
+            val scaled = if (srcW != targetW || srcH != targetH) {
+                Bitmap.createScaledBitmap(bitmap, targetW, targetH, true)
+            } else {
+                bitmap
+            }
+            val stream = ByteArrayOutputStream()
+            scaled.compress(Bitmap.CompressFormat.JPEG, 80, stream)
+            onCaptured(stream.toByteArray())
+        } catch (e: Exception) {
+            android.util.Log.e("PlayerActivity", "Canvas capture failed: ${e.message}")
+            onCaptured(null)
+        }
+    }
+
+    private fun uploadScreenshot(imageBytes: ByteArray) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val deviceId = deviceRepo.getSavedDeviceId() ?: return@launch
+                val baseUrl = try {
+                    getString(R.string.server_http_base_url)
+                } catch (_: Exception) {
+                    "http://192.168.1.46:80"
+                }
+
+                val base64Image = Base64.encodeToString(imageBytes, Base64.NO_WRAP)
+                val jsonBody = JSONObject().apply {
+                    put("deviceId", deviceId)
+                    put("imageData", base64Image)
+                    put("mimeType", "image/jpeg")
+                }.toString()
+
+                val request = Request.Builder()
+                    .url("$baseUrl/api/grpc/distribution/stream/UploadScreenshot")
+                    .post(jsonBody.toRequestBody("application/json".toMediaType()))
+                    .build()
+
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(15, TimeUnit.SECONDS)
+                    .writeTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(20, TimeUnit.SECONDS)
+                    .build()
+
+                val response = client.newCall(request).execute()
+                android.util.Log.i("PlayerActivity", "Upload screenshot selesai: HTTP ${response.code}")
+            } catch (e: Exception) {
+                android.util.Log.e("PlayerActivity", "Gagal upload screenshot: ${e.message}")
+            } finally {
+                isCapturingScreenshot = false
+            }
+        }
+    }
+
+    private fun handleRebootCommand() {
+        runOnUiThread {
+            try {
+                android.util.Log.i("PlayerActivity", "Menerima perintah RebootPlayer. Memuat ulang aplikasi...")
+                val intent = packageManager.getLaunchIntentForPackage(packageName)
+                if (intent != null) {
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(intent)
+                    finish()
+                    Runtime.getRuntime().exit(0)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("PlayerActivity", "Gagal restart: ${e.message}")
             }
         }
     }
