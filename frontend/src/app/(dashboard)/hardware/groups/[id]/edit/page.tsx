@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { api } from '@/lib/services';
 import type { DisplayGroup, Layout, Schedule } from '@/lib/services';
 import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
+import { SingleSelect } from '@/components/ui/SingleSelect';
 
 export default function EditDisplayGroupPage() {
   const params = useParams() as { id: string };
@@ -47,7 +48,7 @@ export default function EditDisplayGroupPage() {
         });
       } catch (err: any) {
         alert(err.message || 'Gagal memuat display group');
-        router.push('/groups');
+        router.push('/hardware/groups');
       } finally {
         setLoading(false);
       }
@@ -130,37 +131,42 @@ export default function EditDisplayGroupPage() {
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
                 Layout Default (Fallback)
               </label>
-              <select
+              <SingleSelect
                 value={formData.defaultLayoutId}
-                onChange={(e) => setFormData({ ...formData, defaultLayoutId: e.target.value })}
-                className="form-select"
-              >
-                <option value="">-- Pilih Layout --</option>
-                {layouts.map(l => (
-                  <option key={l.id} value={l.id}>{l.name}</option>
-                ))}
-              </select>
+                onChange={(val) => setFormData({ ...formData, defaultLayoutId: val })}
+                placeholder="-- Pilih Layout --"
+                options={[
+                  { value: '', label: '-- Pilih Layout --' },
+                  ...layouts.map((l) => ({
+                    value: l.id,
+                    label: l.name,
+                    hint: `${l.canvasWidth} × ${l.canvasHeight}`,
+                  })),
+                ]}
+              />
             </div>
 
             <div>
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
                 Jadwal Prioritas (Aktif)
               </label>
-              <select
+              <SingleSelect
                 value={formData.schedule_id}
-                onChange={(e) => setFormData({ ...formData, schedule_id: e.target.value })}
-                className="form-select"
-              >
-                <option value="">-- Tanpa Jadwal --</option>
-                {schedules.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+                onChange={(val) => setFormData({ ...formData, schedule_id: val })}
+                placeholder="-- Tanpa Jadwal --"
+                options={[
+                  { value: '', label: '-- Tanpa Jadwal --' },
+                  ...schedules.map((s) => ({
+                    value: s.id,
+                    label: s.name,
+                  })),
+                ]}
+              />
             </div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-            <Link href="/groups" className="btn btn-secondary">
+            <Link href="/hardware/groups" className="btn btn-secondary">
               Batal
             </Link>
             <button type="submit" disabled={saving || !formData.name} className="btn btn-primary">

@@ -1,33 +1,36 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/services';
-import { ArrowLeft, Save, Palette } from 'lucide-react';
+import type { Resolution } from '@/lib/services';
+import { ArrowLeft, Save } from 'lucide-react';
+import { SingleSelect } from '@/components/ui/SingleSelect';
 
 export default function CreateLayoutPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
-  const [preset, setPreset] = useState<'1080p_land' | '1080p_port' | '4k_land'>('1080p_land');
+  const [resolutions, setResolutions] = useState<Resolution[]>([]);
+  const [selectedResolution, setSelectedResolution] = useState<string>('');
+
+  useEffect(() => {
+    api.getResolutions().then((items) => {
+      setResolutions(items);
+      if (items.length > 0) {
+        setSelectedResolution(`${items[0].width}x${items[0].height}`);
+      }
+    }).catch(console.error);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setLoading(true);
-      let width = 1920;
-      let height = 1080;
-      let orientation = 'landscape';
-
-      if (preset === '1080p_port') {
-        width = 1080;
-        height = 1920;
-        orientation = 'portrait';
-      } else if (preset === '4k_land') {
-        width = 3840;
-        height = 2160;
-        orientation = 'landscape';
+      const [width, height] = (selectedResolution || '').split('x').map(Number);
+      if (!width || !height) {
+        throw new Error('Pilih resolusi terlebih dahulu');
       }
 
       const layout = await api.createLayout({
@@ -43,6 +46,14 @@ export default function CreateLayoutPage() {
       setLoading(false);
     }
   };
+
+  const resolutionOptions = React.useMemo(() => {
+    return resolutions.map((r) => ({
+      value: `${r.width}x${r.height}`,
+      label: r.name,
+      hint: `${r.width} × ${r.height} (${r.aspectRatio})`,
+    }));
+  }, [resolutions]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -80,15 +91,12 @@ export default function CreateLayoutPage() {
             <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
               Preset Resolusi Kanvas
             </label>
-            <select
-              value={preset}
-              onChange={(e: any) => setPreset(e.target.value)}
-              className="form-select"
-            >
-              <option value="1080p_land">1920 × 1080 · Landscape</option>
-              <option value="1080p_port">1080 × 1920 · Portrait</option>
-              <option value="4k_land">3840 × 2160 · 4K UHD</option>
-            </select>
+            <SingleSelect
+              value={selectedResolution}
+              onChange={(val) => setSelectedResolution(val)}
+              options={resolutionOptions}
+              placeholder="Pilih Resolusi Kanvas..."
+            />
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
