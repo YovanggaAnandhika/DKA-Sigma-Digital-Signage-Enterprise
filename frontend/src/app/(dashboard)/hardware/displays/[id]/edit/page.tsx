@@ -20,7 +20,7 @@ export default function EditDisplayPage() {
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    resolution: '1920x1080',
+    resolution: '',
     orientation: 'landscape',
     timezone: 'Asia/Jakarta',
     displayGroupId: '',
@@ -49,7 +49,7 @@ export default function EditDisplayPage() {
         setResolutions(resolutionsData);
         setFormData({
           name: data.name,
-          resolution: data.screenWidth && data.screenHeight ? `${data.screenWidth}x${data.screenHeight}` : '1920x1080',
+          resolution: data.screenWidth && data.screenHeight ? `${data.screenWidth}x${data.screenHeight}` : '',
           orientation: String(data.orientation) === '2' ? 'portrait' : 'landscape',
           timezone: data.timezone || 'Asia/Jakarta',
           displayGroupId: data.displayGroupId || '',
@@ -73,12 +73,12 @@ export default function EditDisplayPage() {
     e.preventDefault();
     try {
       setSaving(true);
-      const [sw, sh] = (formData.resolution || '1920x1080').split('x').map(Number);
+      const [sw, sh] = formData.resolution ? formData.resolution.split('x').map(Number) : [undefined, undefined];
       const orientationVal = formData.orientation === 'portrait' ? 2 : 1;
       await api.updateDevice(params.id, {
         name: formData.name,
-        screen_width: sw || 1920,
-        screen_height: sh || 1080,
+        screen_width: sw,
+        screen_height: sh,
         orientation: orientationVal,
         timezone: formData.timezone,
         display_group_id: formData.displayGroupId || undefined,
@@ -97,31 +97,12 @@ export default function EditDisplayPage() {
   };
 
   const resolutionOptions = React.useMemo(() => {
-    const list = resolutions.map((r) => ({
+    return resolutions.map((r) => ({
       value: `${r.width}x${r.height}`,
       label: r.name,
       hint: `${r.width} × ${r.height} (${r.aspectRatio})`,
     }));
-
-    if (list.length === 0) {
-      list.push(
-        { value: '1920x1080', label: 'Full HD (1080p)', hint: '1920 × 1080 (16:9)' },
-        { value: '3840x2160', label: '4K Ultra HD (2160p)', hint: '3840 × 2160 (16:9)' },
-        { value: '1280x720', label: 'HD Ready (720p)', hint: '1280 × 720 (16:9)' },
-        { value: '1080x1920', label: 'Portrait Full HD', hint: '1080 × 1920 (9:16)' }
-      );
-    }
-
-    if (formData.resolution && !list.some((opt) => opt.value === formData.resolution)) {
-      list.unshift({
-        value: formData.resolution,
-        label: `Kustom (${formData.resolution})`,
-        hint: 'Resolusi bawaan perangkat',
-      });
-    }
-
-    return list;
-  }, [resolutions, formData.resolution]);
+  }, [resolutions]);
 
   if (loading || !device) {
     return (
@@ -172,6 +153,7 @@ export default function EditDisplayPage() {
                 value={formData.resolution}
                 onChange={(val) => setFormData({ ...formData, resolution: val })}
                 options={resolutionOptions}
+                placeholder="Pilih Resolusi Layar..."
               />
             </div>
 
