@@ -27,6 +27,10 @@ export interface QueueLayoutItem {
     mediaUrl?: string;
   };
   isVisible: boolean;
+  opacity?: number;
+  borderRadius?: number;
+  borderColor?: string;
+  borderWidth?: number;
 }
 
 export interface QueueCounter {
@@ -75,6 +79,9 @@ export interface QueueDisplayConfig {
   backgroundImageUrl?: string;
   themePreset: 'clean-light' | 'solid-dark' | 'medical-green' | 'executive-blue';
   autoRecallEnabled?: boolean;
+  opacity?: number;
+  overlayColor?: string;
+  overlayOpacity?: number;
   items: QueueLayoutItem[];
   counters: QueueCounter[];
   audios: QueueAudio[];

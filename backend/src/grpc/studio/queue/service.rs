@@ -595,7 +595,9 @@ impl QueueServiceTrait for QueueServiceImpl {
             SET name = $2, x = $3, y = $4, width = $5, height = $6, z_index = $7,
                 background_color = $8, text_color = $9, font_size = $10,
                 font_weight = $11, text_align = $12, template_content = $13,
-                config = $14, is_visible = $15, updated_at = NOW()
+                config = $14, is_visible = $15,
+                opacity = $16, border_radius = $17, border_color = $18, border_width = $19,
+                updated_at = NOW()
             WHERE id = $1
             "#,
             item_id,
@@ -613,6 +615,10 @@ impl QueueServiceTrait for QueueServiceImpl {
             it.template_content,
             config_val,
             it.is_visible,
+            if it.opacity > 0.0 { it.opacity as f64 } else { 1.0 },
+            it.border_radius,
+            if it.border_color.is_empty() { "transparent" } else { &it.border_color },
+            it.border_width,
         )
         .execute(&self.pool)
         .await
