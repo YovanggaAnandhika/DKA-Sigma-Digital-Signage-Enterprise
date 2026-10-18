@@ -7,6 +7,7 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
+import android.media.MediaPlayer
 import android.media.ToneGenerator
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
@@ -97,6 +98,7 @@ class PlayerActivity : AppCompatActivity() {
     private val clockRenderers = mutableListOf<ClockZoneRenderer>()
     private var activeQueueRenderer: QueueZoneRenderer? = null
     private var activeQueueDisplayId: String = ""
+    private var activeQueueDataJson: String? = null
     private var textToSpeech: TextToSpeech? = null
     private var isTtsReady = false
     private var timelineJob: Job? = null
@@ -104,6 +106,7 @@ class PlayerActivity : AppCompatActivity() {
     // Tracking untuk memotong / menghentikan audio & TTS sebelumnya saat dipanggil berturut-turut
     private var activeChimeThread: Thread? = null
     private var activeAudioTrack: AudioTrack? = null
+    private var activeChimePlayer: MediaPlayer? = null
     private var currentSpeechGeneration: Long = 0L
     private var currentUtteranceId: String? = null
     private var speechTimeoutRunnable: Runnable? = null
@@ -316,6 +319,12 @@ class PlayerActivity : AppCompatActivity() {
         speechTimeoutRunnable = null
 
         try {
+            activeChimePlayer?.stop()
+            activeChimePlayer?.release()
+        } catch (_: Exception) {}
+        activeChimePlayer = null
+
+        try {
             activeChimeThread?.interrupt()
         } catch (_: Exception) {}
         activeChimeThread = null
@@ -334,6 +343,88 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun playChimeTone(expectedGen: Long, onChimeDone: () -> Unit) {
+        var customAudioFile: File? = null
+        var customAudioVolume = 1.0f
+
+        val queueJsonStr = activeQueueDataJson
+        if (!queueJsonStr.isNullOrBlank()) {
+            try {
+                val qObj = JSONObject(queueJsonStr)
+                val audiosArr = qObj.optJSONArray("audiosList") ?: qObj.optJSONArray("audios")
+                if (audiosArr != null && audiosArr.length() > 0) {
+                    for (i in 0 until audiosArr.length()) {
+                        val aObj = audiosArr.getJSONObject(i)
+                        val isActive = if (aObj.has("isActive")) aObj.optBoolean("isActive", true) else aObj.optBoolean("is_active", true)
+                        val audioType = aObj.optString("audioType", aObj.optString("audio_type", "preset"))
+                        val mediaItemId = aObj.optString("mediaItemId", aObj.optString("media_item_id", ""))
+                        val vol = aObj.optInt("volumePercent", aObj.optInt("volume_percent", 100))
+
+                        if (isActive && audioType.equals("media_item", ignoreCase = true) && mediaItemId.isNotBlank()) {
+                            val file = storageRepo.getLocalFileForAsset(mediaItemId)
+                            if (file != null && file.exists()) {
+                                customAudioFile = file
+                                customAudioVolume = (vol / 100f).coerceIn(0.1f, 1.0f)
+                                break
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("PlayerActivity", "Error parsing custom queue audio: ${e.message}")
+            }
+        }
+
+        if (customAudioFile != null) {
+            android.util.Log.i("PlayerActivity", "Memutar custom chime MP3: ${customAudioFile.name} (volume=$customAudioVolume)")
+            playCustomChimeAudio(customAudioFile, customAudioVolume, expectedGen, onChimeDone)
+        } else {
+            playSynthesizedDingDong(expectedGen, onChimeDone)
+        }
+    }
+
+    private fun playCustomChimeAudio(file: File, volume: Float, expectedGen: Long, onChimeDone: () -> Unit) {
+        runOnUiThread {
+            if (currentSpeechGeneration != expectedGen) return@runOnUiThread
+            try {
+                val mp = MediaPlayer().apply {
+                    setDataSource(file.absolutePath)
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    )
+                    setVolume(volume, volume)
+                    setOnCompletionListener { player ->
+                        player.release()
+                        if (activeChimePlayer === player) {
+                            activeChimePlayer = null
+                        }
+                        if (currentSpeechGeneration == expectedGen) {
+                            onChimeDone()
+                        }
+                    }
+                    setOnErrorListener { player, what, extra ->
+                        android.util.Log.w("PlayerActivity", "Custom chime MediaPlayer error ($what, $extra), fallback ke DingDong")
+                        player.release()
+                        if (activeChimePlayer === player) {
+                            activeChimePlayer = null
+                        }
+                        playSynthesizedDingDong(expectedGen, onChimeDone)
+                        true
+                    }
+                    prepare()
+                    start()
+                }
+                activeChimePlayer = mp
+            } catch (e: Exception) {
+                android.util.Log.e("PlayerActivity", "Failed to start custom chime MediaPlayer: ${e.message}")
+                playSynthesizedDingDong(expectedGen, onChimeDone)
+            }
+        }
+    }
+
+    private fun playSynthesizedDingDong(expectedGen: Long, onChimeDone: () -> Unit) {
         val chimeThread = Thread {
             var track: AudioTrack? = null
             var playedSuccessfully = false
@@ -406,7 +497,6 @@ class PlayerActivity : AppCompatActivity() {
                 playedSuccessfully = true
                 Thread.sleep(((dur1 + dur2) * 1000).toLong() + 150)
             } catch (e: InterruptedException) {
-                // Thread diinterupsi karena panggilan baru masuk
                 return@Thread
             } catch (e: Exception) {
                 android.util.Log.w("PlayerActivity", "AudioTrack DingDong error: ${e.message}, fallback ke ToneGenerator...")
@@ -419,7 +509,6 @@ class PlayerActivity : AppCompatActivity() {
                     activeAudioTrack = null
                 }
 
-                // Fallback jika AudioTrack gagal
                 if (!playedSuccessfully && !Thread.currentThread().isInterrupted && currentSpeechGeneration == expectedGen) {
                     try {
                         val toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 100)
@@ -819,6 +908,7 @@ class PlayerActivity : AppCompatActivity() {
                             }
                         )
                         activeQueueRenderer = renderer
+                        activeQueueDataJson = widgetBlock.widgetDataJson
                         activeQueueDisplayId = try {
                             val qObj = org.json.JSONObject(widgetBlock.widgetDataJson ?: "{}")
                             qObj.optString("id", qObj.optString("queueDisplayId", ""))
@@ -954,6 +1044,7 @@ class PlayerActivity : AppCompatActivity() {
         activeQueueRenderer?.stopCallEffect()
         activeQueueRenderer = null
         activeQueueDisplayId = ""
+        activeQueueDataJson = null
         videoRenderers.forEach { it.release() }
         videoRenderers.clear()
         clockRenderers.forEach { it.release() }
