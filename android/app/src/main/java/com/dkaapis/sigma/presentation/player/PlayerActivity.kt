@@ -131,15 +131,25 @@ class PlayerActivity : AppCompatActivity() {
                         // Kirim data hardware & asset analytics realtime (Hybrid Offline-First)
                         if (::hardwareProfiler.isInitialized && ::analyticsSyncManager.isInitialized) {
                             val hwMetrics = hardwareProfiler.sampleMetrics()
-                            val activeAssetStats = videoRenderers.firstOrNull()?.getCurrentPlaybackStats()
-                                ?: AssetStatsData(
+                            val allAssetStats = videoRenderers.mapNotNull { it.getCurrentPlaybackStats() }
+                            val assetsArray = org.json.JSONArray()
+                            if (allAssetStats.isNotEmpty()) {
+                                for (stat in allAssetStats) {
+                                    assetsArray.put(org.json.JSONObject(stat.toJson()))
+                                }
+                            } else {
+                                val idleStat = AssetStatsData(
+                                    zoneName = "Standby Zone",
                                     mediaName = "Standby / Static Content",
                                     playbackStatus = "IDLE",
                                     diagnosticFlag = "OPTIMAL"
                                 )
+                                assetsArray.put(org.json.JSONObject(idleStat.toJson()))
+                            }
+
                             val snap = AnalyticsSnapshotData(
                                 inputOutputJson = hwMetrics.toJson(),
-                                assetsStatsJson = activeAssetStats.toJson()
+                                assetsStatsJson = assetsArray.toString()
                             )
                             analyticsSyncManager.recordAndSync(snap)
                         }
@@ -528,7 +538,7 @@ class PlayerActivity : AppCompatActivity() {
                 }
 
                 if (videoItems.isNotEmpty()) {
-                    val renderer = VideoZoneRenderer(this)
+                    val renderer = VideoZoneRenderer(this, zone.name.ifEmpty { "Zone ${videoRenderers.size + 1}" })
                     videoRenderers.add(renderer)
                     val view = renderer.createPlaylistView(zoneView, videoItems)
                     zoneView.addView(view)

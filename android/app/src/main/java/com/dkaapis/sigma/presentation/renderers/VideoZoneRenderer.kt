@@ -20,7 +20,8 @@ data class VideoPlaylistItem(
 )
 
 class VideoZoneRenderer(
-    private val context: Context
+    private val context: Context,
+    val zoneName: String = ""
 ) {
     private var exoPlayer: ExoPlayer? = null
     private var playerView: PlayerView? = null
@@ -112,9 +113,13 @@ class VideoZoneRenderer(
             "Pemutaran optimal ($resStr, $codecStr). Dropped frame aman."
         }
 
+        val rawName = item?.mediaName.takeIf { !it.isNullOrBlank() } ?: item?.file?.name ?: "Video Media"
+        val cleanName = rawName.replace(Regex("^[0-9a-fA-F-]{36}_"), "")
+
         return AssetStatsData(
+            zoneName = zoneName.ifEmpty { "Zone Video" },
             mediaId = item?.mediaId.takeIf { !it.isNullOrBlank() } ?: item?.file?.name ?: "",
-            mediaName = item?.mediaName.takeIf { !it.isNullOrBlank() } ?: item?.file?.name ?: "Video Media",
+            mediaName = cleanName,
             mimeType = codecStr,
             codec = format?.codecs ?: codecStr,
             resolution = resStr,

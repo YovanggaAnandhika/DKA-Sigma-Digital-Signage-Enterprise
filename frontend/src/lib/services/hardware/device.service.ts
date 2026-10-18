@@ -179,6 +179,8 @@ export interface HardwareInputOutput {
 }
 
 export interface AssetStats {
+  zone_name?: string;
+  zoneName?: string;
   media_id?: string;
   mediaId?: string;
   media_name?: string;
@@ -215,6 +217,7 @@ export interface DeviceAnalyticsRecord {
   recordedAt: string;
   inputOutput?: HardwareInputOutput;
   assetsStats?: AssetStats;
+  assetsStatsList?: AssetStats[];
 }
 
 export async function getDeviceAnalyticsHistory(
@@ -232,11 +235,24 @@ export async function getDeviceAnalyticsHistory(
   return rawList.map((item) => {
     let io: HardwareInputOutput = {};
     let assets: AssetStats = {};
+    let assetsList: AssetStats[] = [];
     try {
       io = JSON.parse(item.inputOutputJson || '{}');
     } catch (_) {}
     try {
-      assets = JSON.parse(item.assetsStatsJson || '{}');
+      const parsed = JSON.parse(item.assetsStatsJson || '{}');
+      if (Array.isArray(parsed)) {
+        assetsList = parsed;
+        assets = parsed[0] || {};
+      } else if (parsed && typeof parsed === 'object') {
+        if (Array.isArray(parsed.items)) {
+          assetsList = parsed.items;
+          assets = parsed.items[0] || {};
+        } else {
+          assets = parsed;
+          assetsList = [parsed];
+        }
+      }
     } catch (_) {}
 
     return {
@@ -247,6 +263,7 @@ export async function getDeviceAnalyticsHistory(
       recordedAt: item.recordedAt,
       inputOutput: io,
       assetsStats: assets,
+      assetsStatsList: assetsList,
     };
   });
 }

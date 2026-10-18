@@ -31,6 +31,7 @@ data class HardwareMetricsData(
 }
 
 data class AssetStatsData(
+    val zoneName: String = "",
     val mediaId: String = "",
     val mediaName: String = "",
     val mimeType: String = "video/mp4",
@@ -48,6 +49,7 @@ data class AssetStatsData(
 ) {
     fun toJson(): String {
         return JSONObject().apply {
+            put("zone_name", zoneName)
             put("media_id", mediaId)
             put("media_name", mediaName)
             put("mime_type", mimeType)
