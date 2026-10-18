@@ -609,7 +609,7 @@ class PlayerActivity : AppCompatActivity() {
                                 try {
                                     val currentDevId = deviceRepo.getSavedDeviceId() ?: ""
                                     val baseUrl = try {
-                                        getString(com.dkaapis.sigma.R.string.server_http_base_url)
+                                        getString(R.string.server_http_base_url)
                                     } catch (_: Exception) {
                                         "http://100.99.242.84:80"
                                     }
