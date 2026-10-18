@@ -87,7 +87,10 @@ class PlayerActivity : AppCompatActivity() {
                                 viewModel.onDeviceUnpaired()
                             }
                         } else if (res.getOrDefault(false)) {
-                            viewModel.syncManifest()
+                            val currentState = viewModel.uiState.value
+                            if (currentState !is PlayerUiState.DownloadingAssets && currentState !is PlayerUiState.SyncingManifest) {
+                                viewModel.syncManifest()
+                            }
                         }
                     }
                 } catch (_: Exception) {}
@@ -654,7 +657,7 @@ class PlayerActivity : AppCompatActivity() {
                     }, 2500)
                 }
                 "RELOAD" -> {
-                    viewModel.syncManifest()
+                    viewModel.syncManifest(force = true)
                 }
             }
         }
