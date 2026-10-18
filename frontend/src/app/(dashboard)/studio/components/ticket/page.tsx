@@ -6,6 +6,8 @@ import { Ticket, Plus, Search, Eye, Edit, Trash2, Bell, Volume2, X, RotateCcw, M
 import { Pagination } from '@/components/ui/Pagination';
 import { modal } from '@/components/ui/ModalDialog';
 import { QueueDisplayConfig, QUEUE_STORAGE_KEY, DEFAULT_QUEUES } from './types';
+import { getDevices } from '@/lib/services/hardware/device.service';
+import { Device } from '@/lib/services/hardware/types';
 
 const Marquee = 'marquee' as any;
 
@@ -56,6 +58,8 @@ export default function TicketPage() {
   const [modalCurrentNumber, setModalCurrentNumber] = useState('A-024');
   const [modalCounter, setModalCounter] = useState('LOKET 02');
   const [isChiming, setIsChiming] = useState(false);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [targetDeviceId, setTargetDeviceId] = useState<string>('all');
 
   useEffect(() => {
     try {
@@ -69,6 +73,12 @@ export default function TicketPage() {
         localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(DEFAULT_QUEUES));
       }
     } catch {}
+
+    getDevices({ limit: 100 })
+      .then((res) => {
+        if (res && res.data) setDevices(res.data);
+      })
+      .catch(() => {});
   }, []);
 
   const handleDelete = async (id: string, name: string) => {
@@ -112,8 +122,10 @@ export default function TicketPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          deviceId: 'all',
+          deviceId: targetDeviceId,
           type: 'CALL_QUEUE',
+          queueId: activeModalQueue.id,
+          queueName: activeModalQueue.name,
           ticketNumber: newFormatted,
           counterName: modalCounter,
         }),
@@ -136,8 +148,10 @@ export default function TicketPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          deviceId: 'all',
+          deviceId: targetDeviceId,
           type: 'CALL_QUEUE',
+          queueId: activeModalQueue.id,
+          queueName: activeModalQueue.name,
           ticketNumber: modalCurrentNumber,
           counterName: modalCounter,
         }),
@@ -386,19 +400,37 @@ export default function TicketPage() {
 
             {/* Operator Control Panel */}
             <div style={{ padding: '20px 24px', backgroundColor: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <label style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>Meja/Loket:</label>
-                <select
-                  value={modalCounter}
-                  onChange={(e) => setModalCounter(e.target.value)}
-                  style={{ backgroundColor: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--input-border)', borderRadius: '8px', padding: '6px 12px', fontSize: '0.8125rem' }}
-                >
-                  <option value="LOKET 01">LOKET 01</option>
-                  <option value="LOKET 02">LOKET 02</option>
-                  <option value="LOKET 03">LOKET 03</option>
-                  <option value="CUSTOMER SERVICE">CUSTOMER SERVICE</option>
-                  <option value="KASIR UTAMA">KASIR UTAMA</option>
-                </select>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <label style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>Target Layar:</label>
+                  <select
+                    value={targetDeviceId}
+                    onChange={(e) => setTargetDeviceId(e.target.value)}
+                    style={{ backgroundColor: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--input-border)', borderRadius: '8px', padding: '6px 12px', fontSize: '0.8125rem' }}
+                  >
+                    <option value="all">Otomatis (Layar dengan Antrian Ini)</option>
+                    {devices.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name} {d.isOnline ? '● Online' : '○ Offline'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <label style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>Meja/Loket:</label>
+                  <select
+                    value={modalCounter}
+                    onChange={(e) => setModalCounter(e.target.value)}
+                    style={{ backgroundColor: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--input-border)', borderRadius: '8px', padding: '6px 12px', fontSize: '0.8125rem' }}
+                  >
+                    <option value="LOKET 01">LOKET 01</option>
+                    <option value="LOKET 02">LOKET 02</option>
+                    <option value="LOKET 03">LOKET 03</option>
+                    <option value="CUSTOMER SERVICE">CUSTOMER SERVICE</option>
+                    <option value="KASIR UTAMA">KASIR UTAMA</option>
+                  </select>
+                </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
