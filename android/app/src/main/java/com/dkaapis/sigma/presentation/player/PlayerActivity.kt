@@ -264,25 +264,31 @@ class PlayerActivity : AppCompatActivity() {
                     textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                         override fun onStart(utteranceId: String?) {
                             runOnUiThread {
-                                val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
-                                audioManager?.requestAudioFocus(null, android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-                                videoRenderers.forEach { it.setDuckedVolume(true) }
+                                if (utteranceId != null && utteranceId == currentUtteranceId) {
+                                    val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
+                                    audioManager?.requestAudioFocus(null, android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                                    videoRenderers.forEach { it.setDuckedVolume(true) }
+                                }
                             }
                         }
 
                         override fun onDone(utteranceId: String?) {
                             runOnUiThread {
-                                videoRenderers.forEach { it.setDuckedVolume(false) }
-                                val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
-                                audioManager?.abandonAudioFocus(null)
+                                if (utteranceId != null && utteranceId == currentUtteranceId) {
+                                    videoRenderers.forEach { it.setDuckedVolume(false) }
+                                    val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
+                                    audioManager?.abandonAudioFocus(null)
+                                }
                             }
                         }
 
                         override fun onError(utteranceId: String?) {
                             runOnUiThread {
-                                videoRenderers.forEach { it.setDuckedVolume(false) }
-                                val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
-                                audioManager?.abandonAudioFocus(null)
+                                if (utteranceId != null && utteranceId == currentUtteranceId) {
+                                    videoRenderers.forEach { it.setDuckedVolume(false) }
+                                    val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
+                                    audioManager?.abandonAudioFocus(null)
+                                }
                             }
                         }
                     })
@@ -296,11 +302,42 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-    private fun playChimeTone(onChimeDone: () -> Unit) {
-        Thread {
+    /**
+     * Hentikan seketika seluruh audio chime tone maupun suara TTS yang sedang berlangsung
+     * agar saat user menekan 'Selanjutnya' berturut-turut tidak terjadi audio glitch / tumpang tindih.
+     */
+    fun stopCurrentVoice() {
+        currentSpeechGeneration++
+        currentUtteranceId = null
+
+        speechTimeoutRunnable?.let { watchdogHandler.removeCallbacks(it) }
+        speechTimeoutRunnable = null
+
+        try {
+            activeChimeThread?.interrupt()
+        } catch (_: Exception) {}
+        activeChimeThread = null
+
+        try {
+            activeAudioTrack?.pause()
+            activeAudioTrack?.flush()
+            activeAudioTrack?.stop()
+            activeAudioTrack?.release()
+        } catch (_: Exception) {}
+        activeAudioTrack = null
+
+        try {
+            textToSpeech?.stop()
+        } catch (_: Exception) {}
+    }
+
+    private fun playChimeTone(expectedGen: Long, onChimeDone: () -> Unit) {
+        val chimeThread = Thread {
             var track: AudioTrack? = null
             var playedSuccessfully = false
             try {
+                if (currentSpeechGeneration != expectedGen || Thread.currentThread().isInterrupted) return@Thread
+
                 val sampleRate = 44100
                 val dur1 = 0.40 // Ding (880 Hz / A5)
                 val dur2 = 0.60 // Dong (587.33 Hz / D5)
@@ -328,6 +365,8 @@ class PlayerActivity : AppCompatActivity() {
                     AudioFormat.ENCODING_PCM_16BIT
                 )
                 val bufferSize = maxOf(minBuf * 2, 8192)
+
+                if (currentSpeechGeneration != expectedGen || Thread.currentThread().isInterrupted) return@Thread
 
                 track = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     AudioTrack.Builder()
@@ -359,10 +398,14 @@ class PlayerActivity : AppCompatActivity() {
                     )
                 }
 
+                activeAudioTrack = track
                 track.play()
                 track.write(samples, 0, samples.size)
                 playedSuccessfully = true
                 Thread.sleep(((dur1 + dur2) * 1000).toLong() + 150)
+            } catch (e: InterruptedException) {
+                // Thread diinterupsi karena panggilan baru masuk
+                return@Thread
             } catch (e: Exception) {
                 android.util.Log.w("PlayerActivity", "AudioTrack DingDong error: ${e.message}, fallback ke ToneGenerator...")
             } finally {
@@ -370,9 +413,12 @@ class PlayerActivity : AppCompatActivity() {
                     track?.stop()
                     track?.release()
                 } catch (_: Exception) {}
+                if (activeAudioTrack === track) {
+                    activeAudioTrack = null
+                }
 
                 // Fallback jika AudioTrack gagal
-                if (!playedSuccessfully) {
+                if (!playedSuccessfully && !Thread.currentThread().isInterrupted && currentSpeechGeneration == expectedGen) {
                     try {
                         val toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 100)
                         toneGen.startTone(ToneGenerator.TONE_PROP_BEEP2, 500)
@@ -381,17 +427,28 @@ class PlayerActivity : AppCompatActivity() {
                     } catch (_: Exception) {}
                 }
 
-                runOnUiThread {
-                    onChimeDone()
+                if (!Thread.currentThread().isInterrupted && currentSpeechGeneration == expectedGen) {
+                    runOnUiThread {
+                        if (currentSpeechGeneration == expectedGen) {
+                            onChimeDone()
+                        }
+                    }
                 }
             }
-        }.start()
+        }
+        activeChimeThread = chimeThread
+        chimeThread.start()
     }
 
     fun speakQueueTicket(ticketNumber: String, counterName: String, isRecall: Boolean = false) {
         runOnUiThread {
             try {
-                // Mute seluruh audio pemutar video & minta audio focus sistem seketika
+                // 1. HENTIKAN SUARA SEBELUMNYA SEKETIKA (Ding-dong chime maupun TTS)
+                stopCurrentVoice()
+
+                val thisGen = currentSpeechGeneration
+
+                // Mute / duck seluruh audio pemutar video & minta audio focus sistem seketika
                 val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? AudioManager
                 audioManager?.requestAudioFocus(null, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
                 videoRenderers.forEach { it.setDuckedVolume(true) }
@@ -421,20 +478,28 @@ class PlayerActivity : AppCompatActivity() {
 
                 val prefixIntro = if (isRecall) "Panggilan ulang... Nomor antrian... " else "Nomor antrian... "
                 val utteranceText = "$prefixIntro$prefix... $spokenDigits... Silakan menuju... $counterSpoken"
-                android.util.Log.i("PlayerActivity", "Chime & TTS: $utteranceText (isRecall=$isRecall)")
+                android.util.Log.i("PlayerActivity", "Chime & TTS [gen=$thisGen]: $utteranceText (isRecall=$isRecall)")
 
                 // Putar Bell Chime Ding-Dong dulu, lalu lanjutkan pengucapan suara TTS
-                playChimeTone {
+                playChimeTone(thisGen) {
+                    if (currentSpeechGeneration != thisGen) return@playChimeTone
+
                     if (textToSpeech != null && isTtsReady) {
+                        val utteranceId = "queue_${thisGen}_${System.currentTimeMillis()}"
+                        currentUtteranceId = utteranceId
                         val params = Bundle().apply {
-                            putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "queue_${System.currentTimeMillis()}")
+                            putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
                         }
-                        textToSpeech?.speak(utteranceText, TextToSpeech.QUEUE_FLUSH, params, "queue_${System.currentTimeMillis()}")
+                        textToSpeech?.speak(utteranceText, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
                     } else {
-                        watchdogHandler.postDelayed({
-                            videoRenderers.forEach { it.setDuckedVolume(false) }
-                            audioManager?.abandonAudioFocus(null)
-                        }, 3500)
+                        val fallbackTimeout = Runnable {
+                            if (currentSpeechGeneration == thisGen) {
+                                videoRenderers.forEach { it.setDuckedVolume(false) }
+                                audioManager?.abandonAudioFocus(null)
+                            }
+                        }
+                        speechTimeoutRunnable = fallbackTimeout
+                        watchdogHandler.postDelayed(fallbackTimeout, 3500)
                     }
                 }
             } catch (e: Exception) {
@@ -1229,6 +1294,7 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        stopCurrentVoice()
         realtimeStreamJob?.cancel()
         watchdogHandler.removeCallbacks(watchdogHeartbeatRunnable)
         releaseRenderers()
