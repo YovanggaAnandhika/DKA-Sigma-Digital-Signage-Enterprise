@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { invokeApi } from '@/lib/core/invokeApi';
 import { getMediaStreamUrl } from '@/lib/services/studio/media.service';
 import { api } from '@/lib/services';
+import { speakQueueAnnouncement } from '@/app/(dashboard)/studio/components/ticket/types';
 
 interface ManifestAsset {
   mediaId: string;
@@ -165,28 +166,9 @@ export default function WebKioskPlayerPage() {
     };
 
     const triggerTTS = () => {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const spelled = ticket.replace('-', ' ').split('').join(' ');
-        const text = isRecall
-          ? `Panggilan ulang, nomor antrian ${spelled}, menuju ${counter}`
-          : `Nomor antrian ${spelled}, menuju ${counter}`;
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'id-ID';
-        utterance.rate = 0.88;
-        utterance.pitch = 1.0;
-
-        utterance.onend = () => {
-          setTimeout(restoreAudio, 600);
-        };
-        utterance.onerror = () => {
-          restoreAudio();
-        };
-
-        window.speechSynthesis.speak(utterance);
-      } else {
-        setTimeout(restoreAudio, 3500);
-      }
+      speakQueueAnnouncement(ticket, counter, isRecall, () => {
+        setTimeout(restoreAudio, 600);
+      });
     };
 
     // Find custom chime audio from manifest layers/widgetData or requiredAssetsList

@@ -252,3 +252,114 @@ export const DEFAULT_QUEUES: QueueDisplayConfig[] = [
     audios: [],
   },
 ];
+
+/**
+ * Natural Indonesian Queue TTS Voice & Spoken Text Engine
+ * Mirrors the natural Android TextToSpeech engine parameters and pronunciation:
+ * - Maps digits to Indonesian words (0 -> 'kosong', 1 -> 'satu', etc.)
+ * - Inserts natural pauses ('...') between prefix, digits, and destination
+ * - Pronounces 'Silakan menuju... Loket X' instead of raw uppercase strings
+ * - Discovers and locks onto native Indonesian voices (Google Bahasa Indonesia, Gadis, Damayanti)
+ * - Rate 0.92, Pitch 1.0 (exact match with Android)
+ */
+export function buildQueueSpokenText(
+  ticketNumber: string,
+  counterName: string,
+  isRecall: boolean = false
+): string {
+  const parts = (ticketNumber || '').split('-');
+  const prefix = parts[0]?.trim() || '';
+  const digits = (parts.length > 1 ? parts.slice(1).join('') : '').trim();
+
+  const digitMap: Record<string, string> = {
+    '0': 'kosong',
+    '1': 'satu',
+    '2': 'dua',
+    '3': 'tiga',
+    '4': 'empat',
+    '5': 'lima',
+    '6': 'enam',
+    '7': 'tujuh',
+    '8': 'delapan',
+    '9': 'sembilan',
+  };
+
+  const spokenDigits = digits
+    ? digits
+        .split('')
+        .map((ch) => digitMap[ch] || ch)
+        .join(' ')
+    : prefix
+        .replace(/[^0-9]/g, '')
+        .split('')
+        .map((ch) => digitMap[ch] || ch)
+        .join(' ');
+
+  const cleanPrefix = prefix.replace(/[0-9]/g, '').trim() || prefix;
+
+  const counterSpoken = (counterName || 'Loket 1')
+    .replace(/LOKET\s*0+(\d+)/gi, 'Loket $1')
+    .replace(/LOKET\s*(\d+)/gi, 'Loket $1')
+    .replace(/LOKET/gi, 'Loket');
+
+  const prefixIntro = isRecall ? 'Panggilan ulang... Nomor antrian... ' : 'Nomor antrian... ';
+  return `${prefixIntro}${cleanPrefix}... ${spokenDigits}... Silakan menuju... ${counterSpoken}`;
+}
+
+export function getIndonesianVoice(): SpeechSynthesisVoice | null {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices || voices.length === 0) return null;
+
+  return (
+    voices.find(
+      (v) =>
+        (v.lang.toLowerCase().replace('_', '-').startsWith('id-id') ||
+          v.lang.toLowerCase().startsWith('id') ||
+          v.name.toLowerCase().includes('indonesia')) &&
+        !v.name.toLowerCase().includes('english')
+    ) ||
+    voices.find((v) => v.lang.toLowerCase().startsWith('id')) ||
+    null
+  );
+}
+
+export function speakQueueAnnouncement(
+  ticketNumber: string,
+  counterName: string,
+  isRecall: boolean = false,
+  onEnd?: () => void
+): SpeechSynthesisUtterance | null {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    if (onEnd) onEnd();
+    return null;
+  }
+
+  try {
+    window.speechSynthesis.cancel();
+  } catch (_) {}
+
+  const text = buildQueueSpokenText(ticketNumber, counterName, isRecall);
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'id-ID';
+  utterance.rate = 0.92;
+  utterance.pitch = 1.0;
+
+  const voice = getIndonesianVoice();
+  if (voice) {
+    utterance.voice = voice;
+  }
+
+  let ended = false;
+  const handleFinished = () => {
+    if (ended) return;
+    ended = true;
+    if (onEnd) onEnd();
+  };
+
+  utterance.onend = handleFinished;
+  utterance.onerror = handleFinished;
+
+  window.speechSynthesis.speak(utterance);
+  return utterance;
+}

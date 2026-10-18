@@ -29,6 +29,7 @@ import {
   DEFAULT_QUEUES,
   QueueCallHistoryItem,
   QUEUE_HISTORY_STORAGE_KEY,
+  speakQueueAnnouncement,
 } from './types';
 import { getDevices } from '@/lib/services/hardware/device.service';
 import { Device } from '@/lib/services/hardware/types';
@@ -99,29 +100,7 @@ function playQueueCallAudio(
   }
 
   const triggerTTS = () => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      if (onFinished) onFinished();
-      return;
-    }
-    const cleanCounter = counterName || 'Loket';
-    const spelledTicket = ticketNumber.replace('-', ' ').split('').join(' ');
-    const text = isRecall
-      ? `Panggilan ulang, nomor antrian ${spelledTicket}, menuju ${cleanCounter}`
-      : `Nomor antrian ${spelledTicket}, menuju ${cleanCounter}`;
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'id-ID';
-    utterance.rate = 0.9;
-    utterance.pitch = 1.0;
-
-    utterance.onend = () => {
-      if (onFinished) onFinished();
-    };
-    utterance.onerror = () => {
-      if (onFinished) onFinished();
-    };
-
-    window.speechSynthesis.speak(utterance);
+    speakQueueAnnouncement(ticketNumber, counterName, isRecall, onFinished);
   };
 
   // Check if custom audio chime exists and is active

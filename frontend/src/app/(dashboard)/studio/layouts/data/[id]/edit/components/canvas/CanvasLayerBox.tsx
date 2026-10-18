@@ -7,7 +7,7 @@ import { useLayoutEditor } from '../../context/LayoutEditorContext';
 import SynchronizedVideo from './SynchronizedVideo';
 import { Layer } from '../../context/LayoutStateContext';
 import { calculateSnap } from '../../utils/snapHelper';
-import { injectQueueVariables, createDefaultQueueLayoutItems } from '@/app/(dashboard)/studio/components/ticket/types';
+import { injectQueueVariables, createDefaultQueueLayoutItems, speakQueueAnnouncement } from '@/app/(dashboard)/studio/components/ticket/types';
 
 const Marquee = 'marquee' as any;
 
@@ -36,18 +36,7 @@ function playCanvasQueueAudio(
   }
 
   const triggerTTS = () => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-    const cleanCounter = counterName || 'Loket';
-    const spelledTicket = ticketNumber.replace('-', ' ').split('').join(' ');
-    const text = isRecall
-      ? `Panggilan ulang, nomor antrian ${spelledTicket}, menuju ${cleanCounter}`
-      : `Nomor antrian ${spelledTicket}, menuju ${cleanCounter}`;
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'id-ID';
-    utterance.rate = 0.9;
-    utterance.pitch = 1.0;
-    window.speechSynthesis.speak(utterance);
+    speakQueueAnnouncement(ticketNumber, counterName, isRecall);
   };
 
   const playSynthChime = () => {
