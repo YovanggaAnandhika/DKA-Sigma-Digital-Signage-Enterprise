@@ -101,6 +101,13 @@ class PlayerActivity : AppCompatActivity() {
     private var isTtsReady = false
     private var timelineJob: Job? = null
 
+    // Tracking untuk memotong / menghentikan audio & TTS sebelumnya saat dipanggil berturut-turut
+    private var activeChimeThread: Thread? = null
+    private var activeAudioTrack: AudioTrack? = null
+    private var currentSpeechGeneration: Long = 0L
+    private var currentUtteranceId: String? = null
+    private var speechTimeoutRunnable: Runnable? = null
+
     private val watchdogHandler = Handler(Looper.getMainLooper())
     private val watchdogHeartbeatRunnable = object : Runnable {
         override fun run() {
