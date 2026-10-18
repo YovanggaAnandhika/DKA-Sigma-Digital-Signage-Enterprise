@@ -96,6 +96,7 @@ class QueueZoneRenderer(
 ) {
     private var numberTextView: TextView? = null
     private var counterTextView: TextView? = null
+    private var flashOverlayView: View? = null
     private var currentPrefix: String = "A"
     private var currentName: String = "Layar Antrian"
     private var currentSequence: Int = 1
@@ -164,6 +165,38 @@ class QueueZoneRenderer(
                 callNext()
             }
         }
+
+        // Overlay untuk efek kedip background saat ada panggilan
+        val parsedBg = parseColor(bgColor, Color.WHITE)
+        val bgR = Color.red(parsedBg)
+        val bgG = Color.green(parsedBg)
+        val bgB = Color.blue(parsedBg)
+        val isDarkBg = (0.299 * bgR + 0.587 * bgG + 0.114 * bgB) / 255.0 < 0.5
+        val flashColor = if (isDarkBg) Color.parseColor("#38BDF8") else Color.parseColor("#2563EB")
+
+        flashOverlayView = View(context).apply {
+            tag = QueueItemMeta(
+                id = "queue-flash-overlay",
+                itemType = "overlay_scrim",
+                x = 0,
+                y = 0,
+                width = canvasW,
+                height = canvasH,
+                zIndex = 0,
+                backgroundColor = "transparent",
+                textColor = "transparent",
+                fontSize = 0f,
+                fontWeight = "normal",
+                textAlign = "left",
+                templateContent = "",
+                opacity = 0f
+            )
+            setBackgroundColor(flashColor)
+            alpha = 0f
+            isClickable = false
+            isFocusable = false
+        }
+        canvasView.addView(flashOverlayView)
 
         val parsedItems = mutableListOf<QueueItemMeta>()
 
@@ -417,7 +450,35 @@ class QueueZoneRenderer(
         numberTextView?.text = ticketNumber
         counterTextView?.text = counterName
 
-        // Animasi Modern, Minimalis & Rapi (Tanpa Emot / Tanpa Overlapping Element)
+        // 1. Efek Berkedip Background (Mencolok, Rapi, & Modern)
+        flashOverlayView?.let { flash ->
+            flash.alpha = 0f
+            flash.animate()
+                ?.alpha(0.35f)
+                ?.setDuration(130)
+                ?.withEndAction {
+                    flash.animate()
+                        ?.alpha(0f)
+                        ?.setDuration(140)
+                        ?.withEndAction {
+                            // Kedipan ke-2
+                            flash.animate()
+                                ?.alpha(0.35f)
+                                ?.setDuration(130)
+                                ?.withEndAction {
+                                    flash.animate()
+                                        ?.alpha(0f)
+                                        ?.setDuration(260)
+                                        ?.start()
+                                }
+                                ?.start()
+                        }
+                        ?.start()
+                }
+                ?.start()
+        }
+
+        // 2. Animasi Tipografi Modern Minimalis (Scale halus + Aksen Warna)
         val originalTextColor = (numberTextView?.tag as? QueueItemMeta)?.let {
             parseColor(it.textColor, Color.BLACK)
         } ?: Color.BLACK
@@ -431,7 +492,6 @@ class QueueZoneRenderer(
         // Aksen modern: Royal Blue (#2563EB) untuk teks gelap, Sky Blue (#38BDF8) untuk teks terang
         val accentColor = if (isDarkText) Color.parseColor("#2563EB") else Color.parseColor("#38BDF8")
 
-        // 1. Subtle, silky-smooth typography scale & color highlight
         numberTextView?.setTextColor(accentColor)
         numberTextView?.animate()
             ?.scaleX(1.08f)
