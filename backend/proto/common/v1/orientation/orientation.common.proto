@@ -10,6 +10,12 @@ message Orientation {
   string updated_at = 5;
 }
 
+message ListOrientationsRequest {}
+
+message ListOrientationsResponse {
+  repeated Orientation items = 1;
+}
+
 message GetOrientationRequest {
   string id = 1;
 }

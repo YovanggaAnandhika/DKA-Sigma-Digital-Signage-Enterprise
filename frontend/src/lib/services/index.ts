@@ -24,8 +24,20 @@ export const common = commonModule;
 
 // Unified namespace backward-compatible export
 export const api = {
-  // Common
+  // Common - Resolution
   getResolutions: commonModule.getResolutions,
+  getResolution: commonModule.getResolution,
+  createResolution: commonModule.createResolution,
+  updateResolution: commonModule.updateResolution,
+  deleteResolution: commonModule.deleteResolution,
+
+  // Common - Orientation
+  getOrientations: commonModule.getOrientations,
+  getOrientation: commonModule.getOrientation,
+  createOrientation: commonModule.createOrientation,
+  updateOrientation: commonModule.updateOrientation,
+  deleteOrientation: commonModule.deleteOrientation,
+
   // IAM
   getRoles: iamModule.getRoles,
   getRole: iamModule.getRole,
