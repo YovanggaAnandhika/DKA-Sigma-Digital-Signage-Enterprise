@@ -10,6 +10,10 @@ use crate::grpc::proto::hardware::v1::device::{
     ListDevicesRequest, ListDevicesResponse, PairDeviceRequest, PairDeviceResponse,
     RegisterDeviceRequest, RegisterDeviceResponse, UpdateDeviceRequest, DeleteDeviceRequest,
     DeleteDeviceResponse, CheckPairingStatusRequest, CheckPairingStatusResponse,
+    IngestDeviceAnalyticsRequest, IngestDeviceAnalyticsResponse,
+    IngestDeviceAnalyticsBatchRequest, IngestDeviceAnalyticsBatchResponse,
+    GetDeviceAnalyticsHistoryRequest, GetDeviceAnalyticsHistoryResponse,
+    DeviceAnalyticsRecord,
 };
 
 pub struct DeviceServiceImpl {
@@ -374,5 +378,156 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             .map_err(Status::from)?;
 
         Ok(Response::new(DeleteDeviceResponse { success }))
+    }
+
+    async fn ingest_device_analytics(
+        &self,
+        request: Request<IngestDeviceAnalyticsRequest>,
+    ) -> Result<Response<IngestDeviceAnalyticsResponse>, Status> {
+        let req = request.into_inner();
+        let device_id = Uuid::parse_str(&req.device_id)
+            .map_err(|_| Status::invalid_argument("ID Device tidak valid"))?;
+
+        if let Some(snap) = req.snapshot {
+            let snap_id = if snap.id.is_empty() {
+                Uuid::new_v4()
+            } else {
+                Uuid::parse_str(&snap.id).unwrap_or_else(|_| Uuid::new_v4())
+            };
+
+            let io_json: serde_json::Value = serde_json::from_str(&snap.input_output_json)
+                .unwrap_or_else(|_| serde_json::json!({}));
+            let assets_json: serde_json::Value = serde_json::from_str(&snap.assets_stats_json)
+                .unwrap_or_else(|_| serde_json::json!({}));
+            let recorded_at = chrono::DateTime::parse_from_rfc3339(&snap.recorded_at)
+                .map(|dt| dt.with_timezone(&chrono::Utc))
+                .unwrap_or_else(|_| chrono::Utc::now());
+
+            let _ = sqlx::query(
+                r#"
+                INSERT INTO device_analytics (id, device_id, input_output, assets_stats, recorded_at)
+                VALUES ($1, $2, $3, $4, $5)
+                ON CONFLICT (id) DO NOTHING
+                "#,
+            )
+            .bind(snap_id)
+            .bind(device_id)
+            .bind(io_json)
+            .bind(assets_json)
+            .bind(recorded_at)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| Status::internal(format!("Gagal menyimpan analitik: {}", e)))?;
+        }
+
+        Ok(Response::new(IngestDeviceAnalyticsResponse { success: true }))
+    }
+
+    async fn ingest_device_analytics_batch(
+        &self,
+        request: Request<IngestDeviceAnalyticsBatchRequest>,
+    ) -> Result<Response<IngestDeviceAnalyticsBatchResponse>, Status> {
+        let req = request.into_inner();
+        let device_id = Uuid::parse_str(&req.device_id)
+            .map_err(|_| Status::invalid_argument("ID Device tidak valid"))?;
+
+        let mut inserted_count = 0;
+        for snap in req.snapshots {
+            let snap_id = if snap.id.is_empty() {
+                Uuid::new_v4()
+            } else {
+                Uuid::parse_str(&snap.id).unwrap_or_else(|_| Uuid::new_v4())
+            };
+
+            let io_json: serde_json::Value = serde_json::from_str(&snap.input_output_json)
+                .unwrap_or_else(|_| serde_json::json!({}));
+            let assets_json: serde_json::Value = serde_json::from_str(&snap.assets_stats_json)
+                .unwrap_or_else(|_| serde_json::json!({}));
+            let recorded_at = chrono::DateTime::parse_from_rfc3339(&snap.recorded_at)
+                .map(|dt| dt.with_timezone(&chrono::Utc))
+                .unwrap_or_else(|_| chrono::Utc::now());
+
+            let res = sqlx::query(
+                r#"
+                INSERT INTO device_analytics (id, device_id, input_output, assets_stats, recorded_at)
+                VALUES ($1, $2, $3, $4, $5)
+                ON CONFLICT (id) DO NOTHING
+                "#,
+            )
+            .bind(snap_id)
+            .bind(device_id)
+            .bind(io_json)
+            .bind(assets_json)
+            .bind(recorded_at)
+            .execute(&self.pool)
+            .await;
+
+            if let Ok(r) = res {
+                inserted_count += r.rows_affected() as i32;
+            }
+        }
+
+        Ok(Response::new(IngestDeviceAnalyticsBatchResponse {
+            success: true,
+            inserted_count,
+        }))
+    }
+
+    async fn get_device_analytics_history(
+        &self,
+        request: Request<GetDeviceAnalyticsHistoryRequest>,
+    ) -> Result<Response<GetDeviceAnalyticsHistoryResponse>, Status> {
+        let req = request.into_inner();
+        let device_id = Uuid::parse_str(&req.device_id)
+            .map_err(|_| Status::invalid_argument("ID Device tidak valid"))?;
+
+        let limit = if req.limit <= 0 || req.limit > 500 { 100 } else { req.limit as i64 };
+
+        let interval_str = match req.time_range.as_str() {
+            "15m" => "15 minutes",
+            "1h" => "1 hour",
+            "6h" => "6 hours",
+            "24h" => "24 hours",
+            "7d" => "7 days",
+            _ => "1 hour",
+        };
+
+        #[derive(sqlx::FromRow)]
+        struct AnalyticsRow {
+            id: Uuid,
+            device_id: Uuid,
+            input_output: serde_json::Value,
+            assets_stats: serde_json::Value,
+            recorded_at: chrono::DateTime<chrono::Utc>,
+        }
+
+        let query = format!(
+            r#"
+            SELECT id, device_id, input_output, assets_stats, recorded_at
+            FROM device_analytics
+            WHERE device_id = $1
+              AND recorded_at >= NOW() - INTERVAL '{}'
+            ORDER BY recorded_at ASC
+            LIMIT $2
+            "#,
+            interval_str
+        );
+
+        let rows = sqlx::query_as::<_, AnalyticsRow>(&query)
+            .bind(device_id)
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| Status::internal(format!("Gagal mengambil histori analitik: {}", e)))?;
+
+        let records = rows.into_iter().map(|r| DeviceAnalyticsRecord {
+            id: r.id.to_string(),
+            device_id: r.device_id.to_string(),
+            input_output_json: r.input_output.to_string(),
+            assets_stats_json: r.assets_stats.to_string(),
+            recorded_at: r.recorded_at.to_rfc3339(),
+        }).collect();
+
+        Ok(Response::new(GetDeviceAnalyticsHistoryResponse { records }))
     }
 }
