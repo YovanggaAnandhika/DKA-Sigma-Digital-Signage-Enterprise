@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Rnd } from 'react-rnd';
-import { Volume2, VolumeX, Lock } from 'lucide-react';
+import { Volume2, VolumeX, Lock, RotateCcw, Bell } from 'lucide-react';
 import { useLayoutEditor } from '../../context/LayoutEditorContext';
 import SynchronizedVideo from './SynchronizedVideo';
 import { Layer } from '../../context/LayoutStateContext';
@@ -10,6 +10,109 @@ import { calculateSnap } from '../../utils/snapHelper';
 import { injectQueueVariables, createDefaultQueueLayoutItems } from '@/app/(dashboard)/studio/components/ticket/types';
 
 const Marquee = 'marquee' as any;
+
+let activeCanvasAudio: HTMLAudioElement | null = null;
+let activeCanvasAudioTimer: any = null;
+
+function playCanvasQueueAudio(
+  audios: any[],
+  ticketNumber: string,
+  counterName: string,
+  isRecall: boolean = false
+) {
+  if (activeCanvasAudio) {
+    try {
+      activeCanvasAudio.pause();
+      activeCanvasAudio.currentTime = 0;
+    } catch (_) {}
+    activeCanvasAudio = null;
+  }
+  if (activeCanvasAudioTimer) {
+    clearTimeout(activeCanvasAudioTimer);
+    activeCanvasAudioTimer = null;
+  }
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+  }
+
+  const triggerTTS = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    const cleanCounter = counterName || 'Loket';
+    const spelledTicket = ticketNumber.replace('-', ' ').split('').join(' ');
+    const text = isRecall
+      ? `Panggilan ulang, nomor antrian ${spelledTicket}, menuju ${cleanCounter}`
+      : `Nomor antrian ${spelledTicket}, menuju ${cleanCounter}`;
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'id-ID';
+    utterance.rate = 0.9;
+    utterance.pitch = 1.0;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const playSynthChime = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(880, ctx.currentTime);
+      gain1.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(ctx.currentTime);
+      osc1.stop(ctx.currentTime + 0.8);
+
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(587.33, ctx.currentTime + 0.4);
+      gain2.gain.setValueAtTime(0.35, ctx.currentTime + 0.4);
+      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.4);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(ctx.currentTime + 0.4);
+      osc2.stop(ctx.currentTime + 1.4);
+    } catch (_) {}
+  };
+
+  const activeConf = (audios || []).find((a: any) => a.isActive !== false && (a.fileUrl || a.mediaItemId));
+  const audioUrl = activeConf?.fileUrl || (activeConf?.mediaItemId ? `/api/assets/${activeConf.mediaItemId}` : null);
+
+  if (audioUrl) {
+    try {
+      const audio = new Audio(audioUrl);
+      activeCanvasAudio = audio;
+      const vol = (activeConf?.volumePercent ?? 100) / 100;
+      audio.volume = Math.max(0, Math.min(1, vol));
+
+      audio.onended = () => {
+        if (activeCanvasAudio === audio) activeCanvasAudio = null;
+        triggerTTS();
+      };
+      audio.onerror = () => {
+        if (activeCanvasAudio === audio) activeCanvasAudio = null;
+        playSynthChime();
+        activeCanvasAudioTimer = setTimeout(triggerTTS, 1100);
+      };
+
+      const p = audio.play();
+      if (p !== undefined) {
+        p.catch(() => {
+          playSynthChime();
+          activeCanvasAudioTimer = setTimeout(triggerTTS, 1100);
+        });
+      }
+      return;
+    } catch (_) {}
+  }
+
+  playSynthChime();
+  activeCanvasAudioTimer = setTimeout(triggerTTS, 1100);
+}
 
 interface CanvasLayerBoxProps {
   layer: Layer;
@@ -45,6 +148,116 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
   const isSelected = z.id === selectedLayerId;
   const active = isLayerActive(z, playheadPosition);
   const [isHovered, setIsHovered] = React.useState(false);
+
+  const [isCallingQueue, setIsCallingQueue] = React.useState(false);
+
+  const handleCanvasNextCall = (block: any) => {
+    const qData = block?.widgetData || {};
+    const currentTicket = qData.latestCalledNumber || qData.currentNumber || 'A-001';
+    const numPart = parseInt(currentTicket.replace(/[^0-9]/g, ''), 10) || 0;
+    const nextSeq = numPart + 1;
+    const prefix = qData.prefix || 'A';
+    const newFormatted = `${prefix}-${String(nextSeq).padStart(3, '0')}`;
+    const counterName = (qData.countersList && qData.countersList.length > 0 ? qData.countersList[0].counterName : qData.currentCounter) || 'LOKET 01';
+    const qId = qData.id || block.queueId || '76a3e570-9807-40a5-ad74-e7bb28e382dc';
+    const audios = qData.audiosList || qData.audios || [];
+
+    setIsCallingQueue(true);
+    setTimeout(() => setIsCallingQueue(false), 2000);
+
+    // 1. Update layers state on canvas so ticket increments immediately on canvas
+    setLayers((prevLayers) => {
+      return prevLayers.map((lay) => {
+        if (lay.id !== z.id) return lay;
+        return {
+          ...lay,
+          blocksList: (lay.blocksList || []).map((blk) => {
+            if (blk.id !== block.id) return blk;
+            const updatedData = {
+              ...blk.widgetData,
+              latestCalledNumber: newFormatted,
+              currentNumber: newFormatted,
+            };
+            return {
+              ...blk,
+              widgetData: updatedData,
+              widgetDataJson: JSON.stringify(updatedData),
+            };
+          }),
+        };
+      });
+    });
+
+    // 2. Sync to localStorage
+    try {
+      const stored = localStorage.getItem('dka_signage_queue_displays');
+      if (stored) {
+        const list = JSON.parse(stored);
+        if (Array.isArray(list)) {
+          const updated = list.map((item: any) => {
+            if (item.id === qId) {
+              return { ...item, currentNumber: newFormatted };
+            }
+            return item;
+          });
+          localStorage.setItem('dka_signage_queue_displays', JSON.stringify(updated));
+        }
+      }
+    } catch (_) {}
+
+    // 3. Play audio chime + Indonesian TTS
+    playCanvasQueueAudio(audios, newFormatted, counterName, false);
+
+    // 4. Broadcast via SSE to Android Player & all connected screens
+    try {
+      fetch('/api/stream/device', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId: 'all',
+          type: 'CALL_QUEUE',
+          queueId: qId,
+          queueName: qData.name || 'Layar Antrian',
+          ticketNumber: newFormatted,
+          counterName,
+          source: 'layout_canvas_editor',
+          callType: 'next',
+        }),
+      }).catch(() => {});
+    } catch (_) {}
+  };
+
+  const handleCanvasRepeatCall = (block: any) => {
+    const qData = block?.widgetData || {};
+    const currentTicket = qData.latestCalledNumber || qData.currentNumber || 'A-001';
+    const counterName = (qData.countersList && qData.countersList.length > 0 ? qData.countersList[0].counterName : qData.currentCounter) || 'LOKET 01';
+    const qId = qData.id || block.queueId || '76a3e570-9807-40a5-ad74-e7bb28e382dc';
+    const audios = qData.audiosList || qData.audios || [];
+
+    setIsCallingQueue(true);
+    setTimeout(() => setIsCallingQueue(false), 2000);
+
+    // 1. Play audio chime + Indonesian TTS with isRecall = true ("Panggilan ulang, nomor antrian...")
+    playCanvasQueueAudio(audios, currentTicket, counterName, true);
+
+    // 2. Broadcast via SSE to Android Player & all connected screens
+    try {
+      fetch('/api/stream/device', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId: 'all',
+          type: 'CALL_QUEUE',
+          queueId: qId,
+          queueName: qData.name || 'Layar Antrian',
+          ticketNumber: currentTicket,
+          counterName,
+          source: 'layout_canvas_editor',
+          callType: 'recall',
+        }),
+      }).catch(() => {});
+    } catch (_) {}
+  };
 
   // Find active block
   const currentSec = playheadPosition / (pxPerSecond || 20);
@@ -578,6 +791,92 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                       );
                     });
                 })()}
+
+                {/* Quick Calling Overlay Controls (Panggil Ulang ditengah2, sama Next) */}
+                {isSelected && (
+                  <div
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      zIndex: 35,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      backgroundColor: 'rgba(15, 23, 42, 0.94)',
+                      backdropFilter: 'blur(12px)',
+                      padding: '8px 14px',
+                      borderRadius: '12px',
+                      border: isCallingQueue ? '1px solid #10b981' : '1px solid rgba(56, 189, 248, 0.5)',
+                      boxShadow: isCallingQueue
+                        ? '0 12px 36px rgba(0, 0, 0, 0.75), 0 0 25px rgba(16, 185, 129, 0.45)'
+                        : '0 12px 36px rgba(0, 0, 0, 0.75), 0 0 20px rgba(56, 189, 248, 0.25)',
+                      transition: 'all 0.2s ease',
+                      pointerEvents: 'auto',
+                      userSelect: 'none',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      disabled={isCallingQueue}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCanvasRepeatCall(activeBlock);
+                      }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '7px 14px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255, 255, 255, 0.18)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                        color: '#f8fafc',
+                        fontSize: '0.8125rem',
+                        fontWeight: 700,
+                        cursor: isCallingQueue ? 'not-allowed' : 'pointer',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.15s ease',
+                      }}
+                      title="Panggil Ulang Nomor Antrian Ini"
+                    >
+                      <RotateCcw size={14} color="#38bdf8" />
+                      <span>{isCallingQueue ? 'Memanggil...' : 'Panggil Ulang'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isCallingQueue}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCanvasNextCall(activeBlock);
+                      }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '7px 16px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(16, 185, 129, 0.6)',
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: '#ffffff',
+                        fontSize: '0.8125rem',
+                        fontWeight: 800,
+                        cursor: isCallingQueue ? 'not-allowed' : 'pointer',
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 2px 10px rgba(16, 185, 129, 0.4)',
+                        transition: 'all 0.15s ease',
+                      }}
+                      title="Panggil Nomor Antrian Selanjutnya (+1)"
+                    >
+                      <Bell size={14} color="#ffffff" />
+                      <span>Next (+1)</span>
+                    </button>
+                  </div>
+                )}
               </div>
             ) : activeBlock.widgetType === 'album' && (activeBlock.widgetData?.photos?.length || 0) > 0 ? (
               <img
