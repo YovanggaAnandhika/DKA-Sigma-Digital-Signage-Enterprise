@@ -368,6 +368,11 @@ export function QueueEditorProvider({
         currentCounter: simulator.currentCounter,
       };
 
+      const formattedAudios = (payload.audios || []).map((a) => ({
+        ...a,
+        isActive: payload.audioChimeEnabled ? (a.isActive ?? true) : false,
+      }));
+
       if (isNew) {
         items.unshift(payload);
         createQueueDisplay({
@@ -381,6 +386,7 @@ export function QueueEditorProvider({
           autoRecallEnabled: !!payload.autoRecallEnabled,
           items: payload.items,
           counters: payload.counters,
+          audios: formattedAudios,
         }).catch((err) => console.warn('Sync backend queue create failed:', err));
       } else {
         items = items.map((q) => (q.id === payload.id ? payload : q));
@@ -395,6 +401,7 @@ export function QueueEditorProvider({
           autoRecallEnabled: !!payload.autoRecallEnabled,
           items: payload.items,
           counters: payload.counters,
+          audios: formattedAudios,
         }).catch((err) => console.warn('Sync backend queue update failed:', err));
       }
 
