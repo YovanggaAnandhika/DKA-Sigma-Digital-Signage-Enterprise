@@ -242,7 +242,7 @@ class PlayerActivity : AppCompatActivity() {
                     }
                     ZoneWidgetType.TICKER -> {
                         val renderer = TickerZoneRenderer(this)
-                        val view = renderer.createView(zoneView, "Promo Spesial Hari Ini! Diskon Member Hingga 30% di Seluruh Cabang.")
+                        val view = renderer.createView(zoneView)
                         zoneView.addView(view)
                     }
                     ZoneWidgetType.QUEUE -> {
