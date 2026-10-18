@@ -202,7 +202,7 @@ impl UserRepository {
         sqlx::query_as::<_, crate::modules::iam::role_group::model::RoleGroupEntity>(
             r#"
             SELECT rg.id, rg.name, rg.slug, rg.description, rg.created_at, rg.updated_at
-            FROM role_groups rg
+            FROM roles_groups rg
             JOIN user_role_groups urg ON urg.role_group_id = rg.id
             WHERE urg.user_id = $1
             "#,
