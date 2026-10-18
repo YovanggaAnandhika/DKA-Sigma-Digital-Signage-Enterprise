@@ -131,13 +131,14 @@ export default function SchedulesPage() {
                 <th>JAM TAYANG AKTIF</th>
                 <th>HARI TAYANG</th>
                 <th>PRIORITAS</th>
+                <th>TANGGAL DIBUAT</th>
                 <th style={{ textAlign: 'right' }}>AKSI</th>
               </tr>
             </thead>
             <tbody>
               {schedules.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                     {loading ? 'Memuat data...' : 'Tidak ada jadwal ditemukan. Push layout baru dari menu Layouts untuk mulai menayangkan konten.'}
                   </td>
                 </tr>
@@ -145,6 +146,7 @@ export default function SchedulesPage() {
                 schedules.map((s) => {
                   const firstEvent = s.eventsList && s.eventsList.length > 0 ? s.eventsList[0] : null;
                   const totalEvents = s.eventsList ? s.eventsList.length : 0;
+                  const createdDate = s.createdAt || (s as any).created_at;
 
                   return (
                     <tr key={s.id}>
@@ -204,6 +206,9 @@ export default function SchedulesPage() {
                         >
                           P: {firstEvent?.priority ?? 0}
                         </span>
+                      </td>
+                      <td style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                        {createdDate ? new Date(createdDate).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '-'}
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>

@@ -419,8 +419,10 @@ export default function ViewSchedulePage() {
                 Prioritas: {primaryEvent?.priority ?? 0}
               </span>
             </div>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px', margin: 0 }}>
-              {schedule.description || 'Jadwal tayang konten digital signage'}
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span>{schedule.description || 'Jadwal tayang konten digital signage'}</span>
+              <span>·</span>
+              <span>Dibuat: {schedule.createdAt ? new Date(schedule.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '-'}</span>
             </p>
           </div>
         </div>
