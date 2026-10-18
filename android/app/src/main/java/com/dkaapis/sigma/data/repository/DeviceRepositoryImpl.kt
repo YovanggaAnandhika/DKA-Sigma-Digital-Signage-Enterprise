@@ -32,15 +32,36 @@ class DeviceRepositoryImpl(
 
     override suspend fun getLocalDeviceInfo(): DeviceInfo = withContext(Dispatchers.IO) {
         val dm = context.resources.displayMetrics
-        val isLandscape = dm.widthPixels >= dm.heightPixels
+        val wm = context.getSystemService(Context.WINDOW_SERVICE) as? android.view.WindowManager
+
+        var realWidth = dm.widthPixels
+        var realHeight = dm.heightPixels
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && wm != null) {
+            val bounds = wm.currentWindowMetrics.bounds
+            realWidth = bounds.width()
+            realHeight = bounds.height()
+        } else if (wm != null) {
+            val realDm = android.util.DisplayMetrics()
+            @Suppress("DEPRECATION")
+            wm.defaultDisplay?.getRealMetrics(realDm)
+            if (realDm.widthPixels > 0 && realDm.heightPixels > 0) {
+                realWidth = realDm.widthPixels
+                realHeight = realDm.heightPixels
+            }
+        }
+
+        val isLandscape = realWidth >= realHeight
+        val width = if (isLandscape) maxOf(realWidth, realHeight) else minOf(realWidth, realHeight)
+        val height = if (isLandscape) minOf(realWidth, realHeight) else maxOf(realWidth, realHeight)
 
         DeviceInfo(
             id = tokenStorage.getDeviceId() ?: "",
             name = Build.MODEL ?: "Android Display",
             macAddress = getMacAddress(),
             ipAddress = getIpAddress(),
-            screenWidth = dm.widthPixels,
-            screenHeight = dm.heightPixels,
+            screenWidth = width,
+            screenHeight = height,
             isLandscape = isLandscape,
             appVersion = "1.0.0",
             androidVersion = Build.VERSION.RELEASE ?: "",

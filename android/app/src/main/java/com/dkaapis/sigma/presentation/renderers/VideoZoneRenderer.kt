@@ -44,6 +44,7 @@ class VideoZoneRenderer(
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
             useController = false
+            resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
             this.player = player
         }
         playerView = view

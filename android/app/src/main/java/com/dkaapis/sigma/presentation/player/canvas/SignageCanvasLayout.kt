@@ -24,7 +24,8 @@ class SignageCanvasLayout @JvmOverloads constructor(
             requestLayout()
         }
 
-    private var scaleFactor: Float = 1.0f
+    private var scaleFactorX: Float = 1.0f
+    private var scaleFactorY: Float = 1.0f
     private var offsetX: Int = 0
     private var offsetY: Int = 0
 
@@ -34,10 +35,17 @@ class SignageCanvasLayout @JvmOverloads constructor(
 
         val scaleX = availableWidth.toFloat() / virtualWidth
         val scaleY = availableHeight.toFloat() / virtualHeight
-        scaleFactor = min(scaleX, scaleY)
 
-        val canvasW = (virtualWidth * scaleFactor).toInt()
-        val canvasH = (virtualHeight * scaleFactor).toInt()
+        // Untuk digital signage: jika perbedaan rasio X dan Y relatif kecil (< 15%),
+        // kita stretch presisi ke layar penuh agar pas tanpa black bar samping/atas-bawah
+        val ratioDiff = kotlin.math.abs(scaleX - scaleY) / kotlin.math.max(scaleX, scaleY)
+        val stretchToScreen = ratioDiff < 0.15f
+
+        scaleFactorX = if (stretchToScreen) scaleX else min(scaleX, scaleY)
+        scaleFactorY = if (stretchToScreen) scaleY else min(scaleX, scaleY)
+
+        val canvasW = (virtualWidth * scaleFactorX).toInt()
+        val canvasH = (virtualHeight * scaleFactorY).toInt()
 
         offsetX = (availableWidth - canvasW) / 2
         offsetY = (availableHeight - canvasH) / 2
@@ -45,8 +53,8 @@ class SignageCanvasLayout @JvmOverloads constructor(
         for (i in 0 until childCount) {
             val child = getChildAt(i)
             if (child.visibility != GONE && child is ZoneContainerView) {
-                val childW = (child.zoneWidth * scaleFactor).toInt()
-                val childH = (child.zoneHeight * scaleFactor).toInt()
+                val childW = (child.zoneWidth * scaleFactorX).toInt()
+                val childH = (child.zoneHeight * scaleFactorY).toInt()
                 child.measure(
                     MeasureSpec.makeMeasureSpec(childW, MeasureSpec.EXACTLY),
                     MeasureSpec.makeMeasureSpec(childH, MeasureSpec.EXACTLY)
@@ -61,8 +69,8 @@ class SignageCanvasLayout @JvmOverloads constructor(
         for (i in 0 until childCount) {
             val child = getChildAt(i)
             if (child.visibility != GONE && child is ZoneContainerView) {
-                val left = offsetX + (child.zoneX * scaleFactor).toInt()
-                val top = offsetY + (child.zoneY * scaleFactor).toInt()
+                val left = offsetX + (child.zoneX * scaleFactorX).toInt()
+                val top = offsetY + (child.zoneY * scaleFactorY).toInt()
                 val right = left + child.measuredWidth
                 val bottom = top + child.measuredHeight
                 child.layout(left, top, right, bottom)

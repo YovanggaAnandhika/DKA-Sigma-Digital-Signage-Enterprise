@@ -16,7 +16,7 @@ class ImageZoneRenderer(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            scaleType = ImageView.ScaleType.FIT_CENTER
+            scaleType = ImageView.ScaleType.CENTER_CROP
             load(imageFile) {
                 crossfade(300)
             }
