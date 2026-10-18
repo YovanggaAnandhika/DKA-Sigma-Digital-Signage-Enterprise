@@ -356,7 +356,8 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                   position: 'absolute',
                   inset: 0,
                   backgroundColor:
-                    activeBlock.widgetData?.theme === 'blue'
+                    activeBlock.widgetData?.backgroundColor ||
+                    (activeBlock.widgetData?.theme === 'blue'
                       ? '#1e3a8a'
                       : activeBlock.widgetData?.theme === 'red'
                       ? '#991b1b'
@@ -364,8 +365,10 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                       ? '#065f46'
                       : activeBlock.widgetData?.theme === 'amber'
                       ? '#92400e'
-                      : '#111827',
-                  color: '#ffffff',
+                      : '#111827'),
+                  color: activeBlock.widgetData?.textColor || '#ffffff',
+                  borderRadius: activeBlock.widgetData?.borderRadius ? `${activeBlock.widgetData.borderRadius}px` : undefined,
+                  border: activeBlock.widgetData?.borderColor ? `1px solid ${activeBlock.widgetData.borderColor}` : undefined,
                   display: 'flex',
                   alignItems: 'center',
                   overflow: 'hidden',
@@ -376,7 +379,8 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                 {activeBlock.widgetData?.badge && (
                   <span
                     style={{
-                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      backgroundColor: activeBlock.widgetData?.badgeBackgroundColor || 'rgba(255,255,255,0.2)',
+                      color: activeBlock.widgetData?.badgeTextColor || '#ffffff',
                       padding: '2px 8px',
                       borderRadius: '4px',
                       fontWeight: 800,
@@ -405,7 +409,7 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                       alignItems: 'center',
                     }}
                   >
-                    {(activeBlock.widgetData?.messages || ['DKASigma Teks Berjalan']).join('  ✦  ')}
+                    {(activeBlock.widgetData?.messagesList || activeBlock.widgetData?.messages || ['DKASigma Teks Berjalan']).join('  ✦  ')}
                   </Marquee>
                 </div>
               </div>
@@ -414,8 +418,10 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  background: 'var(--bg-surface-elevated)',
-                  color: 'var(--text-primary)',
+                  backgroundColor: activeBlock.widgetData?.backgroundColor || 'var(--bg-surface-elevated)',
+                  color: activeBlock.widgetData?.textColor || 'var(--text-primary)',
+                  borderRadius: activeBlock.widgetData?.borderRadius ? `${activeBlock.widgetData.borderRadius}px` : undefined,
+                  border: activeBlock.widgetData?.borderColor ? `1px solid ${activeBlock.widgetData.borderColor}` : undefined,
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -423,10 +429,19 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                   padding: '12px',
                 }}
               >
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '0.05em', fontFamily: 'monospace' }}>
+                <div style={{
+                  fontSize: activeBlock.widgetData?.timeFontSize ? `calc(${activeBlock.widgetData.timeFontSize}px * 0.7)` : '1.75rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.05em',
+                  fontFamily: 'monospace'
+                }}>
                   {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: activeBlock.widgetData?.showSeconds ? '2-digit' : undefined })}
                 </div>
-                <div style={{ fontSize: '0.75rem', opacity: 0.8, marginTop: '4px' }}>
+                <div style={{
+                  fontSize: activeBlock.widgetData?.dateFontSize ? `${activeBlock.widgetData.dateFontSize}px` : '0.75rem',
+                  color: activeBlock.widgetData?.subtitleColor || 'var(--text-muted)',
+                  marginTop: '4px'
+                }}>
                   {activeBlock.widgetData?.city || 'Makassar'} &bull; Cerah 31°C
                 </div>
               </div>
@@ -449,7 +464,9 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                   const qData = activeBlock.widgetData || {};
                   const canvasW = qData.canvasWidth || 1920;
                   const canvasH = qData.canvasHeight || 1080;
-                  const rawItems = (qData.items && qData.items.length > 0)
+                  const rawItems = (qData.itemsList && qData.itemsList.length > 0)
+                    ? qData.itemsList
+                    : (qData.items && qData.items.length > 0)
                     ? qData.items
                     : createDefaultQueueLayoutItems(qData.themePreset || 'clean-light');
 
@@ -458,8 +475,8 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                     .sort((a: any, b: any) => (a.zIndex || 1) - (b.zIndex || 1))
                     .map((item: any) => {
                       const interpolated = injectQueueVariables(item.templateContent || '', {
-                        queueNumber: qData.currentNumber || 'A-001',
-                        queueCounter: qData.currentCounter || 'LOKET 01',
+                        queueNumber: qData.latestCalledNumber || qData.currentNumber || 'A-001',
+                        queueCounter: (qData.countersList && qData.countersList.length > 0 ? qData.countersList[0].counterName : qData.currentCounter) || 'LOKET 01',
                         queuePrefix: qData.prefix || 'A',
                         queueName: qData.name || 'Layar Antrian',
                       });
