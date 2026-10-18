@@ -95,7 +95,7 @@ export default function DashboardPage() {
             Ikhtisar Operasi Layar Retail
           </h1>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Pemantauan status display player, pustaka playlist, dan audit aktivitas secara real-time.
+            Ringkasan performa dan metrik display player.
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

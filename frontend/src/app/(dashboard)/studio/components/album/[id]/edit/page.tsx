@@ -199,7 +199,7 @@ export default function EditPhotoAlbumPage() {
                   <Images size={16} color="var(--primary-400)" /> Tambah Foto dari Pustaka Media
                 </h3>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  Pilih gambar aset terpusat yang sudah diunggah untuk ditampilkan pada slideshow album.
+                  Pilih gambar untuk slideshow album.
                 </p>
               </div>
               <button
