@@ -15,6 +15,11 @@ import {
   Activity, Thermometer, Wifi, Film, AlertTriangle, TrendingUp, BarChart2
 } from 'lucide-react';
 
+function cleanMediaTitle(raw?: string): string {
+  if (!raw) return 'Tidak ada video aktif (Standby)';
+  return raw.replace(/^[0-9a-fA-F-]{36}_/, '');
+}
+
 export default function ViewDisplayPage() {
   const params = useParams() as { id: string };
   const router = useRouter();
@@ -24,7 +29,7 @@ export default function ViewDisplayPage() {
   const [telemetry, setTelemetry] = useState<LatestTelemetry | null>(null);
   const [realtimeMetrics, setRealtimeMetrics] = useState<{
     io: HardwareInputOutput;
-    assets: AssetStats;
+    assetsList: AssetStats[];
   } | null>(null);
   const [analyticsHistory, setAnalyticsHistory] = useState<DeviceAnalyticsRecord[]>([]);
   const [timeRange, setTimeRange] = useState<string>('1h');
@@ -42,9 +47,12 @@ export default function ViewDisplayPage() {
       setAnalyticsHistory(records);
       if (records.length > 0 && !realtimeMetrics) {
         const last = records[records.length - 1];
+        const initialList = last.assetsStatsList && last.assetsStatsList.length > 0
+          ? last.assetsStatsList
+          : (last.assetsStats ? [last.assetsStats] : []);
         setRealtimeMetrics({
           io: last.inputOutput || {},
-          assets: last.assetsStats || {},
+          assetsList: initialList,
         });
       }
     } catch (_) {}
@@ -91,28 +99,36 @@ export default function ViewDisplayPage() {
         if (data.type === 'ANALYTICS_UPDATE' && data.snapshot) {
           setIsLiveConnected(true);
           let io: HardwareInputOutput = {};
-          let assets: AssetStats = {};
+          let assetsList: AssetStats[] = [];
           try {
             io = typeof data.snapshot.inputOutputJson === 'string'
               ? JSON.parse(data.snapshot.inputOutputJson)
               : (data.snapshot.inputOutputJson || {});
           } catch (_) {}
           try {
-            assets = typeof data.snapshot.assetsStatsJson === 'string'
+            const raw = typeof data.snapshot.assetsStatsJson === 'string'
               ? JSON.parse(data.snapshot.assetsStatsJson)
               : (data.snapshot.assetsStatsJson || {});
+            if (Array.isArray(raw)) {
+              assetsList = raw;
+            } else if (raw && typeof raw === 'object') {
+              if (Array.isArray(raw.items)) assetsList = raw.items;
+              else if (Array.isArray(raw.activeAssets)) assetsList = raw.activeAssets;
+              else assetsList = [raw];
+            }
           } catch (_) {}
 
-          setRealtimeMetrics({ io, assets });
+          setRealtimeMetrics({ io, assetsList });
 
           const newRecord: DeviceAnalyticsRecord = {
             id: data.snapshot.id || String(Date.now()),
             deviceId: params.id,
             inputOutputJson: JSON.stringify(io),
-            assetsStatsJson: JSON.stringify(assets),
+            assetsStatsJson: JSON.stringify(assetsList),
             recordedAt: data.snapshot.recordedAt || new Date().toISOString(),
             inputOutput: io,
-            assetsStats: assets,
+            assetsStats: assetsList[0] || {},
+            assetsStatsList: assetsList,
           };
 
           setAnalyticsHistory(prev => {
@@ -248,17 +264,22 @@ export default function ViewDisplayPage() {
     : '';
 
   // Asset Diagnostic & Bottleneck Detection
-  const currentAsset = realtimeMetrics?.assets;
+  const activeAssetsList = realtimeMetrics?.assetsList && realtimeMetrics.assetsList.length > 0
+    ? realtimeMetrics.assetsList
+    : [];
+
   const currentCpu = realtimeMetrics?.io?.cpu_percent ?? realtimeMetrics?.io?.cpuPercent ?? 0;
   const currentRam = realtimeMetrics?.io?.ram_percent ?? realtimeMetrics?.io?.ramPercent ?? 0;
-  const droppedFrames = currentAsset?.dropped_frames ?? currentAsset?.droppedFrames ?? 0;
-  const bitrateKbps = currentAsset?.bitrate_kbps ?? currentAsset?.bitrateKbps ?? 0;
-  const isHw = currentAsset?.is_hardware_accelerated ?? currentAsset?.isHardwareAccelerated ?? true;
-  const codecName = currentAsset?.codec || 'video/avc';
-  const mediaName = currentAsset?.media_name || currentAsset?.mediaName;
 
-  const getDiagnosticVerdict = () => {
-    if (!mediaName) {
+  const getAssetVerdict = (asset: AssetStats) => {
+    const rawTitle = asset.media_name || asset.mediaName;
+    const mediaName = cleanMediaTitle(rawTitle);
+    const droppedFrames = asset.dropped_frames ?? asset.droppedFrames ?? 0;
+    const bitrateKbps = asset.bitrate_kbps ?? asset.bitrateKbps ?? 0;
+    const isHw = asset.is_hardware_accelerated ?? asset.isHardwareAccelerated ?? true;
+    const codecName = asset.codec || 'video/avc';
+
+    if (!rawTitle) {
       return {
         type: 'idle',
         color: 'var(--text-muted)',
@@ -266,10 +287,10 @@ export default function ViewDisplayPage() {
         border: 'var(--border-subtle)',
         icon: <Film size={18} style={{ color: 'var(--text-muted)' }} />,
         title: 'Player Siaga (Standby / Idle)',
-        desc: 'Tidak ada video streaming yang sedang aktif diputar atau layar sedang menampilkan layout statis / gambar.',
+        desc: 'Tidak ada video streaming yang sedang aktif diputar pada zone ini.',
       };
     }
-    if (droppedFrames > 20) {
+    if (droppedFrames > 10) {
       if (currentCpu > 80) {
         return {
           type: 'danger',
@@ -277,8 +298,8 @@ export default function ViewDisplayPage() {
           bg: 'rgba(244, 63, 94, 0.08)',
           border: 'rgba(244, 63, 94, 0.3)',
           icon: <AlertTriangle size={18} color="var(--accent-rose)" />,
-          title: 'Bottleneck Terdeteksi: Overload Perangkat Keras (CPU Jenuh)',
-          desc: `Terjadi ${droppedFrames} frame drop bersamaan dengan utilisasi CPU sistem mencapai ${currentCpu.toFixed(1)}%. Penyebab perlambatan adalah kapasitas komputasi prosesor Android yang jenuh, bukan codec file.`,
+          title: `Bottleneck Hardware Overload pada "${mediaName}"`,
+          desc: `Terjadi ${droppedFrames} frame drop pada video ini karena beban CPU sistem mencapai ${currentCpu.toFixed(1)}%. Kapasitas komputasi prosesor Android jenuh memproses multi-layer/multi-video.`,
         };
       } else {
         return {
@@ -287,10 +308,21 @@ export default function ViewDisplayPage() {
           bg: 'rgba(234, 179, 8, 0.08)',
           border: 'rgba(234, 179, 8, 0.3)',
           icon: <AlertTriangle size={18} color="var(--accent-amber)" />,
-          title: 'Bottleneck Terdeteksi: Bitrate / Profil Codec Video Terlalu Berat',
-          desc: `Terjadi ${droppedFrames} frame drop meskipun utilisasi CPU normal (${currentCpu.toFixed(1)}%). Pipeline decoder video (${codecName}, ${(bitrateKbps / 1000).toFixed(1)} Mbps) melebihi kapasitas throughput MediaCodec hardware. Disarankan re-encode video ke format H.264 standar atau kompresi bitrate lebih rendah.`,
+          title: `Bottleneck Bitrate/Codec pada "${mediaName}"`,
+          desc: `Terjadi ${droppedFrames} frame drop pada video ini meskipun CPU normal (${currentCpu.toFixed(1)}%). Pipeline decoder video (${codecName}, ${(bitrateKbps / 1000).toFixed(1)} Mbps, resolusi ${asset.resolution || '1080p'}) melebihi batas throughput MediaCodec perangkat. Disarankan kompresi bitrate lebih rendah.`,
         };
       }
+    }
+    if (droppedFrames > 0) {
+      return {
+        type: 'warning',
+        color: 'var(--accent-amber)',
+        bg: 'rgba(234, 179, 8, 0.08)',
+        border: 'rgba(234, 179, 8, 0.3)',
+        icon: <AlertTriangle size={18} color="var(--accent-amber)" />,
+        title: `Frame Drop Minor (${droppedFrames} Frame Drop) pada "${mediaName}"`,
+        desc: `Terjadi ${droppedFrames} frame drop sesaat saat inisialisasi buffering file "${mediaName}". Throughput decoder saat ini telah kembali sinkron.`,
+      };
     }
     if (!isHw) {
       return {
@@ -299,8 +331,8 @@ export default function ViewDisplayPage() {
         bg: 'rgba(234, 179, 8, 0.08)',
         border: 'rgba(234, 179, 8, 0.3)',
         icon: <AlertTriangle size={18} color="var(--accent-amber)" />,
-        title: 'Peringatan: Pemutaran Menggunakan Software Decoding',
-        desc: 'Akselerasi hardware MediaCodec tidak aktif untuk codec ini. Pemutaran software membebani CPU lebih besar dan rentan stuttering pada resolusi tinggi.',
+        title: `Software Decoding pada "${mediaName}"`,
+        desc: 'Akselerasi hardware MediaCodec tidak aktif untuk codec ini. Pemutaran software membebani CPU lebih besar.',
       };
     }
     return {
@@ -309,12 +341,10 @@ export default function ViewDisplayPage() {
       bg: 'rgba(16, 185, 129, 0.08)',
       border: 'rgba(16, 185, 129, 0.3)',
       icon: <CheckCircle2 size={18} color="var(--accent-emerald)" />,
-      title: 'Pemutaran Optimal (Akselerasi Hardware Mulus)',
-      desc: `Video diproses lancar oleh ${currentAsset?.decoder_name || 'Hardware MediaCodec'} tanpa frame drop (${droppedFrames} drop). Throughput decoder bekerja stabil dan sinkron.`,
+      title: `Pemutaran Optimal pada "${mediaName}"`,
+      desc: `Video diproses sempurna oleh ${asset.decoder_name || 'Hardware MediaCodec'} tanpa frame drop (0 drop). Throughput decoder bekerja stabil.`,
     };
   };
-
-  const verdict = getDiagnosticVerdict();
 
   if (loading || !device) {
     return (
@@ -736,18 +766,18 @@ export default function ViewDisplayPage() {
         </div>
       </div>
 
-      {/* Audit Beban & Diagnostik Pemutaran Media (Live Asset Diagnostics) */}
+      {/* Audit Beban & Diagnostik Pemutaran Media (Live Multi-Asset Profiling) */}
       <div className="card-elevated" style={{ padding: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Film size={18} style={{ color: 'var(--accent-indigo)' }} />
               <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Audit Beban & Diagnostik Pemutaran Media (Live Profiling)
+                Audit Beban & Diagnostik Pemutaran Media (Live Profiling Multi-Aset)
               </h2>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Analisis mendalam per-aset: codec, resolusi, throughput bitrate, akselerasi decoder, dan deteksi penyebab video lag.
+              Pemantauan granular per-video/per-zone: mendeteksi video spesifik mana yang mengalami frame drop, status hardware decoder, dan bitrate.
             </p>
           </div>
           <span
@@ -756,90 +786,195 @@ export default function ViewDisplayPage() {
               borderRadius: '9999px',
               fontSize: '0.6875rem',
               fontWeight: 700,
-              backgroundColor: isHw ? 'rgba(16, 185, 129, 0.12)' : 'rgba(234, 179, 8, 0.12)',
-              color: isHw ? 'var(--accent-emerald)' : 'var(--accent-amber)',
-              border: isHw ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(234, 179, 8, 0.3)',
+              backgroundColor: 'rgba(59, 130, 246, 0.12)',
+              color: 'var(--primary-400)',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
             }}
           >
-            {isHw ? '⚡ HARDWARE ACCELERATED' : '⚠️ SOFTWARE DECODING'}
+            {activeAssetsList.length} MEDIA AKTIF
           </span>
         </div>
 
-        {/* Granular Asset Stats Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '16px' }}>
-          <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'var(--bg-surface-elevated)' }}>
-            <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)' }}>MEDIA AKTIF</div>
-            <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={mediaName || 'Idle'}>
-              {mediaName || 'Tidak ada video aktif (Standby)'}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
-              <span style={{ fontSize: '0.6875rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.06)', color: 'var(--accent-cyan)', fontWeight: 700 }}>
-                {codecName}
-              </span>
-              <span style={{ fontSize: '0.6875rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)' }}>
-                {currentAsset?.resolution || (device.screenWidth ? `${device.screenWidth}x${device.screenHeight}` : '1920x1080')}
-              </span>
-            </div>
-          </div>
-
-          <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'var(--bg-surface-elevated)' }}>
-            <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)' }}>STREAM BITRATE</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-cyan)', marginTop: '4px' }}>
-              {bitrateKbps > 0 ? (bitrateKbps >= 1000 ? `${(bitrateKbps / 1000).toFixed(1)} Mbps` : `${bitrateKbps} Kbps`) : 'N/A'}
-            </div>
-            <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              Throughput decoding video
-            </div>
-          </div>
-
-          <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'var(--bg-surface-elevated)' }}>
-            <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)' }}>DECODER HARDWARE</div>
-            <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '4px' }}>
-              {currentAsset?.decoder_name || currentAsset?.decoderName || 'MediaCodec'}
-            </div>
-            <div style={{ fontSize: '0.6875rem', color: isHw ? 'var(--accent-emerald)' : 'var(--accent-amber)', marginTop: '4px', fontWeight: 600 }}>
-              {isHw ? 'Akselerasi GPU/DSP Aktif' : 'Software Fallback'}
-            </div>
-          </div>
-
-          <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'var(--bg-surface-elevated)' }}>
-            <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)' }}>FRAME DROP & INTEGRITAS</div>
-            <div style={{
-              fontSize: '1.25rem',
-              fontWeight: 800,
-              color: droppedFrames > 20 ? 'var(--accent-rose)' : droppedFrames > 0 ? 'var(--accent-amber)' : 'var(--accent-emerald)',
-              marginTop: '4px'
-            }}>
-              {droppedFrames} Frame Drop
-            </div>
-            <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              Status: {currentAsset?.playback_status || 'STABIL'}
-            </div>
-          </div>
-        </div>
-
-        {/* Dynamic Diagnostic Verdict Box */}
-        <div
-          style={{
-            padding: '14px 18px',
+        {activeAssetsList.length === 0 ? (
+          <div style={{
+            padding: '28px',
             borderRadius: '12px',
-            backgroundColor: verdict.bg,
-            border: `1px solid ${verdict.border}`,
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '12px',
-          }}
-        >
-          <div style={{ marginTop: '2px' }}>{verdict.icon}</div>
-          <div>
-            <div style={{ fontSize: '0.875rem', fontWeight: 700, color: verdict.color }}>
-              {verdict.title}
-            </div>
-            <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '3px', lineHeight: 1.45 }}>
-              {verdict.desc}
-            </div>
+            backgroundColor: 'var(--bg-surface-elevated)',
+            border: '1px dashed var(--border-subtle)',
+            textAlign: 'center',
+            color: 'var(--text-muted)',
+            fontSize: '0.875rem',
+          }}>
+            <Film size={28} style={{ margin: '0 auto 8px auto', opacity: 0.5 }} />
+            <div style={{ fontWeight: 600 }}>Player dalam kondisi Siaga (Standby)</div>
+            <p style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+              Tidak ada video streaming yang aktif diputar saat ini atau player sedang menampilkan layout statis/gambar.
+            </p>
           </div>
-        </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {activeAssetsList.map((asset, idx) => {
+              const rawTitle = asset.media_name || asset.mediaName;
+              const cleanTitle = cleanMediaTitle(rawTitle);
+              const dropped = asset.dropped_frames ?? asset.droppedFrames ?? 0;
+              const bitrateKbps = asset.bitrate_kbps ?? asset.bitrateKbps ?? 0;
+              const isHw = asset.is_hardware_accelerated ?? asset.isHardwareAccelerated ?? true;
+              const codec = asset.codec || 'H.264 / AVC';
+              const resolution = asset.resolution || (device.screenWidth ? `${device.screenWidth}x${device.screenHeight}` : '1920x1080');
+              const verdict = getAssetVerdict(asset);
+              const zoneLabel = asset.zone_name || asset.zoneName || (activeAssetsList.length === 1 ? 'Zone Layar Penuh' : `Video Player #${idx + 1}`);
+
+              return (
+                <div
+                  key={`${asset.media_id || idx}-${idx}`}
+                  style={{
+                    padding: '16px',
+                    borderRadius: '12px',
+                    backgroundColor: 'var(--bg-surface-elevated)',
+                    border: dropped > 10 ? '1px solid rgba(244, 63, 94, 0.4)' : dropped > 0 ? '1px solid rgba(234, 179, 8, 0.3)' : '1px solid var(--border-subtle)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                  }}
+                >
+                  {/* Zone Header & Title */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ flex: '1', minWidth: '240px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={{
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.6875rem',
+                          fontWeight: 700,
+                          backgroundColor: 'rgba(255,255,255,0.08)',
+                          color: 'var(--accent-cyan)',
+                          letterSpacing: '0.02em',
+                        }}>
+                          {zoneLabel}
+                        </span>
+                        <span style={{
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.6875rem',
+                          fontWeight: 700,
+                          backgroundColor: asset.playback_status === 'PLAYING' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(234, 179, 8, 0.12)',
+                          color: asset.playback_status === 'PLAYING' ? 'var(--accent-emerald)' : 'var(--accent-amber)',
+                        }}>
+                          ● {asset.playback_status || 'PLAYING'}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '1rem',
+                          fontWeight: 800,
+                          color: 'var(--text-primary)',
+                          wordBreak: 'break-word',
+                          lineHeight: 1.35,
+                        }}
+                        title={rawTitle}
+                      >
+                        {cleanTitle}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: '9999px',
+                          fontSize: '0.6875rem',
+                          fontWeight: 700,
+                          backgroundColor: isHw ? 'rgba(16, 185, 129, 0.12)' : 'rgba(234, 179, 8, 0.12)',
+                          color: isHw ? 'var(--accent-emerald)' : 'var(--accent-amber)',
+                          border: isHw ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(234, 179, 8, 0.3)',
+                        }}
+                      >
+                        {isHw ? '⚡ HARDWARE ACCELERATED' : '⚠️ SOFTWARE DECODING'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Profiler Metrics Strip */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                    <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--bg-surface)' }}>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>RESOLUSI & CODEC</div>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
+                        {resolution}
+                      </div>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--accent-cyan)', fontWeight: 600, marginTop: '2px' }}>
+                        {codec}
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--bg-surface)' }}>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>STREAM BITRATE</div>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--accent-cyan)', marginTop: '2px' }}>
+                        {bitrateKbps > 0 ? (bitrateKbps >= 1000 ? `${(bitrateKbps / 1000).toFixed(1)} Mbps` : `${bitrateKbps} Kbps`) : 'N/A'}
+                      </div>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        Data rate decoding
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--bg-surface)' }}>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>DECODER ENGINE</div>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
+                        {asset.decoder_name || 'Hardware MediaCodec'}
+                      </div>
+                      <div style={{ fontSize: '0.6875rem', color: isHw ? 'var(--accent-emerald)' : 'var(--accent-amber)', marginTop: '2px', fontWeight: 600 }}>
+                        {isHw ? 'GPU / DSP Dedicated' : 'CPU Software'}
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--bg-surface)' }}>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>FRAME DROP & INTEGRITAS</div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        fontWeight: 800,
+                        color: dropped > 10 ? 'var(--accent-rose)' : dropped > 0 ? 'var(--accent-amber)' : 'var(--accent-emerald)',
+                        marginTop: '2px'
+                      }}>
+                        {dropped} Frame Drop
+                        {asset.dropped_frame_rate_percent ? ` (${asset.dropped_frame_rate_percent}%)` : ''}
+                      </div>
+                      <div style={{
+                        fontSize: '0.6875rem',
+                        color: dropped > 10 ? 'var(--accent-rose)' : dropped > 0 ? 'var(--accent-amber)' : 'var(--accent-emerald)',
+                        marginTop: '2px',
+                        fontWeight: 600
+                      }}>
+                        {dropped > 10 ? '🚨 LAG / STUTTERING' : dropped > 0 ? '⚠️ Jeda Minor Terdeteksi' : '✅ 100% Mulus'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dedicated Bottleneck Diagnostic Banner */}
+                  <div
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      backgroundColor: verdict.bg,
+                      border: `1px solid ${verdict.border}`,
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '10px',
+                    }}
+                  >
+                    <div style={{ marginTop: '2px' }}>{verdict.icon}</div>
+                    <div>
+                      <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: verdict.color }}>
+                        {verdict.title}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px', lineHeight: 1.4 }}>
+                        {verdict.desc}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Grafik Tren Performa Hardware dari Waktu ke Waktu (Timeseries Chart) */}
@@ -1087,10 +1222,21 @@ export default function ViewDisplayPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ color: 'var(--text-muted)' }}>Media:</span>
               <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                {hoveredPoint.assetsStats?.media_name || hoveredPoint.assetsStats?.mediaName || 'Idle'}
+                {hoveredPoint.assetsStatsList && hoveredPoint.assetsStatsList.length > 0
+                  ? hoveredPoint.assetsStatsList.map(a => cleanMediaTitle(a.media_name || a.mediaName)).join(', ')
+                  : cleanMediaTitle(hoveredPoint.assetsStats?.media_name || hoveredPoint.assetsStats?.mediaName)}
               </span>
-              <span style={{ color: (hoveredPoint.assetsStats?.dropped_frames ?? 0) > 0 ? 'var(--accent-amber)' : 'var(--accent-emerald)', fontWeight: 700 }}>
-                ({hoveredPoint.assetsStats?.dropped_frames ?? hoveredPoint.assetsStats?.droppedFrames ?? 0} drop)
+              <span style={{
+                color: ((hoveredPoint.assetsStatsList && hoveredPoint.assetsStatsList.length > 0
+                  ? hoveredPoint.assetsStatsList.reduce((acc, a) => acc + (a.dropped_frames ?? a.droppedFrames ?? 0), 0)
+                  : (hoveredPoint.assetsStats?.dropped_frames ?? hoveredPoint.assetsStats?.droppedFrames ?? 0)) > 0)
+                  ? 'var(--accent-amber)'
+                  : 'var(--accent-emerald)',
+                fontWeight: 700
+              }}>
+                ({hoveredPoint.assetsStatsList && hoveredPoint.assetsStatsList.length > 0
+                  ? hoveredPoint.assetsStatsList.reduce((acc, a) => acc + (a.dropped_frames ?? a.droppedFrames ?? 0), 0)
+                  : (hoveredPoint.assetsStats?.dropped_frames ?? hoveredPoint.assetsStats?.droppedFrames ?? 0)} drop)
               </span>
             </div>
           </div>
