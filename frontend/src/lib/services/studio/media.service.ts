@@ -88,6 +88,19 @@ export interface UploadChunkResult {
   error_message: string;
 }
 
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(bytes).toString('base64');
+  }
+  const CHUNK_SIZE = 0x8000; // 32 KB blocks
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+    const sub = bytes.subarray(i, Math.min(i + CHUNK_SIZE, bytes.length));
+    binary += String.fromCharCode.apply(null, sub as unknown as number[]);
+  }
+  return btoa(binary);
+}
+
 export async function uploadMediaChunk(data: {
   upload_id: string;
   originalFilename: string;
@@ -98,13 +111,7 @@ export async function uploadMediaChunk(data: {
   total_file_size: number;
   chunk_offset?: number;
 }): Promise<UploadChunkResult> {
-  // Convert Uint8Array to base64 for JSON transport
-  let binary = '';
-  const len = data.chunk_data.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(data.chunk_data[i]);
-  }
-  const chunkDataB64 = btoa(binary);
+  const chunkDataB64 = uint8ArrayToBase64(data.chunk_data);
 
   const payload = {
     uploadId: data.upload_id,

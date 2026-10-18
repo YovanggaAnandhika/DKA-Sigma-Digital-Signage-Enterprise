@@ -277,7 +277,7 @@ class PlayerActivity : AppCompatActivity() {
                         val downloadedMb = String.format(java.util.Locale.US, "%.1f", state.downloadedBytes / (1024.0 * 1024.0))
                         val totalMb = String.format(java.util.Locale.US, "%.1f", state.totalBytes / (1024.0 * 1024.0))
 
-                        loadingText.text = "Mengunduh Chunk Media (${state.assetIndex}/${state.total}) • ${state.progressPercent}%"
+                        loadingText.text = "Mengunduh Aset Media (${state.assetIndex}/${state.total}) • ${state.progressPercent}%"
                         subDetailText.text = "${state.currentFileName}\n[ ${downloadedMb} MB / ${totalMb} MB ]\nLokasi: /storage/emulated/0/Android/data/com.dkaapis.sigma/files/assets/"
                     }
                     is PlayerUiState.Playing -> {

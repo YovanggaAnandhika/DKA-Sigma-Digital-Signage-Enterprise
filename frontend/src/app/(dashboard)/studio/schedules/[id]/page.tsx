@@ -64,6 +64,7 @@ export default function ViewSchedulePage() {
   // Chunk upload testing states
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const isUploadingRef = useRef(false);
   const [selectedUploadFile, setSelectedUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
@@ -208,10 +209,11 @@ export default function ViewSchedulePage() {
 
   // Large Media Chunk Upload Handler
   const handleStartChunkUpload = async () => {
-    if (!selectedUploadFile || !schedule) return;
+    if (!selectedUploadFile || !schedule || isUploadingRef.current) return;
+    isUploadingRef.current = true;
 
     const file = selectedUploadFile;
-    const CHUNK_SIZE = 512 * 1024; // 512 KB per chunk
+    const CHUNK_SIZE = 1024 * 1024; // 1 MB per chunk for high throughput & fewer HTTP round-trips
     const totalBytes = file.size;
     const totalChunks = Math.max(1, Math.ceil(totalBytes / CHUNK_SIZE));
     const uploadId =
@@ -230,7 +232,7 @@ export default function ViewSchedulePage() {
         id: `init-${Date.now()}`,
         time: new Date().toLocaleTimeString(),
         type: 'info',
-        message: `Memulai inisialisasi upload: "${file.name}" (${formatBytes(totalBytes)}, total ${totalChunks} chunk @ 512 KB, upload_id: ${uploadId.substring(0, 8)}...)`,
+        message: `Memulai inisialisasi upload: "${file.name}" (${formatBytes(totalBytes)}, total ${totalChunks} chunk @ 1 MB, upload_id: ${uploadId.substring(0, 8)}...)`,
       },
     ]);
 
@@ -238,7 +240,7 @@ export default function ViewSchedulePage() {
     let totalUploadedBytes = 0;
     let lastStreamPushTime = 0;
     const startTime = Date.now();
-    const MAX_CONCURRENCY = 5;
+    const MAX_CONCURRENCY = 4;
 
     const chunkIndices = Array.from({ length: totalChunks }, (_, i) => i);
     const failedChunks: number[] = [];
@@ -288,10 +290,10 @@ export default function ViewSchedulePage() {
           totalBytes,
         });
 
-        // Broadcast realtime chunk telemetry to player screens
+        // Broadcast realtime chunk telemetry to player screens (throttled to 150ms)
         if (assignedDevices.length > 0) {
           const now = Date.now();
-          if (now - lastStreamPushTime > 80 || completedChunks === totalChunks || completedChunks === 1) {
+          if (now - lastStreamPushTime > 150 || completedChunks === totalChunks || completedChunks === 1) {
             lastStreamPushTime = now;
             for (const dev of assignedDevices) {
               fetch('/api/stream/device', {
@@ -459,12 +461,14 @@ export default function ViewSchedulePage() {
         }
       }
     } finally {
+      isUploadingRef.current = false;
       setUploading(false);
       abortControllerRef.current = null;
     }
   };
 
   const handleCancelUpload = () => {
+    isUploadingRef.current = false;
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -1223,6 +1227,7 @@ export default function ViewSchedulePage() {
                         </button>
                         <button
                           type="button"
+                          disabled={uploading}
                           onClick={handleStartChunkUpload}
                           className="btn btn-primary"
                           style={{ fontSize: '0.8125rem', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -1294,10 +1299,10 @@ export default function ViewSchedulePage() {
                         Data Terkirim: <strong style={{ color: 'var(--text-primary)' }}>{formatBytes(chunkStatus?.uploadedBytes ?? 0)} / {formatBytes(chunkStatus?.totalBytes ?? 0)}</strong>
                       </div>
                       <div style={{ color: 'var(--text-muted)' }}>
-                        Ukuran Chunk: <strong style={{ color: 'var(--text-primary)' }}>512 KB</strong>
+                        Ukuran Chunk: <strong style={{ color: 'var(--text-primary)' }}>1 MB</strong>
                       </div>
                       <div style={{ color: 'var(--text-muted)' }}>
-                        Koneksi Paralel: <strong style={{ color: 'var(--accent-emerald)' }}>5 Workers (Active)</strong>
+                        Koneksi Paralel: <strong style={{ color: 'var(--accent-emerald)' }}>4 Workers (Active)</strong>
                       </div>
                     </div>
                   </div>

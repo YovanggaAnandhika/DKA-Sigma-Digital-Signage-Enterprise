@@ -19,12 +19,8 @@ export async function POST(req: NextRequest) {
     if (body.chunkOffset !== undefined) request.setChunkOffset(body.chunkOffset);
 
     if (body.chunkData) {
-      const binaryString = atob(body.chunkData);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      request.setChunkData(bytes);
+      const buf = Buffer.from(body.chunkData, 'base64');
+      request.setChunkData(buf);
     }
 
     return new Promise<NextResponse>((resolve) => {
