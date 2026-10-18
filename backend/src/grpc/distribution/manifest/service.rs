@@ -98,7 +98,7 @@ impl ManifestServiceImpl {
             created_at: dto.generated_at.clone(),
             updated_at: dto.generated_at.clone(),
             resolution_id: dto.resolution_id.map(|id| id.to_string()),
-            version_hash: Some(dto.version_hash),
+            version_hash: Some(dto.version_hash.clone()),
             scheduled_version_hash: None,
             is_schedule_synced: true,
         };
