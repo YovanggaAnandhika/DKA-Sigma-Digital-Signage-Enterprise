@@ -15,21 +15,21 @@
   --bg-base: #0c1018;              /* Soft dark base */
   --bg-glass: #131824;             /* Solid sleek dark panel */
 
-  /* Silky Smooth Delicate Hairlines (never harsh wireframe outlines) */
-  --border-subtle: rgba(255, 255, 255, 0.09);
-  --border-strong: rgba(255, 255, 255, 0.18);
+  /* Silky Smooth Defined Hairlines */
+  --border-subtle: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.22);
   --border-focus: #3b82f6;
 
   /* Atmospheric Soft Dark Shadows & Depth */
-  --card-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.07);
-  --card-shadow-hover: 0 8px 28px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(59, 130, 246, 0.35);
-  --specular-highlight: rgba(255, 255, 255, 0.08);
+  --card-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.09);
+  --card-shadow-hover: 0 8px 28px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(59, 130, 246, 0.4);
+  --specular-highlight: rgba(255, 255, 255, 0.1);
   --input-inset-shadow: rgba(0, 0, 0, 0.3);
   --focus-ring-glow: rgba(59, 130, 246, 0.25);
 
   /* Inputs */
   --input-bg: #0b0f17;
-  --input-border: rgba(255, 255, 255, 0.12);
+  --input-border: rgba(255, 255, 255, 0.18);
 
   /* High-Vibrance Accents */
   --primary-50: #eff6ff;
@@ -48,7 +48,7 @@
   /* Typography */
   --text-primary: #f8fafc;
   --text-secondary: #cbd5e1;
-  --text-muted: #798ba3;
+  --text-muted: #94a3b8;
 
   --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --radius-sm: 7px;
@@ -70,49 +70,49 @@
   color-scheme: light;
 
   /* Surfaces & Canvas */
-  --bg-primary: #f8fafc;           /* Silky smooth airy canvas */
+  --bg-primary: #f1f5f9;           /* Clean Slate-100 canvas contrasting white panels */
   --bg-secondary: #ffffff;         /* Pure white navigation & headers */
   --bg-surface: #ffffff;           /* Pure white workspace cards & panels */
-  --bg-surface-elevated: #f1f5f9;  /* Micro-elevated control surfaces & chips */
-  --bg-base: #f8fafc;              /* Soft base */
-  --bg-glass: #ffffff;             /* Clean solid white, no AI mush */
+  --bg-surface-elevated: #f8fafc;  /* Clean elevated control surfaces & chips */
+  --bg-base: #e2e8f0;              /* Soft base */
+  --bg-glass: #ffffff;             /* Clean solid white */
 
-  /* Silky Smooth Delicate Hairlines (dissolves cleanly, never harsh or "hambar") */
-  --border-subtle: rgba(15, 23, 42, 0.08);
-  --border-strong: rgba(15, 23, 42, 0.16);
+  /* Crisp Defined Hairlines & Borders */
+  --border-subtle: #e2e8f0;        /* Distinct, cleanly visible separation border (Slate-200) */
+  --border-strong: #cbd5e1;        /* Clearly defined interactive border (Slate-300) */
   --border-focus: #2563eb;
 
   /* Atmospheric Soft Shadows & Micro-Depth */
-  --card-shadow: 0 1px 3px rgba(15, 23, 42, 0.03), 0 6px 18px -3px rgba(15, 23, 42, 0.05);
-  --card-shadow-hover: 0 4px 12px rgba(15, 23, 42, 0.04), 0 16px 32px -4px rgba(15, 23, 42, 0.08);
+  --card-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 6px 18px -3px rgba(15, 23, 42, 0.07);
+  --card-shadow-hover: 0 4px 12px rgba(15, 23, 42, 0.06), 0 16px 32px -4px rgba(15, 23, 42, 0.1);
   --specular-highlight: rgba(255, 255, 255, 0.85);
-  --input-inset-shadow: rgba(15, 23, 42, 0.03);
-  --focus-ring-glow: rgba(37, 99, 235, 0.15);
+  --input-inset-shadow: rgba(15, 23, 42, 0.04);
+  --focus-ring-glow: rgba(37, 99, 235, 0.2);
 
-  /* Inputs */
+  /* Inputs - Crisp Visible Border */
   --input-bg: #ffffff;
-  --input-border: rgba(15, 23, 42, 0.12);
+  --input-border: #cbd5e1;
 
   /* Rich Smooth Primary Palette */
   --primary-50: #eff6ff;
   --primary-100: #dbeafe;
-  --primary-400: #60a5fa;
-  --primary-500: #3b82f6;
-  --primary-600: #2563eb;
-  --primary-700: #1d4ed8;
+  --primary-400: #3b82f6;
+  --primary-500: #2563eb;
+  --primary-600: #1d4ed8;
+  --primary-700: #1e40af;
 
-  --accent-emerald: #10b981;
-  --accent-amber: #f59e0b;
-  --accent-rose: #f43f5e;
-  --accent-cyan: #06b6d4;
-  --accent-violet: #8b5cf6;
+  --accent-emerald: #059669;
+  --accent-amber: #d97706;
+  --accent-rose: #e11d48;
+  --accent-cyan: #0891b2;
+  --accent-violet: #7c3aed;
 
-  /* Typography: Rich Navy Charcoal (sharp yet warm, not stark harsh black) */
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  /* Typography: Rich Crisp Charcoal & High Legibility (WCAG AAA compliant) */
+  --text-primary: #0f172a;         /* High-contrast Slate-900 */
+  --text-secondary: #334155;       /* Sharp Slate-700 */
+  --text-muted: #64748b;           /* Highly legible Slate-500 */
 
-  --hover-surface: rgba(15, 23, 42, 0.04);
+  --hover-surface: #f1f5f9;
 }
 
 /* ==========================================================================
@@ -236,6 +236,11 @@ a {
   background-color: var(--bg-surface);
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px var(--focus-ring-glow), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.form-input::placeholder, .form-textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.85;
 }
 
 /* Smooth Modern Tactile Buttons */
