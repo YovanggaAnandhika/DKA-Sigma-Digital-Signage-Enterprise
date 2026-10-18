@@ -3,6 +3,10 @@ package com.dkaapis.sigma.presentation.player
 import android.content.ComponentCallbacks2
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioManager
+import android.media.AudioTrack
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import java.util.Locale
@@ -284,12 +288,83 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
+    private fun playChimeTone(onChimeDone: () -> Unit) {
+        Thread {
+            var track: AudioTrack? = null
+            try {
+                val sampleRate = 44100
+                val dur1 = 0.35 // Ding (880 Hz)
+                val dur2 = 0.55 // Dong (587.33 Hz)
+                val total = ((dur1 + dur2) * sampleRate).toInt()
+                val samples = ShortArray(total)
+
+                val dingLen = (dur1 * sampleRate).toInt()
+                for (i in 0 until dingLen) {
+                    val t = i.toDouble() / sampleRate
+                    val decay = Math.exp(-5.0 * (t / dur1))
+                    val wave = Math.sin(2.0 * Math.PI * 880.0 * t)
+                    samples[i] = (wave * decay * 32767 * 0.75).toInt().toShort()
+                }
+
+                for (i in 0 until (total - dingLen)) {
+                    val t = i.toDouble() / sampleRate
+                    val decay = Math.exp(-3.8 * (t / dur2))
+                    val wave = Math.sin(2.0 * Math.PI * 587.33 * t)
+                    samples[dingLen + i] = (wave * decay * 32767 * 0.85).toInt().toShort()
+                }
+
+                track = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    AudioTrack.Builder()
+                        .setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_MEDIA)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build()
+                        )
+                        .setAudioFormat(
+                            AudioFormat.Builder()
+                                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                                .setSampleRate(sampleRate)
+                                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                                .build()
+                        )
+                        .setBufferSizeInBytes(samples.size * 2)
+                        .setTransferMode(AudioTrack.MODE_STATIC)
+                        .build()
+                } else {
+                    @Suppress("DEPRECATION")
+                    AudioTrack(
+                        AudioManager.STREAM_MUSIC,
+                        sampleRate,
+                        AudioFormat.CHANNEL_OUT_MONO,
+                        AudioFormat.ENCODING_PCM_16BIT,
+                        samples.size * 2,
+                        AudioTrack.MODE_STATIC
+                    )
+                }
+
+                track.write(samples, 0, samples.size)
+                track.play()
+                Thread.sleep(((dur1 + dur2) * 1000).toLong() + 100)
+            } catch (_: Exception) {
+            } finally {
+                try {
+                    track?.stop()
+                    track?.release()
+                } catch (_: Exception) {}
+                runOnUiThread {
+                    onChimeDone()
+                }
+            }
+        }.start()
+    }
+
     fun speakQueueTicket(ticketNumber: String, counterName: String) {
         runOnUiThread {
             try {
                 // Mute seluruh audio pemutar video & minta audio focus sistem seketika
-                val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
-                audioManager?.requestAudioFocus(null, android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? AudioManager
+                audioManager?.requestAudioFocus(null, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
                 videoRenderers.forEach { it.setDuckedVolume(true) }
 
                 val prefix = ticketNumber.substringBefore("-", "").trim()
@@ -316,23 +391,26 @@ class PlayerActivity : AppCompatActivity() {
                     .replace("LOKET ", "Loket ")
 
                 val utteranceText = "Nomor antrian... $prefix... $spokenDigits... Silakan menuju... $counterSpoken"
-                android.util.Log.i("PlayerActivity", "TTS Mengucapkan: $utteranceText")
+                android.util.Log.i("PlayerActivity", "Chime & TTS: $utteranceText")
 
-                if (textToSpeech != null && isTtsReady) {
-                    val params = Bundle().apply {
-                        putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "queue_${System.currentTimeMillis()}")
+                // Putar Chime Ding-Dong dulu, lalu lanjutkan pengucapan suara TTS
+                playChimeTone {
+                    if (textToSpeech != null && isTtsReady) {
+                        val params = Bundle().apply {
+                            putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "queue_${System.currentTimeMillis()}")
+                        }
+                        textToSpeech?.speak(utteranceText, TextToSpeech.QUEUE_FLUSH, params, "queue_${System.currentTimeMillis()}")
+                    } else {
+                        watchdogHandler.postDelayed({
+                            videoRenderers.forEach { it.setDuckedVolume(false) }
+                            audioManager?.abandonAudioFocus(null)
+                        }, 3500)
                     }
-                    textToSpeech?.speak(utteranceText, TextToSpeech.QUEUE_FLUSH, params, "queue_${System.currentTimeMillis()}")
-                } else {
-                    watchdogHandler.postDelayed({
-                        videoRenderers.forEach { it.setDuckedVolume(false) }
-                        audioManager?.abandonAudioFocus(null)
-                    }, 3500)
                 }
             } catch (e: Exception) {
                 android.util.Log.e("PlayerActivity", "Error speakQueueTicket: ${e.message}")
                 videoRenderers.forEach { it.setDuckedVolume(false) }
-                val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
+                val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? AudioManager
                 audioManager?.abandonAudioFocus(null)
             }
         }
