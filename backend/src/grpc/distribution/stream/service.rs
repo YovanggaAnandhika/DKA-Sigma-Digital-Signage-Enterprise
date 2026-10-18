@@ -265,7 +265,7 @@ impl StreamServiceTrait for StreamServiceImpl {
 
         #[derive(sqlx::FromRow)]
         struct Row {
-            id: Uuid,
+            id: i64,
             device_id: Uuid,
             device_name: Option<String>,
             media_id: Option<Uuid>,
