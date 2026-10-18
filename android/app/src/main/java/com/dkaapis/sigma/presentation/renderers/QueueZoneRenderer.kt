@@ -43,6 +43,11 @@ class QueueCanvasView(
     private val canvasHeight: Int = 1080
 ) : ViewGroup(context) {
 
+    init {
+        clipChildren = false
+        clipToPadding = false
+    }
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val height = MeasureSpec.getSize(heightMeasureSpec)
@@ -58,15 +63,24 @@ class QueueCanvasView(
             val childW = (meta.width * scale).toInt().coerceAtLeast(1)
             val childH = (meta.height * scale).toInt().coerceAtLeast(1)
 
-            child.measure(
-                MeasureSpec.makeMeasureSpec(childW, MeasureSpec.EXACTLY),
-                MeasureSpec.makeMeasureSpec(childH, MeasureSpec.EXACTLY)
-            )
-
             if (child is TextView) {
                 val fontPx = meta.fontSize * scale
                 child.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontPx)
+                child.includeFontPadding = false
             }
+
+            val widthSpec = MeasureSpec.makeMeasureSpec(childW, MeasureSpec.EXACTLY)
+            val heightSpec = if (child is TextView && meta.itemType != "marquee") {
+                // Ukur ketinggian alami teks tanpa pembatasan terlebih dahulu agar font besar tidak terpotong
+                child.measure(widthSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
+                val paddingBuffer = (4 * context.resources.displayMetrics.density).toInt()
+                val neededH = maxOf(childH, child.measuredHeight + paddingBuffer)
+                MeasureSpec.makeMeasureSpec(neededH, MeasureSpec.EXACTLY)
+            } else {
+                MeasureSpec.makeMeasureSpec(childH, MeasureSpec.EXACTLY)
+            }
+
+            child.measure(widthSpec, heightSpec)
         }
     }
 
@@ -338,6 +352,7 @@ class QueueZoneRenderer(
                 text = textContent
                 alpha = meta.opacity.coerceIn(0.0f, 1.0f)
                 setTextColor(parseColor(meta.textColor, Color.WHITE))
+                includeFontPadding = false
                 gravity = when (meta.textAlign.lowercase()) {
                     "left", "start" -> Gravity.START or Gravity.CENTER_VERTICAL
                     "right", "end" -> Gravity.END or Gravity.CENTER_VERTICAL
@@ -351,6 +366,9 @@ class QueueZoneRenderer(
                     isSingleLine = true
                     maxLines = 1
                     letterSpacing = 0.02f
+                } else if (meta.itemType == "counter_loket") {
+                    isSingleLine = true
+                    maxLines = 1
                 }
 
                 val hasBg = meta.backgroundColor.isNotBlank() && !meta.backgroundColor.equals("transparent", ignoreCase = true)
@@ -373,6 +391,8 @@ class QueueZoneRenderer(
                 }
 
                 if (meta.itemType == "marquee") {
+                    setPadding((16 * density).toInt(), 0, (16 * density).toInt(), 0)
+                } else if (meta.itemType == "counter_loket" && hasBg) {
                     setPadding((16 * density).toInt(), 0, (16 * density).toInt(), 0)
                 }
             }
@@ -411,9 +431,6 @@ class QueueZoneRenderer(
         updateDisplay(newTicket, currentCounter)
         onCallAudioStarted()
         onUserTapNext?.invoke(newTicket, currentCounter)
-        numberTextView?.postDelayed({
-            onCallAudioFinished()
-        }, 3500)
         return newTicket
     }
 
@@ -441,9 +458,6 @@ class QueueZoneRenderer(
         }
         updateDisplay(ticketNumber, currentCounter)
         onCallAudioStarted()
-        numberTextView?.postDelayed({
-            onCallAudioFinished()
-        }, 3500)
     }
 
     private fun updateDisplay(ticketNumber: String, counterName: String) {
