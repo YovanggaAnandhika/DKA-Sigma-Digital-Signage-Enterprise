@@ -17,7 +17,14 @@ sealed class PlayerUiState {
     object CheckingPairing : PlayerUiState()
     object NotPaired : PlayerUiState()
     data class SyncingManifest(val message: String) : PlayerUiState()
-    data class DownloadingAssets(val progressPercent: Int, val assetIndex: Int, val total: Int) : PlayerUiState()
+    data class DownloadingAssets(
+        val progressPercent: Int,
+        val assetIndex: Int,
+        val total: Int,
+        val downloadedBytes: Long = 0L,
+        val totalBytes: Long = 0L,
+        val currentFileName: String = ""
+    ) : PlayerUiState()
     data class Playing(val manifest: Manifest) : PlayerUiState()
     data class Error(val message: String) : PlayerUiState()
 }
@@ -75,11 +82,19 @@ class PlayerViewModel(
         viewModelScope.launch {
             downloadUseCase.execute(manifest).collectLatest { downloadState ->
                 when (downloadState) {
+                    is DownloadState.Verifying -> {
+                        _uiState.value = PlayerUiState.SyncingManifest(
+                            "Memeriksa chunk lokal (${downloadState.assetIndex}/${downloadState.totalAssets}): ${downloadState.filename}"
+                        )
+                    }
                     is DownloadState.Progress -> {
                         _uiState.value = PlayerUiState.DownloadingAssets(
-                            downloadState.percent,
-                            downloadState.assetIndex,
-                            downloadState.totalAssets
+                            progressPercent = downloadState.percent,
+                            assetIndex = downloadState.assetIndex,
+                            total = downloadState.totalAssets,
+                            downloadedBytes = downloadState.downloadedBytes,
+                            totalBytes = downloadState.totalBytes,
+                            currentFileName = downloadState.currentFileName
                         )
                     }
                     is DownloadState.AssetComplete -> {

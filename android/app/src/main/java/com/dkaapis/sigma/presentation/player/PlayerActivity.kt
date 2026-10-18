@@ -51,6 +51,7 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var canvasLayout: SignageCanvasLayout
     private lateinit var loadingOverlay: FrameLayout
     private lateinit var loadingText: TextView
+    private lateinit var subDetailText: TextView
     private lateinit var progressBar: ProgressBar
 
     private val videoRenderers = mutableListOf<VideoZoneRenderer>()
@@ -78,7 +79,7 @@ class PlayerActivity : AppCompatActivity() {
                     }
                 } catch (_: Exception) {}
             }
-            watchdogHandler.postDelayed(this, 15000)
+            watchdogHandler.postDelayed(this, 3000)
         }
     }
 
@@ -155,37 +156,69 @@ class PlayerActivity : AppCompatActivity() {
         root.addView(canvasLayout)
 
         loadingOverlay = FrameLayout(this).apply {
-            setBackgroundColor(Color.parseColor("#99000000"))
+            setBackgroundColor(Color.parseColor("#B3050B14"))
             layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
         }
 
-        val centerBox = FrameLayout(this).apply {
-            val lp = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
+        val cardContainer = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER_HORIZONTAL
+            val bgDrawable = android.graphics.drawable.GradientDrawable().apply {
+                setColor(Color.parseColor("#141E33"))
+                cornerRadius = 24f
+                setStroke(2, Color.parseColor("#2563EB"))
+            }
+            background = bgDrawable
+            setPadding(48, 36, 48, 36)
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
             ).apply {
                 gravity = android.view.Gravity.CENTER
             }
-            layoutParams = lp
         }
 
-        progressBar = ProgressBar(this).apply {
-            isIndeterminate = true
+        val badgeText = TextView(this).apply {
+            text = "● SINKRONISASI KONTEN REALTIME"
+            setTextColor(Color.parseColor("#10B981"))
+            textSize = 12f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setPadding(0, 0, 0, 12)
         }
+        cardContainer.addView(badgeText)
+
+        progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            isIndeterminate = false
+            max = 100
+            progress = 0
+            val lp = android.widget.LinearLayout.LayoutParams(600, 16)
+            lp.setMargins(0, 8, 0, 16)
+            layoutParams = lp
+        }
+        cardContainer.addView(progressBar)
 
         loadingText = TextView(this).apply {
             text = "Memulai DKASigma Player..."
             setTextColor(Color.WHITE)
-            textSize = 16f
-            setPadding(0, 80, 0, 0)
+            textSize = 15f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            gravity = android.view.Gravity.CENTER
         }
+        cardContainer.addView(loadingText)
 
-        centerBox.addView(progressBar)
-        centerBox.addView(loadingText)
-        loadingOverlay.addView(centerBox)
+        subDetailText = TextView(this).apply {
+            text = ""
+            setTextColor(Color.parseColor("#94A3B8"))
+            textSize = 12f
+            gravity = android.view.Gravity.CENTER
+            setPadding(0, 6, 0, 0)
+        }
+        cardContainer.addView(subDetailText)
+
+        loadingOverlay.addView(cardContainer)
         root.addView(loadingOverlay)
 
         setContentView(root)
@@ -203,12 +236,21 @@ class PlayerActivity : AppCompatActivity() {
                     is PlayerUiState.SyncingManifest -> {
                         WatchdogService.setPlaybackActive(this@PlayerActivity, false)
                         loadingOverlay.visibility = View.VISIBLE
+                        progressBar.isIndeterminate = true
                         loadingText.text = state.message
+                        subDetailText.text = "Mengecek pembaruan jadwal dan integritas manifest..."
                     }
                     is PlayerUiState.DownloadingAssets -> {
                         WatchdogService.setPlaybackActive(this@PlayerActivity, false)
                         loadingOverlay.visibility = View.VISIBLE
-                        loadingText.text = "Mengunduh Aset Media (${state.assetIndex}/${state.total}) • ${state.progressPercent}%"
+                        progressBar.isIndeterminate = false
+                        progressBar.progress = state.progressPercent
+
+                        val downloadedMb = String.format(java.util.Locale.US, "%.1f", state.downloadedBytes / (1024.0 * 1024.0))
+                        val totalMb = String.format(java.util.Locale.US, "%.1f", state.totalBytes / (1024.0 * 1024.0))
+
+                        loadingText.text = "Mengunduh Chunk Media (${state.assetIndex}/${state.total}) • ${state.progressPercent}%"
+                        subDetailText.text = "${state.currentFileName}\n[ ${downloadedMb} MB / ${totalMb} MB ]\nLokasi: /storage/emulated/0/Android/data/com.dkaapis.sigma/files/assets/"
                     }
                     is PlayerUiState.Playing -> {
                         WatchdogService.setPlaybackActive(this@PlayerActivity, true)
@@ -217,7 +259,10 @@ class PlayerActivity : AppCompatActivity() {
                     }
                     is PlayerUiState.Error -> {
                         loadingOverlay.visibility = View.VISIBLE
+                        progressBar.isIndeterminate = false
+                        progressBar.progress = 0
                         loadingText.text = "Kendala: ${state.message}"
+                        subDetailText.text = "Menunggu perintah sinkronisasi dari server CMS..."
                     }
                     else -> Unit
                 }

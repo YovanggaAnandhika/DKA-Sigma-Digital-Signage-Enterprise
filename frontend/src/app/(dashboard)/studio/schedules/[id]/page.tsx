@@ -1055,10 +1055,10 @@ export default function ViewSchedulePage() {
                 <UploadCloud size={20} style={{ color: 'var(--primary-400)' }} />
                 <div>
                   <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-                    Rollout Berkas Media ke Layar (Upload Chunk & Auto-Deploy ke Player)
+                    Uji Coba Pengiriman Chunk ke Player (Testing Sandbox)
                   </h2>
                   <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
-                    Unggah berkas video/gambar berukuran besar (512 KB per chunk). Sistem akan menguji transmisi chunk, memverifikasi integritas SHA-256 server-side, otomatis menyematkan ke layout jadwal ini, dan memicu unduhan chunk di layar Android ({assignedDevices.map((d) => d.name).join(', ') || 'Belum ada layar terikat'}).
+                    Unggah berkas untuk menguji transmisi chunk (512 KB/chunk) dan latensi sinyal gRPC push ke layar player ({assignedDevices.map((d) => d.name).join(', ') || 'Belum ada layar terikat'}). Berkas ini TIDAK akan didaftarkan ke Pustaka Media atau mengubah susunan layout tayang.
                   </p>
                 </div>
               </div>
@@ -1380,6 +1380,7 @@ export default function ViewSchedulePage() {
                       <th>RESOLUSI / DURASI</th>
                       <th>UKURAN</th>
                       <th>SHA-256 HASH</th>
+                      <th>LOKASI DISIMPAN DI ANDROID</th>
                       <th>STATUS PENYIMPANAN</th>
                     </tr>
                   </thead>
@@ -1438,6 +1439,41 @@ export default function ViewSchedulePage() {
                           ) : (
                             <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>-</span>
                           )}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                              <code
+                                style={{
+                                  fontSize: '0.6875rem',
+                                  backgroundColor: 'var(--bg-base)',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  color: 'var(--accent-emerald)',
+                                  fontFamily: 'monospace',
+                                  border: '1px solid var(--border-subtle)',
+                                }}
+                                title={`/storage/emulated/0/Android/data/com.dkaapis.sigma/files/assets/${m.id}`}
+                              >
+                                .../assets/{m.id.substring(0, 8)}...
+                              </code>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyHash(`/storage/emulated/0/Android/data/com.dkaapis.sigma/files/assets/${m.id}`)}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px' }}
+                                title="Salin Lokasi Penyimpanan di Android"
+                              >
+                                {copiedHash === `/storage/emulated/0/Android/data/com.dkaapis.sigma/files/assets/${m.id}` ? (
+                                  <Check size={12} color="var(--accent-emerald)" />
+                                ) : (
+                                  <Copy size={12} />
+                                )}
+                              </button>
+                            </div>
+                            <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                              /storage/emulated/0/Android/data/com.dkaapis.sigma/files/assets/
+                            </span>
+                          </div>
                         </td>
                         <td>
                           <span
