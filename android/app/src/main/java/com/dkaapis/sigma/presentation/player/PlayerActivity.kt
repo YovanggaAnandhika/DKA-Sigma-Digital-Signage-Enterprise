@@ -249,28 +249,64 @@ class PlayerActivity : AppCompatActivity() {
                         clockRenderers.add(renderer)
                         var city = "Makassar"
                         var showSeconds = true
+                        var bgColor = "#0f172a"
+                        var textColor = "#ffffff"
+                        var subtitleColor = "#94a3b8"
+                        var borderColor = "#1e3a8a"
+                        var borderRadius = 12
+                        var timeFontSize = 52f
+                        var dateFontSize = 14f
                         if (!widgetBlock.widgetDataJson.isNullOrBlank()) {
                             try {
                                 val json = org.json.JSONObject(widgetBlock.widgetDataJson)
                                 city = json.optString("city", "Makassar")
                                 showSeconds = json.optBoolean("showSeconds", true)
+                                bgColor = json.optString("backgroundColor", "#0f172a").ifBlank { "#0f172a" }
+                                textColor = json.optString("textColor", "#ffffff").ifBlank { "#ffffff" }
+                                subtitleColor = json.optString("subtitleColor", "#94a3b8").ifBlank { "#94a3b8" }
+                                borderColor = json.optString("borderColor", "#1e3a8a").ifBlank { "#1e3a8a" }
+                                borderRadius = json.optInt("borderRadius", 12)
+                                timeFontSize = json.optDouble("timeFontSize", 52.0).toFloat()
+                                dateFontSize = json.optDouble("dateFontSize", 14.0).toFloat()
                             } catch (_: Exception) {}
                         }
-                        val view = renderer.createView(zoneView, city, showSeconds)
+                        val view = renderer.createView(
+                            parent = zoneView,
+                            city = city,
+                            showSeconds = showSeconds,
+                            backgroundColorHex = bgColor,
+                            textColorHex = textColor,
+                            subtitleColorHex = subtitleColor,
+                            borderColorHex = borderColor,
+                            borderRadiusDp = borderRadius,
+                            timeFontSizeSp = timeFontSize,
+                            dateFontSizeSp = dateFontSize
+                        )
                         zoneView.addView(view)
                     }
                     ZoneWidgetType.TICKER -> {
                         val renderer = TickerZoneRenderer(this)
                         var textMessage = ""
                         var badgeText = ""
-                        var theme = "blue"
                         var fontSize = 16f
+                        var bgColor = "#1e3a8a"
+                        var textColor = "#ffffff"
+                        var badgeBgColor = "#2563eb"
+                        var badgeTextColor = "#ffffff"
+                        var borderColor = "#60a5fa"
+                        var borderRadius = 8
                         if (!widgetBlock.widgetDataJson.isNullOrBlank()) {
                             try {
                                 val json = org.json.JSONObject(widgetBlock.widgetDataJson)
                                 badgeText = json.optString("badge", "")
-                                theme = json.optString("theme", "blue")
-                                fontSize = json.optInt("fontSize", 16).toFloat()
+                                fontSize = json.optDouble("fontSize", 16.0).toFloat()
+                                bgColor = json.optString("backgroundColor", "#1e3a8a").ifBlank { "#1e3a8a" }
+                                textColor = json.optString("textColor", "#ffffff").ifBlank { "#ffffff" }
+                                badgeBgColor = json.optString("badgeBackgroundColor", "#2563eb").ifBlank { "#2563eb" }
+                                badgeTextColor = json.optString("badgeTextColor", "#ffffff").ifBlank { "#ffffff" }
+                                borderColor = json.optString("borderColor", "#60a5fa").ifBlank { "#60a5fa" }
+                                borderRadius = json.optInt("borderRadius", 8)
+
                                 val msgArr = json.optJSONArray("messagesList") ?: json.optJSONArray("messages")
                                 val msgs = mutableListOf<String>()
                                 if (msgArr != null) {
@@ -286,7 +322,18 @@ class PlayerActivity : AppCompatActivity() {
                                 }
                             } catch (_: Exception) {}
                         }
-                        val view = renderer.createView(zoneView, textMessage, badgeText, theme, fontSize)
+                        val view = renderer.createView(
+                            parent = zoneView,
+                            textMessage = textMessage,
+                            badgeText = badgeText,
+                            fontSize = fontSize,
+                            backgroundColorHex = bgColor,
+                            textColorHex = textColor,
+                            badgeBackgroundColorHex = badgeBgColor,
+                            badgeTextColorHex = badgeTextColor,
+                            borderColorHex = borderColor,
+                            borderRadiusDp = borderRadius
+                        )
                         zoneView.addView(view)
                     }
                     ZoneWidgetType.QUEUE -> {
@@ -299,31 +346,7 @@ class PlayerActivity : AppCompatActivity() {
                                 videoRenderers.forEach { it.setDuckedVolume(false) }
                             }
                         )
-                        var queueData = QueueDisplayData()
-                        var themePreset = "clean-light"
-                        var bgColor: String? = null
-                        if (!widgetBlock.widgetDataJson.isNullOrBlank()) {
-                            try {
-                                val json = org.json.JSONObject(widgetBlock.widgetDataJson)
-                                val prefix = json.optString("prefix", "A")
-                                val name = json.optString("name", "Antrian")
-                                val latestNum = json.optString("latestCalledNumber").ifEmpty { "$prefix-001" }
-                                themePreset = json.optString("themePreset", "clean-light")
-                                bgColor = json.optString("backgroundColor").ifEmpty { null }
-                                val countersArr = json.optJSONArray("countersList") ?: json.optJSONArray("counters")
-                                val counterName = if (countersArr != null && countersArr.length() > 0) {
-                                    countersArr.getJSONObject(0).optString("counterName", "LOKET 01")
-                                } else "LOKET 01"
-
-                                queueData = QueueDisplayData(
-                                    queueNumber = latestNum,
-                                    queueCounter = counterName,
-                                    queuePrefix = prefix,
-                                    queueName = name
-                                )
-                            } catch (_: Exception) {}
-                        }
-                        val view = renderer.createView(zoneView, queueData, themePreset, bgColor)
+                        val view = renderer.createView(zoneView, widgetBlock.widgetDataJson)
                         zoneView.addView(view)
                     }
                     ZoneWidgetType.WEBVIEW -> {

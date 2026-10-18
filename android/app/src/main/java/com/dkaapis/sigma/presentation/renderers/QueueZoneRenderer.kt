@@ -3,15 +3,86 @@ package com.dkaapis.sigma.presentation.renderers
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
-import android.media.AudioAttributes
-import android.media.SoundPool
+import android.graphics.drawable.GradientDrawable
+import android.text.TextUtils
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.LinearLayout
 import android.widget.TextView
-import com.dkaapis.sigma.domain.model.QueueDisplayData
+import org.json.JSONArray
+import org.json.JSONObject
+
+data class QueueItemMeta(
+    val id: String,
+    val itemType: String,
+    val x: Int,
+    val y: Int,
+    val width: Int,
+    val height: Int,
+    val zIndex: Int,
+    val backgroundColor: String,
+    val textColor: String,
+    val fontSize: Float,
+    val fontWeight: String,
+    val textAlign: String,
+    val templateContent: String,
+    val borderRadius: Float = 0f,
+    val borderWidth: Int = 0,
+    val borderColor: String = "#00000000"
+)
+
+class QueueCanvasView(
+    context: Context,
+    private val canvasWidth: Int = 1920,
+    private val canvasHeight: Int = 1080
+) : ViewGroup(context) {
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val width = MeasureSpec.getSize(widthMeasureSpec)
+        val height = MeasureSpec.getSize(heightMeasureSpec)
+        setMeasuredDimension(width, height)
+
+        if (width <= 0 || height <= 0) return
+
+        val scale = width.toFloat() / canvasWidth.toFloat()
+
+        for (i in 0 until childCount) {
+            val child = getChildAt(i)
+            val meta = child.tag as? QueueItemMeta ?: continue
+            val childW = (meta.width * scale).toInt().coerceAtLeast(1)
+            val childH = (meta.height * scale).toInt().coerceAtLeast(1)
+
+            child.measure(
+                MeasureSpec.makeMeasureSpec(childW, MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec(childH, MeasureSpec.EXACTLY)
+            )
+
+            if (child is TextView) {
+                val fontPx = meta.fontSize * scale
+                child.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontPx)
+            }
+        }
+    }
+
+    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+        val width = r - l
+        if (width <= 0) return
+
+        val scale = width.toFloat() / canvasWidth.toFloat()
+
+        for (i in 0 until childCount) {
+            val child = getChildAt(i)
+            val meta = child.tag as? QueueItemMeta ?: continue
+            val left = (meta.x * scale).toInt()
+            val top = (meta.y * scale).toInt()
+            val right = left + child.measuredWidth
+            val bottom = top + child.measuredHeight
+            child.layout(left, top, right, bottom)
+        }
+    }
+}
 
 class QueueZoneRenderer(
     private val context: Context,
@@ -20,119 +91,199 @@ class QueueZoneRenderer(
 ) {
     private var numberTextView: TextView? = null
     private var counterTextView: TextView? = null
+    private var currentPrefix: String = "A"
+    private var currentName: String = "Layar Antrian"
 
     fun createView(
         parent: ViewGroup,
-        data: QueueDisplayData = QueueDisplayData(),
-        themePreset: String = "clean-light",
-        backgroundColorHex: String? = null
+        widgetDataJson: String?
     ): View {
-        val isDark = themePreset == "solid-dark" || themePreset == "executive-blue"
-        val isMedical = themePreset == "medical-green"
+        var canvasW = 1920
+        var canvasH = 1080
+        var bgColor = "#0f172a"
+        var latestNumber = "A-001"
+        var counterName = "LOKET 01"
+        var itemsJsonArray: JSONArray? = null
 
-        val bgColor = backgroundColorHex?.ifBlank { null } ?: if (isDark || isMedical) "#0f172a" else "#f8fafc"
-        val primaryColor = if (isMedical) "#10b981" else if (isDark) "#38bdf8" else "#0284c7"
-        val subtitleColor = if (isMedical) "#10b981" else if (isDark) "#94a3b8" else "#64748b"
-        val borderColor = if (isMedical) "#059669" else if (isDark) "#1e3a8a" else "#e2e8f0"
-        val badgeBgColor = if (isMedical) "#059669" else "#f59e0b"
-        val footerBg = if (isMedical) "#064e3b" else if (isDark) "#020617" else "#0369a1"
+        if (!widgetDataJson.isNullOrBlank()) {
+            try {
+                val json = JSONObject(widgetDataJson)
+                canvasW = json.optInt("canvasWidth", 1920).takeIf { it > 0 } ?: 1920
+                canvasH = json.optInt("canvasHeight", 1080).takeIf { it > 0 } ?: 1080
+                currentPrefix = json.optString("prefix", "A")
+                currentName = json.optString("name", "Layar Antrian")
+                latestNumber = json.optString("latestCalledNumber", "$currentPrefix-001")
+                bgColor = json.optString("backgroundColor", "#0f172a").ifBlank { "#0f172a" }
 
-        // Outer container with background matching Web Studio theme
-        val root = LinearLayout(context).apply {
+                val countersArr = json.optJSONArray("countersList") ?: json.optJSONArray("counters")
+                if (countersArr != null && countersArr.length() > 0) {
+                    counterName = countersArr.getJSONObject(0).optString("counterName", "LOKET 01")
+                }
+
+                itemsJsonArray = json.optJSONArray("itemsList") ?: json.optJSONArray("items")
+            } catch (_: Exception) {}
+        }
+
+        val canvasView = QueueCanvasView(context, canvasW, canvasH).apply {
             layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            val bgDrawable = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = 16f * context.resources.displayMetrics.density
-                setColor(Color.parseColor(bgColor))
-                setStroke(
-                    (1 * context.resources.displayMetrics.density).toInt(),
-                    Color.parseColor(borderColor)
+            setBackgroundColor(Color.parseColor(bgColor))
+        }
+
+        val parsedItems = mutableListOf<QueueItemMeta>()
+
+        if (itemsJsonArray != null && itemsJsonArray.length() > 0) {
+            for (i in 0 until itemsJsonArray.length()) {
+                val itemObj = itemsJsonArray.optJSONObject(i) ?: continue
+                if (!itemObj.optBoolean("isVisible", true)) continue
+
+                var br = 0f
+                var bw = 0
+                var bc = "#00000000"
+                val configStr = itemObj.optString("configJson", "")
+                if (configStr.isNotBlank()) {
+                    try {
+                        val cfg = JSONObject(configStr)
+                        br = cfg.optDouble("borderRadius", 0.0).toFloat()
+                        bw = cfg.optInt("borderWidth", 0)
+                        bc = cfg.optString("borderColor", "#00000000")
+                    } catch (_: Exception) {}
+                }
+
+                parsedItems.add(
+                    QueueItemMeta(
+                        id = itemObj.optString("id", "item-$i"),
+                        itemType = itemObj.optString("itemType", "text_label"),
+                        x = itemObj.optInt("x", 0),
+                        y = itemObj.optInt("y", 0),
+                        width = itemObj.optInt("width", 200),
+                        height = itemObj.optInt("height", 100),
+                        zIndex = itemObj.optInt("zIndex", i + 1),
+                        backgroundColor = itemObj.optString("backgroundColor", "transparent"),
+                        textColor = itemObj.optString("textColor", "#ffffff"),
+                        fontSize = itemObj.optDouble("fontSize", 24.0).toFloat(),
+                        fontWeight = itemObj.optString("fontWeight", "bold"),
+                        textAlign = itemObj.optString("textAlign", "center"),
+                        templateContent = itemObj.optString("templateContent", ""),
+                        borderRadius = br,
+                        borderWidth = bw,
+                        borderColor = bc
+                    )
                 )
             }
-            background = bgDrawable
-            setPadding(32, 40, 32, 24)
+        } else {
+            // Database-synced fallback matching migration 0042
+            parsedItems.add(
+                QueueItemMeta(
+                    id = "fallback-title",
+                    itemType = "text_label",
+                    x = 60, y = 60, width = 1800, height = 70, zIndex = 1,
+                    backgroundColor = "transparent", textColor = "#10b981", fontSize = 36f,
+                    fontWeight = "800", textAlign = "center", templateContent = "\$queue_name\$"
+                )
+            )
+            parsedItems.add(
+                QueueItemMeta(
+                    id = "fallback-ticket",
+                    itemType = "ticket_number",
+                    x = 360, y = 190, width = 1200, height = 440, zIndex = 2,
+                    backgroundColor = "transparent", textColor = "#10b981", fontSize = 150f,
+                    fontWeight = "900", textAlign = "center", templateContent = "\$queue_number\$"
+                )
+            )
+            parsedItems.add(
+                QueueItemMeta(
+                    id = "fallback-counter",
+                    itemType = "counter_loket",
+                    x = 710, y = 680, width = 500, height = 90, zIndex = 3,
+                    backgroundColor = "#059669", textColor = "#ffffff", fontSize = 32f,
+                    fontWeight = "800", textAlign = "center", templateContent = "\$queue_counter\$",
+                    borderRadius = 14f
+                )
+            )
+            parsedItems.add(
+                QueueItemMeta(
+                    id = "fallback-marquee",
+                    itemType = "marquee",
+                    x = 0, y = 990, width = 1920, height = 90, zIndex = 4,
+                    backgroundColor = "#064e3b", textColor = "#ffffff", fontSize = 24f,
+                    fontWeight = "bold", textAlign = "left",
+                    templateContent = "PENGUMUMAN: Silakan menuju \$queue_counter\$ saat nomor \$queue_number\$ dipanggil. Terima kasih."
+                )
+            )
         }
 
-        // Title
-        val title = TextView(context).apply {
-            text = data.queueName.ifBlank { "Antrian" }
-            textSize = 20f
-            setTextColor(Color.parseColor(subtitleColor))
-            setTypeface(null, Typeface.BOLD)
-            letterSpacing = 0.12f
-            gravity = Gravity.CENTER
-        }
+        parsedItems.sortBy { it.zIndex }
 
-        // Ticket Number
-        val number = TextView(context).apply {
-            text = data.queueNumber.ifBlank { "${data.queuePrefix}-001" }
-            textSize = 76f
-            setTextColor(Color.parseColor(primaryColor))
-            setTypeface(Typeface.MONOSPACE, Typeface.BOLD)
-            gravity = Gravity.CENTER
-            setPadding(0, 8, 0, 16)
-        }
-        numberTextView = number
+        for (meta in parsedItems) {
+            val textContent = interpolate(meta.templateContent, latestNumber, counterName)
+            val isBold = meta.fontWeight == "800" || meta.fontWeight == "900" || meta.fontWeight.equals("bold", ignoreCase = true)
+            val density = context.resources.displayMetrics.density
 
-        // Counter Badge (Pill matching Web Studio)
-        val counterBadge = TextView(context).apply {
-            text = data.queueCounter.ifBlank { "LOKET 01" }
-            textSize = 24f
-            setTextColor(Color.WHITE)
-            setTypeface(null, Typeface.BOLD)
-            letterSpacing = 0.08f
-            setPadding(48, 14, 48, 14)
-            val badgeBg = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                cornerRadius = 9999f
-                setColor(Color.parseColor(badgeBgColor))
+            val textView = TextView(context).apply {
+                tag = meta
+                text = textContent
+                setTextColor(Color.parseColor(meta.textColor))
+                gravity = when (meta.textAlign.lowercase()) {
+                    "left", "start" -> Gravity.START or Gravity.CENTER_VERTICAL
+                    "right", "end" -> Gravity.END or Gravity.CENTER_VERTICAL
+                    else -> Gravity.CENTER
+                }
+                typeface = if (meta.itemType == "ticket_number") {
+                    Typeface.create(Typeface.MONOSPACE, if (isBold) Typeface.BOLD else Typeface.NORMAL)
+                } else {
+                    if (isBold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+                }
+
+                if (meta.backgroundColor != "transparent" && meta.backgroundColor.isNotBlank()) {
+                    val gd = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        setColor(Color.parseColor(meta.backgroundColor))
+                        if (meta.borderRadius > 0f) {
+                            cornerRadius = meta.borderRadius * density
+                        }
+                        if (meta.borderWidth > 0 && meta.borderColor != "#00000000") {
+                            setStroke((meta.borderWidth * density).toInt(), Color.parseColor(meta.borderColor))
+                        }
+                    }
+                    background = gd
+                }
+
+                if (meta.itemType == "marquee") {
+                    isSingleLine = true
+                    ellipsize = TextUtils.TruncateAt.MARQUEE
+                    marqueeRepeatLimit = -1
+                    isSelected = true
+                    setPadding((24 * density).toInt(), 0, (24 * density).toInt(), 0)
+                }
             }
-            background = badgeBg
-            gravity = Gravity.CENTER
-        }
-        counterTextView = counterBadge
 
-        // Footer Marquee
-        val footerMarquee = TextView(context).apply {
-            val counterText = data.queueCounter.ifBlank { "Loket" }
-            val numText = data.queueNumber.ifBlank { "${data.queuePrefix}-001" }
-            text = "PENGUMUMAN: Silakan menuju $counterText saat nomor $numText dipanggil."
-            textSize = 12f
-            setTextColor(Color.WHITE)
-            setTypeface(null, Typeface.BOLD)
-            val footerBgDrawable = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                cornerRadius = 8f * context.resources.displayMetrics.density
-                setColor(Color.parseColor(footerBg))
+            if (meta.itemType == "ticket_number") {
+                numberTextView = textView
+            } else if (meta.itemType == "counter_loket") {
+                counterTextView = textView
             }
-            background = footerBgDrawable
-            setPadding(24, 10, 24, 10)
-            gravity = Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = 32
-            }
+
+            canvasView.addView(textView)
         }
 
-        root.addView(title)
-        root.addView(number)
-        root.addView(counterBadge)
-        root.addView(footerMarquee)
+        return canvasView
+    }
 
-        return root
+    private fun interpolate(template: String, queueNumber: String, queueCounter: String): String {
+        return template
+            .replace("\$queue_number\$", queueNumber)
+            .replace("\$queue_counter\$", queueCounter)
+            .replace("\$queue_prefix\$", currentPrefix)
+            .replace("\$queue_name\$", currentName)
     }
 
     fun updateCall(ticketNumber: String, counterName: String) {
         numberTextView?.text = ticketNumber
         counterTextView?.text = counterName
         onCallAudioStarted()
-        // Audio chime / TTS notification
         numberTextView?.postDelayed({
             onCallAudioFinished()
         }, 3000)
