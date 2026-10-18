@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { api } from '@/lib/services';
 import type { Schedule } from '@/lib/services/studio/schedule.types';
 import { Pagination } from '@/components/ui/Pagination';
-import { CalendarDays, Search, RefreshCw, Trash2, Edit, Clock, Layers, ArrowRight } from 'lucide-react';
+import { CalendarDays, Search, RefreshCw, Trash2, Eye, Clock, Layers, ArrowRight } from 'lucide-react';
 
 export default function SchedulesPage() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -149,7 +149,9 @@ export default function SchedulesPage() {
                   return (
                     <tr key={s.id}>
                       <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                        <div>{s.name}</div>
+                        <Link href={`/studio/schedules/${s.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                          <div>{s.name}</div>
+                        </Link>
                         {s.description && (
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                             {s.description}
@@ -205,8 +207,8 @@ export default function SchedulesPage() {
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                          <Link href={`/studio/schedules/${s.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit Jadwal">
-                            <Edit size={14} />
+                          <Link href={`/studio/schedules/${s.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Lihat Detail Jadwal">
+                            <Eye size={14} />
                           </Link>
                           <button
                             onClick={() => handleDelete(s.id, s.name)}
