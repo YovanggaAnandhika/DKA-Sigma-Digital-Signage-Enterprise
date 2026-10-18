@@ -472,7 +472,7 @@ export default function LayoutsDataPage() {
                       </div>
                     </div>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
-                      ℹ️ Player hanya akan menayangkan layout ini saat jam lokal perangkat berada di dalam rentang waktu di atas.
+                      Player hanya menayangkan layout ini saat jam lokal perangkat berada di dalam rentang waktu di atas.
                     </span>
                   </div>
 

@@ -369,18 +369,17 @@ export default function ViewDisplayPage() {
                 {device.name}
               </h1>
               <span
+                title={device.isOnline ? 'Online' : 'Offline'}
+                aria-label={device.isOnline ? 'Online' : 'Offline'}
                 style={{
-                  padding: '2px 8px',
-                  borderRadius: '9999px',
-                  fontSize: '0.6875rem',
-                  fontWeight: 700,
-                  backgroundColor: device.isOnline ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
-                  color: device.isOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
-                  border: device.isOnline ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: device.isOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
+                  boxShadow: device.isOnline ? '0 0 6px rgba(16, 185, 129, 0.5)' : 'none',
+                  display: 'inline-block',
                 }}
-              >
-                {device.isOnline ? 'ONLINE' : 'OFFLINE'}
-              </span>
+              />
             </div>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px', fontFamily: 'monospace' }}>
               ID: {device.id}
@@ -966,11 +965,11 @@ export default function ViewDisplayPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Activity size={18} style={{ color: 'var(--accent-cyan)' }} />
               <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Grafik Tren Performa Hardware dari Waktu ke Waktu
+                Tren Performa Perangkat
               </h2>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Pantau kestabilan beban CPU dan memori RAM secara berkelanjutan untuk mencegah hardware throttling.
+              Metrik beban CPU dan memori RAM.
             </p>
           </div>
 

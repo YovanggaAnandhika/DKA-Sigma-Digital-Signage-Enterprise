@@ -67,19 +67,22 @@ export default function DashboardDeviceList({
                     </span>
                   </td>
                   <td>
-                    <span
-                      style={{
-                        padding: '2px 8px',
-                        borderRadius: '9999px',
-                        fontSize: '0.6875rem',
-                        fontWeight: 700,
-                        backgroundColor: d.isOnline ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
-                        color: d.isOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
-                        border: d.isOnline ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
-                      }}
+                    <div
+                      style={{ display: 'inline-flex', alignItems: 'center' }}
+                      title={d.isOnline ? 'Online' : 'Offline'}
+                      aria-label={d.isOnline ? 'Online' : 'Offline'}
                     >
-                      {d.isOnline ? 'ONLINE' : 'OFFLINE'}
-                    </span>
+                      <span
+                        style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          backgroundColor: d.isOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
+                          boxShadow: d.isOnline ? '0 0 6px rgba(16, 185, 129, 0.5)' : 'none',
+                          display: 'inline-block',
+                        }}
+                      />
+                    </div>
                   </td>
                   <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
                     {d.ipAddress || '127.0.0.1'}

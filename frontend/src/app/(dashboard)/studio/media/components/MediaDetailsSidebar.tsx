@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Film, Image as ImageIcon, Globe, Eye, Edit, Trash2 } from 'lucide-react';
+import { Film, Image as ImageIcon, Globe, Eye, Edit, Trash2, X } from 'lucide-react';
 import { MediaItem } from '@/lib/services';
 import { getMediaDisplayUrl } from '@/lib/services/studio/media.service';
 
@@ -43,7 +43,7 @@ export default function MediaDetailsSidebar({
     <div className="card-elevated" style={{ width: '320px', flexShrink: 0, position: 'sticky', top: '24px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-surface-elevated)' }}>
         <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Detail File</h3>
-        <button onClick={() => setSelectedMedia(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }} title="Tutup Panel">✕</button>
+        <button onClick={() => setSelectedMedia(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }} title="Tutup Panel"><X size={15} /></button>
       </div>
       
       <div style={{ height: '180px', backgroundColor: 'var(--bg-surface-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

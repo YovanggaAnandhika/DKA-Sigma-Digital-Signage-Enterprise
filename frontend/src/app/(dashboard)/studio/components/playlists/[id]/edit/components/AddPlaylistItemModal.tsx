@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { FolderOpen, Film, Image as ImageIcon, Plus } from 'lucide-react';
+import { FolderOpen, Film, Image as ImageIcon, Plus, X } from 'lucide-react';
 import { MediaItem } from '@/lib/services';
 
 interface AddPlaylistItemModalProps {
@@ -55,9 +55,10 @@ export default function AddPlaylistItemModal({
           <button
             type="button"
             onClick={() => setShowAddModal(false)}
-            style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--text-muted)' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+            title="Tutup Modal"
           >
-            ✕
+            <X size={18} />
           </button>
         </div>
 

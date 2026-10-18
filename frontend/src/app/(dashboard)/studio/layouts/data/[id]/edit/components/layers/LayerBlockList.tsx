@@ -179,7 +179,7 @@ export default function LayerBlockList() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (window.confirm('Hapus blok playlist ini dari layer?')) {
+                      if (window.confirm('Hapus konten ini dari layer?')) {
                         const newBlocks = (selectedZone.blocksList || []).filter(b => b.id !== block.id);
                         updateSelectedLayer('blocksList', newBlocks);
                         if (selectedBlockId === block.id) {
@@ -191,7 +191,7 @@ export default function LayerBlockList() {
                     style={{ padding: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '4px' }}
                     onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.color = '#ef4444'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
-                    title="Hapus Blok"
+                    title="Hapus Konten"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -200,28 +200,26 @@ export default function LayerBlockList() {
             })
           ) : (
             <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)', fontSize: '0.75rem', backgroundColor: 'var(--bg-base)', borderRadius: '6px', border: '1px dashed var(--border-subtle)' }}>
-              Belum ada playlist yang ditambahkan.
+              Belum ada konten pada layer ini.
             </div>
           )}
           
-          <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+          <div className="layer-action-group" style={{ marginTop: '6px' }}>
             <button
               onClick={() => setMediaPickerZoneId(selectedZone.id)}
-              style={{ flex: 1, padding: '7px 8px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'var(--bg-surface-elevated)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-50)'; e.currentTarget.style.borderColor = 'var(--primary-300)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
-              title="Tambah File Media Langsung (Gambar, Video)"
+              className="btn-action-compact"
+              title="Tambah Media (Gambar, Video)"
             >
-              <Film size={14} /> + Media
+              <Film size={14} style={{ flexShrink: 0 }} />
+              <span className="btn-label">+ Media</span>
             </button>
             <button
               onClick={() => setComponentPickerZoneId(selectedZone.id)}
-              style={{ flex: 1, padding: '7px 8px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'var(--primary-50)', border: '1px dashed var(--primary-400)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-100)'; e.currentTarget.style.borderColor = 'var(--primary-500)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--primary-50)'; e.currentTarget.style.borderColor = 'var(--primary-400)'; }}
-              title="Tambah Komponen Layar (Daftar Putar, Web View, Teks Berjalan, Jam, Antrian, Album)"
+              className="btn-action-compact btn-action-accent"
+              title="Tambah Komponen Layar (Jam, Teks Berjalan, Web View, Antrian, Album)"
             >
-              <LayoutGrid size={14} /> + Komponen
+              <LayoutGrid size={14} style={{ flexShrink: 0 }} />
+              <span className="btn-label">+ Komponen</span>
             </button>
           </div>
         </div>

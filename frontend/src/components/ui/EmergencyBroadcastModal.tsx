@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { api, Device } from '@/lib/services';
 import { pushDeviceCommand, ServerCommandType } from '@/lib/services/hardware/device.service';
-import { AlertTriangle, Send, X, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, AlertCircle, Info, Send, X, ShieldAlert, CheckCircle2 } from 'lucide-react';
 
 interface EmergencyBroadcastModalProps {
   isOpen: boolean;
@@ -167,6 +167,11 @@ export default function EmergencyBroadcastModal({ isOpen, onClose }: EmergencyBr
                 type="button"
                 onClick={() => setAlertType('danger')}
                 style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
                   padding: '10px',
                   borderRadius: '8px',
                   border: alertType === 'danger' ? '2px solid var(--accent-rose)' : '1px solid var(--border-subtle)',
@@ -177,12 +182,17 @@ export default function EmergencyBroadcastModal({ isOpen, onClose }: EmergencyBr
                   cursor: 'pointer',
                 }}
               >
-                🚨 Bahaya (Merah)
+                <AlertTriangle size={15} /> Bahaya (Merah)
               </button>
               <button
                 type="button"
                 onClick={() => setAlertType('warning')}
                 style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
                   padding: '10px',
                   borderRadius: '8px',
                   border: alertType === 'warning' ? '2px solid var(--accent-amber)' : '1px solid var(--border-subtle)',
@@ -193,12 +203,17 @@ export default function EmergencyBroadcastModal({ isOpen, onClose }: EmergencyBr
                   cursor: 'pointer',
                 }}
               >
-                ⚠️ Peringatan (Kuning)
+                <AlertCircle size={15} /> Peringatan (Kuning)
               </button>
               <button
                 type="button"
                 onClick={() => setAlertType('info')}
                 style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
                   padding: '10px',
                   borderRadius: '8px',
                   border: alertType === 'info' ? '2px solid var(--primary-500)' : '1px solid var(--border-subtle)',
@@ -209,7 +224,7 @@ export default function EmergencyBroadcastModal({ isOpen, onClose }: EmergencyBr
                   cursor: 'pointer',
                 }}
               >
-                ℹ️ Informasi (Biru)
+                <Info size={15} /> Informasi (Biru)
               </button>
             </div>
           </div>

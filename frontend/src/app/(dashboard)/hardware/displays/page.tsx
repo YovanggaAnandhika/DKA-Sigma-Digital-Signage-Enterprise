@@ -136,7 +136,7 @@ export default function DisplaysPage() {
               Layar Retail (Player Fleet)
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Pusat registrasi dan pairing perangkat Android display player secara terpusat.
+              Registrasi dan pairing display player.
             </p>
           </div>
         </div>
@@ -147,7 +147,7 @@ export default function DisplaysPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '6px 12px',
+              padding: '5px 10px',
               borderRadius: '9999px',
               backgroundColor: isSseConnected ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255, 255, 255, 0.05)',
               border: isSseConnected ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
@@ -155,7 +155,7 @@ export default function DisplaysPage() {
               fontSize: '0.75rem',
               fontWeight: 600,
             }}
-            title={isSseConnected ? 'Terhubung ke Real-time SSE Stream (Pembaruan status otomatis tanpa refresh)' : 'SSE Offline'}
+            title={isSseConnected ? 'Terhubung ke Real-time Stream' : 'Stream Terputus'}
           >
             <span
               style={{
@@ -166,7 +166,7 @@ export default function DisplaysPage() {
                 boxShadow: isSseConnected ? '0 0 8px var(--accent-emerald)' : 'none',
               }}
             />
-            <span>{isSseConnected ? 'Live Stream SSE' : 'Offline'}</span>
+            <span>{isSseConnected ? 'Live' : 'Offline'}</span>
           </div>
 
           <button onClick={loadData} className="btn btn-secondary" title="Segarkan data manual">
@@ -257,19 +257,22 @@ export default function DisplaysPage() {
                           MENUNGGU PERSETUJUAN
                         </span>
                       ) : (
-                        <span
-                          style={{
-                            padding: '3px 8px',
-                            borderRadius: '9999px',
-                            fontSize: '0.6875rem',
-                            fontWeight: 700,
-                            backgroundColor: d.isOnline ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)',
-                            color: d.isOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
-                            border: d.isOnline ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(244, 63, 94, 0.3)',
-                          }}
+                        <div
+                          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                          title={d.isOnline ? 'Online' : 'Offline'}
+                          aria-label={d.isOnline ? 'Online' : 'Offline'}
                         >
-                          {d.isOnline ? 'ONLINE' : 'OFFLINE'}
-                        </span>
+                          <span
+                            style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              backgroundColor: d.isOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
+                              boxShadow: d.isOnline ? '0 0 6px rgba(16, 185, 129, 0.5)' : 'none',
+                              display: 'inline-block',
+                            }}
+                          />
+                        </div>
                       )}
                     </td>
                     <td>

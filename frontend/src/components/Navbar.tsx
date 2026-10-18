@@ -82,23 +82,20 @@ export function Navbar() {
           {collapsed ? <Menu size={16} /> : <X size={16} />}
         </button>
 
-        <div
+        <span
+          title="Status Sistem: Terhubung (Online)"
+          aria-label="Online"
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '4px 10px',
-            borderRadius: '9999px',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            border: '1px solid rgba(16, 185, 129, 0.25)',
-            fontSize: '0.6875rem',
-            fontWeight: 600,
-            color: 'var(--accent-emerald)',
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--accent-emerald)',
+            boxShadow: '0 0 8px rgba(16, 185, 129, 0.6)',
+            display: 'inline-block',
+            marginLeft: '6px',
+            cursor: 'default',
           }}
-        >
-          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'currentColor' }} />
-          Online
-        </div>
+        />
       </div>
 
       {/* Right Controls */}

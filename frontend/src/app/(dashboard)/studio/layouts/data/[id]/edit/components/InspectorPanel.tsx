@@ -994,20 +994,22 @@ export default function InspectorPanel() {
                 <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
                   Tambah Konten
                 </span>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div className="layer-action-group">
                   <button
                     onClick={() => setMediaPickerZoneId(selectedZone.id)}
-                    style={{ flex: 1, padding: '7px 10px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'var(--bg-base)', border: '1px dashed var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                    title="Tambah File Media Langsung (Gambar, Video)"
+                    className="btn-action-compact"
+                    title="Tambah Media (Gambar, Video)"
                   >
-                    <Film size={14} /> + Media
+                    <Film size={14} style={{ flexShrink: 0 }} />
+                    <span className="btn-label">+ Media</span>
                   </button>
                   <button
                     onClick={() => setComponentPickerZoneId(selectedZone.id)}
-                    style={{ flex: 1, padding: '7px 10px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: 'var(--primary-50)', border: '1px dashed var(--primary-400)', borderRadius: '6px', cursor: 'pointer', color: 'var(--primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                    title="Tambah Komponen Layar (Daftar Putar, Web View, Teks Berjalan, Jam, Antrian, Album)"
+                    className="btn-action-compact btn-action-accent"
+                    title="Tambah Komponen Layar (Jam, Teks Berjalan, Web View, Antrian, Album)"
                   >
-                    <LayoutGrid size={14} /> + Komponen
+                    <LayoutGrid size={14} style={{ flexShrink: 0 }} />
+                    <span className="btn-label">+ Komponen</span>
                   </button>
                 </div>
               </div>

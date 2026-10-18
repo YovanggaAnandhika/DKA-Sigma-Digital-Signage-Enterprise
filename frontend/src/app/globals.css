@@ -354,3 +354,52 @@ a {
   background: var(--hover-surface);
   color: var(--text-primary);
 }
+
+/* Responsive Action Buttons (Prevents wrapping on narrow sidebars) */
+.layer-action-group {
+  display: flex;
+  gap: 6px;
+  container-type: inline-size;
+}
+
+.btn-action-compact {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justifyContent: center;
+  gap: 6px;
+  padding: 7px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 0;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-surface-elevated);
+  border: 1px dashed var(--border-subtle);
+  color: var(--primary-500);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-action-compact:hover {
+  background-color: var(--hover-surface);
+  border-color: var(--primary-400);
+}
+
+.btn-action-compact.btn-action-accent {
+  background-color: rgba(37, 99, 235, 0.1);
+  border: 1px dashed rgba(59, 130, 246, 0.4);
+  color: var(--primary-400);
+}
+
+.btn-action-compact.btn-action-accent:hover {
+  background-color: rgba(37, 99, 235, 0.18);
+  border-color: var(--primary-500);
+}
+
+@container (max-width: 210px) {
+  .btn-action-compact .btn-label {
+    display: none;
+  }
+}
+

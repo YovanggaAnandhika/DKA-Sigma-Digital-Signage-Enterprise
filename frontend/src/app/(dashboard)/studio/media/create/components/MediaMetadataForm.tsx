@@ -92,9 +92,9 @@ export default function MediaMetadataForm({
                 onChange={(e) => setFormData({ ...formData, mediaType: Number(e.target.value) })}
                 className="form-input"
               >
-                <option value={3}>🌐 Halaman Web URL</option>
-                <option value={1}>🖼️ Gambar Statis URL</option>
-                <option value={2}>🎬 Video Stream URL</option>
+                <option value={3}>Halaman Web URL</option>
+                <option value={1}>Gambar URL</option>
+                <option value={2}>Video URL</option>
               </select>
             </div>
 
