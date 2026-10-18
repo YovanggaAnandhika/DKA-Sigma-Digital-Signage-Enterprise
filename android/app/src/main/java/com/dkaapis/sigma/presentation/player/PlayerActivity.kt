@@ -601,9 +601,22 @@ class PlayerActivity : AppCompatActivity() {
                     }, 2000)
                 }
                 "CANCELLED" -> {
-                    if (viewModel.uiState.value is PlayerUiState.Playing) {
-                        loadingOverlay.visibility = View.GONE
+                    val fileName = data.optString("fileName", "")
+                    loadingOverlay.visibility = View.VISIBLE
+                    progressBar.isIndeterminate = false
+                    progressBar.progress = 0
+                    loadingText.text = "✖ Transmisi Chunk Dibatalkan"
+                    subDetailText.text = if (fileName.isNotBlank()) {
+                        "${fileName}\nPengunggahan berkas dibatalkan oleh CMS."
+                    } else {
+                        "Pengunggahan berkas dibatalkan oleh CMS."
                     }
+
+                    watchdogHandler.postDelayed({
+                        if (viewModel.uiState.value is PlayerUiState.Playing) {
+                            loadingOverlay.visibility = View.GONE
+                        }
+                    }, 2000)
                 }
                 "RELOAD" -> {
                     viewModel.syncManifest()
