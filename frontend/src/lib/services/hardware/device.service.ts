@@ -156,6 +156,102 @@ export async function getLatestDeviceTelemetry(deviceId: string): Promise<Latest
   return res.telemetry || null;
 }
 
+export interface HardwareInputOutput {
+  cpu_percent?: number;
+  cpuPercent?: number;
+  cpu_cores?: number;
+  cpuCores?: number;
+  ram_used_bytes?: number;
+  ramUsedBytes?: number;
+  ram_total_bytes?: number;
+  ramTotalBytes?: number;
+  ram_percent?: number;
+  ramPercent?: number;
+  storage_free_bytes?: number;
+  storageFreeBytes?: number;
+  storage_total_bytes?: number;
+  storageTotalBytes?: number;
+  battery_temp_celsius?: number;
+  batteryTempCelsius?: number;
+  fps?: number;
+  network_type?: string;
+  networkType?: string;
+}
+
+export interface AssetStats {
+  media_id?: string;
+  mediaId?: string;
+  media_name?: string;
+  mediaName?: string;
+  mime_type?: string;
+  mimeType?: string;
+  codec?: string;
+  resolution?: string;
+  bitrate_kbps?: number;
+  bitrateKbps?: number;
+  decoder_name?: string;
+  decoderName?: string;
+  is_hardware_accelerated?: boolean;
+  isHardwareAccelerated?: boolean;
+  dropped_frames?: number;
+  droppedFrames?: number;
+  total_frames?: number;
+  totalFrames?: number;
+  dropped_frame_rate_percent?: number;
+  droppedFrameRatePercent?: number;
+  playback_status?: string;
+  playbackStatus?: string;
+  diagnostic_flag?: string;
+  diagnosticFlag?: string;
+  diagnostic_note?: string;
+  diagnosticNote?: string;
+}
+
+export interface DeviceAnalyticsRecord {
+  id: string;
+  deviceId: string;
+  inputOutputJson: string;
+  assetsStatsJson: string;
+  recordedAt: string;
+  inputOutput?: HardwareInputOutput;
+  assetsStats?: AssetStats;
+}
+
+export async function getDeviceAnalyticsHistory(
+  deviceId: string,
+  timeRange: string = '1h',
+  limit: number = 100
+): Promise<DeviceAnalyticsRecord[]> {
+  const res = await invokeApi<any>('/api/grpc/hardware/device/GetDeviceAnalyticsHistory', {
+    deviceId,
+    timeRange,
+    limit,
+  });
+
+  const rawList: any[] = res.recordsList || [];
+  return rawList.map((item) => {
+    let io: HardwareInputOutput = {};
+    let assets: AssetStats = {};
+    try {
+      io = JSON.parse(item.inputOutputJson || '{}');
+    } catch (_) {}
+    try {
+      assets = JSON.parse(item.assetsStatsJson || '{}');
+    } catch (_) {}
+
+    return {
+      id: item.id,
+      deviceId: item.deviceId,
+      inputOutputJson: item.inputOutputJson,
+      assetsStatsJson: item.assetsStatsJson,
+      recordedAt: item.recordedAt,
+      inputOutput: io,
+      assetsStats: assets,
+    };
+  });
+}
+
+
 
 
 
