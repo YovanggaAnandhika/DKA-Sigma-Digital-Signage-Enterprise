@@ -190,6 +190,9 @@ impl QueueServiceImpl {
             latest_called_number: latest_ticket,
             created_at: display.created_at.to_rfc3339(),
             updated_at: display.updated_at.to_rfc3339(),
+            opacity: display.opacity as f32,
+            overlay_color: display.overlay_color,
+            overlay_opacity: display.overlay_opacity as f32,
         })
     }
 }
@@ -207,18 +210,22 @@ impl QueueServiceTrait for QueueServiceImpl {
             r#"
             INSERT INTO queue_displays (
                 id, name, prefix, canvas_width, canvas_height, background_color,
-                background_image_url, theme_preset, auto_recall_enabled
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                background_image_url, theme_preset, auto_recall_enabled,
+                opacity, overlay_color, overlay_opacity
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             "#,
             display_id,
             req.name,
             if req.prefix.is_empty() { "A" } else { &req.prefix },
             if req.canvas_width > 0 { req.canvas_width } else { 1920 },
             if req.canvas_height > 0 { req.canvas_height } else { 1080 },
-            if req.background_color.is_empty() { "#f8fafc" } else { &req.background_color },
+            if req.background_color.is_empty() { "transparent" } else { &req.background_color },
             if req.background_image_url.is_empty() { None } else { Some(req.background_image_url) },
             if req.theme_preset.is_empty() { "clean-light" } else { &req.theme_preset },
             req.auto_recall_enabled,
+            if req.opacity > 0.0 { req.opacity as f64 } else { 1.0 },
+            if req.overlay_color.is_empty() { "transparent" } else { &req.overlay_color },
+            req.overlay_opacity as f64,
         )
         .execute(&self.pool)
         .await
@@ -233,8 +240,9 @@ impl QueueServiceTrait for QueueServiceImpl {
                 INSERT INTO queue_layout_items (
                     id, queue_display_id, item_type, name, x, y, width, height, z_index,
                     background_color, text_color, font_size, font_weight, text_align,
-                    template_content, config, is_visible
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+                    template_content, config, is_visible,
+                    opacity, border_radius, border_color, border_width
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
                 "#,
                 item_id,
                 display_id,
@@ -253,6 +261,10 @@ impl QueueServiceTrait for QueueServiceImpl {
                 it.template_content,
                 config_val,
                 it.is_visible,
+                if it.opacity > 0.0 { it.opacity as f64 } else { 1.0 },
+                it.border_radius,
+                if it.border_color.is_empty() { "transparent" } else { &it.border_color },
+                it.border_width,
             )
             .execute(&self.pool)
             .await
@@ -348,6 +360,9 @@ impl QueueServiceTrait for QueueServiceImpl {
                 background_image_url = $7,
                 theme_preset = COALESCE(NULLIF($8, ''), theme_preset),
                 auto_recall_enabled = $9,
+                opacity = CASE WHEN $10 > 0.0 THEN $10 ELSE opacity END,
+                overlay_color = COALESCE(NULLIF($11, ''), overlay_color),
+                overlay_opacity = $12,
                 updated_at = NOW()
             WHERE id = $1
             "#,
@@ -360,6 +375,9 @@ impl QueueServiceTrait for QueueServiceImpl {
             if req.background_image_url.is_empty() { None } else { Some(req.background_image_url) },
             req.theme_preset,
             req.auto_recall_enabled,
+            req.opacity as f64,
+            req.overlay_color,
+            req.overlay_opacity as f64,
         )
         .execute(&self.pool)
         .await
@@ -379,8 +397,9 @@ impl QueueServiceTrait for QueueServiceImpl {
                     INSERT INTO queue_layout_items (
                         id, queue_display_id, item_type, name, x, y, width, height, z_index,
                         background_color, text_color, font_size, font_weight, text_align,
-                        template_content, config, is_visible
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+                        template_content, config, is_visible,
+                        opacity, border_radius, border_color, border_width
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
                     "#,
                     item_id,
                     id,
@@ -399,6 +418,10 @@ impl QueueServiceTrait for QueueServiceImpl {
                     it.template_content,
                     config_val,
                     it.is_visible,
+                    if it.opacity > 0.0 { it.opacity as f64 } else { 1.0 },
+                    it.border_radius,
+                    if it.border_color.is_empty() { "transparent" } else { &it.border_color },
+                    it.border_width,
                 )
                 .execute(&self.pool)
                 .await
@@ -445,8 +468,9 @@ impl QueueServiceTrait for QueueServiceImpl {
                 INSERT INTO queue_layout_items (
                     id, queue_display_id, item_type, name, x, y, width, height, z_index,
                     background_color, text_color, font_size, font_weight, text_align,
-                    template_content, config, is_visible
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+                    template_content, config, is_visible,
+                    opacity, border_radius, border_color, border_width
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
                 "#,
                 item_id,
                 display_id,
@@ -465,6 +489,10 @@ impl QueueServiceTrait for QueueServiceImpl {
                 it.template_content,
                 config_val,
                 it.is_visible,
+                if it.opacity > 0.0 { it.opacity as f64 } else { 1.0 },
+                it.border_radius,
+                if it.border_color.is_empty() { "transparent" } else { &it.border_color },
+                it.border_width,
             )
             .execute(&self.pool)
             .await
@@ -490,6 +518,10 @@ impl QueueServiceTrait for QueueServiceImpl {
                 is_visible: it.is_visible,
                 created_at: chrono::Utc::now().to_rfc3339(),
                 updated_at: chrono::Utc::now().to_rfc3339(),
+                opacity: it.opacity,
+                border_radius: it.border_radius,
+                border_color: it.border_color,
+                border_width: it.border_width,
             });
         }
 
@@ -507,7 +539,9 @@ impl QueueServiceTrait for QueueServiceImpl {
             r#"
             SELECT id, queue_display_id, item_type, name, x, y, width, height, z_index,
                    background_color, text_color, font_size, font_weight, text_align,
-                   template_content, config, is_visible, created_at, updated_at
+                   template_content, config, is_visible,
+                   opacity, border_radius, border_color, border_width,
+                   created_at, updated_at
             FROM queue_layout_items
             WHERE queue_display_id = $1
             ORDER BY z_index ASC, created_at ASC
@@ -528,7 +562,7 @@ impl QueueServiceTrait for QueueServiceImpl {
             width: it.width,
             height: it.height,
             z_index: it.z_index,
-            background_color: it.background_color.unwrap_or_default(),
+            background_color: it.background_color.unwrap_or_else(|| "transparent".to_string()),
             text_color: it.text_color.unwrap_or_default(),
             font_size: it.font_size.unwrap_or(24),
             font_weight: it.font_weight.unwrap_or_default(),
@@ -538,6 +572,10 @@ impl QueueServiceTrait for QueueServiceImpl {
             is_visible: it.is_visible,
             created_at: it.created_at.to_rfc3339(),
             updated_at: it.updated_at.to_rfc3339(),
+            opacity: it.opacity as f32,
+            border_radius: it.border_radius,
+            border_color: it.border_color,
+            border_width: it.border_width,
         }).collect();
 
         Ok(Response::new(GetQueueLayoutResponse { items }))
