@@ -120,10 +120,6 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
     try {
       setSaving(true);
 
-      if (layoutName !== layout.name) {
-        await api.updateLayout(params.id, { name: layoutName });
-      }
-
       for (const delId of deletedLayerIds) {
         await api.deleteLayer(delId, params.id);
       }
@@ -191,7 +187,9 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      const data = await api.getLayout(params.id);
+      // Always commit layout update after layers are saved to record layout_history and new version hash
+      const updatedLayout = await api.updateLayout(params.id, { name: layoutName });
+      const data = updatedLayout || (await api.getLayout(params.id));
       setLayout(data);
       setLayoutName(data.name);
 

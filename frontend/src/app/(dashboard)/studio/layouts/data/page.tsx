@@ -144,6 +144,7 @@ export default function LayoutsDataPage() {
       });
 
       setPushSuccessMsg(res.message || 'Layout berhasil dipush ke penjadwalan perangkat target.');
+      loadData();
     } catch (err: any) {
       alert(err.message || 'Gagal mempush layout ke penjadwalan');
     } finally {
@@ -241,22 +242,23 @@ export default function LayoutsDataPage() {
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '6px' }}>
-                        <button
-                          onClick={() => handleOpenPushModal(l)}
-                          className="btn btn-primary"
-                          style={{
-                            padding: '5px 10px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                          }}
-                          title="Push ke Penjadwalan Layar"
-                        >
-                          <Send size={13} />
-                          <span>Push Jadwal</span>
-                        </button>
+                        {!l.isScheduleSynced && (
+                          <button
+                            onClick={() => handleOpenPushModal(l)}
+                            className="btn btn-primary"
+                            style={{
+                              padding: '5px 10px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                            }}
+                            title="Push ke Penjadwalan Layar"
+                          >
+                            <Send size={13} />
+                          </button>
+                        )}
                         <Link href={`/studio/layouts/data/${l.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Preview Canvas">
                           <Eye size={14} />
                         </Link>
