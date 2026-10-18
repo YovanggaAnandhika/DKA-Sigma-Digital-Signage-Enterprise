@@ -278,6 +278,7 @@ class PlayerActivity : AppCompatActivity() {
                                     videoRenderers.forEach { it.setDuckedVolume(false) }
                                     val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
                                     audioManager?.abandonAudioFocus(null)
+                                    activeQueueRenderer?.stopCallEffect()
                                 }
                             }
                         }
@@ -288,6 +289,7 @@ class PlayerActivity : AppCompatActivity() {
                                     videoRenderers.forEach { it.setDuckedVolume(false) }
                                     val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
                                     audioManager?.abandonAudioFocus(null)
+                                    activeQueueRenderer?.stopCallEffect()
                                 }
                             }
                         }
@@ -496,6 +498,7 @@ class PlayerActivity : AppCompatActivity() {
                             if (currentSpeechGeneration == thisGen) {
                                 videoRenderers.forEach { it.setDuckedVolume(false) }
                                 audioManager?.abandonAudioFocus(null)
+                                activeQueueRenderer?.stopCallEffect()
                             }
                         }
                         speechTimeoutRunnable = fallbackTimeout
@@ -922,6 +925,7 @@ class PlayerActivity : AppCompatActivity() {
     private fun releaseRenderers() {
         timelineJob?.cancel()
         timelineJob = null
+        activeQueueRenderer?.stopCallEffect()
         activeQueueRenderer = null
         activeQueueDisplayId = ""
         videoRenderers.forEach { it.release() }

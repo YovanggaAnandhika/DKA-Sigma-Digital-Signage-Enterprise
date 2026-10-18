@@ -1,5 +1,6 @@
 package com.dkaapis.sigma.presentation.renderers
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
@@ -9,6 +10,7 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
@@ -116,6 +118,12 @@ class QueueZoneRenderer(
     private var currentSequence: Int = 1
     private var currentCounter: String = "LOKET 01"
     private val countersList = mutableListOf<String>()
+
+    private var isCallingActive = false
+    private var numberPulseAnimator: ValueAnimator? = null
+    private var counterPulseAnimator: ValueAnimator? = null
+    private var bgPulseAnimator: ValueAnimator? = null
+    private var originalTextColor: Int? = null
 
     fun createView(
         parent: ViewGroup,
@@ -399,6 +407,7 @@ class QueueZoneRenderer(
 
             if (meta.itemType == "ticket_number") {
                 numberTextView = textView
+                originalTextColor = parseColor(meta.textColor, Color.BLACK)
                 textView.isClickable = true
                 textView.setOnClickListener {
                     callNext()
@@ -460,30 +469,64 @@ class QueueZoneRenderer(
         onCallAudioStarted()
     }
 
-    private fun updateDisplay(ticketNumber: String, counterName: String) {
+    fun startCallEffect(ticketNumber: String, counterName: String) {
+        stopCallEffect()
+        isCallingActive = true
+
         numberTextView?.text = ticketNumber
         counterTextView?.text = counterName
 
-        // 1. Efek Berkedip Background (Mencolok, Rapi, & Modern)
+        if (originalTextColor == null) {
+            originalTextColor = (numberTextView?.tag as? QueueItemMeta)?.let {
+                parseColor(it.textColor, Color.BLACK)
+            } ?: Color.BLACK
+        }
+        val origColor = originalTextColor ?: Color.BLACK
+
+        // Deteksi kontras background/teks untuk aksen modern
+        val r = Color.red(origColor)
+        val g = Color.green(origColor)
+        val b = Color.blue(origColor)
+        val isDarkText = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0 < 0.5
+
+        // Aksen modern & mencolok: Royal Blue (#2563EB) untuk teks gelap, Sky Blue (#38BDF8) untuk teks terang
+        val accentColor = if (isDarkText) Color.parseColor("#2563EB") else Color.parseColor("#38BDF8")
+        val glowColor = if (isDarkText) Color.argb(140, 37, 99, 235) else Color.argb(160, 56, 189, 248)
+
+        numberTextView?.setTextColor(accentColor)
+        numberTextView?.setShadowLayer(18f, 0f, 3f, glowColor)
+
+        // 1. Double Strobe Flash awal yang intens & mencolok, lalu transisi ke denyut ambient berulang sampai speech berhenti
         flashOverlayView?.let { flash ->
+            flash.animate()?.cancel()
             flash.alpha = 0f
             flash.animate()
-                ?.alpha(0.35f)
-                ?.setDuration(130)
+                ?.alpha(0.55f)
+                ?.setDuration(120)
                 ?.withEndAction {
                     flash.animate()
-                        ?.alpha(0f)
-                        ?.setDuration(140)
+                        ?.alpha(0.08f)
+                        ?.setDuration(100)
                         ?.withEndAction {
-                            // Kedipan ke-2
                             flash.animate()
-                                ?.alpha(0.35f)
-                                ?.setDuration(130)
+                                ?.alpha(0.55f)
+                                ?.setDuration(120)
                                 ?.withEndAction {
-                                    flash.animate()
-                                        ?.alpha(0f)
-                                        ?.setDuration(260)
-                                        ?.start()
+                                    // Masuk ke denyut ambient breathing yang terus berdenyut sampai speech berhenti
+                                    if (isCallingActive) {
+                                        bgPulseAnimator = ValueAnimator.ofFloat(0.12f, 0.35f).apply {
+                                            duration = 750
+                                            repeatMode = ValueAnimator.REVERSE
+                                            repeatCount = ValueAnimator.INFINITE
+                                            interpolator = AccelerateDecelerateInterpolator()
+                                            addUpdateListener { va ->
+                                                flash.alpha = va.animatedValue as Float
+                                            }
+                                            start()
+                                        }
+                                    } else {
+                                        flash.animate()?.alpha(0f)?.setDuration(250)?.start()
+                                    }
                                 }
                                 ?.start()
                         }
@@ -492,54 +535,78 @@ class QueueZoneRenderer(
                 ?.start()
         }
 
-        // 2. Animasi Tipografi Modern Minimalis (Scale halus + Aksen Warna)
-        val originalTextColor = (numberTextView?.tag as? QueueItemMeta)?.let {
-            parseColor(it.textColor, Color.BLACK)
-        } ?: Color.BLACK
+        // 2. Denyut tipografi nomor tiket yang terus berulang (1.00x - 1.12x) sampai speech berhenti
+        numberTextView?.let { numTv ->
+            numTv.animate()?.cancel()
+            numberPulseAnimator = ValueAnimator.ofFloat(1.0f, 1.12f).apply {
+                duration = 700
+                repeatMode = ValueAnimator.REVERSE
+                repeatCount = ValueAnimator.INFINITE
+                interpolator = AccelerateDecelerateInterpolator()
+                addUpdateListener { va ->
+                    val s = va.animatedValue as Float
+                    numTv.scaleX = s
+                    numTv.scaleY = s
+                }
+                start()
+            }
+        }
 
-        // Deteksi kontras warna teks untuk pulse aksen elegan
-        val r = Color.red(originalTextColor)
-        val g = Color.green(originalTextColor)
-        val b = Color.blue(originalTextColor)
-        val isDarkText = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0 < 0.5
+        // 3. Denyut badge loket (1.00x - 1.07f) sampai speech berhenti
+        counterTextView?.let { cntTv ->
+            cntTv.animate()?.cancel()
+            counterPulseAnimator = ValueAnimator.ofFloat(1.0f, 1.07f).apply {
+                duration = 700
+                repeatMode = ValueAnimator.REVERSE
+                repeatCount = ValueAnimator.INFINITE
+                interpolator = AccelerateDecelerateInterpolator()
+                addUpdateListener { va ->
+                    val s = va.animatedValue as Float
+                    cntTv.scaleX = s
+                    cntTv.scaleY = s
+                }
+                start()
+            }
+        }
+    }
 
-        // Aksen modern: Royal Blue (#2563EB) untuk teks gelap, Sky Blue (#38BDF8) untuk teks terang
-        val accentColor = if (isDarkText) Color.parseColor("#2563EB") else Color.parseColor("#38BDF8")
+    fun stopCallEffect() {
+        if (!isCallingActive) return
+        isCallingActive = false
 
-        numberTextView?.setTextColor(accentColor)
+        bgPulseAnimator?.cancel()
+        bgPulseAnimator = null
+        flashOverlayView?.animate()?.cancel()
+        flashOverlayView?.animate()
+            ?.alpha(0f)
+            ?.setDuration(300)
+            ?.start()
+
+        numberPulseAnimator?.cancel()
+        numberPulseAnimator = null
+        numberTextView?.animate()?.cancel()
         numberTextView?.animate()
-            ?.scaleX(1.08f)
-            ?.scaleY(1.08f)
-            ?.setInterpolator(DecelerateInterpolator())
-            ?.setDuration(220)
+            ?.scaleX(1.0f)
+            ?.scaleY(1.0f)
+            ?.setDuration(300)
             ?.withEndAction {
-                numberTextView?.animate()
-                    ?.scaleX(1.0f)
-                    ?.scaleY(1.0f)
-                    ?.setInterpolator(DecelerateInterpolator())
-                    ?.setDuration(400)
-                    ?.withEndAction {
-                        numberTextView?.setTextColor(originalTextColor)
-                    }
-                    ?.start()
+                originalTextColor?.let { numberTextView?.setTextColor(it) }
+                numberTextView?.setShadowLayer(0f, 0f, 0f, 0)
             }
             ?.start()
 
-        // 2. Subtle pulse pada badge loket
+        counterPulseAnimator?.cancel()
+        counterPulseAnimator = null
+        counterTextView?.animate()?.cancel()
         counterTextView?.animate()
-            ?.scaleX(1.05f)
-            ?.scaleY(1.05f)
-            ?.setInterpolator(DecelerateInterpolator())
-            ?.setDuration(180)
-            ?.withEndAction {
-                counterTextView?.animate()
-                    ?.scaleX(1.0f)
-                    ?.scaleY(1.0f)
-                    ?.setInterpolator(DecelerateInterpolator())
-                    ?.setDuration(300)
-                    ?.start()
-            }
+            ?.scaleX(1.0f)
+            ?.scaleY(1.0f)
+            ?.setDuration(300)
             ?.start()
+    }
+
+    private fun updateDisplay(ticketNumber: String, counterName: String) {
+        startCallEffect(ticketNumber, counterName)
     }
 
     fun getCurrentTicketNumber(): String = "$currentPrefix-${String.format(java.util.Locale.US, "%03d", currentSequence)}"
