@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { api } from '@/lib/services';
 import type { Device, DisplayGroup, Schedule, Layout } from '@/lib/services';
 import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
+import { SingleSelect } from '@/components/ui/SingleSelect';
 
 export default function EditDisplayPage() {
   const params = useParams() as { id: string };
@@ -137,30 +138,30 @@ export default function EditDisplayPage() {
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
                 Preset Resolusi Layar
               </label>
-              <select
+              <SingleSelect
                 value={formData.resolution}
-                onChange={(e) => setFormData({ ...formData, resolution: e.target.value })}
-                className="form-select"
-              >
-                <option value="1920x1080">1920 × 1080</option>
-                <option value="3840x2160">3840 × 2160</option>
-                <option value="1280x720">1280 × 720</option>
-                <option value="1080x1920">1080 × 1920</option>
-              </select>
+                onChange={(val) => setFormData({ ...formData, resolution: val })}
+                options={[
+                  { value: '1920x1080', label: '1920 × 1080', hint: 'Full HD (16:9 Standard)' },
+                  { value: '3840x2160', label: '3840 × 2160', hint: '4K Ultra HD' },
+                  { value: '1280x720', label: '1280 × 720', hint: 'HD Ready (720p)' },
+                  { value: '1080x1920', label: '1080 × 1920', hint: 'Vertical Totem / Portrait' },
+                ]}
+              />
             </div>
 
             <div>
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
                 Orientasi Fisik
               </label>
-              <select
+              <SingleSelect
                 value={formData.orientation}
-                onChange={(e) => setFormData({ ...formData, orientation: e.target.value })}
-                className="form-select"
-              >
-                <option value="landscape">Landscape</option>
-                <option value="portrait">Portrait</option>
-              </select>
+                onChange={(val) => setFormData({ ...formData, orientation: val })}
+                options={[
+                  { value: 'landscape', label: 'Landscape', hint: 'Horizontal (Standar Layar TV)' },
+                  { value: 'portrait', label: 'Portrait', hint: 'Vertikal (Standing Banner)' },
+                ]}
+              />
             </div>
           </div>
 
@@ -169,16 +170,19 @@ export default function EditDisplayPage() {
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
                 Layout Utama Layar (Default Layout)
               </label>
-              <select
+              <SingleSelect
                 value={formData.current_layout_id}
-                onChange={(e) => setFormData({ ...formData, current_layout_id: e.target.value })}
-                className="form-select"
-              >
-                <option value="">-- Gunakan Layout Grup atau Kosong --</option>
-                {layouts.map(l => (
-                  <option key={l.id} value={l.id}>{l.name} ({l.canvasWidth}×{l.canvasHeight})</option>
-                ))}
-              </select>
+                onChange={(val) => setFormData({ ...formData, current_layout_id: val })}
+                placeholder="-- Gunakan Layout Grup atau Kosong --"
+                options={[
+                  { value: '', label: '-- Gunakan Layout Grup atau Kosong --' },
+                  ...layouts.map((l) => ({
+                    value: l.id,
+                    label: l.name,
+                    hint: `${l.canvasWidth} × ${l.canvasHeight}`,
+                  })),
+                ]}
+              />
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
                 Layout ini diputar otomatis jika tidak ada jadwal aktif.
               </span>
@@ -188,16 +192,18 @@ export default function EditDisplayPage() {
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
                 Jadwal Perangkat (Schedule Override)
               </label>
-              <select
+              <SingleSelect
                 value={formData.schedule_id}
-                onChange={(e) => setFormData({ ...formData, schedule_id: e.target.value })}
-                className="form-select"
-              >
-                <option value="">-- Gunakan Jadwal Grup / Tanpa Jadwal --</option>
-                {schedules.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+                onChange={(val) => setFormData({ ...formData, schedule_id: val })}
+                placeholder="-- Gunakan Jadwal Grup / Tanpa Jadwal --"
+                options={[
+                  { value: '', label: '-- Gunakan Jadwal Grup / Tanpa Jadwal --' },
+                  ...schedules.map((s) => ({
+                    value: s.id,
+                    label: s.name,
+                  })),
+                ]}
+              />
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
                 Event tayang dalam jadwal ini mengesampingkan layout utama.
               </span>
@@ -209,32 +215,34 @@ export default function EditDisplayPage() {
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
                 Zona Waktu (Timezone)
               </label>
-              <select
+              <SingleSelect
                 value={formData.timezone}
-                onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
-                className="form-select"
-              >
-                <option value="Asia/Jakarta">WIB · Asia/Jakarta</option>
-                <option value="Asia/Makassar">WITA · Asia/Makassar</option>
-                <option value="Asia/Jayapura">WIT · Asia/Jayapura</option>
-                <option value="UTC">UTC</option>
-              </select>
+                onChange={(val) => setFormData({ ...formData, timezone: val })}
+                options={[
+                  { value: 'Asia/Jakarta', label: 'WIB · Asia/Jakarta' },
+                  { value: 'Asia/Makassar', label: 'WITA · Asia/Makassar' },
+                  { value: 'Asia/Jayapura', label: 'WIT · Asia/Jayapura' },
+                  { value: 'UTC', label: 'UTC' },
+                ]}
+              />
             </div>
 
             <div>
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
                 Grup Layar (Display Group)
               </label>
-              <select
+              <SingleSelect
                 value={formData.displayGroupId}
-                onChange={(e) => setFormData({ ...formData, displayGroupId: e.target.value })}
-                className="form-select"
-              >
-                <option value="">-- Tidak Tergabung --</option>
-                {groups.map(g => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
+                onChange={(val) => setFormData({ ...formData, displayGroupId: val })}
+                placeholder="-- Tidak Tergabung --"
+                options={[
+                  { value: '', label: '-- Tidak Tergabung --' },
+                  ...groups.map((g) => ({
+                    value: g.id,
+                    label: g.name,
+                  })),
+                ]}
+              />
             </div>
           </div>
 

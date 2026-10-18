@@ -25,7 +25,8 @@ export async function POST(req: NextRequest) {
       client.sendHeartbeat(request, metadata, (error: any, response: any) => {
         if (error) {
           console.error('SendHeartbeat error:', error);
-          resolve(NextResponse.json({ error: error.message }, { status: 500 }));
+          const status = error.code === grpc.status.NOT_FOUND ? 404 : error.code === grpc.status.UNAUTHENTICATED ? 401 : 500;
+          resolve(NextResponse.json({ error: error.message, code: error.code }, { status }));
         } else {
           resolve(NextResponse.json(response.toObject()));
         }

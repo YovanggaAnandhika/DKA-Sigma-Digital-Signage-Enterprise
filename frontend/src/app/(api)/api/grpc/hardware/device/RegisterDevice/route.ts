@@ -16,6 +16,9 @@ export async function POST(req: NextRequest) {
     if (body.screenWidth) request.setScreenWidth(body.screenWidth);
     if (body.screenHeight) request.setScreenHeight(body.screenHeight);
     if (body.orientation) request.setOrientation(body.orientation);
+    if (body.deviceName || body.device_name || body.name) {
+      request.setDeviceName(body.deviceName || body.device_name || body.name);
+    }
 
     const metadata = new grpc.Metadata();
 

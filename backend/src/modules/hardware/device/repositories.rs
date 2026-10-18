@@ -22,7 +22,7 @@ impl DeviceRepository {
             RETURNING *
             "#,
         )
-        .bind("New Display")
+        .bind(dto.name.unwrap_or_else(|| "Android Display".to_string()))
         .bind(dto.screen_width.unwrap_or(1920))
         .bind(dto.screen_height.unwrap_or(1080))
         .bind(dto.orientation.unwrap_or_else(|| "landscape".to_string()))

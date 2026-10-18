@@ -66,6 +66,9 @@ class ManifestRepositoryImpl(
                     val cached = getLocalCachedManifest()
                     Result.success(cached)
                 }
+            } else if (response.code == 404 || response.code == 401) {
+                manifestStorage.clear()
+                Result.failure(IllegalStateException("HTTP error ${response.code}: Perangkat telah dihapus dari CMS"))
             } else {
                 val cached = getLocalCachedManifest()
                 if (cached != null) {

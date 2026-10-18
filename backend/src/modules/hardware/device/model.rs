@@ -49,6 +49,7 @@ pub struct DevicePairingEntity {
 
 #[derive(Debug, Deserialize)]
 pub struct RegisterDeviceDto {
+    pub name: Option<String>,
     pub mac_address: Option<String>,
     pub app_version: Option<String>,
     pub android_version: Option<String>,

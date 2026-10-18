@@ -47,6 +47,7 @@ message RegisterDeviceRequest {
   int32 screen_width = 4;
   int32 screen_height = 5;
   DeviceOrientation orientation = 6;
+  optional string device_name = 7;
 }
 
 message RegisterDeviceResponse {

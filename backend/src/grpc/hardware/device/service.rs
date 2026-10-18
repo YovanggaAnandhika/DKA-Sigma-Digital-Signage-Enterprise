@@ -72,6 +72,7 @@ impl DeviceServiceTrait for DeviceServiceImpl {
         };
 
         let dto = RegisterDeviceDto {
+            name: req.device_name.filter(|s| !s.trim().is_empty()),
             mac_address: if req.mac_address.is_empty() { None } else { Some(req.mac_address) },
             app_version: if req.app_version.is_empty() { None } else { Some(req.app_version) },
             android_version: if req.android_version.is_empty() { None } else { Some(req.android_version) },

@@ -23,7 +23,8 @@ export async function POST(req: NextRequest) {
     return new Promise<NextResponse>((resolve) => {
       client.getActiveManifest(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) {
-          resolve(NextResponse.json({ error: error.message }, { status: 500 }));
+          const status = error.code === grpc.status.NOT_FOUND ? 404 : error.code === grpc.status.UNAUTHENTICATED ? 401 : 500;
+          resolve(NextResponse.json({ error: error.message, code: error.code }, { status }));
         } else {
           resolve(NextResponse.json(response.toObject()));
         }

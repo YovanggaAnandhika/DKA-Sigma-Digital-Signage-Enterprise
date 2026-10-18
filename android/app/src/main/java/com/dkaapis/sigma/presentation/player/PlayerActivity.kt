@@ -60,7 +60,12 @@ class PlayerActivity : AppCompatActivity() {
                     if (::deviceRepo.isInitialized && ::viewModel.isInitialized) {
                         val currentHash = viewModel.getActiveManifestHash()
                         val res = deviceRepo.sendHeartbeat(manifestHash = currentHash)
-                        if (res.getOrDefault(false)) {
+                        if (res.isFailure) {
+                            val ex = res.exceptionOrNull()
+                            if (!deviceRepo.isPaired() || ex is IllegalStateException) {
+                                viewModel.onDeviceUnpaired()
+                            }
+                        } else if (res.getOrDefault(false)) {
                             viewModel.syncManifest()
                         }
                     }

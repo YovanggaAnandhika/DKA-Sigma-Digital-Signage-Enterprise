@@ -59,6 +59,7 @@ class DeviceRepositoryImpl(
             }
 
             val jsonBody = JSONObject().apply {
+                put("deviceName", info.name.ifEmpty { "Android Display" })
                 put("macAddress", info.macAddress.ifEmpty { "02:00:00:00:00:00" })
                 put("appVersion", info.appVersion)
                 put("androidVersion", info.androidVersion)
@@ -252,6 +253,9 @@ class DeviceRepositoryImpl(
                 val json = JSONObject(response.body?.string() ?: "")
                 val needsSync = json.optBoolean("needsManifestSync", false) || json.optBoolean("needs_manifest_sync", false)
                 Result.success(needsSync)
+            } else if (response.code == 404 || response.code == 401) {
+                clearCredentials()
+                Result.failure(IllegalStateException("Perangkat telah dihapus dari CMS (HTTP ${response.code})"))
             } else {
                 Result.success(false)
             }
