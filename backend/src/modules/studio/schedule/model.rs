@@ -24,6 +24,7 @@ pub struct ScheduleEventEntity {
     pub created_at: DateTime<Utc>,
     pub start_date: Option<NaiveDate>,
     pub end_date: Option<NaiveDate>,
+    pub version_hash: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

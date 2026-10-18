@@ -120,6 +120,27 @@ impl LayoutHistoryRepository {
         Ok(row)
     }
 
+    pub async fn find_by_version_hash(
+        pool: &DbPool,
+        version_hash: &str,
+    ) -> Result<Option<LayoutHistoryEntity>, sqlx::Error> {
+        let row = sqlx::query_as::<_, LayoutHistoryEntity>(
+            r#"
+            SELECT h.id, h.layout_id, l.name as layout_name, h.version_hash, h.snapshot_json, h.description, h.created_at
+            FROM layout_history h
+            JOIN layouts l ON h.layout_id = l.id
+            WHERE h.version_hash = $1
+            ORDER BY h.created_at DESC
+            LIMIT 1
+            "#,
+        )
+        .bind(version_hash)
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(row)
+    }
+
     pub async fn rollback(
         pool: &DbPool,
         history_id: Uuid,
