@@ -29,6 +29,9 @@ export async function POST(req: NextRequest) {
     const groupIds = body.display_group_ids || body.displayGroupIds || [];
     if (Array.isArray(groupIds)) request.setDisplayGroupIdsList(groupIds);
 
+    const scheduleId = body.schedule_id || body.scheduleId;
+    if (scheduleId) request.setScheduleId(scheduleId);
+
     return new Promise<NextResponse>((resolve) => {
       client.pushLayoutToSchedule(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) {

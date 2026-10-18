@@ -91,6 +91,7 @@ message PushLayoutToScheduleRequest {
   optional string end_date = 8;   // YYYY-MM-DD
   repeated string device_ids = 9;
   repeated string display_group_ids = 10;
+  optional string schedule_id = 11;
 }
 
 message PushLayoutToScheduleResponse {

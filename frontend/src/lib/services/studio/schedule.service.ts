@@ -76,6 +76,7 @@ export async function removeScheduleEvent(id: string, schedule_id?: string): Pro
 
 export async function pushLayoutToSchedule(data: {
   layoutId: string;
+  scheduleId?: string;
   scheduleName?: string;
   startTime: string;
   endTime: string;
@@ -88,6 +89,7 @@ export async function pushLayoutToSchedule(data: {
 }): Promise<{ success: boolean; scheduleId: string; message: string; affectedDevicesCount: number }> {
   return await invokeApi<any>('/api/grpc/studio/schedule/PushLayoutToSchedule', {
     layoutId: data.layoutId,
+    scheduleId: data.scheduleId,
     scheduleName: data.scheduleName,
     startTime: data.startTime,
     endTime: data.endTime,

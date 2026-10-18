@@ -259,25 +259,52 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         let mut tx = self.pool.begin().await
             .map_err(|e| Status::internal(format!("Database error: {}", e)))?;
 
-        // 1. Create schedule
+        // 1. Resolve or Create schedule
         let schedule_name = if req.schedule_name.trim().is_empty() {
             "Jadwal Layout".to_string()
         } else {
             req.schedule_name.trim().to_string()
         };
 
-        let schedule_id = sqlx::query_scalar::<_, Uuid>(
-            r#"
-            INSERT INTO schedules (name, description, created_at, updated_at)
-            VALUES ($1, $2, NOW(), NOW())
-            RETURNING id
-            "#,
-        )
-        .bind(&schedule_name)
-        .bind(format!("Dipush dari template layout {}", layout_id))
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(|e| Status::internal(format!("Failed to create schedule: {}", e)))?;
+        let schedule_id = if let Some(ref sid_str) = req.schedule_id.as_ref().filter(|s| !s.trim().is_empty()) {
+            if let Ok(existing_id) = Uuid::parse_str(sid_str) {
+                let _ = sqlx::query("DELETE FROM schedule_events WHERE schedule_id = $1")
+                    .bind(existing_id)
+                    .execute(&mut *tx)
+                    .await;
+                let _ = sqlx::query("UPDATE schedules SET updated_at = NOW() WHERE id = $1")
+                    .bind(existing_id)
+                    .execute(&mut *tx)
+                    .await;
+                existing_id
+            } else {
+                sqlx::query_scalar::<_, Uuid>(
+                    r#"
+                    INSERT INTO schedules (name, description, created_at, updated_at)
+                    VALUES ($1, $2, NOW(), NOW())
+                    RETURNING id
+                    "#,
+                )
+                .bind(&schedule_name)
+                .bind(format!("Dipush dari template layout {}", layout_id))
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(|e| Status::internal(format!("Failed to create schedule: {}", e)))?
+            }
+        } else {
+            sqlx::query_scalar::<_, Uuid>(
+                r#"
+                INSERT INTO schedules (name, description, created_at, updated_at)
+                VALUES ($1, $2, NOW(), NOW())
+                RETURNING id
+                "#,
+            )
+            .bind(&schedule_name)
+            .bind(format!("Dipush dari template layout {}", layout_id))
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(format!("Failed to create schedule: {}", e)))?
+        };
 
         // 2. Resolve latest version_hash for layout
         let version_hash = match sqlx::query_scalar::<_, String>(
