@@ -696,6 +696,7 @@ class PlayerActivity : AppCompatActivity() {
     private fun releaseRenderers() {
         timelineJob?.cancel()
         timelineJob = null
+        activeQueueRenderer = null
         videoRenderers.forEach { it.release() }
         videoRenderers.clear()
         clockRenderers.forEach { it.release() }
@@ -840,6 +841,14 @@ class PlayerActivity : AppCompatActivity() {
                 }
                 "REBOOT" -> {
                     handleRebootCommand()
+                }
+                "CALL_QUEUE", "QUEUE_CALL" -> {
+                    val ticketNumber = data.optString("ticketNumber", data.optString("ticket_number", ""))
+                    val counterName = data.optString("counterName", data.optString("counter_name", "LOKET 01"))
+                    if (ticketNumber.isNotBlank()) {
+                        activeQueueRenderer?.updateCall(ticketNumber, counterName)
+                        speakQueueTicket(ticketNumber, counterName)
+                    }
                 }
             }
         }
