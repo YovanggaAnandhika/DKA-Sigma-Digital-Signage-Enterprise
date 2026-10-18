@@ -7,7 +7,7 @@ import { useLayoutEditor } from '../../context/LayoutEditorContext';
 import SynchronizedVideo from './SynchronizedVideo';
 import { Layer } from '../../context/LayoutStateContext';
 import { calculateSnap } from '../../utils/snapHelper';
-import { injectQueueVariables, createDefaultQueueLayoutItems, speakQueueAnnouncement } from '@/app/(dashboard)/studio/components/ticket/types';
+import { injectQueueVariables, createDefaultQueueLayoutItems, speakQueueAnnouncement, stopQueueAnnouncement } from '@/app/(dashboard)/studio/components/ticket/types';
 
 const Marquee = 'marquee' as any;
 
@@ -31,9 +31,7 @@ function playCanvasQueueAudio(
     clearTimeout(activeCanvasAudioTimer);
     activeCanvasAudioTimer = null;
   }
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-  }
+  stopQueueAnnouncement();
 
   const triggerTTS = () => {
     speakQueueAnnouncement(ticketNumber, counterName, isRecall);

@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { invokeApi } from '@/lib/core/invokeApi';
 import { getMediaStreamUrl } from '@/lib/services/studio/media.service';
 import { api } from '@/lib/services';
-import { speakQueueAnnouncement } from '@/app/(dashboard)/studio/components/ticket/types';
+import { speakQueueAnnouncement, stopQueueAnnouncement } from '@/app/(dashboard)/studio/components/ticket/types';
 
 interface ManifestAsset {
   mediaId: string;
@@ -142,9 +142,7 @@ export default function WebKioskPlayerPage() {
       clearTimeout(activeChimeTimerRef.current);
       activeChimeTimerRef.current = null;
     }
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
+    stopQueueAnnouncement();
 
     setQueueState({ ticket, counter, isCalling: true });
     setIsAudioDucked(true);

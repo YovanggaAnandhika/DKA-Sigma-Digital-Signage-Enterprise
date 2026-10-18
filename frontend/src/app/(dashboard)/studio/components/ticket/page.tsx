@@ -30,6 +30,7 @@ import {
   QueueCallHistoryItem,
   QUEUE_HISTORY_STORAGE_KEY,
   speakQueueAnnouncement,
+  stopQueueAnnouncement,
 } from './types';
 import { getDevices } from '@/lib/services/hardware/device.service';
 import { Device } from '@/lib/services/hardware/types';
@@ -95,9 +96,7 @@ function playQueueCallAudio(
     clearTimeout(activeChimeTimer);
     activeChimeTimer = null;
   }
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-  }
+  stopQueueAnnouncement();
 
   const triggerTTS = () => {
     speakQueueAnnouncement(ticketNumber, counterName, isRecall, onFinished);

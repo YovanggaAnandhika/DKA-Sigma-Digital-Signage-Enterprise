@@ -324,42 +324,181 @@ export function getIndonesianVoice(): SpeechSynthesisVoice | null {
   );
 }
 
+let activeSourceNode: AudioBufferSourceNode | null = null;
+let activeAudioContext: AudioContext | null = null;
+
+export function stopQueueAnnouncement() {
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch (_) {}
+  }
+  if (activeSourceNode) {
+    try {
+      activeSourceNode.stop();
+      activeSourceNode.disconnect();
+    } catch (_) {}
+    activeSourceNode = null;
+  }
+}
+
+/**
+ * Natural High-Fidelity PA Announcement with WebAudio Echo & Bass Boost
+ * Routes the natural Google TTS neural voice through:
+ * - 220Hz Low-Shelf Filter (+6dB) for deep, warm, authoritative chest resonance ("berat")
+ * - 200ms Delay with 32% feedback and 2200Hz wall damping for realistic airport/hospital echo
+ * - Broadcast Dynamics Compressor for rich, punchy presence
+ */
+export async function playQueueAnnouncementAudio(
+  text: string,
+  onEnd?: () => void
+): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+
+  const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+  if (!AudioContextClass) return false;
+
+  try {
+    if (!activeAudioContext || activeAudioContext.state === 'closed') {
+      activeAudioContext = new AudioContextClass();
+    }
+    if (activeAudioContext.state === 'suspended') {
+      await activeAudioContext.resume();
+    }
+    const ctx = activeAudioContext;
+
+    // Fetch synthesized audio from our local /api/tts endpoint
+    const response = await fetch(`/api/tts?text=${encodeURIComponent(text)}`);
+    if (!response.ok) return false;
+
+    const arrayBuffer = await response.arrayBuffer();
+    const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+
+    stopQueueAnnouncement();
+
+    const source = ctx.createBufferSource();
+    source.buffer = audioBuffer;
+    activeSourceNode = source;
+
+    // 1. Bass Boost ("berat", warm PA chest resonance)
+    const bassFilter = ctx.createBiquadFilter();
+    bassFilter.type = 'lowshelf';
+    bassFilter.frequency.value = 220; // 220Hz warm low-end
+    bassFilter.gain.value = 6.0; // +6dB deep bass body
+
+    // 2. Dynamics Compressor (broadcast limiter / thick presence)
+    const compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.value = -20;
+    compressor.knee.value = 12;
+    compressor.ratio.value = 4.5;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.15;
+
+    // 3. PA Announcement Spatial Echo / Reverb Network
+    const delay = ctx.createDelay(1.0);
+    delay.delayTime.value = 0.20; // 200ms acoustic reflection
+
+    const echoFeedback = ctx.createGain();
+    echoFeedback.gain.value = 0.32; // Natural acoustic decay
+
+    const echoDamp = ctx.createBiquadFilter();
+    echoDamp.type = 'lowpass';
+    echoDamp.frequency.value = 2200; // Natural wall absorption
+
+    const echoWetGain = ctx.createGain();
+    echoWetGain.gain.value = 0.38; // Audible, lush hall echo
+
+    const dryGain = ctx.createGain();
+    dryGain.gain.value = 1.0;
+
+    const masterGain = ctx.createGain();
+    masterGain.gain.value = 1.15;
+
+    // Signal Routing:
+    source.connect(bassFilter);
+
+    // Dry path: bassFilter -> dryGain -> compressor
+    bassFilter.connect(dryGain);
+    dryGain.connect(compressor);
+
+    // Wet Echo path: bassFilter -> delay -> echoDamp -> echoWetGain -> compressor
+    bassFilter.connect(delay);
+    delay.connect(echoDamp);
+    echoDamp.connect(echoWetGain);
+    echoWetGain.connect(compressor);
+
+    // Feedback loop: echoDamp -> echoFeedback -> delay
+    echoDamp.connect(echoFeedback);
+    echoFeedback.connect(delay);
+
+    // Final output: compressor -> masterGain -> destination
+    compressor.connect(masterGain);
+    masterGain.connect(ctx.destination);
+
+    let finished = false;
+    const handleEnd = () => {
+      if (finished) return;
+      finished = true;
+      if (activeSourceNode === source) {
+        activeSourceNode = null;
+      }
+      if (onEnd) onEnd();
+    };
+
+    source.onended = () => {
+      // Allow reverb tail to ring out for 400ms before declaring end
+      setTimeout(handleEnd, 400);
+    };
+
+    source.start(0);
+    return true;
+  } catch (e) {
+    console.warn('WebAudio PA announcement failed, falling back to SpeechSynthesis', e);
+    return false;
+  }
+}
+
 export function speakQueueAnnouncement(
   ticketNumber: string,
   counterName: string,
   isRecall: boolean = false,
   onEnd?: () => void
-): SpeechSynthesisUtterance | null {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-    if (onEnd) onEnd();
-    return null;
-  }
-
-  try {
-    window.speechSynthesis.cancel();
-  } catch (_) {}
+) {
+  stopQueueAnnouncement();
 
   const text = buildQueueSpokenText(ticketNumber, counterName, isRecall);
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'id-ID';
-  utterance.rate = 0.92;
-  utterance.pitch = 1.0;
 
-  const voice = getIndonesianVoice();
-  if (voice) {
-    utterance.voice = voice;
-  }
+  // Try natural high-fidelity PA announcement with WebAudio Echo & Bass Boost
+  playQueueAnnouncementAudio(text, onEnd).then((success) => {
+    if (success) return;
 
-  let ended = false;
-  const handleFinished = () => {
-    if (ended) return;
-    ended = true;
-    if (onEnd) onEnd();
-  };
+    // Fallback: Web SpeechSynthesis with lowered pitch (0.85 = berat) and rate (0.88)
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      if (onEnd) onEnd();
+      return;
+    }
 
-  utterance.onend = handleFinished;
-  utterance.onerror = handleFinished;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'id-ID';
+    utterance.rate = 0.88;
+    utterance.pitch = 0.85; // Lowers pitch for deep "berat" tone
 
-  window.speechSynthesis.speak(utterance);
-  return utterance;
+    const voice = getIndonesianVoice();
+    if (voice) {
+      utterance.voice = voice;
+    }
+
+    let ended = false;
+    const handleFinished = () => {
+      if (ended) return;
+      ended = true;
+      if (onEnd) onEnd();
+    };
+
+    utterance.onend = handleFinished;
+    utterance.onerror = handleFinished;
+
+    window.speechSynthesis.speak(utterance);
+  });
 }
+
