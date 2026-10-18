@@ -33,6 +33,7 @@ function calculateAspectRatio(w: number, h: number): string {
     { ratio: 4 / 3, label: '4:3' },
     { ratio: 3 / 4, label: '3:4' },
     { ratio: 21 / 9, label: '21:9' },
+    { ratio: 64 / 27, label: '21:9' },
     { ratio: 9 / 21, label: '9:21' },
     { ratio: 32 / 9, label: '32:9' },
     { ratio: 1 / 1, label: '1:1' },
@@ -41,7 +42,7 @@ function calculateAspectRatio(w: number, h: number): string {
   ];
 
   for (const std of standardRatios) {
-    if (Math.abs(ratioVal - std.ratio) < 0.015) {
+    if (Math.abs(ratioVal - std.ratio) < 0.05) {
       return std.label;
     }
   }
@@ -88,7 +89,7 @@ export default function CreateResolusiPage() {
   const handleWidthChange = (val: number | '') => {
     setErrorMessage('');
     setFormData((prev) => {
-      const w = val === '' ? '' : Number(val);
+      const w: number | '' = val === '' ? '' : Number(val);
       const next = { ...prev, width: w };
       if (typeof w === 'number' && typeof next.height === 'number') {
         next.aspectRatio = calculateAspectRatio(w, next.height);
@@ -100,7 +101,7 @@ export default function CreateResolusiPage() {
   const handleHeightChange = (val: number | '') => {
     setErrorMessage('');
     setFormData((prev) => {
-      const h = val === '' ? '' : Number(val);
+      const h: number | '' = val === '' ? '' : Number(val);
       const next = { ...prev, height: h };
       if (typeof next.width === 'number' && typeof h === 'number') {
         next.aspectRatio = calculateAspectRatio(next.width, h);
@@ -136,7 +137,8 @@ export default function CreateResolusiPage() {
 
       router.push('/studio/layouts/resolusi');
     } catch (err: any) {
-      setErrorMessage(err.message || 'Gagal menambahkan resolusi ke database');
+      const msg = err.message ? err.message.replace(/^\d+\s+[A-Z_]+:\s*/, '') : 'Gagal menambahkan resolusi ke database';
+      setErrorMessage(msg);
     } finally {
       setLoading(false);
     }

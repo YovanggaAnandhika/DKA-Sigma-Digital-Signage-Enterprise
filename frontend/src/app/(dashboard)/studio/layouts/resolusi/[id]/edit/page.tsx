@@ -111,7 +111,7 @@ export default function EditResolusiPage() {
   const handleWidthChange = (val: number | '') => {
     setErrorMessage('');
     setFormData((prev) => {
-      const w = val === '' ? '' : Number(val);
+      const w: number | '' = val === '' ? '' : Number(val);
       const next = { ...prev, width: w };
       if (typeof w === 'number' && typeof next.height === 'number') {
         next.aspectRatio = calculateAspectRatio(w, next.height);
@@ -123,7 +123,7 @@ export default function EditResolusiPage() {
   const handleHeightChange = (val: number | '') => {
     setErrorMessage('');
     setFormData((prev) => {
-      const h = val === '' ? '' : Number(val);
+      const h: number | '' = val === '' ? '' : Number(val);
       const next = { ...prev, height: h };
       if (typeof next.width === 'number' && typeof h === 'number') {
         next.aspectRatio = calculateAspectRatio(next.width, h);
