@@ -286,14 +286,14 @@ export function buildQueueSpokenText(
 
   const spokenDigits = digits
     ? digits
-        .split('')
-        .map((ch) => digitMap[ch] || ch)
-        .join(' ')
+      .split('')
+      .map((ch) => digitMap[ch] || ch)
+      .join(' ')
     : prefix
-        .replace(/[^0-9]/g, '')
-        .split('')
-        .map((ch) => digitMap[ch] || ch)
-        .join(' ');
+      .replace(/[^0-9]/g, '')
+      .split('')
+      .map((ch) => digitMap[ch] || ch)
+      .join(' ');
 
   const cleanPrefix = prefix.replace(/[0-9]/g, '').trim() || prefix;
 
@@ -331,13 +331,13 @@ export function stopQueueAnnouncement() {
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     try {
       window.speechSynthesis.cancel();
-    } catch (_) {}
+    } catch (_) { }
   }
   if (activeSourceNode) {
     try {
       activeSourceNode.stop();
       activeSourceNode.disconnect();
-    } catch (_) {}
+    } catch (_) { }
     activeSourceNode = null;
   }
 }
@@ -380,60 +380,8 @@ export async function playQueueAnnouncementAudio(
     source.buffer = audioBuffer;
     activeSourceNode = source;
 
-    // 1. Bass Boost ("berat", warm PA chest resonance)
-    const bassFilter = ctx.createBiquadFilter();
-    bassFilter.type = 'lowshelf';
-    bassFilter.frequency.value = 220; // 220Hz warm low-end
-    bassFilter.gain.value = 6.0; // +6dB deep bass body
-
-    // 2. Dynamics Compressor (broadcast limiter / thick presence)
-    const compressor = ctx.createDynamicsCompressor();
-    compressor.threshold.value = -20;
-    compressor.knee.value = 12;
-    compressor.ratio.value = 4.5;
-    compressor.attack.value = 0.003;
-    compressor.release.value = 0.15;
-
-    // 3. PA Announcement Spatial Echo / Reverb Network
-    const delay = ctx.createDelay(1.0);
-    delay.delayTime.value = 0.20; // 200ms acoustic reflection
-
-    const echoFeedback = ctx.createGain();
-    echoFeedback.gain.value = 0.32; // Natural acoustic decay
-
-    const echoDamp = ctx.createBiquadFilter();
-    echoDamp.type = 'lowpass';
-    echoDamp.frequency.value = 2200; // Natural wall absorption
-
-    const echoWetGain = ctx.createGain();
-    echoWetGain.gain.value = 0.38; // Audible, lush hall echo
-
-    const dryGain = ctx.createGain();
-    dryGain.gain.value = 1.0;
-
-    const masterGain = ctx.createGain();
-    masterGain.gain.value = 1.15;
-
-    // Signal Routing:
-    source.connect(bassFilter);
-
-    // Dry path: bassFilter -> dryGain -> compressor
-    bassFilter.connect(dryGain);
-    dryGain.connect(compressor);
-
-    // Wet Echo path: bassFilter -> delay -> echoDamp -> echoWetGain -> compressor
-    bassFilter.connect(delay);
-    delay.connect(echoDamp);
-    echoDamp.connect(echoWetGain);
-    echoWetGain.connect(compressor);
-
-    // Feedback loop: echoDamp -> echoFeedback -> delay
-    echoDamp.connect(echoFeedback);
-    echoFeedback.connect(delay);
-
-    // Final output: compressor -> masterGain -> destination
-    compressor.connect(masterGain);
-    masterGain.connect(ctx.destination);
+    // Connect directly to output: clean, natural, crystal-clear voice without any artificial echo or reverb
+    source.connect(ctx.destination);
 
     let finished = false;
     const handleEnd = () => {
@@ -445,11 +393,7 @@ export async function playQueueAnnouncementAudio(
       if (onEnd) onEnd();
     };
 
-    source.onended = () => {
-      // Allow reverb tail to ring out for 400ms before declaring end
-      setTimeout(handleEnd, 400);
-    };
-
+    source.onended = handleEnd;
     source.start(0);
     return true;
   } catch (e) {
