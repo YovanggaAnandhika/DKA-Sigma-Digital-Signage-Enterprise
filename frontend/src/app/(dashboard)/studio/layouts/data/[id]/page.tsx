@@ -77,7 +77,7 @@ export default function ViewLayoutPage() {
         }
       } catch (err: any) {
         alert(err.message || 'Gagal memuat layout');
-        router.push('/studio/layouts');
+        router.push('/studio/layouts/data');
       } finally {
         setLoading(false);
       }
@@ -144,7 +144,7 @@ export default function ViewLayoutPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Link href="/studio/layouts" className="btn btn-outline" style={{ padding: '8px' }}>
+          <Link href="/studio/layouts/data" className="btn btn-outline" style={{ padding: '8px' }}>
             <ArrowLeft size={16} />
           </Link>
           <div>
@@ -157,7 +157,7 @@ export default function ViewLayoutPage() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <Link href={`/studio/layouts/${layout.id}/edit`} className="btn btn-primary">
+          <Link href={`/studio/layouts/data/${layout.id}/edit`} className="btn btn-primary">
             <Edit size={14} />
             <span>Buka Canvas Designer</span>
           </Link>

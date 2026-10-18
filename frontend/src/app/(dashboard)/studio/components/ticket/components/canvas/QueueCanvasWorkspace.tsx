@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useQueueEditor } from '../../context/QueueEditorContext';
 import { QueueLayoutItem, injectQueueVariables } from '../../types';
-import { calculateSnap } from '@/app/(dashboard)/studio/layouts/[id]/edit/utils/snapHelper';
+import { calculateSnap } from '@/app/(dashboard)/studio/layouts/data/[id]/edit/utils/snapHelper';
 
 const Marquee = 'marquee' as any;
 

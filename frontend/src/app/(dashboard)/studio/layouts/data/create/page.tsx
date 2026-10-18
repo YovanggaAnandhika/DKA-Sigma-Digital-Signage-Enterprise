@@ -39,9 +39,9 @@ export default function CreateLayoutPage() {
         canvasHeight: height,
       });
 
-      router.push(`/studio/layouts/${layout.id}/edit`);
+      router.push(`/studio/layouts/data/${layout.id}/edit`);
     } catch (err: any) {
-      alert(err.message || 'Gagal membuat layout');
+      alert(err.message || 'Gagal membuat template layout');
     } finally {
       setLoading(false);
     }
@@ -58,20 +58,20 @@ export default function CreateLayoutPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <Link href="/studio/layouts" className="btn btn-outline" style={{ padding: '8px' }}>
+        <Link href="/studio/layouts/data" className="btn btn-outline" style={{ padding: '8px' }}>
           <ArrowLeft size={16} />
         </Link>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
             Buat Template Layout Baru
           </h1>
-          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px', marginBottom: 0 }}>
             Tentukan nama dan dimensi kanvas untuk membuka Visual Canvas Designer.
           </p>
         </div>
       </div>
 
-      <div className="card-elevated" style={{ padding: '24px', width: '100%' }}>
+      <div className="card-elevated" style={{ padding: '24px', width: '100%', maxWidth: '640px' }}>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
@@ -100,7 +100,7 @@ export default function CreateLayoutPage() {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-            <Link href="/studio/layouts" className="btn btn-secondary">
+            <Link href="/studio/layouts/data" className="btn btn-secondary">
               Batal
             </Link>
             <button type="submit" disabled={loading} className="btn btn-primary">
