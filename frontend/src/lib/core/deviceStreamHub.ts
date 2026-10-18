@@ -21,6 +21,17 @@ class DeviceStreamHub {
   }
 
   broadcast(deviceId: string, data: any) {
+    if (deviceId === 'all') {
+      this.listeners.forEach((set) => {
+        set.forEach((listener) => {
+          try {
+            listener(data);
+          } catch (_) {}
+        });
+      });
+      return;
+    }
+
     const set = this.listeners.get(deviceId);
     if (set) {
       set.forEach((listener) => {

@@ -94,7 +94,7 @@ export default function TicketPage() {
     setModalCounter(q.currentCounter);
   };
 
-  const handleCallNext = () => {
+  const handleCallNext = async () => {
     if (!activeModalQueue) return;
     const nextSeq = modalSeq + 1;
     const newFormatted = `${activeModalQueue.prefix}-${String(nextSeq).padStart(3, '0')}`;
@@ -106,14 +106,44 @@ export default function TicketPage() {
       playDingDongChime();
       setTimeout(() => setIsChiming(false), 1500);
     }
+
+    try {
+      await fetch('/api/stream/device', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId: 'all',
+          type: 'CALL_QUEUE',
+          ticketNumber: newFormatted,
+          counterName: modalCounter,
+        }),
+      });
+    } catch (e) {
+      console.error('Gagal broadcast panggilan antrian:', e);
+    }
   };
 
-  const handleRepeatCall = () => {
+  const handleRepeatCall = async () => {
     if (!activeModalQueue) return;
     if (activeModalQueue.audioChimeEnabled) {
       setIsChiming(true);
       playDingDongChime();
       setTimeout(() => setIsChiming(false), 1500);
+    }
+
+    try {
+      await fetch('/api/stream/device', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId: 'all',
+          type: 'CALL_QUEUE',
+          ticketNumber: modalCurrentNumber,
+          counterName: modalCounter,
+        }),
+      });
+    } catch (e) {
+      console.error('Gagal broadcast panggil ulang antrian:', e);
     }
   };
 
