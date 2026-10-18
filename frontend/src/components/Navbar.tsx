@@ -1,18 +1,16 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Sun, Moon, LogOut, Menu, X, ChevronDown, User, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Sun, Moon, LogOut, Menu, X, ChevronDown, User, ShieldCheck } from 'lucide-react';
 import { useSidebar } from './SidebarProvider';
 import { useTheme } from './ThemeProvider';
 import { getStoredSession, clearSession, UserSession } from '../lib/auth';
 import { useRouter } from 'next/navigation';
-import EmergencyBroadcastModal from './ui/EmergencyBroadcastModal';
 
 export function Navbar() {
   const { collapsed, toggle } = useSidebar();
   const { theme, toggleTheme } = useTheme();
   const [profileOpen, setProfileOpen] = useState(false);
-  const [emergencyOpen, setEmergencyOpen] = useState(false);
   const [session, setSession] = useState<UserSession | null>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -100,29 +98,6 @@ export function Navbar() {
 
       {/* Right Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        {/* Emergency Broadcast Trigger */}
-        <button
-          onClick={() => setEmergencyOpen(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '6px 12px',
-            borderRadius: '8px',
-            backgroundColor: 'rgba(239, 68, 68, 0.15)',
-            color: 'var(--accent-rose)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            cursor: 'pointer',
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            transition: 'all 0.2s ease',
-          }}
-          title="Siarkan Konten Darurat ke Seluruh Layar"
-        >
-          <ShieldAlert size={15} />
-          <span>Siaran Darurat</span>
-        </button>
-
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
@@ -238,11 +213,6 @@ export function Navbar() {
           )}
         </div>
       </div>
-
-      <EmergencyBroadcastModal
-        isOpen={emergencyOpen}
-        onClose={() => setEmergencyOpen(false)}
-      />
     </header>
   );
 }
