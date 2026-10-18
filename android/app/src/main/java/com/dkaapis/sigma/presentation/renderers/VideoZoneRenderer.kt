@@ -10,29 +10,68 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import java.io.File
 
+data class VideoPlaylistItem(
+    val file: File,
+    val durationSeconds: Int = 0,
+    val isMuted: Boolean = false
+)
+
 class VideoZoneRenderer(
     private val context: Context
 ) {
     private var exoPlayer: ExoPlayer? = null
     private var playerView: PlayerView? = null
+    private var isDucked: Boolean = false
+    private var currentItemMuted: Boolean = false
 
     fun createView(parent: ViewGroup, videoFile: File, isMuted: Boolean = false): PlayerView {
+        return createPlaylistView(parent, listOf(VideoPlaylistItem(videoFile, 0, isMuted)))
+    }
+
+    fun createPlaylistView(parent: ViewGroup, playlist: List<VideoPlaylistItem>): PlayerView {
         val player = ExoPlayer.Builder(context).build().apply {
             repeatMode = Player.REPEAT_MODE_ALL
-            volume = if (isMuted) 0f else 1.0f
-            addListener(object : Player.Listener {
-                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                    android.util.Log.e("VideoZoneRenderer", "Playback error for ${videoFile.absolutePath}: ${error.message}", error)
+
+            for (item in playlist) {
+                val itemUri = Uri.fromFile(item.file)
+                val mediaItemBuilder = MediaItem.Builder()
+                    .setUri(itemUri)
+                    .setMimeType(androidx.media3.common.MimeTypes.VIDEO_MP4)
+
+                if (item.durationSeconds > 0) {
+                    mediaItemBuilder.setClippingConfiguration(
+                        MediaItem.ClippingConfiguration.Builder()
+                            .setEndPositionMs(item.durationSeconds * 1000L)
+                            .build()
+                    )
                 }
+                addMediaItem(mediaItemBuilder.build())
+            }
+
+            val firstMuted = playlist.firstOrNull()?.isMuted ?: false
+            currentItemMuted = firstMuted
+            volume = if (firstMuted) 0f else (if (isDucked) 0.15f else 1.0f)
+
+            addListener(object : Player.Listener {
+                override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                    val idx = currentMediaItemIndex
+                    if (idx in playlist.indices) {
+                        val current = playlist[idx]
+                        currentItemMuted = current.isMuted
+                        volume = if (current.isMuted) 0f else (if (isDucked) 0.15f else 1.0f)
+                        android.util.Log.i("VideoZoneRenderer", "Track transitioned to item $idx: ${current.file.name}, isMuted=${current.isMuted}")
+                    }
+                }
+
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    android.util.Log.e("VideoZoneRenderer", "Playback error in playlist: ${error.message}", error)
+                }
+
                 override fun onPlaybackStateChanged(playbackState: Int) {
-                    android.util.Log.i("VideoZoneRenderer", "Playback state for ${videoFile.name}: $playbackState (READY=3)")
+                    android.util.Log.i("VideoZoneRenderer", "Playback state: $playbackState (READY=3, ENDED=4)")
                 }
             })
-            val item = MediaItem.Builder()
-                .setUri(Uri.fromFile(videoFile))
-                .setMimeType(androidx.media3.common.MimeTypes.VIDEO_MP4)
-                .build()
-            setMediaItem(item)
+
             prepare()
             playWhenReady = true
         }
@@ -47,7 +86,12 @@ class VideoZoneRenderer(
     }
 
     fun setDuckedVolume(duck: Boolean) {
-        exoPlayer?.volume = if (duck) 0.15f else 1.0f
+        isDucked = duck
+        if (currentItemMuted) {
+            exoPlayer?.volume = 0f
+        } else {
+            exoPlayer?.volume = if (duck) 0.15f else 1.0f
+        }
     }
 
     fun release() {

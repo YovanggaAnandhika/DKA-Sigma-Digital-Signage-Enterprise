@@ -231,61 +231,76 @@ class PlayerActivity : AppCompatActivity() {
                 bindZone(zone)
             }
 
-            val activeBlock = zone.blocks.firstOrNull()
-            if (activeBlock != null) {
-                when {
-                    activeBlock.widgetType == ZoneWidgetType.CLOCK -> {
+            val widgetBlock = zone.blocks.find { it.widgetType != ZoneWidgetType.NONE }
+            if (widgetBlock != null) {
+                when (widgetBlock.widgetType) {
+                    ZoneWidgetType.CLOCK -> {
                         val renderer = ClockZoneRenderer(this)
                         clockRenderers.add(renderer)
                         val view = renderer.createView(zoneView)
                         zoneView.addView(view)
                     }
-                    activeBlock.widgetType == ZoneWidgetType.TICKER -> {
+                    ZoneWidgetType.TICKER -> {
                         val renderer = TickerZoneRenderer(this)
                         val view = renderer.createView(zoneView, "Promo Spesial Hari Ini! Diskon Member Hingga 30% di Seluruh Cabang.")
                         zoneView.addView(view)
                     }
-                    activeBlock.widgetType == ZoneWidgetType.QUEUE -> {
+                    ZoneWidgetType.QUEUE -> {
                         val renderer = QueueZoneRenderer(
                             this,
                             onCallAudioStarted = {
-                                // Duck all running videos
                                 videoRenderers.forEach { it.setDuckedVolume(true) }
                             },
                             onCallAudioFinished = {
-                                // Restore video volume
                                 videoRenderers.forEach { it.setDuckedVolume(false) }
                             }
                         )
                         val view = renderer.createView(zoneView)
                         zoneView.addView(view)
                     }
-                    activeBlock.widgetType == ZoneWidgetType.WEBVIEW -> {
+                    ZoneWidgetType.WEBVIEW -> {
                         val renderer = WebviewZoneRenderer(this)
                         val view = renderer.createView(zoneView, "https://google.com")
                         zoneView.addView(view)
                     }
-                    activeBlock.mediaItemId != null -> {
-                        val file = storageRepo.getLocalFileForAsset(activeBlock.mediaItemId)
-                        if (file != null) {
-                            val asset = manifest.requiredAssets.find { it.mediaId == activeBlock.mediaItemId }
-                            val isVideo = asset?.localFilename?.endsWith(".mp4", ignoreCase = true) == true
-                                || asset?.url?.endsWith(".mp4", ignoreCase = true) == true
-                                || asset?.mediaType == MediaType.VIDEO
-                                || isVideoFile(file)
+                    else -> Unit
+                }
+            } else {
+                // Media Blocks (Videos / Images)
+                val videoItems = mutableListOf<VideoPlaylistItem>()
+                var firstImageFile: File? = null
 
-                            if (isVideo) {
-                                val renderer = VideoZoneRenderer(this)
-                                videoRenderers.add(renderer)
-                                val view = renderer.createView(zoneView, file, activeBlock.isMuted)
-                                zoneView.addView(view)
-                            } else {
-                                val renderer = ImageZoneRenderer(this)
-                                val view = renderer.createView(zoneView, file)
-                                zoneView.addView(view)
-                            }
-                        }
+                for (block in zone.blocks) {
+                    val mediaId = block.mediaItemId ?: continue
+                    val file = storageRepo.getLocalFileForAsset(mediaId) ?: continue
+                    val asset = manifest.requiredAssets.find { it.mediaId == mediaId }
+                    val isVideo = asset?.localFilename?.endsWith(".mp4", ignoreCase = true) == true
+                        || asset?.url?.endsWith(".mp4", ignoreCase = true) == true
+                        || asset?.mediaType == MediaType.VIDEO
+                        || isVideoFile(file)
+
+                    if (isVideo) {
+                        videoItems.add(
+                            VideoPlaylistItem(
+                                file = file,
+                                durationSeconds = block.durationSeconds,
+                                isMuted = block.isMuted
+                            )
+                        )
+                    } else if (firstImageFile == null) {
+                        firstImageFile = file
                     }
+                }
+
+                if (videoItems.isNotEmpty()) {
+                    val renderer = VideoZoneRenderer(this)
+                    videoRenderers.add(renderer)
+                    val view = renderer.createPlaylistView(zoneView, videoItems)
+                    zoneView.addView(view)
+                } else if (firstImageFile != null) {
+                    val renderer = ImageZoneRenderer(this)
+                    val view = renderer.createView(zoneView, firstImageFile)
+                    zoneView.addView(view)
                 }
             }
 
