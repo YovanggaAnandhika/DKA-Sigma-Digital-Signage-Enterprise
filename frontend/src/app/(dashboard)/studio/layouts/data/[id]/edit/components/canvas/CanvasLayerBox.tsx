@@ -155,8 +155,8 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
     const qData = block?.widgetData || {};
     const currentTicket = qData.latestCalledNumber || qData.currentNumber || 'A-001';
     const numPart = parseInt(currentTicket.replace(/[^0-9]/g, ''), 10) || 0;
-    const nextSeq = numPart + 1;
-    const prefix = qData.prefix || 'A';
+    const prefixMatch = currentTicket.match(/^([A-Za-z]+)/);
+    const prefix = (prefixMatch ? prefixMatch[1] : (qData.prefix || 'A')).toUpperCase();
     const newFormatted = `${prefix}-${String(nextSeq).padStart(3, '0')}`;
     const counterName = (qData.countersList && qData.countersList.length > 0 ? qData.countersList[0].counterName : qData.currentCounter) || 'LOKET 01';
     const qId = qData.id || block.queueId || '76a3e570-9807-40a5-ad74-e7bb28e382dc';
