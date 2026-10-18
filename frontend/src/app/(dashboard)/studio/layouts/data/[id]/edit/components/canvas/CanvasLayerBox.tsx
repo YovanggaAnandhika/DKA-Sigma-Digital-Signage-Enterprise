@@ -18,7 +18,8 @@ function playCanvasQueueAudio(
   audios: any[],
   ticketNumber: string,
   counterName: string,
-  isRecall: boolean = false
+  isRecall: boolean = false,
+  onFinished?: () => void
 ) {
   if (activeCanvasAudio) {
     try {
@@ -34,7 +35,7 @@ function playCanvasQueueAudio(
   stopQueueAnnouncement();
 
   const triggerTTS = () => {
-    speakQueueAnnouncement(ticketNumber, counterName, isRecall);
+    speakQueueAnnouncement(ticketNumber, counterName, isRecall, onFinished);
   };
 
   const playSynthChime = () => {
@@ -137,6 +138,17 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
   const [isHovered, setIsHovered] = React.useState(false);
 
   const [isCallingQueue, setIsCallingQueue] = React.useState(false);
+  // Invert lasts until chime + TTS finish (like Android stopCallEffect); 20s guard in case onEnd never fires
+  const callGuardRef = React.useRef<any>(null);
+  const endCall = () => {
+    clearTimeout(callGuardRef.current);
+    setIsCallingQueue(false);
+  };
+  React.useEffect(() => {
+    if (!isCallingQueue) return;
+    callGuardRef.current = setTimeout(() => setIsCallingQueue(false), 20000);
+    return () => clearTimeout(callGuardRef.current);
+  }, [isCallingQueue]);
 
   const handleCanvasNextCall = (block: any) => {
     const qData = block?.widgetData || {};
@@ -151,7 +163,6 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
     const audios = qData.audiosList || qData.audios || [];
 
     setIsCallingQueue(true);
-    setTimeout(() => setIsCallingQueue(false), 2000);
 
     // 1. Update layers state on canvas so ticket increments immediately on canvas
     setLayers((prevLayers) => {
@@ -194,7 +205,7 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
     } catch (_) {}
 
     // 3. Play audio chime + Indonesian TTS
-    playCanvasQueueAudio(audios, newFormatted, counterName, false);
+    playCanvasQueueAudio(audios, newFormatted, counterName, false, endCall);
 
     // 4. Broadcast via SSE to Android Player & all connected screens
     try {
@@ -223,10 +234,9 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
     const audios = qData.audiosList || qData.audios || [];
 
     setIsCallingQueue(true);
-    setTimeout(() => setIsCallingQueue(false), 2000);
 
     // 1. Play audio chime + Indonesian TTS with isRecall = true ("Panggilan ulang, nomor antrian...")
-    playCanvasQueueAudio(audios, currentTicket, counterName, true);
+    playCanvasQueueAudio(audios, currentTicket, counterName, true, endCall);
 
     // 2. Broadcast via SSE to Android Player & all connected screens
     try {
@@ -661,6 +671,9 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                   backgroundPosition: 'center',
                   overflow: 'hidden',
                   containerType: 'size',
+                  // Same as Android color-matrix inversion during a call (140ms in, 180ms out)
+                  filter: isCallingQueue ? 'invert(1)' : 'none',
+                  transition: isCallingQueue ? 'filter 140ms ease-out' : 'filter 180ms ease-in-out',
                 }}
               >
                 {(() => {
@@ -804,6 +817,7 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                         : '0 12px 36px rgba(0, 0, 0, 0.75), 0 0 20px rgba(56, 189, 248, 0.25)',
                       transition: 'all 0.2s ease',
                       pointerEvents: 'auto',
+                      filter: isCallingQueue ? 'invert(1)' : 'none', // cancels parent invert so controls keep their colors
                       userSelect: 'none',
                     }}
                   >
