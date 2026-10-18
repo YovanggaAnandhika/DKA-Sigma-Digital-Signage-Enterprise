@@ -3,6 +3,9 @@ package com.dkaapis.sigma.presentation.player
 import android.content.ComponentCallbacks2
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
+import java.util.Locale
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -87,6 +90,9 @@ class PlayerActivity : AppCompatActivity() {
 
     private val videoRenderers = mutableListOf<VideoZoneRenderer>()
     private val clockRenderers = mutableListOf<ClockZoneRenderer>()
+    private var activeQueueRenderer: QueueZoneRenderer? = null
+    private var textToSpeech: TextToSpeech? = null
+    private var isTtsReady = false
     private var timelineJob: Job? = null
 
     private val watchdogHandler = Handler(Looper.getMainLooper())
@@ -178,6 +184,7 @@ class PlayerActivity : AppCompatActivity() {
             androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 
         initDependencies()
+        initTextToSpeech()
         setupViews()
         observeState()
 
@@ -224,6 +231,98 @@ class PlayerActivity : AppCompatActivity() {
         val downloadUseCase = DownloadAndVerifyMediaUseCase(storageRepo)
 
         viewModel = PlayerViewModel(registerUseCase, syncUseCase, downloadUseCase)
+    }
+
+    private fun initTextToSpeech() {
+        try {
+            textToSpeech = TextToSpeech(this) { status ->
+                if (status == TextToSpeech.SUCCESS) {
+                    val idLocale = Locale("id", "ID")
+                    val available = textToSpeech?.isLanguageAvailable(idLocale)
+                    if (available != TextToSpeech.LANG_MISSING_DATA && available != TextToSpeech.LANG_NOT_SUPPORTED) {
+                        textToSpeech?.language = idLocale
+                    } else {
+                        textToSpeech?.language = Locale.getDefault()
+                    }
+                    textToSpeech?.setSpeechRate(0.92f)
+                    textToSpeech?.setPitch(1.0f)
+                    isTtsReady = true
+
+                    textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                        override fun onStart(utteranceId: String?) {
+                            runOnUiThread {
+                                videoRenderers.forEach { it.setDuckedVolume(true) }
+                            }
+                        }
+
+                        override fun onDone(utteranceId: String?) {
+                            runOnUiThread {
+                                videoRenderers.forEach { it.setDuckedVolume(false) }
+                            }
+                        }
+
+                        override fun onError(utteranceId: String?) {
+                            runOnUiThread {
+                                videoRenderers.forEach { it.setDuckedVolume(false) }
+                            }
+                        }
+                    })
+                    android.util.Log.i("PlayerActivity", "Android TextToSpeech engine siap (Bahasa Indonesia)")
+                } else {
+                    android.util.Log.w("PlayerActivity", "Inisialisasi TextToSpeech gagal, status: $status")
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("PlayerActivity", "Gagal inisialisasi TTS: ${e.message}")
+        }
+    }
+
+    fun speakQueueTicket(ticketNumber: String, counterName: String) {
+        runOnUiThread {
+            try {
+                videoRenderers.forEach { it.setDuckedVolume(true) }
+
+                val prefix = ticketNumber.substringBefore("-", "").trim()
+                val digits = ticketNumber.substringAfter("-", "").trim()
+
+                val spokenDigits = digits.map { ch ->
+                    when (ch) {
+                        '0' -> "kosong"
+                        '1' -> "satu"
+                        '2' -> "dua"
+                        '3' -> "tiga"
+                        '4' -> "empat"
+                        '5' -> "lima"
+                        '6' -> "enam"
+                        '7' -> "tujuh"
+                        '8' -> "delapan"
+                        '9' -> "sembilan"
+                        else -> ch.toString()
+                    }
+                }.joinToString(" ")
+
+                val counterSpoken = counterName
+                    .replace("LOKET 0", "Loket ")
+                    .replace("LOKET ", "Loket ")
+
+                val utteranceText = "Nomor antrian... $prefix... $spokenDigits... Silakan menuju... $counterSpoken"
+                android.util.Log.i("PlayerActivity", "TTS Mengucapkan: $utteranceText")
+
+                if (textToSpeech != null && isTtsReady) {
+                    val params = Bundle().apply {
+                        putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "queue_${System.currentTimeMillis()}")
+                    }
+                    textToSpeech?.speak(utteranceText, TextToSpeech.QUEUE_FLUSH, params, "queue_${System.currentTimeMillis()}")
+                } else {
+                    watchdogHandler.postDelayed({
+                        videoRenderers.forEach { it.setDuckedVolume(false) }
+                    }, 3500)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("PlayerActivity", "Error speakQueueTicket: ${e.message}")
+                videoRenderers.forEach { it.setDuckedVolume(false) }
+            }
+        }
     }
 
     private fun setupViews() {

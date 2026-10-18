@@ -89,12 +89,16 @@ class QueueCanvasView(
 class QueueZoneRenderer(
     private val context: Context,
     private val onCallAudioStarted: () -> Unit = {},
-    private val onCallAudioFinished: () -> Unit = {}
+    private val onCallAudioFinished: () -> Unit = {},
+    var onUserTapNext: ((ticketNumber: String, counterName: String) -> Unit)? = null
 ) {
     private var numberTextView: TextView? = null
     private var counterTextView: TextView? = null
     private var currentPrefix: String = "A"
     private var currentName: String = "Layar Antrian"
+    private var currentSequence: Int = 1
+    private var currentCounter: String = "LOKET 01"
+    private val countersList = mutableListOf<String>()
 
     fun createView(
         parent: ViewGroup,
@@ -115,7 +119,7 @@ class QueueZoneRenderer(
                 val json = JSONObject(widgetDataJson)
                 canvasW = json.optInt("canvasWidth", 1920).takeIf { it > 0 } ?: 1920
                 canvasH = json.optInt("canvasHeight", 1080).takeIf { it > 0 } ?: 1080
-                currentPrefix = json.optString("prefix", "A")
+                currentPrefix = json.optString("prefix", "A").ifBlank { "A" }
                 currentName = json.optString("name", "Layar Antrian")
                 latestNumber = json.optString("latestCalledNumber", "$currentPrefix-001")
                 bgColor = json.optString("backgroundColor", "transparent").ifBlank { "transparent" }
@@ -124,13 +128,26 @@ class QueueZoneRenderer(
                 overlayOpacity = (if (json.has("overlayOpacity")) json.optDouble("overlayOpacity", 0.0) else json.optDouble("overlay_opacity", 0.0)).toFloat()
 
                 val countersArr = json.optJSONArray("countersList") ?: json.optJSONArray("counters")
+                countersList.clear()
                 if (countersArr != null && countersArr.length() > 0) {
-                    counterName = countersArr.getJSONObject(0).optString("counterName", "LOKET 01")
+                    for (cIdx in 0 until countersArr.length()) {
+                        val cObj = countersArr.getJSONObject(cIdx)
+                        val cName = cObj.optString("counterName", "LOKET ${cIdx + 1}")
+                        countersList.add(cName)
+                    }
+                    counterName = countersList.first()
+                } else {
+                    countersList.addAll(listOf("LOKET 01", "LOKET 02", "LOKET 03"))
                 }
 
                 itemsJsonArray = json.optJSONArray("itemsList") ?: json.optJSONArray("items")
             } catch (_: Exception) {}
+        } else {
+            countersList.addAll(listOf("LOKET 01", "LOKET 02", "LOKET 03"))
         }
+
+        currentCounter = counterName
+        currentSequence = latestNumber.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 1
 
         val canvasView = QueueCanvasView(context, canvasW, canvasH).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -139,6 +156,11 @@ class QueueZoneRenderer(
             )
             setBackgroundColor(parseColor(bgColor, Color.TRANSPARENT))
             alpha = canvasOpacity.coerceIn(0.0f, 1.0f)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                callNext()
+            }
         }
 
         val parsedItems = mutableListOf<QueueItemMeta>()
@@ -322,8 +344,16 @@ class QueueZoneRenderer(
 
             if (meta.itemType == "ticket_number") {
                 numberTextView = textView
+                textView.isClickable = true
+                textView.setOnClickListener {
+                    callNext()
+                }
             } else if (meta.itemType == "counter_loket") {
                 counterTextView = textView
+                textView.isClickable = true
+                textView.setOnClickListener {
+                    cycleNextCounter()
+                }
             }
 
             canvasView.addView(textView)
@@ -340,14 +370,65 @@ class QueueZoneRenderer(
             .replace("\$queue_name\$", currentName)
     }
 
+    fun callNext(): String {
+        currentSequence++
+        val newTicket = "$currentPrefix-${String.format(java.util.Locale.US, "%03d", currentSequence)}"
+        updateDisplay(newTicket, currentCounter)
+        onCallAudioStarted()
+        onUserTapNext?.invoke(newTicket, currentCounter)
+        numberTextView?.postDelayed({
+            onCallAudioFinished()
+        }, 3000)
+        return newTicket
+    }
+
+    fun cycleNextCounter(): String {
+        if (countersList.isNotEmpty()) {
+            val currIdx = countersList.indexOf(currentCounter)
+            val nextIdx = if (currIdx >= 0) (currIdx + 1) % countersList.size else 0
+            currentCounter = countersList[nextIdx]
+            counterTextView?.text = currentCounter
+            counterTextView?.animate()?.scaleX(1.08f)?.scaleY(1.08f)?.setDuration(100)?.withEndAction {
+                counterTextView?.animate()?.scaleX(1.0f)?.scaleY(1.0f)?.setDuration(150)?.start()
+            }?.start()
+            onUserTapNext?.invoke(getCurrentTicketNumber(), currentCounter)
+        }
+        return currentCounter
+    }
+
     fun updateCall(ticketNumber: String, counterName: String) {
-        numberTextView?.text = ticketNumber
-        counterTextView?.text = counterName
+        val numPart = ticketNumber.replace(Regex("[^0-9]"), "").toIntOrNull()
+        if (numPart != null) {
+            currentSequence = numPart
+        }
+        if (counterName.isNotBlank()) {
+            currentCounter = counterName
+        }
+        updateDisplay(ticketNumber, currentCounter)
         onCallAudioStarted()
         numberTextView?.postDelayed({
             onCallAudioFinished()
         }, 3000)
     }
+
+    private fun updateDisplay(ticketNumber: String, counterName: String) {
+        numberTextView?.text = ticketNumber
+        counterTextView?.text = counterName
+
+        // Animasi highlight & pulse saat nomor dipanggil
+        numberTextView?.animate()
+            ?.scaleX(1.12f)?.scaleY(1.12f)?.alpha(0.6f)
+            ?.setDuration(140)
+            ?.withEndAction {
+                numberTextView?.animate()
+                    ?.scaleX(1.0f)?.scaleY(1.0f)?.alpha(1.0f)
+                    ?.setDuration(220)
+                    ?.start()
+            }?.start()
+    }
+
+    fun getCurrentTicketNumber(): String = "$currentPrefix-${String.format(java.util.Locale.US, "%03d", currentSequence)}"
+    fun getCurrentCounterName(): String = currentCounter
 
     private fun parseColor(colorStr: String, fallback: Int): Int {
         if (colorStr.isBlank() || colorStr.equals("transparent", ignoreCase = true)) return Color.TRANSPARENT
