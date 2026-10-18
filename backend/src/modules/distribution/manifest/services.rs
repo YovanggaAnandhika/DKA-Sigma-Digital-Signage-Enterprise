@@ -225,8 +225,42 @@ impl ManifestService {
                         item_overrides: block.item_overrides.clone(),
                         playlist: None,
                     });
+                } else if let Some(queue_id) = block.block.queue_id {
+                    // Enrich custom chime audio assets from queue_audios for offline-first player caching
+                    if let Ok(audios) = sqlx::query!(
+                        "SELECT media_item_id FROM queue_audios WHERE queue_display_id = $1 AND audio_type = 'media_item' AND is_active = true AND media_item_id IS NOT NULL",
+                        queue_id
+                    )
+                    .fetch_all(pool)
+                    .await {
+                        for a in audios {
+                            if let Some(m_id) = a.media_item_id {
+                                if !required_assets_map.contains_key(&m_id) {
+                                    if let Ok(Some(media)) = MediaRepository::find_by_id(pool, m_id).await {
+                                        required_assets_map.insert(
+                                            m_id,
+                                            ManifestAssetDto {
+                                                media_id: m_id,
+                                                name: media.name.clone(),
+                                                url: media.public_url.clone(),
+                                                sha256_hash: media.sha256_hash.clone(),
+                                                file_size_bytes: media.file_size_bytes,
+                                                local_filename: format!("{}_{}", media.id, media.original_filename),
+                                                media_type: media.media_type.clone(),
+                                            },
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto {
+                        block: block.block.clone(),
+                        item_overrides: block.item_overrides.clone(),
+                        playlist: None,
+                    });
                 } else {
-                    // Studio Component Widgets (Queue, Clock, Ticker, WebView)
+                    // Studio Component Widgets (Clock, Ticker, WebView)
                     mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto {
                         block: block.block.clone(),
                         item_overrides: block.item_overrides.clone(),

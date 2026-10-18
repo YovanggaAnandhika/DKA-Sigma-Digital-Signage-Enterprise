@@ -291,6 +291,29 @@ impl QueueServiceTrait for QueueServiceImpl {
             .ok();
         }
 
+        // Insert audios if provided
+        for a in req.audios {
+            let aid = Uuid::from_str(&a.id).unwrap_or_else(|_| Uuid::new_v4());
+            let mid = Uuid::from_str(&a.media_item_id).ok();
+            sqlx::query!(
+                r#"
+                INSERT INTO queue_audios (id, queue_display_id, name, audio_type, media_item_id, file_url, volume_percent, is_active)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                "#,
+                aid,
+                display_id,
+                a.name,
+                a.audio_type,
+                mid,
+                if a.file_url.is_empty() { None } else { Some(a.file_url) },
+                a.volume_percent,
+                a.is_active,
+            )
+            .execute(&self.pool)
+            .await
+            .ok();
+        }
+
         self.fetch_display_detail(display_id).await.map(Response::new)
     }
 
@@ -422,6 +445,61 @@ impl QueueServiceTrait for QueueServiceImpl {
                     it.border_radius,
                     if it.border_color.is_empty() { "transparent" } else { &it.border_color },
                     it.border_width,
+                )
+                .execute(&self.pool)
+                .await
+                .ok();
+            }
+        }
+
+        // Sync counters if passed
+        if !req.counters.is_empty() {
+            sqlx::query!("DELETE FROM queue_counters WHERE queue_display_id = $1", id)
+                .execute(&self.pool)
+                .await
+                .ok();
+            for c in req.counters {
+                let cid = Uuid::from_str(&c.id).unwrap_or_else(|_| Uuid::new_v4());
+                sqlx::query!(
+                    r#"
+                    INSERT INTO queue_counters (id, queue_display_id, counter_number, counter_name, operator_name, is_active)
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                    "#,
+                    cid,
+                    id,
+                    c.counter_number,
+                    c.counter_name,
+                    c.operator_name,
+                    c.is_active,
+                )
+                .execute(&self.pool)
+                .await
+                .ok();
+            }
+        }
+
+        // Sync audios if passed
+        if !req.audios.is_empty() {
+            sqlx::query!("DELETE FROM queue_audios WHERE queue_display_id = $1", id)
+                .execute(&self.pool)
+                .await
+                .ok();
+            for a in req.audios {
+                let aid = Uuid::from_str(&a.id).unwrap_or_else(|_| Uuid::new_v4());
+                let mid = Uuid::from_str(&a.media_item_id).ok();
+                sqlx::query!(
+                    r#"
+                    INSERT INTO queue_audios (id, queue_display_id, name, audio_type, media_item_id, file_url, volume_percent, is_active)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    "#,
+                    aid,
+                    id,
+                    a.name,
+                    a.audio_type,
+                    mid,
+                    if a.file_url.is_empty() { None } else { Some(a.file_url) },
+                    a.volume_percent,
+                    a.is_active,
                 )
                 .execute(&self.pool)
                 .await
