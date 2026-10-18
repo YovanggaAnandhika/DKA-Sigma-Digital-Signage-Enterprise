@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ManifestServiceClient } from '@/lib/api/distribution/v1/manifest/manifest_grpc_pb';
 import { GetActiveManifestRequest } from '@/lib/api/distribution/v1/manifest/manifest.common_pb';
 import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import * as grpc from '@grpc/grpc-js';
 
 export async function POST(req: NextRequest) {
   try {
