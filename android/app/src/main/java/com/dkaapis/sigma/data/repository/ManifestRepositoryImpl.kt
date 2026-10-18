@@ -138,11 +138,16 @@ class ManifestRepositoryImpl(
                     for (j in 0 until blocksArr.length()) {
                         val bObj = blocksArr.getJSONObject(j)
                         val widgetTypeStr = bObj.optString("widgetType", "")
-                        val wType = when (widgetTypeStr.lowercase()) {
-                            "clock" -> ZoneWidgetType.CLOCK
-                            "ticker" -> ZoneWidgetType.TICKER
-                            "queue" -> ZoneWidgetType.QUEUE
-                            "webview" -> ZoneWidgetType.WEBVIEW
+                        val hasQueue = !bObj.optString("queueId").isNullOrEmpty() || !bObj.optString("queue_id").isNullOrEmpty() || widgetTypeStr.equals("queue", true)
+                        val hasClock = !bObj.optString("clockId").isNullOrEmpty() || !bObj.optString("clock_id").isNullOrEmpty() || widgetTypeStr.equals("clock", true)
+                        val hasTicker = !bObj.optString("tickerId").isNullOrEmpty() || !bObj.optString("ticker_id").isNullOrEmpty() || widgetTypeStr.equals("ticker", true)
+                        val hasWebview = !bObj.optString("webviewId").isNullOrEmpty() || !bObj.optString("webview_id").isNullOrEmpty() || widgetTypeStr.equals("webview", true)
+
+                        val wType = when {
+                            hasQueue -> ZoneWidgetType.QUEUE
+                            hasClock -> ZoneWidgetType.CLOCK
+                            hasTicker -> ZoneWidgetType.TICKER
+                            hasWebview -> ZoneWidgetType.WEBVIEW
                             else -> ZoneWidgetType.NONE
                         }
                         blocksList.add(

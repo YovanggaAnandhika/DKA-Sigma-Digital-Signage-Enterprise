@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 sealed class PairingUiState {
     object Initial : PairingUiState()
@@ -47,7 +48,7 @@ class PairingViewModel(
     private fun pollPairingStatus(pairingCode: String) {
         viewModelScope.launch {
             while (true) {
-                delay(5_000)
+                delay(5_000.milliseconds)
                 val statusResult = registerAndPairUseCase.checkStatus(pairingCode)
                 if (statusResult.isSuccess && statusResult.getOrNull()?.isSuccess == true) {
                     _uiState.value = PairingUiState.PairedSuccess

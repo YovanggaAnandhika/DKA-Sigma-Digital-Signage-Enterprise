@@ -178,6 +178,12 @@ impl ManifestService {
                         }
                         mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto { block: block.block.clone(), item_overrides: block.item_overrides.clone() });
                     }
+                } else {
+                    // Studio Component Widgets (Queue, Clock, Ticker, WebView, Album)
+                    mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto {
+                        block: block.block.clone(),
+                        item_overrides: block.item_overrides.clone(),
+                    });
                 }
             }
 
@@ -190,6 +196,15 @@ impl ManifestService {
         // Compute checksum of the entire manifest structure
         let mut hasher = Sha256::new();
         hasher.update(format!("{}:{}:{:?}", effective_layout_id, enriched_zones.len(), assets_vec.len()).as_bytes());
+        for z in &enriched_zones {
+            hasher.update(format!("{}:{}:{}:{}:{}", z.layer.id, z.layer.x, z.layer.y, z.layer.width, z.layer.height).as_bytes());
+            for b in &z.blocks {
+                hasher.update(format!("{}:{}:{:?}:{:?}:{:?}", b.block.id, b.block.duration_seconds, b.block.media_item_id, b.block.playlist_id, b.block.queue_id).as_bytes());
+            }
+        }
+        for a in &assets_vec {
+            hasher.update(format!("{}:{}", a.media_id, a.sha256_hash).as_bytes());
+        }
         let version_hash = format!("{:x}", hasher.finalize());
 
         if let Some(client_h) = client_hash {
