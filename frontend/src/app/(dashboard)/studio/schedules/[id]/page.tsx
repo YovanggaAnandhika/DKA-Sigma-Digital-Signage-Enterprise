@@ -444,6 +444,19 @@ export default function ViewSchedulePage() {
           },
           ...prev,
         ]);
+        if (assignedDevices.length > 0) {
+          for (const dev of assignedDevices) {
+            fetch('/api/stream/device', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                deviceId: dev.id,
+                type: 'CANCELLED',
+                fileName: file.name,
+              }),
+            }).catch(() => null);
+          }
+        }
       }
     } finally {
       setUploading(false);
@@ -464,6 +477,7 @@ export default function ViewSchedulePage() {
           body: JSON.stringify({
             deviceId: dev.id,
             type: 'CANCELLED',
+            fileName: selectedUploadFile?.name || '',
           }),
         }).catch(() => null);
       }
