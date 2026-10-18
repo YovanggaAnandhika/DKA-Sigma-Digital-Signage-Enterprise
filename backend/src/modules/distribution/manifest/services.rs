@@ -165,7 +165,11 @@ impl ManifestService {
                                 );
                             }
                         }
-                        mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto { block: block.block.clone(), item_overrides: block.item_overrides.clone() });
+                        mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto {
+                            block: block.block.clone(),
+                            item_overrides: block.item_overrides.clone(),
+                            playlist: Some(pl),
+                        });
                     }
                 } else if let Some(media_id) = block.block.media_item_id {
                     if let Ok(Some(media)) = MediaRepository::find_by_id(pool, media_id).await {
@@ -183,7 +187,11 @@ impl ManifestService {
                                 },
                             );
                         }
-                        mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto { block: block.block.clone(), item_overrides: block.item_overrides.clone() });
+                        mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto {
+                            block: block.block.clone(),
+                            item_overrides: block.item_overrides.clone(),
+                            playlist: None,
+                        });
                     }
                 } else if let Some(album_id) = block.block.album_id {
                     // Enrich album photo assets for offline-first player caching
@@ -215,12 +223,14 @@ impl ManifestService {
                     mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto {
                         block: block.block.clone(),
                         item_overrides: block.item_overrides.clone(),
+                        playlist: None,
                     });
                 } else {
                     // Studio Component Widgets (Queue, Clock, Ticker, WebView)
                     mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto {
                         block: block.block.clone(),
                         item_overrides: block.item_overrides.clone(),
+                        playlist: None,
                     });
                 }
             }

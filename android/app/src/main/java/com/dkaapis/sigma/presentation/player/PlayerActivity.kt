@@ -848,26 +848,52 @@ class PlayerActivity : AppCompatActivity() {
                 var firstImageFile: File? = null
 
                 for (block in zone.blocks) {
-                    val mediaId = block.mediaItemId ?: continue
-                    val file = storageRepo.getLocalFileForAsset(mediaId) ?: continue
-                    val asset = manifest.requiredAssets.find { it.mediaId == mediaId }
-                    val isVideo = asset?.localFilename?.endsWith(".mp4", ignoreCase = true) == true
-                        || asset?.url?.endsWith(".mp4", ignoreCase = true) == true
-                        || asset?.mediaType == MediaType.VIDEO
-                        || isVideoFile(file)
+                    if (block.playlistItems.isNotEmpty()) {
+                        for (item in block.playlistItems.sortedBy { it.position }) {
+                            val mediaId = item.mediaItemId
+                            val file = storageRepo.getLocalFileForAsset(mediaId) ?: continue
+                            val asset = manifest.requiredAssets.find { it.mediaId == mediaId }
+                            val isVideo = asset?.localFilename?.endsWith(".mp4", ignoreCase = true) == true
+                                || asset?.url?.endsWith(".mp4", ignoreCase = true) == true
+                                || asset?.mediaType == MediaType.VIDEO
+                                || isVideoFile(file)
 
-                    if (isVideo) {
-                        videoItems.add(
-                            VideoPlaylistItem(
-                                file = file,
-                                durationSeconds = block.durationSeconds,
-                                isMuted = block.isMuted,
-                                mediaId = mediaId,
-                                mediaName = asset?.localFilename ?: file.name
+                            if (isVideo) {
+                                videoItems.add(
+                                    VideoPlaylistItem(
+                                        file = file,
+                                        durationSeconds = item.durationSeconds,
+                                        isMuted = item.isMuted || block.isMuted,
+                                        mediaId = mediaId,
+                                        mediaName = asset?.localFilename ?: file.name
+                                    )
+                                )
+                            } else if (firstImageFile == null) {
+                                firstImageFile = file
+                            }
+                        }
+                    } else {
+                        val mediaId = block.mediaItemId ?: continue
+                        val file = storageRepo.getLocalFileForAsset(mediaId) ?: continue
+                        val asset = manifest.requiredAssets.find { it.mediaId == mediaId }
+                        val isVideo = asset?.localFilename?.endsWith(".mp4", ignoreCase = true) == true
+                            || asset?.url?.endsWith(".mp4", ignoreCase = true) == true
+                            || asset?.mediaType == MediaType.VIDEO
+                            || isVideoFile(file)
+
+                        if (isVideo) {
+                            videoItems.add(
+                                VideoPlaylistItem(
+                                    file = file,
+                                    durationSeconds = block.durationSeconds,
+                                    isMuted = block.isMuted,
+                                    mediaId = mediaId,
+                                    mediaName = asset?.localFilename ?: file.name
+                                )
                             )
-                        )
-                    } else if (firstImageFile == null) {
-                        firstImageFile = file
+                        } else if (firstImageFile == null) {
+                            firstImageFile = file
+                        }
                     }
                 }
 

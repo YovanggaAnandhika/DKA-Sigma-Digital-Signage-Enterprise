@@ -64,6 +64,8 @@ pub struct LayerBlockDto {
     #[serde(flatten)]
     pub block: LayerBlockEntity,
     pub item_overrides: Vec<LayerPlaylistItemOverrideEntity>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub playlist: Option<crate::modules::studio::playlist::model::PlaylistWithItemsDto>,
 }
 
 pub type LayerPlaylistEntity = LayerBlockEntity;

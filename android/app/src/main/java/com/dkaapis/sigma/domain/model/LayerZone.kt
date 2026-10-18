@@ -8,6 +8,14 @@ enum class ZoneWidgetType {
     WEBVIEW
 }
 
+data class LayerPlaylistItem(
+    val id: String = "",
+    val mediaItemId: String = "",
+    val position: Int = 0,
+    val durationSeconds: Int = 0,
+    val isMuted: Boolean = false
+)
+
 data class LayerBlock(
     val id: String,
     val mediaItemId: String? = null,
@@ -16,7 +24,8 @@ data class LayerBlock(
     val widgetDataJson: String? = null,
     val startTimeSeconds: Int = 0,
     val durationSeconds: Int = 10,
-    val isMuted: Boolean = false
+    val isMuted: Boolean = false,
+    val playlistItems: List<LayerPlaylistItem> = emptyList()
 )
 
 data class LayerZone(

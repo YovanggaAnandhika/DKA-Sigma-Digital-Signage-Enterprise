@@ -130,6 +130,7 @@ impl LayoutRepository {
                 block_dtos.push(LayerBlockDto {
                     block,
                     item_overrides: overrides,
+                    playlist: None,
                 });
             }
 

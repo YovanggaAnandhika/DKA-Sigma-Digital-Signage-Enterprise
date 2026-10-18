@@ -153,6 +153,29 @@ class ManifestRepositoryImpl(
                             hasWebview -> ZoneWidgetType.WEBVIEW
                             else -> ZoneWidgetType.NONE
                         }
+                        val playlistItems = mutableListOf<LayerPlaylistItem>()
+                        val plObj = bObj.optJSONObject("playlist")
+                        val itemsArr = plObj?.optJSONArray("itemsList")
+                            ?: plObj?.optJSONArray("items")
+                            ?: bObj.optJSONArray("playlistItems")
+                        if (itemsArr != null) {
+                            for (k in 0 until itemsArr.length()) {
+                                val itm = itemsArr.getJSONObject(k)
+                                val mId = itm.optString("mediaItemId").ifEmpty { itm.optString("media_item_id") }
+                                if (mId.isNotEmpty()) {
+                                    playlistItems.add(
+                                        LayerPlaylistItem(
+                                            id = itm.optString("id", "pl-item-$k"),
+                                            mediaItemId = mId,
+                                            position = itm.optInt("position", k),
+                                            durationSeconds = itm.optInt("durationSeconds", itm.optInt("duration_seconds", 0)),
+                                            isMuted = itm.optBoolean("isMuted", itm.optBoolean("is_muted", false))
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
                         blocksList.add(
                             LayerBlock(
                                 id = bObj.optString("id", "blk-$j"),
@@ -164,7 +187,8 @@ class ManifestRepositoryImpl(
                                 },
                                 startTimeSeconds = bObj.optInt("startTimeSeconds", 0),
                                 durationSeconds = bObj.optInt("durationSeconds", 10),
-                                isMuted = bObj.optBoolean("isMuted", false)
+                                isMuted = bObj.optBoolean("isMuted", false),
+                                playlistItems = playlistItems
                             )
                         )
                     }
@@ -290,6 +314,20 @@ class ManifestRepositoryImpl(
                                 if (block.widgetDataJson != null) put("widgetDataJson", block.widgetDataJson)
                                 put("durationSeconds", block.durationSeconds)
                                 put("isMuted", block.isMuted)
+                                if (block.playlistItems.isNotEmpty()) {
+                                    val plItemsArr = JSONArray()
+                                    for (pItem in block.playlistItems) {
+                                        val pObj = JSONObject().apply {
+                                            put("id", pItem.id)
+                                            put("mediaItemId", pItem.mediaItemId)
+                                            put("position", pItem.position)
+                                            put("durationSeconds", pItem.durationSeconds)
+                                            put("isMuted", pItem.isMuted)
+                                        }
+                                        plItemsArr.put(pObj)
+                                    }
+                                    put("playlistItems", plItemsArr)
+                                }
                             }
                             blocksArr.put(bObj)
                         }

@@ -38,39 +38,73 @@ impl ManifestServiceImpl {
                 border_radius: z.layer.border_radius,
                 border_color: z.layer.border_color,
                 border_width: z.layer.border_width,
-                blocks: z.blocks.into_iter().map(|b| LayerPlaylist {
-                    id: b.block.id.to_string(),
-                    layer_id: z.layer.id.to_string(),
-                    volume_level: b.block.volume_level,
-                    playlist_id: b.block.playlist_id.map(|id| id.to_string()).unwrap_or_default(),
-                    media_item_id: b.block.media_item_id.map(|id| id.to_string()).unwrap_or_default(),
-                    playlist: None, // Simplified for now
-                    media_item: None,
-                    start_time_seconds: b.block.start_time_seconds,
-                    duration_seconds: b.block.duration_seconds,
-                    trim_start_seconds: b.block.trim_start_seconds,
-                    trim_end_seconds: b.block.trim_end_seconds,
-                    transition_id: b.block.transition_id.map(|id| id.to_string()),
-                    visual_filter_id: b.block.visual_filter_id.map(|id| id.to_string()),
-                    order_index: b.block.order_index,
-                    is_muted: b.block.is_muted,
-                    ticker_id: b.block.ticker_id.map(|id| id.to_string()),
-                    clock_id: b.block.clock_id.map(|id| id.to_string()),
-                    webview_id: b.block.webview_id.map(|id| id.to_string()),
-                    queue_id: b.block.queue_id.map(|id| id.to_string()),
-                    album_id: b.block.album_id.map(|id| id.to_string()),
-                    created_at: b.block.created_at.to_rfc3339(),
-                    item_overrides: b.item_overrides.into_iter().map(|o| {
-                        crate::grpc::proto::studio::v1::layer::LayerPlaylistItemOverride {
-                            id: o.id.to_string(),
-                            layer_playlist_id: o.layer_block_id.to_string(),
-                            playlist_item_id: o.playlist_item_id.to_string(),
-                            is_muted: o.is_muted.unwrap_or(false),
-                            volume_level: o.volume_level.unwrap_or(100),
-                        }
-                    }).collect(),
-                    transition: None,
-                    visual_filter: None,
+                blocks: z.blocks.into_iter().map(|b| {
+                    let duration = if b.block.duration_seconds > 0 {
+                        b.block.duration_seconds
+                    } else if let Some(ref pl) = b.playlist {
+                        pl.total_duration_seconds
+                    } else {
+                        10
+                    };
+                    let fallback_media_id = b.block.media_item_id
+                        .map(|id| id.to_string())
+                        .or_else(|| b.playlist.as_ref().and_then(|pl| pl.items.first().map(|i| i.media_item_id.to_string())))
+                        .unwrap_or_default();
+                    let proto_playlist = b.playlist.map(|pl| crate::grpc::proto::studio::v1::playlist::Playlist {
+                        id: pl.playlist.id.to_string(),
+                        name: pl.playlist.name,
+                        description: pl.playlist.description.unwrap_or_default(),
+                        is_shuffle: pl.playlist.is_shuffle,
+                        items: pl.items.into_iter().map(|item| crate::grpc::proto::studio::v1::playlist::PlaylistItem {
+                            id: item.id.to_string(),
+                            playlist_id: item.playlist_id.to_string(),
+                            media_item_id: item.media_item_id.to_string(),
+                            media_item: None,
+                            position: item.position,
+                            duration_seconds: item.duration_seconds,
+                            transition_type: item.transition_type,
+                            created_at: "".to_string(),
+                            is_muted: item.is_muted,
+                        }).collect(),
+                        total_duration_seconds: pl.total_duration_seconds,
+                        created_at: pl.playlist.created_at.to_rfc3339(),
+                        updated_at: pl.playlist.updated_at.to_rfc3339(),
+                    });
+
+                    LayerPlaylist {
+                        id: b.block.id.to_string(),
+                        layer_id: z.layer.id.to_string(),
+                        volume_level: b.block.volume_level,
+                        playlist_id: b.block.playlist_id.map(|id| id.to_string()).unwrap_or_default(),
+                        media_item_id: fallback_media_id,
+                        playlist: proto_playlist,
+                        media_item: None,
+                        start_time_seconds: b.block.start_time_seconds,
+                        duration_seconds: duration,
+                        trim_start_seconds: b.block.trim_start_seconds,
+                        trim_end_seconds: b.block.trim_end_seconds,
+                        transition_id: b.block.transition_id.map(|id| id.to_string()),
+                        visual_filter_id: b.block.visual_filter_id.map(|id| id.to_string()),
+                        order_index: b.block.order_index,
+                        is_muted: b.block.is_muted,
+                        ticker_id: b.block.ticker_id.map(|id| id.to_string()),
+                        clock_id: b.block.clock_id.map(|id| id.to_string()),
+                        webview_id: b.block.webview_id.map(|id| id.to_string()),
+                        queue_id: b.block.queue_id.map(|id| id.to_string()),
+                        album_id: b.block.album_id.map(|id| id.to_string()),
+                        created_at: b.block.created_at.to_rfc3339(),
+                        item_overrides: b.item_overrides.into_iter().map(|o| {
+                            crate::grpc::proto::studio::v1::layer::LayerPlaylistItemOverride {
+                                id: o.id.to_string(),
+                                layer_playlist_id: o.layer_block_id.to_string(),
+                                playlist_item_id: o.playlist_item_id.to_string(),
+                                is_muted: o.is_muted.unwrap_or(false),
+                                volume_level: o.volume_level.unwrap_or(100),
+                            }
+                        }).collect(),
+                        transition: None,
+                        visual_filter: None,
+                    }
                 }).collect(),
                 created_at: "".to_string(),
                 updated_at: "".to_string(),
