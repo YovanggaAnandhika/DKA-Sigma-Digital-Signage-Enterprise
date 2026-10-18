@@ -30,6 +30,10 @@ class VideoZoneRenderer(
     private var currentItemMuted: Boolean = false
     private var playlistItems: List<VideoPlaylistItem> = emptyList()
 
+    var onPlaybackCompleted: ((mediaId: String, durationSeconds: Int) -> Unit)? = null
+    private var lastTrackIndex: Int = -1
+    private var currentTrackStartTimeMs: Long = 0L
+
     fun createView(parent: ViewGroup, videoFile: File, isMuted: Boolean = false): PlayerView {
         return createPlaylistView(parent, listOf(VideoPlaylistItem(videoFile, 0, isMuted)))
     }
@@ -73,10 +77,25 @@ class VideoZoneRenderer(
             val firstMuted = playlist.firstOrNull()?.isMuted ?: false
             currentItemMuted = firstMuted
             volume = if (firstMuted) 0f else (if (isDucked) 0.15f else 1.0f)
+            lastTrackIndex = 0
+            currentTrackStartTimeMs = System.currentTimeMillis()
 
             addListener(object : Player.Listener {
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                    val prevIdx = lastTrackIndex
+                    val now = System.currentTimeMillis()
+                    if (prevIdx in playlist.indices && currentTrackStartTimeMs > 0L) {
+                        val prevItem = playlist[prevIdx]
+                        val playedSec = ((now - currentTrackStartTimeMs) / 1000).toInt()
+                        if (playedSec >= 1 && prevItem.mediaId.isNotBlank()) {
+                            onPlaybackCompleted?.invoke(prevItem.mediaId, playedSec)
+                        }
+                    }
+
                     val idx = currentMediaItemIndex
+                    lastTrackIndex = idx
+                    currentTrackStartTimeMs = now
+
                     if (idx in playlist.indices) {
                         val current = playlist[idx]
                         currentItemMuted = current.isMuted
@@ -86,7 +105,19 @@ class VideoZoneRenderer(
                 }
 
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                    android.util.Log.e("VideoZoneRenderer", "Playback error in playlist: ${error.message}", error)
+                    android.util.Log.e("VideoZoneRenderer", "Playback error in playlist item $currentMediaItemIndex: ${error.message}", error)
+                    // Auto-fallback: lewati video korup otomatis agar layar tidak hang/layar hitam
+                    try {
+                        if (playlist.size > 1) {
+                            seekToNextMediaItem()
+                            prepare()
+                            play()
+                        } else {
+                            prepare()
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("VideoZoneRenderer", "Gagal auto-recover: ${e.message}")
+                    }
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
@@ -161,6 +192,13 @@ class VideoZoneRenderer(
     }
 
     fun release() {
+        if (lastTrackIndex in playlistItems.indices && currentTrackStartTimeMs > 0L) {
+            val item = playlistItems[lastTrackIndex]
+            val playedSec = ((System.currentTimeMillis() - currentTrackStartTimeMs) / 1000).toInt()
+            if (playedSec >= 1 && item.mediaId.isNotBlank()) {
+                onPlaybackCompleted?.invoke(item.mediaId, playedSec)
+            }
+        }
         exoPlayer?.release()
         exoPlayer = null
         playerView?.player = null
