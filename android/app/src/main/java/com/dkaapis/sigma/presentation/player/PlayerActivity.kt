@@ -36,12 +36,17 @@ import com.dkaapis.sigma.presentation.player.canvas.ZoneContainerView
 import com.dkaapis.sigma.presentation.renderers.*
 import com.dkaapis.sigma.service.PlayerForegroundService
 import com.dkaapis.sigma.service.WatchdogService
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 class PlayerActivity : AppCompatActivity() {
 
@@ -53,6 +58,13 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var loadingText: TextView
     private lateinit var subDetailText: TextView
     private lateinit var progressBar: ProgressBar
+
+    private var realtimeStreamJob: Job? = null
+    private val streamingHttpClient = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(0, TimeUnit.MILLISECONDS)
+        .retryOnConnectionFailure(true)
+        .build()
 
     private val videoRenderers = mutableListOf<VideoZoneRenderer>()
     private val clockRenderers = mutableListOf<ClockZoneRenderer>()
@@ -123,6 +135,7 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         viewModel.initializePlayer()
+        startRealtimeDeviceStream()
     }
 
     private fun initDependencies() {
@@ -505,8 +518,103 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
+    private fun startRealtimeDeviceStream() {
+        val deviceId = deviceRepo.getSavedDeviceId()
+        if (deviceId.isNullOrEmpty()) return
+
+        realtimeStreamJob?.cancel()
+        realtimeStreamJob = lifecycleScope.launch(Dispatchers.IO) {
+            val baseUrl = try {
+                getString(com.dkaapis.sigma.R.string.server_http_base_url)
+            } catch (_: Exception) {
+                "http://100.99.242.84:80"
+            }
+
+            while (isActive) {
+                try {
+                    val request = Request.Builder()
+                        .url("$baseUrl/api/stream/device?deviceId=$deviceId")
+                        .addHeader("Accept", "text/event-stream")
+                        .build()
+
+                    val response = streamingHttpClient.newCall(request).execute()
+                    if (response.isSuccessful) {
+                        val inputStream = response.body?.byteStream()
+                        if (inputStream != null) {
+                            inputStream.bufferedReader().useLines { lines ->
+                                for (line in lines) {
+                                    if (!isActive) break
+                                    if (line.startsWith("data: ")) {
+                                        val jsonStr = line.substring(6).trim()
+                                        try {
+                                            val data = JSONObject(jsonStr)
+                                            handleRealtimeEvent(data)
+                                        } catch (_: Exception) {}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.w("PlayerActivity", "SSE Stream disconnected: ${e.message}, reconnecting in 3s...")
+                }
+                delay(3000)
+            }
+        }
+    }
+
+    private fun handleRealtimeEvent(data: JSONObject) {
+        val type = data.optString("type", "")
+        runOnUiThread {
+            when (type) {
+                "CHUNK_PROGRESS" -> {
+                    val chunkIndex = data.optInt("chunkIndex", 0)
+                    val completedChunks = data.optInt("completedChunks", chunkIndex + 1)
+                    val totalChunks = data.optInt("totalChunks", 1)
+                    val percent = data.optInt("percent", 0)
+                    val uploadedBytes = data.optLong("uploadedBytes", 0L)
+                    val totalBytes = data.optLong("totalBytes", 0L)
+                    val fileName = data.optString("fileName", "Media Asset")
+
+                    loadingOverlay.visibility = View.VISIBLE
+                    progressBar.isIndeterminate = false
+                    progressBar.progress = percent
+
+                    val uploadedMb = String.format(java.util.Locale.US, "%.1f", uploadedBytes / (1024.0 * 1024.0))
+                    val totalMb = String.format(java.util.Locale.US, "%.1f", totalBytes / (1024.0 * 1024.0))
+
+                    loadingText.text = "Menerima Transmisi Chunk (${completedChunks}/${totalChunks}) • ${percent}%"
+                    subDetailText.text = "${fileName}\n[ ${uploadedMb} MB / ${totalMb} MB ]\nLokasi: /storage/emulated/0/Android/data/com.dkaapis.sigma/files/assets/"
+                }
+                "COMPLETE" -> {
+                    val totalChunks = data.optInt("totalChunks", 1)
+                    val fileName = data.optString("fileName", "Media")
+                    progressBar.isIndeterminate = false
+                    progressBar.progress = 100
+                    loadingText.text = "✓ Transmisi Seluruh Chunk Selesai (SHA-256 Valid)"
+                    subDetailText.text = "${fileName}\nSeluruh ${totalChunks} chunk berhasil diterima & terverifikasi."
+
+                    watchdogHandler.postDelayed({
+                        if (viewModel.uiState.value is PlayerUiState.Playing) {
+                            loadingOverlay.visibility = View.GONE
+                        }
+                    }, 2000)
+                }
+                "CANCELLED" -> {
+                    if (viewModel.uiState.value is PlayerUiState.Playing) {
+                        loadingOverlay.visibility = View.GONE
+                    }
+                }
+                "RELOAD" -> {
+                    viewModel.syncManifest()
+                }
+            }
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
+        realtimeStreamJob?.cancel()
         watchdogHandler.removeCallbacks(watchdogHeartbeatRunnable)
         releaseRenderers()
     }

@@ -236,6 +236,7 @@ export default function ViewSchedulePage() {
 
     let completedChunks = 0;
     let totalUploadedBytes = 0;
+    let lastStreamPushTime = 0;
     const startTime = Date.now();
     const MAX_CONCURRENCY = 5;
 
@@ -286,6 +287,32 @@ export default function ViewSchedulePage() {
           uploadedBytes: totalUploadedBytes,
           totalBytes,
         });
+
+        // Broadcast realtime chunk telemetry to player screens
+        if (assignedDevices.length > 0) {
+          const now = Date.now();
+          if (now - lastStreamPushTime > 80 || completedChunks === totalChunks || completedChunks === 1) {
+            lastStreamPushTime = now;
+            for (const dev of assignedDevices) {
+              fetch('/api/stream/device', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  deviceId: dev.id,
+                  type: 'CHUNK_PROGRESS',
+                  fileName: file.name,
+                  chunkIndex,
+                  completedChunks,
+                  totalChunks,
+                  percent: progress,
+                  uploadedBytes: totalUploadedBytes,
+                  totalBytes,
+                  speedBps,
+                }),
+              }).catch(() => null);
+            }
+          }
+        }
 
         // Log every 10 chunks or the final chunk to avoid React state flood
         if (chunkIndex % 10 === 0 || completedChunks === totalChunks) {
@@ -364,8 +391,23 @@ export default function ViewSchedulePage() {
           ...prev,
         ]);
 
-        // Pengujian pengiriman ke player tanpa membuat data di Pustaka Media / Layout
+        // Pengiriman sinyal COMPLETE secara real-time ke player
         if (assignedDevices.length > 0) {
+          for (const dev of assignedDevices) {
+            fetch('/api/stream/device', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                deviceId: dev.id,
+                type: 'COMPLETE',
+                fileName: file.name,
+                totalChunks,
+                totalBytes,
+                sha256Hash: finalResult.sha256Hash,
+              }),
+            }).catch(() => null);
+          }
+
           setUploadLogs((prev) => [
             {
               id: `test-push-${Date.now()}`,
@@ -428,6 +470,18 @@ export default function ViewSchedulePage() {
       abortControllerRef.current.abort();
     }
     setUploading(false);
+    if (assignedDevices.length > 0) {
+      for (const dev of assignedDevices) {
+        fetch('/api/stream/device', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            deviceId: dev.id,
+            type: 'CANCELLED',
+          }),
+        }).catch(() => null);
+      }
+    }
   };
 
   const dayNames = [
