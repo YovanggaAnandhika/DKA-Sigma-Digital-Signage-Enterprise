@@ -4,11 +4,12 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/services';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function CreateOrientasiPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     value: '',
@@ -16,26 +17,28 @@ export default function CreateOrientasiPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage('');
     try {
       setLoading(true);
       if (!formData.name.trim()) throw new Error('Nama orientasi wajib diisi');
       if (!formData.value.trim()) throw new Error('Kode sistem (value) wajib diisi');
 
       await api.createOrientation({
-        name: formData.name,
+        name: formData.name.trim(),
         value: formData.value.toLowerCase().replace(/\s+/g, '_'),
       });
 
       router.push('/studio/layouts/orientasi');
     } catch (err: any) {
-      alert(err.message || 'Gagal menambahkan orientasi');
+      const msg = err.message ? err.message.replace(/^\d+\s+[A-Z_]+:\s*/, '') : 'Gagal menambahkan orientasi';
+      setErrorMessage(msg);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <Link href="/studio/layouts/orientasi" className="btn btn-outline" style={{ padding: '8px' }}>
           <ArrowLeft size={16} />
@@ -50,8 +53,28 @@ export default function CreateOrientasiPage() {
         </div>
       </div>
 
-      <div className="card-elevated" style={{ padding: '24px', width: '100%', maxWidth: '640px' }}>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      <div className="card-elevated" style={{ padding: '28px', width: '100%' }}>
+        {errorMessage && (
+          <div
+            style={{
+              padding: '12px 16px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.25)',
+              color: 'var(--accent-rose)',
+              fontSize: '0.875rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              marginBottom: '20px',
+            }}
+          >
+            <AlertCircle size={18} style={{ flexShrink: 0 }} />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
               Nama Orientasi <span style={{ color: 'var(--accent-rose)' }}>*</span>
@@ -89,12 +112,12 @@ export default function CreateOrientasiPage() {
             </span>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
             <Link href="/studio/layouts/orientasi" className="btn btn-secondary">
               Batal
             </Link>
-            <button type="submit" disabled={loading} className="btn btn-primary">
-              <Save size={14} />
+            <button type="submit" disabled={loading} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              {loading ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
               <span>{loading ? 'Menyimpan...' : 'Simpan Master Orientasi'}</span>
             </button>
           </div>
