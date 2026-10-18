@@ -14,6 +14,12 @@ pub struct LayerEntity {
     pub height: i32,
     pub z_index: i32,
     pub background_color: String,
+    pub opacity: f64,
+    pub overlay_color: String,
+    pub overlay_opacity: f64,
+    pub border_radius: i32,
+    pub border_color: String,
+    pub border_width: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -80,6 +86,12 @@ pub struct CreateLayerDto {
     pub height: i32,
     pub z_index: Option<i32>,
     pub background_color: Option<String>,
+    pub opacity: Option<f64>,
+    pub overlay_color: Option<String>,
+    pub overlay_opacity: Option<f64>,
+    pub border_radius: Option<i32>,
+    pub border_color: Option<String>,
+    pub border_width: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -91,6 +103,12 @@ pub struct UpdateLayerDto {
     pub height: Option<i32>,
     pub z_index: Option<i32>,
     pub background_color: Option<String>,
+    pub opacity: Option<f64>,
+    pub overlay_color: Option<String>,
+    pub overlay_opacity: Option<f64>,
+    pub border_radius: Option<i32>,
+    pub border_color: Option<String>,
+    pub border_width: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]

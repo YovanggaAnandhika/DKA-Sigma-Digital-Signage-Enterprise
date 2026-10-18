@@ -31,7 +31,9 @@ impl QueueServiceImpl {
         let display = sqlx::query!(
             r#"
             SELECT id, name, prefix, canvas_width, canvas_height, background_color,
-                   background_image_url, theme_preset, auto_recall_enabled, created_at, updated_at
+                   background_image_url, theme_preset, auto_recall_enabled,
+                   opacity, overlay_color, overlay_opacity,
+                   created_at, updated_at
             FROM queue_displays
             WHERE id = $1
             "#,
@@ -46,7 +48,9 @@ impl QueueServiceImpl {
             r#"
             SELECT id, queue_display_id, item_type, name, x, y, width, height, z_index,
                    background_color, text_color, font_size, font_weight, text_align,
-                   template_content, config, is_visible, created_at, updated_at
+                   template_content, config, is_visible,
+                   opacity, border_radius, border_color, border_width,
+                   created_at, updated_at
             FROM queue_layout_items
             WHERE queue_display_id = $1
             ORDER BY z_index ASC, created_at ASC
@@ -67,7 +71,7 @@ impl QueueServiceImpl {
             width: it.width,
             height: it.height,
             z_index: it.z_index,
-            background_color: it.background_color.unwrap_or_default(),
+            background_color: it.background_color.unwrap_or_else(|| "transparent".to_string()),
             text_color: it.text_color.unwrap_or_default(),
             font_size: it.font_size.unwrap_or(24),
             font_weight: it.font_weight.unwrap_or_default(),
@@ -77,6 +81,10 @@ impl QueueServiceImpl {
             is_visible: it.is_visible,
             created_at: it.created_at.to_rfc3339(),
             updated_at: it.updated_at.to_rfc3339(),
+            opacity: it.opacity as f32,
+            border_radius: it.border_radius,
+            border_color: it.border_color,
+            border_width: it.border_width,
         })
         .collect();
 

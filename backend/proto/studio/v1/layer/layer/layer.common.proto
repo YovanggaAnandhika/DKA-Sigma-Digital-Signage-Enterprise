@@ -16,6 +16,12 @@ message Layer {
   string background_color = 11;
   string created_at = 12;
   string updated_at = 13;
+  float opacity = 14;
+  string overlay_color = 15;
+  float overlay_opacity = 16;
+  int32 border_radius = 17;
+  string border_color = 18;
+  int32 border_width = 19;
 }
 
 
@@ -28,6 +34,12 @@ message CreateLayerRequest {
   int32 height = 6;
   int32 z_index = 7;
   string background_color = 9;
+  float opacity = 10;
+  string overlay_color = 11;
+  float overlay_opacity = 12;
+  int32 border_radius = 13;
+  string border_color = 14;
+  int32 border_width = 15;
 }
 
 message GetLayerRequest {
@@ -57,6 +69,12 @@ message UpdateLayerRequest {
   int32 height = 6;
   int32 z_index = 7;
   string background_color = 9;
+  float opacity = 10;
+  string overlay_color = 11;
+  float overlay_opacity = 12;
+  int32 border_radius = 13;
+  string border_color = 14;
+  int32 border_width = 15;
 }
 
 message DeleteLayerRequest {

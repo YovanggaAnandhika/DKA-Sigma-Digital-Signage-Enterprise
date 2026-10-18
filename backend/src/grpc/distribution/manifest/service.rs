@@ -32,6 +32,12 @@ impl ManifestServiceImpl {
                 height: z.layer.height,
                 z_index: z.layer.z_index,
                 background_color: z.layer.background_color,
+                opacity: z.layer.opacity as f32,
+                overlay_color: z.layer.overlay_color,
+                overlay_opacity: z.layer.overlay_opacity as f32,
+                border_radius: z.layer.border_radius,
+                border_color: z.layer.border_color,
+                border_width: z.layer.border_width,
                 blocks: z.blocks.into_iter().map(|b| LayerPlaylist {
                     id: b.block.id.to_string(),
                     layer_id: z.layer.id.to_string(),

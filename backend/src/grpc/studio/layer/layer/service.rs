@@ -43,6 +43,12 @@ impl LayerServiceImpl {
             created_at: dto.layer.created_at.to_rfc3339(),
             updated_at: dto.layer.updated_at.to_rfc3339(),
             blocks: dto.blocks.into_iter().map(Self::map_layer_block).collect(),
+            opacity: dto.layer.opacity as f32,
+            overlay_color: dto.layer.overlay_color,
+            overlay_opacity: dto.layer.overlay_opacity as f32,
+            border_radius: dto.layer.border_radius,
+            border_color: dto.layer.border_color,
+            border_width: dto.layer.border_width,
         }
     }
 
@@ -106,6 +112,12 @@ impl LayerServiceTrait for LayerServiceImpl {
             height: req.height,
             z_index: Some(req.z_index),
             background_color: if req.background_color.is_empty() { None } else { Some(req.background_color) },
+            opacity: if req.opacity > 0.0 { Some(req.opacity as f64) } else { Some(1.0) },
+            overlay_color: if req.overlay_color.is_empty() { None } else { Some(req.overlay_color) },
+            overlay_opacity: Some(req.overlay_opacity as f64),
+            border_radius: Some(req.border_radius),
+            border_color: if req.border_color.is_empty() { None } else { Some(req.border_color) },
+            border_width: Some(req.border_width),
         };
 
         let layer = LayerService::create_layer(&self.pool, dto)
@@ -172,6 +184,12 @@ impl LayerServiceTrait for LayerServiceImpl {
             height: Some(req.height),
             z_index: Some(req.z_index),
             background_color: if req.background_color.is_empty() { None } else { Some(req.background_color) },
+            opacity: if req.opacity > 0.0 { Some(req.opacity as f64) } else { None },
+            overlay_color: if req.overlay_color.is_empty() { None } else { Some(req.overlay_color) },
+            overlay_opacity: Some(req.overlay_opacity as f64),
+            border_radius: Some(req.border_radius),
+            border_color: if req.border_color.is_empty() { None } else { Some(req.border_color) },
+            border_width: Some(req.border_width),
         };
 
         let layer = LayerService::update_layer(&self.pool, layer_id, dto)

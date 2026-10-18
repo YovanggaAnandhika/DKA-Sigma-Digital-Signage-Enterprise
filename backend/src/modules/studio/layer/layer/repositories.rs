@@ -11,9 +11,10 @@ impl LayerRepository {
         let layer = sqlx::query_as::<_, LayerEntity>(
             r#"
             INSERT INTO layers (
-                layout_id, name, x, y, width, height, z_index, background_color
+                layout_id, name, x, y, width, height, z_index, background_color,
+                opacity, overlay_color, overlay_opacity, border_radius, border_color, border_width
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING *
             "#,
         )
@@ -25,6 +26,12 @@ impl LayerRepository {
         .bind(dto.height)
         .bind(dto.z_index.unwrap_or(0))
         .bind(dto.background_color.unwrap_or_else(|| "transparent".to_string()))
+        .bind(dto.opacity.unwrap_or(1.0))
+        .bind(dto.overlay_color.unwrap_or_else(|| "transparent".to_string()))
+        .bind(dto.overlay_opacity.unwrap_or(0.0))
+        .bind(dto.border_radius.unwrap_or(0))
+        .bind(dto.border_color.unwrap_or_else(|| "transparent".to_string()))
+        .bind(dto.border_width.unwrap_or(0))
         .fetch_one(pool)
         .await?;
 
@@ -58,6 +65,12 @@ impl LayerRepository {
                 height = COALESCE($6, height),
                 z_index = COALESCE($7, z_index),
                 background_color = COALESCE($8, background_color),
+                opacity = COALESCE($9, opacity),
+                overlay_color = COALESCE($10, overlay_color),
+                overlay_opacity = COALESCE($11, overlay_opacity),
+                border_radius = COALESCE($12, border_radius),
+                border_color = COALESCE($13, border_color),
+                border_width = COALESCE($14, border_width),
                 updated_at = NOW()
             WHERE id = $1
             RETURNING *
@@ -71,6 +84,12 @@ impl LayerRepository {
         .bind(dto.height)
         .bind(dto.z_index)
         .bind(dto.background_color)
+        .bind(dto.opacity)
+        .bind(dto.overlay_color)
+        .bind(dto.overlay_opacity)
+        .bind(dto.border_radius)
+        .bind(dto.border_color)
+        .bind(dto.border_width)
         .fetch_one(pool)
         .await?;
 
