@@ -85,15 +85,12 @@ class TickerZoneRenderer(
             container.addView(badge)
         }
 
-        val marqueeText = TextView(context).apply {
+        val marqueeText = MarqueeTextView(context).apply {
             text = textMessage.ifBlank { "DKASigma Teks Berjalan" }
             setTextColor(textColor)
             textSize = if (fontSize > 0f) fontSize else 16f
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-            isSingleLine = true
-            ellipsize = TextUtils.TruncateAt.MARQUEE
-            marqueeRepeatLimit = -1
-            isSelected = true
+            speedPixelsPerSec = 110f
             layoutParams = LinearLayout.LayoutParams(
                 0,
                 ViewGroup.LayoutParams.WRAP_CONTENT,

@@ -30,7 +30,8 @@ data class QueueItemMeta(
     val templateContent: String,
     val borderRadius: Float = 0f,
     val borderWidth: Int = 0,
-    val borderColor: String = "#00000000"
+    val borderColor: String = "#00000000",
+    val speed: String = "normal"
 )
 
 class QueueCanvasView(
@@ -142,6 +143,7 @@ class QueueZoneRenderer(
                 var br = 0f
                 var bw = 0
                 var bc = "#00000000"
+                var spd = "normal"
                 val configStr = itemObj.optString("configJson", "")
                 if (configStr.isNotBlank()) {
                     try {
@@ -149,6 +151,7 @@ class QueueZoneRenderer(
                         br = cfg.optDouble("borderRadius", 0.0).toFloat()
                         bw = cfg.optInt("borderWidth", 0)
                         bc = cfg.optString("borderColor", "#00000000")
+                        spd = cfg.optString("speed", "normal")
                     } catch (_: Exception) {}
                 }
 
@@ -169,7 +172,8 @@ class QueueZoneRenderer(
                         templateContent = itemObj.optString("templateContent", ""),
                         borderRadius = br,
                         borderWidth = bw,
-                        borderColor = bc
+                        borderColor = bc,
+                        speed = spd
                     )
                 )
             }
@@ -210,7 +214,8 @@ class QueueZoneRenderer(
                     x = 0, y = 990, width = 1920, height = 90, zIndex = 4,
                     backgroundColor = "#064e3b", textColor = "#ffffff", fontSize = 24f,
                     fontWeight = "bold", textAlign = "left",
-                    templateContent = "PENGUMUMAN: Silakan menuju \$queue_counter\$ saat nomor \$queue_number\$ dipanggil. Terima kasih."
+                    templateContent = "PENGUMUMAN: Silakan menuju \$queue_counter\$ saat nomor \$queue_number\$ dipanggil. Terima kasih.",
+                    speed = "normal"
                 )
             )
         }
@@ -222,7 +227,17 @@ class QueueZoneRenderer(
             val isBold = meta.fontWeight == "800" || meta.fontWeight == "900" || meta.fontWeight.equals("bold", ignoreCase = true)
             val density = context.resources.displayMetrics.density
 
-            val textView = TextView(context).apply {
+            val textView = if (meta.itemType == "marquee") {
+                MarqueeTextView(context).apply {
+                    speedPixelsPerSec = when (meta.speed.lowercase()) {
+                        "fast" -> 160f
+                        "slow" -> 60f
+                        else -> 100f
+                    }
+                }
+            } else {
+                TextView(context)
+            }.apply {
                 tag = meta
                 text = textContent
                 setTextColor(parseColor(meta.textColor, Color.WHITE))
@@ -256,11 +271,7 @@ class QueueZoneRenderer(
                 }
 
                 if (meta.itemType == "marquee") {
-                    isSingleLine = true
-                    ellipsize = TextUtils.TruncateAt.MARQUEE
-                    marqueeRepeatLimit = -1
-                    isSelected = true
-                    setPadding((24 * density).toInt(), 0, (24 * density).toInt(), 0)
+                    setPadding((16 * density).toInt(), 0, (16 * density).toInt(), 0)
                 }
             }
 
