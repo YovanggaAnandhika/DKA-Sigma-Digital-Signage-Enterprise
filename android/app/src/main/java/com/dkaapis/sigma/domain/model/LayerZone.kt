@@ -28,6 +28,12 @@ data class LayerZone(
     val height: Int,
     val zIndex: Int = 1,
     val backgroundColor: String? = null,
+    val opacity: Float = 1.0f,
+    val overlayColor: String? = null,
+    val overlayOpacity: Float = 0.0f,
+    val borderRadius: Int = 0,
+    val borderColor: String? = null,
+    val borderWidth: Int = 0,
     val blocks: List<LayerBlock> = emptyList(),
     val isLocked: Boolean = false
 )

@@ -23,6 +23,12 @@ export interface Layer {
   zIndex: number;
   blocksList: LayerPlaylist[];
   backgroundColor: string;
+  opacity?: number;
+  overlayColor?: string;
+  overlayOpacity?: number;
+  borderRadius?: number;
+  borderColor?: string;
+  borderWidth?: number;
   createdAt: string;
   updatedAt: string;
 }

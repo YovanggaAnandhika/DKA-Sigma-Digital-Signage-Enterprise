@@ -842,6 +842,153 @@ export default function InspectorPanel() {
                 </div>
               </div>
 
+              {/* Gaya Visual Zona (Background, Opacity, Overlay, Border) */}
+              <div style={{ marginTop: '8px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Latar Belakang & Efek Zona
+                </span>
+
+                {/* Mode Background: Transparan vs Warna */}
+                <div style={{ display: 'flex', backgroundColor: 'var(--bg-base)', padding: '2px', borderRadius: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => updateSelectedLayer('backgroundColor', 'transparent')}
+                    style={{
+                      flex: 1,
+                      padding: '4px 6px',
+                      fontSize: '0.6875rem',
+                      fontWeight: 600,
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      backgroundColor: !selectedZone.backgroundColor || selectedZone.backgroundColor === 'transparent' ? 'var(--primary-600)' : 'transparent',
+                      color: !selectedZone.backgroundColor || selectedZone.backgroundColor === 'transparent' ? '#ffffff' : 'var(--text-muted)',
+                    }}
+                  >
+                    Transparan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateSelectedLayer('backgroundColor', selectedZone.backgroundColor && selectedZone.backgroundColor !== 'transparent' ? selectedZone.backgroundColor : '#000000')}
+                    style={{
+                      flex: 1,
+                      padding: '4px 6px',
+                      fontSize: '0.6875rem',
+                      fontWeight: 600,
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      backgroundColor: selectedZone.backgroundColor && selectedZone.backgroundColor !== 'transparent' ? 'var(--primary-600)' : 'transparent',
+                      color: selectedZone.backgroundColor && selectedZone.backgroundColor !== 'transparent' ? '#ffffff' : 'var(--text-muted)',
+                    }}
+                  >
+                    Warna Solid
+                  </button>
+                </div>
+
+                {selectedZone.backgroundColor && selectedZone.backgroundColor !== 'transparent' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <input
+                      type="color"
+                      value={selectedZone.backgroundColor.startsWith('#') ? selectedZone.backgroundColor : '#000000'}
+                      onChange={(e) => updateSelectedLayer('backgroundColor', e.target.value)}
+                      style={{ width: '26px', height: '26px', borderRadius: '4px', border: 'none', cursor: 'pointer', padding: 0 }}
+                    />
+                    <input
+                      type="text"
+                      value={selectedZone.backgroundColor}
+                      onChange={(e) => updateSelectedLayer('backgroundColor', e.target.value)}
+                      className="form-input"
+                      style={{ flex: 1, padding: '4px 8px', fontSize: '0.72rem' }}
+                    />
+                  </div>
+                )}
+
+                {/* Opacity Zona */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                    <label style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)' }}>Opacity Zona</label>
+                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--primary-400)' }}>
+                      {Math.round((selectedZone.opacity ?? 1.0) * 100)}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={Math.round((selectedZone.opacity ?? 1.0) * 100)}
+                    onChange={(e) => updateSelectedLayer('opacity', Number(e.target.value) / 100)}
+                    style={{ width: '100%', cursor: 'pointer' }}
+                  />
+                </div>
+
+                {/* Overlay Scrim */}
+                <div style={{ padding: '8px', borderRadius: '6px', backgroundColor: 'var(--bg-base)', border: '1px solid var(--border-subtle)' }}>
+                  <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                    Overlay Scrim (Gelapkan/Warnai)
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                    <input
+                      type="color"
+                      value={(selectedZone.overlayColor || '#000000').startsWith('#') ? (selectedZone.overlayColor || '#000000') : '#000000'}
+                      onChange={(e) => updateSelectedLayer('overlayColor', e.target.value)}
+                      style={{ width: '24px', height: '24px', borderRadius: '4px', border: 'none', cursor: 'pointer', padding: 0 }}
+                    />
+                    <input
+                      type="text"
+                      value={selectedZone.overlayColor || 'transparent'}
+                      onChange={(e) => updateSelectedLayer('overlayColor', e.target.value)}
+                      className="form-input"
+                      style={{ flex: 1, padding: '3px 6px', fontSize: '0.6875rem' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                    <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>Opacity Overlay</span>
+                    <span style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--primary-400)' }}>
+                      {Math.round((selectedZone.overlayOpacity ?? 0.0) * 100)}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={Math.round((selectedZone.overlayOpacity ?? 0.0) * 100)}
+                    onChange={(e) => updateSelectedLayer('overlayOpacity', Number(e.target.value) / 100)}
+                    style={{ width: '100%', cursor: 'pointer' }}
+                  />
+                </div>
+
+                {/* Border & Radius */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)' }}>Border Radius</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={selectedZone.borderRadius || 0}
+                      onChange={(e) => updateSelectedLayer('borderRadius', parseInt(e.target.value, 10) || 0)}
+                      className="form-input"
+                      style={{ padding: '4px 6px', fontSize: '0.72rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)' }}>Tebal Border</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={20}
+                      value={selectedZone.borderWidth || 0}
+                      onChange={(e) => updateSelectedLayer('borderWidth', parseInt(e.target.value, 10) || 0)}
+                      className="form-input"
+                      style={{ padding: '4px 6px', fontSize: '0.72rem' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Quick block allocation button inside layer */}
               <div style={{ marginTop: '8px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
                 <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>

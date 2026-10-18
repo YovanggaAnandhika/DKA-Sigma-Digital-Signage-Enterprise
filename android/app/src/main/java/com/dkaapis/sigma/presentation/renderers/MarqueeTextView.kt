@@ -14,6 +14,7 @@ class MarqueeTextView @JvmOverloads constructor(
 
     private var animator: ValueAnimator? = null
     var speedPixelsPerSec: Float = 100f
+    var cycleDurationMs: Long? = null
 
     init {
         maxLines = 1
@@ -30,12 +31,12 @@ class MarqueeTextView @JvmOverloads constructor(
         val textWidth = paint.measureText(textStr)
         val viewWidth = width.toFloat().takeIf { it > 0 } ?: return
 
-        // Sweep from right edge all the way to left edge, exactly like HTML <marquee>
+        // Sweep from right edge all the way to left edge, exactly like Web Studio CSS @keyframes marquee-scroll
         val startX = -viewWidth
         val endX = textWidth
         val distance = endX - startX
 
-        val durationMs = ((distance / speedPixelsPerSec) * 1000).toLong().coerceAtLeast(1000)
+        val durationMs = cycleDurationMs ?: ((distance / speedPixelsPerSec) * 1000).toLong().coerceAtLeast(1000)
 
         animator = ValueAnimator.ofFloat(startX, endX).apply {
             duration = durationMs
@@ -62,6 +63,11 @@ class MarqueeTextView @JvmOverloads constructor(
         if (w > 0) {
             post { startMarquee() }
         }
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        post { startMarquee() }
     }
 
     override fun onDetachedFromWindow() {

@@ -170,6 +170,17 @@ class ManifestRepositoryImpl(
                     }
                 }
 
+                val zOpacity = (if (zObj.has("opacity")) zObj.optDouble("opacity", 1.0) else 1.0).toFloat()
+                val zOverlayColor = zObj.optString("overlayColor").ifEmpty {
+                    zObj.optString("overlay_color").ifEmpty { null }
+                }
+                val zOverlayOpacity = (if (zObj.has("overlayOpacity")) zObj.optDouble("overlayOpacity", 0.0) else zObj.optDouble("overlay_opacity", 0.0)).toFloat()
+                val zBorderRadius = if (zObj.has("borderRadius")) zObj.optInt("borderRadius", 0) else zObj.optInt("border_radius", 0)
+                val zBorderColor = zObj.optString("borderColor").ifEmpty {
+                    zObj.optString("border_color").ifEmpty { null }
+                }
+                val zBorderWidth = if (zObj.has("borderWidth")) zObj.optInt("borderWidth", 0) else zObj.optInt("border_width", 0)
+
                 zonesList.add(
                     LayerZone(
                         id = zObj.optString("id", "zone-$i"),
@@ -180,6 +191,12 @@ class ManifestRepositoryImpl(
                         height = zObj.optInt("height", canvasHeight),
                         zIndex = zObj.optInt("zIndex", i + 1),
                         backgroundColor = zObj.optString("backgroundColor").ifEmpty { null },
+                        opacity = zOpacity,
+                        overlayColor = zOverlayColor,
+                        overlayOpacity = zOverlayOpacity,
+                        borderRadius = zBorderRadius,
+                        borderColor = zBorderColor,
+                        borderWidth = zBorderWidth,
                         blocks = blocksList,
                         isLocked = zObj.optBoolean("isLocked", false)
                     )
@@ -256,6 +273,12 @@ class ManifestRepositoryImpl(
                         put("height", zone.height)
                         put("zIndex", zone.zIndex)
                         if (zone.backgroundColor != null) put("backgroundColor", zone.backgroundColor)
+                        put("opacity", zone.opacity)
+                        if (zone.overlayColor != null) put("overlayColor", zone.overlayColor)
+                        put("overlayOpacity", zone.overlayOpacity)
+                        put("borderRadius", zone.borderRadius)
+                        if (zone.borderColor != null) put("borderColor", zone.borderColor)
+                        put("borderWidth", zone.borderWidth)
 
                         val blocksArr = JSONArray()
                         for (block in zone.blocks) {

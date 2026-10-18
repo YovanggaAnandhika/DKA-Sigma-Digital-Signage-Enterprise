@@ -18,6 +18,9 @@ export async function POST(req: NextRequest) {
     if (body.backgroundImageUrl || body.background_image_url) request.setBackgroundImageUrl(body.backgroundImageUrl || body.background_image_url);
     if (body.themePreset || body.theme_preset) request.setThemePreset(body.themePreset || body.theme_preset);
     if (body.autoRecallEnabled !== undefined) request.setAutoRecallEnabled(body.autoRecallEnabled);
+    if (body.opacity !== undefined) request.setOpacity(body.opacity);
+    if (body.overlayColor || body.overlay_color) request.setOverlayColor(body.overlayColor || body.overlay_color);
+    if (body.overlayOpacity !== undefined || body.overlay_opacity !== undefined) request.setOverlayOpacity(body.overlayOpacity ?? body.overlay_opacity);
 
     if (Array.isArray(body.items)) {
       const itemsList = body.items.map((it: any) => {
@@ -39,6 +42,10 @@ export async function POST(req: NextRequest) {
         if (it.configJson || it.config_json) item.setConfigJson(it.configJson || it.config_json);
         else if (it.config) item.setConfigJson(typeof it.config === 'string' ? it.config : JSON.stringify(it.config));
         if (it.isVisible !== undefined || it.is_visible !== undefined) item.setIsVisible(it.isVisible ?? it.is_visible);
+        if (it.opacity !== undefined) item.setOpacity(it.opacity);
+        if (it.borderRadius !== undefined || it.border_radius !== undefined) item.setBorderRadius(it.borderRadius ?? it.border_radius);
+        if (it.borderColor || it.border_color) item.setBorderColor(it.borderColor || it.border_color);
+        if (it.borderWidth !== undefined || it.border_width !== undefined) item.setBorderWidth(it.borderWidth ?? it.border_width);
         return item;
       });
       request.setItemsList(itemsList);

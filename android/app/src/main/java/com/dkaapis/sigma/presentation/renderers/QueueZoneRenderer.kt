@@ -31,7 +31,8 @@ data class QueueItemMeta(
     val borderRadius: Float = 0f,
     val borderWidth: Int = 0,
     val borderColor: String = "#00000000",
-    val speed: String = "normal"
+    val speed: String = "normal",
+    val opacity: Float = 1.0f
 )
 
 class QueueCanvasView(

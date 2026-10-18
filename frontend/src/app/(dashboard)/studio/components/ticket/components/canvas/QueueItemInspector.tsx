@@ -109,46 +109,151 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
             />
           </div>
 
-          {/* Warna Latar Kanvas */}
+          {/* Warna & Mode Latar Kanvas */}
           <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                Latar Belakang Kanvas
+              </span>
+              <span style={{ fontSize: '0.6875rem', color: queue.backgroundColor === 'transparent' ? 'var(--accent-emerald)' : 'var(--text-muted)', fontWeight: 600 }}>
+                {queue.backgroundColor === 'transparent' ? 'Transparan (Default)' : 'Warna Solid'}
+              </span>
+            </div>
+
+            {/* Segmented Mode Button */}
+            <div style={{ display: 'flex', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '3px', gap: '4px', marginBottom: '10px' }}>
+              <button
+                type="button"
+                onClick={() => updateField('backgroundColor', 'transparent')}
+                style={{
+                  flex: 1,
+                  padding: '5px 8px',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: queue.backgroundColor === 'transparent' ? 'var(--primary-600)' : 'transparent',
+                  color: queue.backgroundColor === 'transparent' ? '#ffffff' : 'var(--text-muted)',
+                }}
+              >
+                Transparan
+              </button>
+              <button
+                type="button"
+                onClick={() => updateField('backgroundColor', queue.backgroundColor && queue.backgroundColor !== 'transparent' ? queue.backgroundColor : '#f8fafc')}
+                style={{
+                  flex: 1,
+                  padding: '5px 8px',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: queue.backgroundColor !== 'transparent' ? 'var(--primary-600)' : 'transparent',
+                  color: queue.backgroundColor !== 'transparent' ? '#ffffff' : 'var(--text-muted)',
+                }}
+              >
+                Warna Solid
+              </button>
+            </div>
+
+            {queue.backgroundColor !== 'transparent' && (
+              <div style={{ marginBottom: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <input
+                    type="color"
+                    value={(queue.backgroundColor || '#f8fafc').startsWith('#') ? (queue.backgroundColor || '#f8fafc') : '#f8fafc'}
+                    onChange={(e) => updateField('backgroundColor', e.target.value)}
+                    style={{ width: '32px', height: '32px', borderRadius: '6px', border: 'none', cursor: 'pointer', padding: 0 }}
+                  />
+                  <input
+                    type="text"
+                    value={queue.backgroundColor || ''}
+                    onChange={(e) => updateField('backgroundColor', e.target.value)}
+                    className="form-input"
+                    style={{ flex: 1, padding: '5px 8px', fontSize: '0.78rem' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {['#f8fafc', '#ffffff', '#020617', '#0f172a', '#f0fdf4', '#1e1b4b'].map((hex) => (
+                    <button
+                      key={hex}
+                      type="button"
+                      onClick={() => updateField('backgroundColor', hex)}
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '4px',
+                        backgroundColor: hex,
+                        border: queue.backgroundColor === hex ? '2px solid var(--primary-500)' : '1px solid var(--border-subtle)',
+                        cursor: 'pointer',
+                      }}
+                      title={hex}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Opacity Kanvas */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                Opacity Kanvas
+              </span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-400)' }}>
+                {Math.round((queue.opacity ?? 1.0) * 100)}%
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={Math.round((queue.opacity ?? 1.0) * 100)}
+              onChange={(e) => updateField('opacity', Number(e.target.value) / 100)}
+              style={{ width: '100%', cursor: 'pointer' }}
+            />
+          </div>
+
+          {/* Overlay Warna & Overlay Opacity */}
+          <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>
-              Warna Latar Kanvas
+              Warna Overlay (Scrim)
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
               <input
                 type="color"
-                value={(queue.backgroundColor || '#f8fafc').startsWith('#') ? (queue.backgroundColor || '#f8fafc') : '#f8fafc'}
-                onChange={(e) => updateField('backgroundColor', e.target.value)}
-                style={{ width: '32px', height: '32px', borderRadius: '6px', border: 'none', cursor: 'pointer', padding: 0 }}
+                value={(queue.overlayColor || '#000000').startsWith('#') ? (queue.overlayColor || '#000000') : '#000000'}
+                onChange={(e) => updateField('overlayColor', e.target.value)}
+                style={{ width: '28px', height: '28px', borderRadius: '4px', border: 'none', cursor: 'pointer', padding: 0 }}
               />
               <input
                 type="text"
-                value={queue.backgroundColor || ''}
-                onChange={(e) => updateField('backgroundColor', e.target.value)}
+                value={queue.overlayColor || 'transparent'}
+                onChange={(e) => updateField('overlayColor', e.target.value)}
                 className="form-input"
-                style={{ flex: 1, padding: '5px 8px', fontSize: '0.78rem' }}
+                style={{ flex: 1, padding: '4px 6px', fontSize: '0.75rem' }}
               />
             </div>
-
-            {/* Quick swatches */}
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {['#f8fafc', '#ffffff', '#020617', '#0f172a', '#f0fdf4', '#1e1b4b'].map((hex) => (
-                <button
-                  key={hex}
-                  type="button"
-                  onClick={() => updateField('backgroundColor', hex)}
-                  style={{
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '4px',
-                    backgroundColor: hex,
-                    border: queue.backgroundColor === hex ? '2px solid var(--primary-500)' : '1px solid var(--border-subtle)',
-                    cursor: 'pointer',
-                  }}
-                  title={hex}
-                />
-              ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Opacity Overlay</span>
+              <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--primary-400)' }}>
+                {Math.round((queue.overlayOpacity ?? 0.0) * 100)}%
+              </span>
             </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={Math.round((queue.overlayOpacity ?? 0.0) * 100)}
+              onChange={(e) => updateField('overlayOpacity', Number(e.target.value) / 100)}
+              style={{ width: '100%', cursor: 'pointer' }}
+            />
           </div>
 
           {/* Wallpaper / Gambar Background */}
@@ -726,8 +831,54 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
                   />
                 </div>
               </div>
+
+              <div>
+                <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Warna Border</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <input
+                    type="color"
+                    value={(selectedItem.config?.borderColor || '#000000').startsWith('#') ? (selectedItem.config?.borderColor || '#000000') : '#000000'}
+                    onChange={(e) =>
+                      updateLayoutItem(selectedItem.id, {
+                        config: { ...selectedItem.config, borderColor: e.target.value },
+                      })
+                    }
+                    style={{ width: '28px', height: '28px', borderRadius: '4px', border: 'none', cursor: 'pointer', padding: 0 }}
+                  />
+                  <input
+                    type="text"
+                    value={selectedItem.config?.borderColor || 'transparent'}
+                    onChange={(e) =>
+                      updateLayoutItem(selectedItem.id, {
+                        config: { ...selectedItem.config, borderColor: e.target.value },
+                      })
+                    }
+                    className="form-input"
+                    style={{ flex: 1, padding: '4px 6px', fontSize: '0.72rem' }}
+                  />
+                </div>
+              </div>
             </div>
           )}
+
+          {/* Opacity Elemen */}
+          <div style={{ marginTop: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <label style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Opacity Elemen</label>
+              <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--primary-400)' }}>
+                {Math.round((selectedItem.opacity ?? 1.0) * 100)}%
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={Math.round((selectedItem.opacity ?? 1.0) * 100)}
+              onChange={(e) => updateLayoutItem(selectedItem.id, { opacity: Number(e.target.value) / 100 })}
+              style={{ width: '100%', cursor: 'pointer' }}
+            />
+          </div>
 
           {/* Lapisan Z-Index */}
           <div style={{ marginTop: '12px' }}>

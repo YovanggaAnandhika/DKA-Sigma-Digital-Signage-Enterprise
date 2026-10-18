@@ -19,6 +19,12 @@ export async function POST(req: NextRequest) {
     if(body.height !== undefined) request.setHeight(body.height);
     if(body.zIndex !== undefined) request.setZIndex(body.zIndex);
     if(body.backgroundColor) request.setBackgroundColor(body.backgroundColor);
+    if(body.opacity !== undefined) request.setOpacity(body.opacity);
+    if(body.overlayColor || body.overlay_color) request.setOverlayColor(body.overlayColor || body.overlay_color);
+    if(body.overlayOpacity !== undefined || body.overlay_opacity !== undefined) request.setOverlayOpacity(body.overlayOpacity ?? body.overlay_opacity);
+    if(body.borderRadius !== undefined || body.border_radius !== undefined) request.setBorderRadius(body.borderRadius ?? body.border_radius);
+    if(body.borderColor || body.border_color) request.setBorderColor(body.borderColor || body.border_color);
+    if(body.borderWidth !== undefined || body.border_width !== undefined) request.setBorderWidth(body.borderWidth ?? body.border_width);
       
     return new Promise<NextResponse>((resolve) => {
       client.createLayer(request, getGrpcMetadata(token), (error: any, response: any) => {

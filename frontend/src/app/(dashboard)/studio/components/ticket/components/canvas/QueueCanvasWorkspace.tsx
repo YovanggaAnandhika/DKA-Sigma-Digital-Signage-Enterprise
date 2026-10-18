@@ -338,10 +338,15 @@ export default function QueueCanvasWorkspace({
             width: `${canvasWidth * scale}px`,
             height: `${canvasHeight * scale}px`,
             position: 'relative',
-            backgroundColor: queue.backgroundColor,
-            backgroundImage: queue.backgroundImageUrl ? `url(${queue.backgroundImageUrl})` : undefined,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
+            backgroundColor: queue.backgroundColor === 'transparent' ? 'transparent' : (queue.backgroundColor || 'transparent'),
+            opacity: queue.opacity ?? 1,
+            backgroundImage: queue.backgroundImageUrl
+              ? `url(${queue.backgroundImageUrl})`
+              : queue.backgroundColor === 'transparent'
+              ? 'linear-gradient(45deg, rgba(255,255,255,0.04) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,0.04) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.04) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.04) 75%)'
+              : undefined,
+            backgroundSize: queue.backgroundImageUrl ? 'cover' : '20px 20px',
+            backgroundPosition: queue.backgroundImageUrl ? 'center' : '0 0, 0 10px, 10px -10px, -10px 0px',
             boxShadow: '0 25px 60px -15px rgba(0,0,0,0.6)',
             border: '1px solid var(--border-subtle)',
             overflow: 'hidden',
@@ -354,6 +359,20 @@ export default function QueueCanvasWorkspace({
             }
           }}
         >
+          {/* Overlay Scrim */}
+          {queue.overlayOpacity && queue.overlayOpacity > 0 && queue.overlayColor && queue.overlayColor !== 'transparent' ? (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundColor: queue.overlayColor,
+                opacity: queue.overlayOpacity,
+                pointerEvents: 'none',
+                zIndex: 1,
+              }}
+            />
+          ) : null}
+
           {/* Render Elements with Rnd */}
           {queue.items
             .filter((it) => it.isVisible)
@@ -592,10 +611,12 @@ export default function QueueCanvasWorkspace({
                       width: '100%',
                       height: '100%',
                       backgroundColor: item.backgroundColor === 'transparent' || !item.backgroundColor ? 'transparent' : item.backgroundColor,
+                      opacity: item.opacity ?? 1,
+                      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                       color: item.textColor,
-                      borderRadius: item.backgroundColor && item.backgroundColor !== 'transparent' ? `${(item.config?.borderRadius || 0) * scale}px` : 0,
-                      border: item.backgroundColor && item.backgroundColor !== 'transparent' && item.config?.borderWidth
-                        ? `${item.config.borderWidth}px solid ${item.config.borderColor || 'rgba(0,0,0,0.1)'}`
+                      borderRadius: item.backgroundColor && item.backgroundColor !== 'transparent' ? `${(item.borderRadius || item.config?.borderRadius || 0) * scale}px` : 0,
+                      border: item.backgroundColor && item.backgroundColor !== 'transparent' && (item.borderWidth || item.config?.borderWidth)
+                        ? `${item.borderWidth || item.config?.borderWidth}px solid ${item.borderColor || item.config?.borderColor || 'rgba(0,0,0,0.1)'}`
                         : 'none',
                       display: 'flex',
                       alignItems: 'center',
