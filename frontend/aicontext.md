@@ -106,11 +106,15 @@ Always use the design system variables:
 
 ---
 
-## Essential Developer Commands
+## Developer Workflow & Rules
+
+> [!WARNING]
+> **DILARANG MENJALANKAN `bun run build` ATAU `next build`**
+> Aplikasi frontend sudah dijalankan oleh user menggunakan Docker Compose (`compose.yml`) dalam mode development fleksibel dengan live HMR. Mengedit kode sumber secara langsung sudah otomatis ter-reload.
 
 ```bash
-bun dev                  # Run local dev server (port 80 or PORT env)
+bun dev                  # Local dev server (dijalankan via Docker Compose dev)
 bun run generate:grpc    # Compile proto files from backend/proto into src/lib/api/
-bun run build            # Next.js production build
 bun run lint             # ESLint checks
 ```
+

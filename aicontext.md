@@ -78,3 +78,7 @@ Managed via `compose.yml`:
 - **Frontend**: Bun-powered Next.js running on port 80. Hot reloads on local file change.
 - **Backend**: Rust container with `cargo watch` monitoring `src/`, `proto/`, `migrations/`, and `build.rs`. Port 50051.
 - **Database**: PostgreSQL 17.1 container on host port 54321 (`dka_signage` database).
+
+> [!IMPORTANT]
+> **Larangan Eksekusi Build**: Dilarang menjalankan `bun run build` atau `next build`. Container `compose.yml` sudah berjalan fleksibel dalam mode dev dengan live HMR. Cukup edit berkas secara langsung.
+
