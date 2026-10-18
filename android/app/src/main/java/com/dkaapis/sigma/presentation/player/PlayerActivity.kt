@@ -91,6 +91,7 @@ class PlayerActivity : AppCompatActivity() {
     private val videoRenderers = mutableListOf<VideoZoneRenderer>()
     private val clockRenderers = mutableListOf<ClockZoneRenderer>()
     private var activeQueueRenderer: QueueZoneRenderer? = null
+    private var activeQueueDisplayId: String = ""
     private var textToSpeech: TextToSpeech? = null
     private var isTtsReady = false
     private var timelineJob: Job? = null
@@ -606,6 +607,10 @@ class PlayerActivity : AppCompatActivity() {
                             }
                         )
                         activeQueueRenderer = renderer
+                        activeQueueDisplayId = try {
+                            val qObj = org.json.JSONObject(widgetBlock.widgetDataJson ?: "{}")
+                            qObj.optString("id", qObj.optString("queueDisplayId", ""))
+                        } catch (_: Exception) { "" }
                         val view = renderer.createView(zoneView, widgetBlock.widgetDataJson)
                         zoneView.addView(view)
                     }
@@ -709,6 +714,7 @@ class PlayerActivity : AppCompatActivity() {
         timelineJob?.cancel()
         timelineJob = null
         activeQueueRenderer = null
+        activeQueueDisplayId = ""
         videoRenderers.forEach { it.release() }
         videoRenderers.clear()
         clockRenderers.forEach { it.release() }
@@ -855,10 +861,22 @@ class PlayerActivity : AppCompatActivity() {
                     handleRebootCommand()
                 }
                 "CALL_QUEUE", "QUEUE_CALL" -> {
+                    val targetQueueId = data.optString("queueId", data.optString("queue_id", ""))
                     val ticketNumber = data.optString("ticketNumber", data.optString("ticket_number", ""))
                     val counterName = data.optString("counterName", data.optString("counter_name", "LOKET 01"))
+
+                    val queueRenderer = activeQueueRenderer ?: run {
+                        android.util.Log.i("PlayerActivity", "Panggilan diabaikan: player saat ini tidak sedang memutar antrian.")
+                        return@runOnUiThread
+                    }
+
+                    if (targetQueueId.isNotBlank() && activeQueueDisplayId.isNotBlank() && targetQueueId != activeQueueDisplayId) {
+                        android.util.Log.i("PlayerActivity", "Panggilan diabaikan: target queue $targetQueueId tidak cocok dengan antrian aktif $activeQueueDisplayId.")
+                        return@runOnUiThread
+                    }
+
                     if (ticketNumber.isNotBlank()) {
-                        activeQueueRenderer?.updateCall(ticketNumber, counterName)
+                        queueRenderer.updateCall(ticketNumber, counterName)
                         speakQueueTicket(ticketNumber, counterName)
                     }
                 }
