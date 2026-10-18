@@ -391,7 +391,7 @@ export default function ViewSchedulePage() {
           ...prev,
         ]);
 
-        // Pengiriman sinyal COMPLETE secara real-time ke player
+        // Pengiriman sinyal COMPLETE secara real-time ke player (tanpa reload paksa)
         if (assignedDevices.length > 0) {
           for (const dev of assignedDevices) {
             fetch('/api/stream/device', {
@@ -410,24 +410,10 @@ export default function ViewSchedulePage() {
 
           setUploadLogs((prev) => [
             {
-              id: `test-push-${Date.now()}`,
-              time: new Date().toLocaleTimeString(),
-              type: 'info',
-              message: `2. Mengirim sinyal distribusi (COMMAND_RELOAD_MANIFEST) secara real-time ke ${assignedDevices.length} layar terhubung (${assignedDevices.map((d) => d.name).join(', ')})...`,
-            },
-            ...prev,
-          ]);
-
-          for (const dev of assignedDevices) {
-            await api.pushDeviceCommand(dev.id, 1).catch(() => null);
-          }
-
-          setUploadLogs((prev) => [
-            {
               id: `test-done-${Date.now()}`,
               time: new Date().toLocaleTimeString(),
               type: 'success',
-              message: `3. Uji coba berhasil! Sinyal gRPC push terkirim ke player (${assignedDevices.map((d) => d.name).join(', ')}). (Mode Uji Coba: File tidak disimpan ke Pustaka Media atau merubah layout).`,
+              message: `2. Uji transmisi chunk real-time selesai! Sinyal COMPLETE terkirim ke player (${assignedDevices.map((d) => d.name).join(', ')}). Tidak ada reload manifest paksa.`,
             },
             ...prev,
           ]);
