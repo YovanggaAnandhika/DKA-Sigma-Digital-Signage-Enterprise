@@ -64,6 +64,21 @@ export async function POST(req: NextRequest) {
       request.setCountersList(countersList);
     }
 
+    if (Array.isArray(body.audios)) {
+      const audiosList = body.audios.map((a: any) => {
+        const audio = new QueueAudio();
+        if (a.id) audio.setId(a.id);
+        if (a.name) audio.setName(a.name);
+        if (a.audioType || a.audio_type) audio.setAudioType(a.audioType || a.audio_type);
+        if (a.mediaItemId || a.media_item_id) audio.setMediaItemId(a.mediaItemId || a.media_item_id);
+        if (a.fileUrl || a.file_url) audio.setFileUrl(a.fileUrl || a.file_url);
+        if (a.volumePercent !== undefined || a.volume_percent !== undefined) audio.setVolumePercent(a.volumePercent ?? a.volume_percent);
+        if (a.isActive !== undefined || a.is_active !== undefined) audio.setIsActive(a.isActive ?? a.is_active);
+        return audio;
+      });
+      request.setAudiosList(audiosList);
+    }
+
     return new Promise<NextResponse>((resolve) => {
       client.createQueueDisplay(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
