@@ -9,18 +9,23 @@ export * from '../core/invokeApi';
 export * from './iam';
 export * from './hardware';
 export * from './studio';
+export * from './common';
 
 // Re-export domain namespaces for direct modular consumption:
 import * as iamModule from './iam';
 import * as hardwareModule from './hardware';
 import * as studioModule from './studio';
+import * as commonModule from './common';
 
 export const iam = iamModule;
 export const hardware = hardwareModule;
 export const studio = studioModule;
+export const common = commonModule;
 
 // Unified namespace backward-compatible export
 export const api = {
+  // Common
+  getResolutions: commonModule.getResolutions,
   // IAM
   getRoles: iamModule.getRoles,
   getRole: iamModule.getRole,

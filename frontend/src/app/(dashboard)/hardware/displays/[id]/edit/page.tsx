@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/services';
-import type { Device, DisplayGroup, Schedule, Layout } from '@/lib/services';
+import type { Device, DisplayGroup, Schedule, Layout, Resolution } from '@/lib/services';
 import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
 import { SingleSelect } from '@/components/ui/SingleSelect';
 
@@ -15,6 +15,7 @@ export default function EditDisplayPage() {
   const [groups, setGroups] = useState<DisplayGroup[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [layouts, setLayouts] = useState<Layout[]>([]);
+  const [resolutions, setResolutions] = useState<Resolution[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -34,16 +35,18 @@ export default function EditDisplayPage() {
     const fetchDevice = async () => {
       try {
         setLoading(true);
-        const [data, groupsData, schedulesData, layoutsData] = await Promise.all([
+        const [data, groupsData, schedulesData, layoutsData, resolutionsData] = await Promise.all([
           api.getDevice(params.id),
           api.getDisplayGroups({ limit: 1000 }),
           api.getSchedules({ limit: 1000 }),
           api.getLayouts({ limit: 1000 }),
+          api.getResolutions(),
         ]);
         setDevice(data);
         setGroups(groupsData.data);
         setSchedules(schedulesData.data);
         setLayouts(layoutsData.data);
+        setResolutions(resolutionsData);
         setFormData({
           name: data.name,
           resolution: data.screenWidth && data.screenHeight ? `${data.screenWidth}x${data.screenHeight}` : '1920x1080',
@@ -93,6 +96,33 @@ export default function EditDisplayPage() {
     }
   };
 
+  const resolutionOptions = React.useMemo(() => {
+    const list = resolutions.map((r) => ({
+      value: `${r.width}x${r.height}`,
+      label: r.name,
+      hint: `${r.width} × ${r.height} (${r.aspectRatio})`,
+    }));
+
+    if (list.length === 0) {
+      list.push(
+        { value: '1920x1080', label: 'Full HD (1080p)', hint: '1920 × 1080 (16:9)' },
+        { value: '3840x2160', label: '4K Ultra HD (2160p)', hint: '3840 × 2160 (16:9)' },
+        { value: '1280x720', label: 'HD Ready (720p)', hint: '1280 × 720 (16:9)' },
+        { value: '1080x1920', label: 'Portrait Full HD', hint: '1080 × 1920 (9:16)' }
+      );
+    }
+
+    if (formData.resolution && !list.some((opt) => opt.value === formData.resolution)) {
+      list.unshift({
+        value: formData.resolution,
+        label: `Kustom (${formData.resolution})`,
+        hint: 'Resolusi bawaan perangkat',
+      });
+    }
+
+    return list;
+  }, [resolutions, formData.resolution]);
+
   if (loading || !device) {
     return (
       <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -141,12 +171,7 @@ export default function EditDisplayPage() {
               <SingleSelect
                 value={formData.resolution}
                 onChange={(val) => setFormData({ ...formData, resolution: val })}
-                options={[
-                  { value: '1920x1080', label: '1920 × 1080', hint: 'Full HD (16:9 Standard)' },
-                  { value: '3840x2160', label: '3840 × 2160', hint: '4K Ultra HD' },
-                  { value: '1280x720', label: '1280 × 720', hint: 'HD Ready (720p)' },
-                  { value: '1080x1920', label: '1080 × 1920', hint: 'Vertical Totem / Portrait' },
-                ]}
+                options={resolutionOptions}
               />
             </div>
 
