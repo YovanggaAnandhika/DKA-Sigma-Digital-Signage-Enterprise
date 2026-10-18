@@ -65,7 +65,7 @@ class TickerZoneRenderer(
                 text = badgeText
                 setTextColor(badgeTextCol)
                 textSize = 12f
-                setTypeface(null, Typeface.BOLD)
+                setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD))
                 setPadding((8 * density).toInt(), (2 * density).toInt(), (8 * density).toInt(), (2 * density).toInt())
 
                 val badgeDrawable = GradientDrawable().apply {
@@ -89,7 +89,7 @@ class TickerZoneRenderer(
             text = textMessage.ifBlank { "DKASigma Teks Berjalan" }
             setTextColor(textColor)
             textSize = if (fontSize > 0f) fontSize else 16f
-            setTypeface(null, Typeface.BOLD)
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
             isSingleLine = true
             ellipsize = TextUtils.TruncateAt.MARQUEE
             marqueeRepeatLimit = -1

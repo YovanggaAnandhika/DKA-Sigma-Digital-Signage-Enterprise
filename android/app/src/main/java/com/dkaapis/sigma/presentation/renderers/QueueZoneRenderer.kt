@@ -231,10 +231,14 @@ class QueueZoneRenderer(
                     "right", "end" -> Gravity.END or Gravity.CENTER_VERTICAL
                     else -> Gravity.CENTER
                 }
-                typeface = if (meta.itemType == "ticket_number") {
-                    Typeface.create(Typeface.MONOSPACE, if (isBold) Typeface.BOLD else Typeface.NORMAL)
-                } else {
-                    if (isBold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+                typeface = Typeface.create(
+                    Typeface.SANS_SERIF,
+                    if (isBold) Typeface.BOLD else Typeface.NORMAL
+                )
+                if (meta.itemType == "ticket_number") {
+                    isSingleLine = true
+                    maxLines = 1
+                    letterSpacing = 0.02f
                 }
 
                 if (meta.backgroundColor != "transparent" && meta.backgroundColor.isNotBlank()) {

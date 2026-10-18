@@ -432,8 +432,10 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                 <div style={{
                   fontSize: activeBlock.widgetData?.timeFontSize ? `calc(${activeBlock.widgetData.timeFontSize}px * 0.7)` : '1.75rem',
                   fontWeight: 800,
-                  letterSpacing: '0.05em',
-                  fontFamily: 'monospace'
+                  letterSpacing: '0.02em',
+                  fontFamily: 'inherit',
+                  lineHeight: 1.1,
+                  whiteSpace: 'nowrap',
                 }}>
                   {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: activeBlock.widgetData?.showSeconds ? '2-digit' : undefined })}
                 </div>

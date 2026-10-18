@@ -66,14 +66,16 @@ class ClockZoneRenderer(
             }
         }
 
-        // Line 1: Time (matches Web Studio layout order)
+        // Line 1: Time (matches Web Studio layout and sans-serif font)
         val timeText = TextView(context).apply {
             setTextColor(textColor)
-            textSize = if (timeFontSizeSp > 0f) timeFontSizeSp else 56f
-            typeface = Typeface.MONOSPACE
+            val baseSize = if (timeFontSizeSp > 0f) (timeFontSizeSp * 0.65f) else 36f
+            textSize = baseSize
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
             gravity = Gravity.CENTER
-            setTypeface(typeface, Typeface.BOLD)
-            letterSpacing = 0.05f
+            isSingleLine = true
+            maxLines = 1
+            letterSpacing = 0.02f
         }
 
         // Line 2: City / Weather Subtitle (matches Web Studio line 445: City • Cerah 31°C)
@@ -81,8 +83,9 @@ class ClockZoneRenderer(
             text = "$city • Cerah 31°C"
             setTextColor(subColor)
             textSize = if (dateFontSizeSp > 0f) dateFontSizeSp else 14f
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
             gravity = Gravity.CENTER
-            setPadding(0, (4 * density).toInt(), 0, 0)
+            setPadding(0, (6 * density).toInt(), 0, 0)
         }
 
         container.addView(timeText)
