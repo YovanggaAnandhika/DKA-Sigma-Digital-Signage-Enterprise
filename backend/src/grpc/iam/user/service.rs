@@ -5,6 +5,7 @@ use crate::config::Config;
 use crate::common::AppError;
 use crate::modules::iam::user::model::{CreateUserDto, LoginDto, UpdateUserDto, UserEntity};
 use crate::modules::iam::user::services::UserService;
+use crate::modules::iam::user::repositories::UserRepository;
 use crate::modules::iam::permission::repositories::PermissionRepository;
 use crate::grpc::proto::iam::v1::user::{
     user_service_server::UserService as UserServiceTrait,

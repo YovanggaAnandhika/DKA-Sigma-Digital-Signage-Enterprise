@@ -14,68 +14,64 @@ impl VisualFilterRepository {
     pub async fn find_all(&self, search: Option<&str>, limit: i32, offset: i32) -> Result<(Vec<VisualFilter>, i32), sqlx::Error> {
         let search_term = search.map(|s| format!("%{}%", s)).unwrap_or_else(|| "%".to_string());
         
-        let filters = sqlx::query_as!(
-            VisualFilter,
+        let filters = sqlx::query_as::<_, VisualFilter>(
             r#"
             SELECT * FROM visual_filters
             WHERE name ILIKE $1
             ORDER BY name ASC
             LIMIT $2 OFFSET $3
             "#,
-            search_term,
-            limit as i64,
-            offset as i64
         )
+        .bind(&search_term)
+        .bind(limit as i64)
+        .bind(offset as i64)
         .fetch_all(&self.pool)
         .await?;
 
-        let total_row = sqlx::query!(
+        let total_row: (i64,) = sqlx::query_as(
             r#"
-            SELECT count(*) as "total!" FROM visual_filters
+            SELECT count(*) FROM visual_filters
             WHERE name ILIKE $1
             "#,
-            search_term
         )
+        .bind(&search_term)
         .fetch_one(&self.pool)
         .await?;
 
-        Ok((filters, total_row.total as i32))
+        Ok((filters, total_row.0 as i32))
     }
 
     pub async fn find_by_id(&self, id: Uuid) -> Result<Option<VisualFilter>, sqlx::Error> {
-        sqlx::query_as!(
-            VisualFilter,
+        sqlx::query_as::<_, VisualFilter>(
             r#"
             SELECT * FROM visual_filters WHERE id = $1
             "#,
-            id
         )
+        .bind(id)
         .fetch_optional(&self.pool)
         .await
     }
 
     pub async fn create(&self, name: &str, brightness: i32, contrast: i32, saturation: i32, hue_rotate: i32, blur_px: i32) -> Result<VisualFilter, sqlx::Error> {
-        sqlx::query_as!(
-            VisualFilter,
+        sqlx::query_as::<_, VisualFilter>(
             r#"
             INSERT INTO visual_filters (name, brightness, contrast, saturation, hue_rotate, blur_px)
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
             "#,
-            name,
-            brightness,
-            contrast,
-            saturation,
-            hue_rotate,
-            blur_px
         )
+        .bind(name)
+        .bind(brightness)
+        .bind(contrast)
+        .bind(saturation)
+        .bind(hue_rotate)
+        .bind(blur_px)
         .fetch_one(&self.pool)
         .await
     }
 
     pub async fn update(&self, id: Uuid, name: Option<&str>, brightness: Option<i32>, contrast: Option<i32>, saturation: Option<i32>, hue_rotate: Option<i32>, blur_px: Option<i32>) -> Result<VisualFilter, sqlx::Error> {
-        sqlx::query_as!(
-            VisualFilter,
+        sqlx::query_as::<_, VisualFilter>(
             r#"
             UPDATE visual_filters
             SET
@@ -89,25 +85,25 @@ impl VisualFilterRepository {
             WHERE id = $1
             RETURNING *
             "#,
-            id,
-            name,
-            brightness,
-            contrast,
-            saturation,
-            hue_rotate,
-            blur_px
         )
+        .bind(id)
+        .bind(name)
+        .bind(brightness)
+        .bind(contrast)
+        .bind(saturation)
+        .bind(hue_rotate)
+        .bind(blur_px)
         .fetch_one(&self.pool)
         .await
     }
 
     pub async fn delete(&self, id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query!(
+        let result = sqlx::query(
             r#"
             DELETE FROM visual_filters WHERE id = $1
             "#,
-            id
         )
+        .bind(id)
         .execute(&self.pool)
         .await?;
 
