@@ -11,6 +11,19 @@ interface LayoutsLayoutProps {
 
 export default function LayoutsLayout({ children }: LayoutsLayoutProps) {
   const pathname = usePathname();
+  const normalizedPath = pathname?.replace(/\/$/, '') || '';
+
+  // Tabs only show on the main root tab index pages
+  const isRootTabPage = [
+    '/studio/layouts',
+    '/studio/layouts/data',
+    '/studio/layouts/resolusi',
+    '/studio/layouts/orientasi',
+  ].includes(normalizedPath);
+
+  if (!isRootTabPage) {
+    return <>{children}</>;
+  }
 
   const tabs = [
     {
@@ -74,7 +87,7 @@ export default function LayoutsLayout({ children }: LayoutsLayoutProps) {
         }}
       >
         {tabs.map((tab) => {
-          const isActive = pathname.startsWith(tab.href);
+          const isActive = normalizedPath === tab.href;
           const Icon = tab.icon;
 
           return (
@@ -108,3 +121,4 @@ export default function LayoutsLayout({ children }: LayoutsLayoutProps) {
     </div>
   );
 }
+
