@@ -121,3 +121,30 @@ export async function setPlaylistItemOverride(layerPlaylistId: string, playlistI
     isMuted
   });
 }
+
+export interface LayoutHistoryItem {
+  id: string;
+  layoutId: string;
+  layoutName: string;
+  versionHash: string;
+  snapshotJson: string;
+  description: string;
+  createdAt: string;
+}
+
+export async function getLayoutHistory(params?: { layoutId?: string; search?: string; page?: number; limit?: number }): Promise<{ data: LayoutHistoryItem[]; total: number }> {
+  const result = await invokeApi<any>('/api/grpc/studio/layout/ListLayoutHistory', {
+    layoutId: params?.layoutId,
+    search: params?.search,
+    page: params?.page || 1,
+    limit: params?.limit || 20,
+  });
+  return {
+    data: result.itemsList || [],
+    total: result.pagination?.totalItems || result.itemsList?.length || 0,
+  };
+}
+
+export async function rollbackLayout(historyId: string): Promise<{ success: boolean; message: string; layoutId: string }> {
+  return await invokeApi<any>('/api/grpc/studio/layout/RollbackLayout', { historyId });
+}

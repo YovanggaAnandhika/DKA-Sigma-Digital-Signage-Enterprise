@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { api } from '@/lib/services';
 import type { Schedule } from '@/lib/services/studio/schedule.types';
 import { Pagination } from '@/components/ui/Pagination';
-import { CalendarDays, Plus, Search, RefreshCw, Trash2, Edit } from 'lucide-react';
+import { CalendarDays, Search, RefreshCw, Trash2, Edit, Clock, Layers, ArrowRight } from 'lucide-react';
 
 export default function SchedulesPage() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -42,6 +42,24 @@ export default function SchedulesPage() {
     }
   };
 
+  const formatDays = (daysStr?: string) => {
+    if (!daysStr) return '-';
+    if (daysStr === '1,2,3,4,5,6,7') return 'Setiap Hari';
+    const dayMap: Record<string, string> = {
+      '1': 'Sen',
+      '2': 'Sel',
+      '3': 'Rab',
+      '4': 'Kam',
+      '5': 'Jum',
+      '6': 'Sab',
+      '7': 'Min',
+    };
+    return daysStr
+      .split(',')
+      .map((d) => dayMap[d.trim()] || d)
+      .join(', ');
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
@@ -63,18 +81,23 @@ export default function SchedulesPage() {
               Penjadwalan
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Atur waktu tayang dan prioritas layout yang ditampilkan.
+              Daftar jadwal tayang aktif. Jadwal baru dipublikasikan langsung dari menu <strong>Layouts</strong> (Aksi Push Jadwal).
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button onClick={loadData} className="btn btn-secondary" title="Segarkan data">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button onClick={loadData} className="btn btn-outline" style={{ padding: '8px 12px' }} title="Segarkan data">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
-          <Link href="/studio/schedules/create" className="btn btn-primary">
-            <Plus size={16} />
-            <span>Tambah Jadwal</span>
+          <Link
+            href="/studio/layouts/data"
+            className="btn btn-primary"
+            style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <Layers size={16} />
+            <span>Pilih Layout untuk Ditayangkan</span>
+            <ArrowRight size={14} />
           </Link>
         </div>
       </div>
@@ -103,44 +126,101 @@ export default function SchedulesPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Nama Jadwal</th>
-                <th>Deskripsi</th>
-                <th>Jumlah Event</th>
-                <th style={{ textAlign: 'right' }}>Aksi</th>
+                <th>NAMA JADWAL</th>
+                <th>LAYOUT TAYANG</th>
+                <th>JAM TAYANG AKTIF</th>
+                <th>HARI TAYANG</th>
+                <th>PRIORITAS</th>
+                <th style={{ textAlign: 'right' }}>AKSI</th>
               </tr>
             </thead>
             <tbody>
               {schedules.length === 0 ? (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    {loading ? 'Memuat data...' : 'Tidak ada jadwal ditemukan.'}
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                    {loading ? 'Memuat data...' : 'Tidak ada jadwal ditemukan. Push layout baru dari menu Layouts untuk mulai menayangkan konten.'}
                   </td>
                 </tr>
               ) : (
-                schedules.map((s) => (
-                  <tr key={s.id}>
-                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {s.name}
-                    </td>
-                    <td>{s.description || '-'}</td>
-                    <td>{s.eventsList ? s.eventsList.length : 0} Event</td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <Link href={`/studio/schedules/${s.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit">
-                          <Edit size={14} />
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(s.id, s.name)}
-                          className="btn btn-danger"
-                          style={{ padding: '5px 8px' }}
-                          title="Hapus Jadwal"
+                schedules.map((s) => {
+                  const firstEvent = s.eventsList && s.eventsList.length > 0 ? s.eventsList[0] : null;
+                  const totalEvents = s.eventsList ? s.eventsList.length : 0;
+
+                  return (
+                    <tr key={s.id}>
+                      <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                        <div>{s.name}</div>
+                        {s.description && (
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            {s.description}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        {firstEvent ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Layers size={14} style={{ color: 'var(--primary-400)' }} />
+                            <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                              {firstEvent.layoutName || 'Layout'}
+                            </span>
+                            {totalEvents > 1 && (
+                              <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', backgroundColor: 'var(--bg-surface-elevated)', padding: '2px 6px', borderRadius: '4px' }}>
+                                +{totalEvents - 1} lainnya
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>-</span>
+                        )}
+                      </td>
+                      <td>
+                        {firstEvent ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem' }}>
+                            <Clock size={13} style={{ color: 'var(--text-muted)' }} />
+                            <span style={{ fontFamily: 'monospace' }}>
+                              {firstEvent.startTime} — {firstEvent.endTime}
+                            </span>
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)' }}>-</span>
+                        )}
+                      </td>
+                      <td style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                        {firstEvent ? formatDays(firstEvent.daysOfWeek) : '-'}
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            color: 'var(--primary-400)',
+                            border: '1px solid rgba(59, 130, 246, 0.2)',
+                            fontFamily: 'monospace',
+                          }}
                         >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          P: {firstEvent?.priority ?? 0}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <Link href={`/studio/schedules/${s.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit Jadwal">
+                            <Edit size={14} />
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(s.id, s.name)}
+                            className="btn btn-danger"
+                            style={{ padding: '5px 8px' }}
+                            title="Hapus Jadwal"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

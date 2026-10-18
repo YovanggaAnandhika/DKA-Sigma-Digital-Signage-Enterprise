@@ -76,6 +76,8 @@ export const api = {
   createLayout: studioModule.createLayout,
   updateLayout: studioModule.updateLayout,
   deleteLayout: studioModule.deleteLayout,
+  getLayoutHistory: studioModule.getLayoutHistory,
+  rollbackLayout: studioModule.rollbackLayout,
 
   // Studio — Layers
   createLayer: studioModule.createLayer,
@@ -96,6 +98,7 @@ export const api = {
   deleteSchedule: studioModule.deleteSchedule,
   addScheduleEvent: studioModule.addScheduleEvent,
   removeScheduleEvent: studioModule.removeScheduleEvent,
+  pushLayoutToSchedule: studioModule.pushLayoutToSchedule,
 
   // Studio — Playlists
   getPlaylists: studioModule.getPlaylists,

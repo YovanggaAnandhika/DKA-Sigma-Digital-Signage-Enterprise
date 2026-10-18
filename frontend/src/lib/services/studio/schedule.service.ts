@@ -74,3 +74,29 @@ export async function removeScheduleEvent(id: string, schedule_id?: string): Pro
   return true;
 }
 
+export async function pushLayoutToSchedule(data: {
+  layoutId: string;
+  scheduleName?: string;
+  startTime: string;
+  endTime: string;
+  daysOfWeek?: string;
+  priority?: number;
+  startDate?: string;
+  endDate?: string;
+  deviceIds: string[];
+  displayGroupIds?: string[];
+}): Promise<{ success: boolean; scheduleId: string; message: string; affectedDevicesCount: number }> {
+  return await invokeApi<any>('/api/grpc/studio/schedule/PushLayoutToSchedule', {
+    layoutId: data.layoutId,
+    scheduleName: data.scheduleName,
+    startTime: data.startTime,
+    endTime: data.endTime,
+    daysOfWeek: data.daysOfWeek || '1,2,3,4,5,6,7',
+    priority: data.priority ?? 0,
+    startDate: data.startDate,
+    endDate: data.endDate,
+    deviceIds: data.deviceIds,
+    displayGroupIds: data.displayGroupIds || [],
+  });
+}
+

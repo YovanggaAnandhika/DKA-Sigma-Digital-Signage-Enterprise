@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/services';
-import type { Device, DisplayGroup, Schedule, Layout, Resolution } from '@/lib/services';
+import type { Device, DisplayGroup, Schedule, Resolution } from '@/lib/services';
 import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
 import { SingleSelect } from '@/components/ui/SingleSelect';
 
@@ -14,7 +14,6 @@ export default function EditDisplayPage() {
   const [device, setDevice] = useState<Device | null>(null);
   const [groups, setGroups] = useState<DisplayGroup[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [layouts, setLayouts] = useState<Layout[]>([]);
   const [resolutions, setResolutions] = useState<Resolution[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -25,7 +24,6 @@ export default function EditDisplayPage() {
     timezone: 'Asia/Jakarta',
     displayGroupId: '',
     schedule_id: '',
-    current_layout_id: '',
     power_schedule_enabled: false,
     sleep_time: '22:00:00',
     wake_time: '06:00:00',
@@ -35,17 +33,15 @@ export default function EditDisplayPage() {
     const fetchDevice = async () => {
       try {
         setLoading(true);
-        const [data, groupsData, schedulesData, layoutsData, resolutionsData] = await Promise.all([
+        const [data, groupsData, schedulesData, resolutionsData] = await Promise.all([
           api.getDevice(params.id),
           api.getDisplayGroups({ limit: 1000 }),
           api.getSchedules({ limit: 1000 }),
-          api.getLayouts({ limit: 1000 }),
           api.getResolutions(),
         ]);
         setDevice(data);
         setGroups(groupsData.data);
         setSchedules(schedulesData.data);
-        setLayouts(layoutsData.data);
         setResolutions(resolutionsData);
         setFormData({
           name: data.name,
@@ -54,7 +50,6 @@ export default function EditDisplayPage() {
           timezone: data.timezone || 'Asia/Jakarta',
           displayGroupId: data.displayGroupId || '',
           schedule_id: data.scheduleId || '',
-          current_layout_id: data.currentLayoutId || '',
           power_schedule_enabled: Boolean(data.powerScheduleEnabled),
           sleep_time: data.sleepTime || '22:00:00',
           wake_time: data.wakeTime || '06:00:00',
@@ -83,7 +78,6 @@ export default function EditDisplayPage() {
         timezone: formData.timezone,
         display_group_id: formData.displayGroupId || undefined,
         schedule_id: formData.schedule_id || undefined,
-        current_layout_id: formData.current_layout_id || undefined,
         power_schedule_enabled: formData.power_schedule_enabled,
         sleep_time: formData.power_schedule_enabled ? formData.sleep_time : undefined,
         wake_time: formData.power_schedule_enabled ? formData.wake_time : undefined,
@@ -175,29 +169,7 @@ export default function EditDisplayPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                Layout Utama Layar (Default Layout)
-              </label>
-              <SingleSelect
-                value={formData.current_layout_id}
-                onChange={(val) => setFormData({ ...formData, current_layout_id: val })}
-                placeholder="-- Gunakan Layout Grup atau Kosong --"
-                options={[
-                  { value: '', label: '-- Gunakan Layout Grup atau Kosong --' },
-                  ...layouts.map((l) => ({
-                    value: l.id,
-                    label: l.name,
-                    hint: `${l.canvasWidth} × ${l.canvasHeight}`,
-                  })),
-                ]}
-              />
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
-                Layout ini diputar otomatis jika tidak ada jadwal aktif.
-              </span>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                Jadwal Perangkat (Schedule Override)
+                Jadwal Perangkat (Schedule Active)
               </label>
               <SingleSelect
                 value={formData.schedule_id}
@@ -212,26 +184,8 @@ export default function EditDisplayPage() {
                 ]}
               />
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
-                Event tayang dalam jadwal ini mengesampingkan layout utama.
+                Event tayang dikendalikan sepenuhnya melalui sistem Penjadwalan.
               </span>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                Zona Waktu (Timezone)
-              </label>
-              <SingleSelect
-                value={formData.timezone}
-                onChange={(val) => setFormData({ ...formData, timezone: val })}
-                options={[
-                  { value: 'Asia/Jakarta', label: 'WIB · Asia/Jakarta' },
-                  { value: 'Asia/Makassar', label: 'WITA · Asia/Makassar' },
-                  { value: 'Asia/Jayapura', label: 'WIT · Asia/Jayapura' },
-                  { value: 'UTC', label: 'UTC' },
-                ]}
-              />
             </div>
 
             <div>
@@ -251,6 +205,22 @@ export default function EditDisplayPage() {
                 ]}
               />
             </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+              Zona Waktu (Timezone)
+            </label>
+            <SingleSelect
+              value={formData.timezone}
+              onChange={(val) => setFormData({ ...formData, timezone: val })}
+              options={[
+                { value: 'Asia/Jakarta', label: 'WIB · Asia/Jakarta' },
+                { value: 'Asia/Makassar', label: 'WITA · Asia/Makassar' },
+                { value: 'Asia/Jayapura', label: 'WIT · Asia/Jayapura' },
+                { value: 'UTC', label: 'UTC' },
+              ]}
+            />
           </div>
 
           {/* Power Schedule / CEC Eco Mode */}

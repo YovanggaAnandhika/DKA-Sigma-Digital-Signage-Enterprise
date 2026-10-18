@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Palette, Monitor, Compass, LayoutGrid } from 'lucide-react';
+import { Palette, Monitor, Compass, LayoutGrid, History } from 'lucide-react';
 
 interface LayoutsLayoutProps {
   children: React.ReactNode;
@@ -17,6 +17,7 @@ export default function LayoutsLayout({ children }: LayoutsLayoutProps) {
   const isRootTabPage = [
     '/studio/layouts',
     '/studio/layouts/data',
+    '/studio/layouts/history',
     '/studio/layouts/resolusi',
     '/studio/layouts/orientasi',
   ].includes(normalizedPath);
@@ -31,6 +32,12 @@ export default function LayoutsLayout({ children }: LayoutsLayoutProps) {
       label: 'Data Layout',
       href: '/studio/layouts/data',
       icon: LayoutGrid,
+    },
+    {
+      id: 'history',
+      label: 'Riwayat Ubah',
+      href: '/studio/layouts/history',
+      icon: History,
     },
     {
       id: 'resolusi',
