@@ -19,6 +19,9 @@ message Layout {
   string created_at = 10;
   string updated_at = 11;
   optional string resolution_id = 12;
+  optional string version_hash = 13;
+  optional string scheduled_version_hash = 14;
+  bool is_schedule_synced = 15;
 }
 
 message CreateLayoutRequest {

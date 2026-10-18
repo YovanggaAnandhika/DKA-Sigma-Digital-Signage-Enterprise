@@ -9,3 +9,6 @@ CREATE TABLE IF NOT EXISTS layout_history (
 
 CREATE INDEX IF NOT EXISTS idx_layout_history_layout_id ON layout_history(layout_id);
 CREATE INDEX IF NOT EXISTS idx_layout_history_created_at ON layout_history(created_at DESC);
+
+GRANT ALL PRIVILEGES ON TABLE layout_history TO dka_signage;
+
