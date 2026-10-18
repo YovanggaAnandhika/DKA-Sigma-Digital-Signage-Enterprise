@@ -17,7 +17,10 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.TextView
+import coil.load
+import com.dkaapis.sigma.R
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -135,6 +138,7 @@ class QueueZoneRenderer(
         var canvasW = 1920
         var canvasH = 1080
         var bgColor = "transparent"
+        var bgImageUrl = ""
         var canvasOpacity = 1.0f
         var overlayColor = ""
         var overlayOpacity = 0.0f
@@ -151,6 +155,7 @@ class QueueZoneRenderer(
                 currentName = json.optString("name", "Layar Antrian")
                 latestNumber = json.optString("latestCalledNumber", "$currentPrefix-001")
                 bgColor = json.optString("backgroundColor", "transparent").ifBlank { "transparent" }
+                bgImageUrl = json.optString("backgroundImageUrl", "").ifBlank { json.optString("background_image_url", "") }
                 canvasOpacity = (if (json.has("opacity")) json.optDouble("opacity", 1.0) else 1.0).toFloat()
                 overlayColor = json.optString("overlayColor", "").ifEmpty { json.optString("overlay_color", "") }
                 overlayOpacity = (if (json.has("overlayOpacity")) json.optDouble("overlayOpacity", 0.0) else json.optDouble("overlay_opacity", 0.0)).toFloat()
@@ -396,7 +401,30 @@ class QueueZoneRenderer(
             canvasView.addView(textView)
         }
 
-        return canvasView
+        if (bgImageUrl.isBlank()) return canvasView
+
+        // Background image (center-crop = CSS background-size: cover) behind the canvas
+        val resolvedUrl = if (bgImageUrl.startsWith("/")) {
+            val base = try { context.getString(R.string.server_http_base_url) } catch (_: Exception) { "" }
+            "${base.trimEnd('/')}$bgImageUrl"
+        } else bgImageUrl
+
+        return FrameLayout(context).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            addView(ImageView(context).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                alpha = canvasOpacity.coerceIn(0.0f, 1.0f)
+                load(resolvedUrl) { crossfade(300) }
+            })
+            addView(canvasView)
+        }
     }
 
     private fun interpolate(template: String, queueNumber: String, queueCounter: String): String {
