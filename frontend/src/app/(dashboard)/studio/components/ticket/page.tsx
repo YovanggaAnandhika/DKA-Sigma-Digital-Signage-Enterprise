@@ -1,11 +1,33 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { Ticket, Plus, Search, Eye, Edit, Trash2, Bell, Volume2, X, RotateCcw, Monitor } from 'lucide-react';
+import {
+  Ticket,
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Bell,
+  Volume2,
+  RotateCcw,
+  Monitor,
+  History,
+  GripVertical,
+  Clock,
+  Radio,
+  CheckCircle2,
+  Tv
+} from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
 import { modal } from '@/components/ui/ModalDialog';
-import { QueueDisplayConfig, QUEUE_STORAGE_KEY, DEFAULT_QUEUES } from './types';
+import {
+  QueueDisplayConfig,
+  QUEUE_STORAGE_KEY,
+  DEFAULT_QUEUES,
+  QueueCallHistoryItem,
+  QUEUE_HISTORY_STORAGE_KEY,
+} from './types';
 import { getDevices } from '@/lib/services/hardware/device.service';
 import { Device } from '@/lib/services/hardware/types';
 
@@ -51,29 +73,58 @@ export default function TicketPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [activeModalQueue, setActiveModalQueue] = useState<QueueDisplayConfig | null>(null);
+  const [selectedQueueId, setSelectedQueueId] = useState<string>(DEFAULT_QUEUES[0]?.id || '');
 
-  // Operator state in modal
-  const [modalSeq, setModalSeq] = useState(24);
-  const [modalCurrentNumber, setModalCurrentNumber] = useState('A-024');
-  const [modalCounter, setModalCounter] = useState('LOKET 02');
+  // Operator Calling Panel State
   const [isChiming, setIsChiming] = useState(false);
   const [devices, setDevices] = useState<Device[]>([]);
   const [targetDeviceId, setTargetDeviceId] = useState<string>('all');
+  const [callHistory, setCallHistory] = useState<QueueCallHistoryItem[]>([]);
 
+  // Draggable Split Divider State (Left Column ~68%, Right Column ~32%)
+  const [leftWidthPercent, setLeftWidthPercent] = useState<number>(68);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const splitContainerRef = useRef<HTMLDivElement>(null);
+
+  // Active selected queue
+  const selectedQueue = queues.find((q) => q.id === selectedQueueId) || queues[0] || null;
+
+  // Initialize and load saved state from localStorage
   useEffect(() => {
     try {
       const stored = localStorage.getItem(QUEUE_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          setQueues(parsed);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // If previously only 1 queue was cached, merge second default queue if absent
+          if (parsed.length === 1 && parsed[0].id === DEFAULT_QUEUES[0].id && DEFAULT_QUEUES.length > 1) {
+            const merged = [parsed[0], DEFAULT_QUEUES[1]];
+            setQueues(merged);
+            setSelectedQueueId(merged[0].id);
+            localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(merged));
+          } else {
+            setQueues(parsed);
+            setSelectedQueueId(parsed[0].id);
+          }
         }
       } else {
         localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(DEFAULT_QUEUES));
+        setSelectedQueueId(DEFAULT_QUEUES[0]?.id || '');
       }
     } catch {}
 
+    // Load Call History
+    try {
+      const historyStored = localStorage.getItem(QUEUE_HISTORY_STORAGE_KEY);
+      if (historyStored) {
+        const parsedHistory = JSON.parse(historyStored);
+        if (Array.isArray(parsedHistory)) {
+          setCallHistory(parsedHistory);
+        }
+      }
+    } catch {}
+
+    // Load hardware displays
     getDevices({ limit: 100 })
       .then((res) => {
         if (res && res.data) setDevices(res.data);
@@ -81,6 +132,260 @@ export default function TicketPage() {
       .catch(() => {});
   }, []);
 
+  // Real-time SSE listener: sync with Android player taps or other clients
+  useEffect(() => {
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/stream/device?deviceId=all');
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && (data.type === 'CALL_QUEUE' || data.type === 'QUEUE_CALL')) {
+            const ticketNum = data.ticketNumber;
+            const counterNm = data.counterName || 'LOKET 01';
+            const targetQId = data.queueId;
+            const isFromPlayer = data.source === 'player_touch';
+
+            if (!ticketNum) return;
+
+            // Update queue list state & persist immediately
+            setQueues((prevQueues) => {
+              const updated = prevQueues.map((q) => {
+                const isMatch = !targetQId || q.id === targetQId || prevQueues.length === 1;
+                if (isMatch) {
+                  return {
+                    ...q,
+                    currentNumber: ticketNum,
+                    currentCounter: counterNm,
+                  };
+                }
+                return q;
+              });
+              try {
+                localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(updated));
+              } catch {}
+              return updated;
+            });
+
+            // Trigger chime feedback on web if chime is enabled
+            setIsChiming(true);
+            playDingDongChime();
+            setTimeout(() => setIsChiming(false), 1400);
+
+            // Record to calling history
+            const newHistoryItem: QueueCallHistoryItem = {
+              id: `call-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              queueId: targetQId || '',
+              queueName: data.queueName || 'Layar Antrian',
+              ticketNumber: ticketNum,
+              counterName: counterNm,
+              targetDevice: isFromPlayer
+                ? (data.sourceDeviceId ? `Layar Player (${data.sourceDeviceId.substring(0, 8)})` : 'Layar Player (Sentuh Langsung)')
+                : 'Studio Web / Operator',
+              calledAt: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+              timestamp: Date.now(),
+              callType: isFromPlayer ? 'player_tap' : (data.callType || 'next'),
+            };
+
+            setCallHistory((prev) => {
+              const next = [newHistoryItem, ...prev].slice(0, 50);
+              try {
+                localStorage.setItem(QUEUE_HISTORY_STORAGE_KEY, JSON.stringify(next));
+              } catch {}
+              return next;
+            });
+          }
+        } catch (_) {}
+      };
+    } catch (_) {}
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
+  }, []);
+
+  // Draggable divider mouse events
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging || !splitContainerRef.current) return;
+      const rect = splitContainerRef.current.getBoundingClientRect();
+      const relativeX = e.clientX - rect.left;
+      const newPercent = (relativeX / rect.width) * 100;
+      // Clamp between 45% and 82%
+      if (newPercent >= 45 && newPercent <= 82) {
+        setLeftWidthPercent(Math.round(newPercent * 10) / 10);
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isDragging) {
+        setIsDragging(false);
+      }
+    };
+
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  // Update Loket/Counter for selected queue
+  const handleCounterChange = (newCounter: string) => {
+    if (!selectedQueue) return;
+    const updated = queues.map((q) => {
+      if (q.id === selectedQueue.id) {
+        return { ...q, currentCounter: newCounter };
+      }
+      return q;
+    });
+    setQueues(updated);
+    try {
+      localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(updated));
+    } catch {}
+  };
+
+  // Call Next Ticket (+1)
+  const handleCallNext = async () => {
+    if (!selectedQueue) return;
+
+    // Parse numeric sequence part from current ticket
+    const numPart = parseInt(selectedQueue.currentNumber.replace(/[^0-9]/g, ''), 10) || 0;
+    const nextSeq = numPart + 1;
+    const newFormatted = `${selectedQueue.prefix}-${String(nextSeq).padStart(3, '0')}`;
+
+    // 1. Update queue state & localStorage immediately so table list updates in real time!
+    const updatedQueues = queues.map((q) => {
+      if (q.id === selectedQueue.id) {
+        return {
+          ...q,
+          currentNumber: newFormatted,
+          currentCounter: selectedQueue.currentCounter,
+        };
+      }
+      return q;
+    });
+    setQueues(updatedQueues);
+    try {
+      localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(updatedQueues));
+    } catch {}
+
+    // 2. Audio Chime
+    if (selectedQueue.audioChimeEnabled) {
+      setIsChiming(true);
+      playDingDongChime();
+      setTimeout(() => setIsChiming(false), 1400);
+    }
+
+    // 3. Add to History
+    const historyItem: QueueCallHistoryItem = {
+      id: `call-${Date.now()}`,
+      queueId: selectedQueue.id,
+      queueName: selectedQueue.name,
+      ticketNumber: newFormatted,
+      counterName: selectedQueue.currentCounter,
+      targetDevice: targetDeviceId === 'all' ? 'Semua Layar' : (devices.find((d) => d.id === targetDeviceId)?.name || targetDeviceId),
+      calledAt: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      timestamp: Date.now(),
+      callType: 'next',
+    };
+    const nextHistory = [historyItem, ...callHistory].slice(0, 50);
+    setCallHistory(nextHistory);
+    try {
+      localStorage.setItem(QUEUE_HISTORY_STORAGE_KEY, JSON.stringify(nextHistory));
+    } catch {}
+
+    // 4. Broadcast via SSE to Android Player
+    try {
+      await fetch('/api/stream/device', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId: targetDeviceId,
+          type: 'CALL_QUEUE',
+          queueId: selectedQueue.id,
+          queueName: selectedQueue.name,
+          ticketNumber: newFormatted,
+          counterName: selectedQueue.currentCounter,
+          source: 'web_studio',
+          callType: 'next',
+        }),
+      });
+    } catch (e) {
+      console.error('Gagal broadcast panggilan antrian:', e);
+    }
+  };
+
+  // Repeat Call Current Ticket
+  const handleRepeatCall = async () => {
+    if (!selectedQueue) return;
+
+    if (selectedQueue.audioChimeEnabled) {
+      setIsChiming(true);
+      playDingDongChime();
+      setTimeout(() => setIsChiming(false), 1400);
+    }
+
+    // Add to History as recall
+    const historyItem: QueueCallHistoryItem = {
+      id: `call-${Date.now()}`,
+      queueId: selectedQueue.id,
+      queueName: selectedQueue.name,
+      ticketNumber: selectedQueue.currentNumber,
+      counterName: selectedQueue.currentCounter,
+      targetDevice: targetDeviceId === 'all' ? 'Semua Layar' : (devices.find((d) => d.id === targetDeviceId)?.name || targetDeviceId),
+      calledAt: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      timestamp: Date.now(),
+      callType: 'recall',
+    };
+    const nextHistory = [historyItem, ...callHistory].slice(0, 50);
+    setCallHistory(nextHistory);
+    try {
+      localStorage.setItem(QUEUE_HISTORY_STORAGE_KEY, JSON.stringify(nextHistory));
+    } catch {}
+
+    // Broadcast via SSE
+    try {
+      await fetch('/api/stream/device', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId: targetDeviceId,
+          type: 'CALL_QUEUE',
+          queueId: selectedQueue.id,
+          queueName: selectedQueue.name,
+          ticketNumber: selectedQueue.currentNumber,
+          counterName: selectedQueue.currentCounter,
+          source: 'web_studio',
+          callType: 'recall',
+        }),
+      });
+    } catch (e) {
+      console.error('Gagal broadcast panggil ulang antrian:', e);
+    }
+  };
+
+  // Clear History
+  const handleClearHistory = () => {
+    setCallHistory([]);
+    try {
+      localStorage.removeItem(QUEUE_HISTORY_STORAGE_KEY);
+    } catch {}
+  };
+
+  // Delete Queue Configuration
   const handleDelete = async (id: string, name: string) => {
     const ok = await modal.confirm({
       title: 'Hapus Layar Antrian',
@@ -89,78 +394,18 @@ export default function TicketPage() {
       confirmText: 'Hapus Layar',
     });
     if (!ok) return;
+
     const updated = queues.filter((q) => q.id !== id);
     setQueues(updated);
+    if (selectedQueueId === id && updated.length > 0) {
+      setSelectedQueueId(updated[0].id);
+    }
     try {
       localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(updated));
     } catch {}
   };
 
-  const handleOpenSimulator = (q: QueueDisplayConfig) => {
-    setActiveModalQueue(q);
-    const numPart = parseInt(q.currentNumber.replace(/[^0-9]/g, ''), 10) || 1;
-    setModalSeq(numPart);
-    setModalCurrentNumber(q.currentNumber);
-    setModalCounter(q.currentCounter);
-  };
-
-  const handleCallNext = async () => {
-    if (!activeModalQueue) return;
-    const nextSeq = modalSeq + 1;
-    const newFormatted = `${activeModalQueue.prefix}-${String(nextSeq).padStart(3, '0')}`;
-    setModalSeq(nextSeq);
-    setModalCurrentNumber(newFormatted);
-
-    if (activeModalQueue.audioChimeEnabled) {
-      setIsChiming(true);
-      playDingDongChime();
-      setTimeout(() => setIsChiming(false), 1500);
-    }
-
-    try {
-      await fetch('/api/stream/device', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          deviceId: targetDeviceId,
-          type: 'CALL_QUEUE',
-          queueId: activeModalQueue.id,
-          queueName: activeModalQueue.name,
-          ticketNumber: newFormatted,
-          counterName: modalCounter,
-        }),
-      });
-    } catch (e) {
-      console.error('Gagal broadcast panggilan antrian:', e);
-    }
-  };
-
-  const handleRepeatCall = async () => {
-    if (!activeModalQueue) return;
-    if (activeModalQueue.audioChimeEnabled) {
-      setIsChiming(true);
-      playDingDongChime();
-      setTimeout(() => setIsChiming(false), 1500);
-    }
-
-    try {
-      await fetch('/api/stream/device', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          deviceId: targetDeviceId,
-          type: 'CALL_QUEUE',
-          queueId: activeModalQueue.id,
-          queueName: activeModalQueue.name,
-          ticketNumber: modalCurrentNumber,
-          counterName: modalCounter,
-        }),
-      });
-    } catch (e) {
-      console.error('Gagal broadcast panggil ulang antrian:', e);
-    }
-  };
-
+  // Filter queues
   const filtered = queues.filter(
     (q) =>
       q.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -171,13 +416,16 @@ export default function TicketPage() {
   const paginated = filtered.slice((page - 1) * limit, page * limit);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Header & Action Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-            Komponen Nomor Antrian / Tiket
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Ticket size={24} color="var(--primary-400)" />
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+              Komponen Nomor Antrian / Tiket
+            </h2>
+          </div>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
             Layar pemanggil nomor antrian ritel otomatis, audio chime Ding-Dong Web Audio, dan kontrol kasir loket.
           </p>
@@ -191,270 +439,580 @@ export default function TicketPage() {
         </div>
       </div>
 
-      {/* Filter & Search */}
-      <div className="card-elevated" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Cari layar antrian berdasarkan nama, awalan, atau loket..."
-            className="form-input"
-            style={{ paddingLeft: '36px' }}
-          />
-        </div>
-      </div>
-
-      {/* Table Data */}
-      <div className="card-elevated" style={{ overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Nama Komponen Antrian</th>
-                <th>Awalan Tiket</th>
-                <th>Nomor Terakhir</th>
-                <th>Loket Saat Ini</th>
-                <th>Audio Chime</th>
-                <th style={{ textAlign: 'right' }}>Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.length === 0 ? (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    Belum ada antrian tersimpan. Klik tombol Tambah untuk membuat baru.
-                  </td>
-                </tr>
-              ) : (
-                paginated.map((q) => (
-                  <tr key={q.id}>
-                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                      <Link href={`/studio/components/ticket/${q.id}/edit`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        {q.name}
-                      </Link>
-                    </td>
-                    <td>
-                      <span
-                        style={{
-                          padding: '2px 10px',
-                          borderRadius: '6px',
-                          fontSize: '0.8125rem',
-                          fontWeight: 800,
-                          backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                          color: 'var(--primary-400)',
-                          border: '1px solid rgba(59, 130, 246, 0.3)',
-                        }}
-                      >
-                        {q.prefix}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '0.9375rem', fontWeight: 800, color: '#f59e0b' }}>
-                        {q.currentNumber}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                        {q.currentCounter}
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontSize: '0.75rem',
-                          color: q.audioChimeEnabled ? 'var(--accent-emerald)' : 'var(--text-muted)',
-                        }}
-                      >
-                        <Volume2 size={12} />
-                        {q.audioChimeEnabled ? 'Chime Aktif (Ding-Dong)' : 'Mute (Hening)'}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <button
-                          onClick={() => handleOpenSimulator(q)}
-                          className="btn btn-outline"
-                          style={{ padding: '5px 8px' }}
-                          title="Simulator Panggil Antrian"
-                        >
-                          <Bell size={14} />
-                        </button>
-                        <Link
-                          href={`/studio/components/ticket/${q.id}/edit`}
-                          className="btn btn-secondary"
-                          style={{ padding: '5px 8px' }}
-                          title="Edit Layar Antrian"
-                        >
-                          <Edit size={14} />
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(q.id, q.name)}
-                          className="btn btn-danger"
-                          style={{ padding: '5px 8px' }}
-                          title="Hapus"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <Pagination
-          page={page}
-          limit={limit}
-          total={filtered.length}
-          onPageChange={(p) => setPage(p)}
-          onLimitChange={(l) => {
-            setLimit(l);
-            setPage(1);
-          }}
-        />
-      </div>
-
-      {/* Modal Simulator Panggil Antrian */}
-      {activeModalQueue && (
+      {/* 2-Column Split Layout with Draggable Divider */}
+      <div
+        ref={splitContainerRef}
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'stretch',
+          gap: 0,
+          width: '100%',
+          userSelect: isDragging ? 'none' : 'auto',
+        }}
+      >
+        {/* LEFT COLUMN: Table List (default ~68%) */}
         <div
           style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)',
-            backdropFilter: 'blur(8px)',
-            zIndex: 1000,
+            width: `${leftWidthPercent}%`,
+            minWidth: '380px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            paddingRight: '6px',
+            transition: isDragging ? 'none' : 'width 0.1s ease',
+          }}
+        >
+          {/* Search Box */}
+          <div className="card-elevated" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Cari layar antrian berdasarkan nama, awalan, atau loket..."
+                className="form-input"
+                style={{ paddingLeft: '36px' }}
+              />
+            </div>
+          </div>
+
+          {/* Table Data */}
+          <div className="card-elevated" style={{ overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Nama Komponen Antrian</th>
+                    <th>Awalan</th>
+                    <th>Nomor Terakhir</th>
+                    <th>Loket Saat Ini</th>
+                    <th>Audio Chime</th>
+                    <th style={{ textAlign: 'right' }}>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginated.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                        Belum ada antrian tersimpan. Klik tombol Tambah untuk membuat baru.
+                      </td>
+                    </tr>
+                  ) : (
+                    paginated.map((q) => {
+                      const isSelected = selectedQueue?.id === q.id;
+                      return (
+                        <tr
+                          key={q.id}
+                          onClick={() => setSelectedQueueId(q.id)}
+                          style={{
+                            cursor: 'pointer',
+                            backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.08)' : undefined,
+                            borderLeft: isSelected ? '4px solid var(--primary-500)' : '4px solid transparent',
+                            transition: 'background-color 0.15s ease',
+                          }}
+                        >
+                          <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <Link
+                                href={`/studio/components/ticket/${q.id}/edit`}
+                                onClick={(e) => e.stopPropagation()}
+                                style={{ textDecoration: 'none', color: 'inherit' }}
+                              >
+                                {q.name}
+                              </Link>
+                              {isSelected && (
+                                <span
+                                  style={{
+                                    fontSize: '0.6875rem',
+                                    fontWeight: 700,
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                                    color: 'var(--primary-400)',
+                                    letterSpacing: '0.02em',
+                                  }}
+                                >
+                                  AKTIF DI KANAN
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td>
+                            <span
+                              style={{
+                                padding: '2px 10px',
+                                borderRadius: '6px',
+                                fontSize: '0.8125rem',
+                                fontWeight: 800,
+                                backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                                color: 'var(--primary-400)',
+                                border: '1px solid rgba(59, 130, 246, 0.3)',
+                              }}
+                            >
+                              {q.prefix}
+                            </span>
+                          </td>
+                          <td>
+                            <span
+                              style={{
+                                fontSize: '0.9375rem',
+                                fontWeight: 800,
+                                color: '#f59e0b',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                              }}
+                            >
+                              {q.currentNumber}
+                            </span>
+                          </td>
+                          <td>
+                            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                              {q.currentCounter}
+                            </span>
+                          </td>
+                          <td>
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontSize: '0.75rem',
+                                color: q.audioChimeEnabled ? 'var(--accent-emerald)' : 'var(--text-muted)',
+                              }}
+                            >
+                              <Volume2 size={12} />
+                              {q.audioChimeEnabled ? 'Chime Ding-Dong' : 'Mute'}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedQueueId(q.id);
+                                }}
+                                className={isSelected ? 'btn btn-primary' : 'btn btn-outline'}
+                                style={{ padding: '5px 9px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                title="Picu dan Kontrol Antrian Ini di Panel Kanan"
+                              >
+                                <Bell size={14} />
+                                <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>
+                                  {isSelected ? 'Terpilih' : 'Picu'}
+                                </span>
+                              </button>
+                              <Link
+                                href={`/studio/components/ticket/${q.id}/edit`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="btn btn-secondary"
+                                style={{ padding: '5px 8px' }}
+                                title="Edit Layar Antrian"
+                              >
+                                <Edit size={14} />
+                              </Link>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(q.id, q.name);
+                                }}
+                                className="btn btn-danger"
+                                style={{ padding: '5px 8px' }}
+                                title="Hapus"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <Pagination
+              page={page}
+              limit={limit}
+              total={filtered.length}
+              onPageChange={(p) => setPage(p)}
+              onLimitChange={(l) => {
+                setLimit(l);
+                setPage(1);
+              }}
+            />
+          </div>
+        </div>
+
+        {/* DRAGGABLE DIVIDER */}
+        <div
+          onMouseDown={handleMouseDown}
+          style={{
+            width: '12px',
+            cursor: 'col-resize',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '24px',
+            position: 'relative',
+            zIndex: 10,
+            userSelect: 'none',
+            transition: 'background-color 0.15s ease',
+            backgroundColor: isDragging ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+            borderRadius: '4px',
           }}
+          title="Geser ke kiri / kanan untuk menyesuaikan ukuran kolom"
         >
           <div
-            className="card-elevated"
             style={{
-              width: '100%',
-              maxWidth: '840px',
-              backgroundColor: 'var(--bg-surface)',
-              borderRadius: '20px',
-              border: '1px solid var(--border-subtle)',
-              overflow: 'hidden',
+              width: '4px',
+              height: '56px',
+              borderRadius: '2px',
+              backgroundColor: isDragging ? 'var(--primary-400)' : 'var(--border-strong)',
               display: 'flex',
-              flexDirection: 'column',
-              boxShadow: 'var(--card-shadow)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background-color 0.2s ease',
             }}
-          >
-            {/* Header */}
-            <div style={{ padding: '16px 24px', backgroundColor: 'var(--bg-surface-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Ticket size={20} color="var(--primary-400)" />
-                <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)' }}>
-                  Simulator Layar Antrian: {activeModalQueue.name}
-                </span>
-              </div>
-              <button onClick={() => setActiveModalQueue(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
-                <X size={20} />
-              </button>
-            </div>
+          />
+        </div>
 
-            {/* Display Screen Stage */}
-            <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-primary)', borderBottom: '1px solid var(--border-subtle)' }}>
+        {/* RIGHT COLUMN: Calling Console & History (default ~32%) */}
+        <div
+          style={{
+            width: `${100 - leftWidthPercent}%`,
+            minWidth: '320px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            paddingLeft: '6px',
+            transition: isDragging ? 'none' : 'width 0.1s ease',
+          }}
+        >
+          {selectedQueue ? (
+            <>
+              {/* Operator Controller & Screen Card */}
               <div
+                className="card-elevated"
                 style={{
-                  width: '100%',
-                  maxWidth: '520px',
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '14px',
                   backgroundColor: 'var(--bg-surface)',
-                  border: isChiming ? '2px solid var(--primary-400)' : '1px solid var(--border-subtle)',
-                  borderRadius: '20px',
-                  padding: '28px',
-                  textAlign: 'center',
-                  boxShadow: isChiming ? '0 0 30px rgba(56, 189, 248, 0.35)' : 'var(--card-shadow)',
-                  transition: 'all 0.3s ease',
+                  border: '1px solid var(--border-subtle)',
                 }}
               >
-                <div style={{ fontSize: '0.875rem', fontWeight: 800, letterSpacing: '0.1em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                  NOMOR ANTRIAN
-                </div>
-                <div style={{ fontSize: '4.5rem', fontWeight: 900, letterSpacing: '0.04em', color: 'var(--primary-400)', lineHeight: 1.1, margin: '8px 0' }}>
-                  {modalCurrentNumber}
-                </div>
-                <div style={{ display: 'inline-block', padding: '6px 20px', borderRadius: '10px', backgroundColor: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#fbbf24', fontSize: '1.25rem', fontWeight: 800 }}>
-                  {modalCounter}
-                </div>
-              </div>
-
-              {/* Marquee Banner */}
-              <div style={{ marginTop: '20px', width: '100%', maxWidth: '520px', overflow: 'hidden', whiteSpace: 'nowrap', backgroundColor: 'var(--bg-surface-elevated)', padding: '8px 16px', borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>
-                <Marquee>{activeModalQueue.marqueeText}</Marquee>
-              </div>
-            </div>
-
-            {/* Operator Control Panel */}
-            <div style={{ padding: '20px 24px', backgroundColor: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <label style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>Target Layar:</label>
-                  <select
-                    value={targetDeviceId}
-                    onChange={(e) => setTargetDeviceId(e.target.value)}
-                    style={{ backgroundColor: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--input-border)', borderRadius: '8px', padding: '6px 12px', fontSize: '0.8125rem' }}
+                {/* Header Title */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Radio size={16} color="var(--primary-400)" />
+                    <span style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      Kontrol Pemanggil Antrian
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                      color: 'var(--primary-400)',
+                      border: '1px solid rgba(59, 130, 246, 0.25)',
+                    }}
                   >
-                    <option value="all">Otomatis (Layar dengan Antrian Ini)</option>
-                    {devices.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} {d.isOnline ? '● Online' : '○ Offline'}
-                      </option>
-                    ))}
-                  </select>
+                    {selectedQueue.name} ({selectedQueue.prefix})
+                  </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <label style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>Meja/Loket:</label>
-                  <select
-                    value={modalCounter}
-                    onChange={(e) => setModalCounter(e.target.value)}
-                    style={{ backgroundColor: 'var(--input-bg)', color: 'var(--text-primary)', border: '1px solid var(--input-border)', borderRadius: '8px', padding: '6px 12px', fontSize: '0.8125rem' }}
+                {/* Digital Signage Screen Simulation */}
+                <div
+                  style={{
+                    backgroundColor: 'var(--bg-primary)',
+                    borderRadius: '14px',
+                    padding: '20px 16px',
+                    textAlign: 'center',
+                    border: isChiming ? '2px solid var(--primary-400)' : '1px solid var(--border-subtle)',
+                    boxShadow: isChiming ? '0 0 24px rgba(56, 189, 248, 0.35)' : 'none',
+                    transition: 'all 0.25s ease',
+                    position: 'relative',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.1em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                    NOMOR ANTRIAN
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '3.5rem',
+                      fontWeight: 900,
+                      letterSpacing: '0.04em',
+                      color: 'var(--primary-400)',
+                      lineHeight: 1.1,
+                      margin: '6px 0',
+                    }}
                   >
-                    <option value="LOKET 01">LOKET 01</option>
-                    <option value="LOKET 02">LOKET 02</option>
-                    <option value="LOKET 03">LOKET 03</option>
-                    <option value="CUSTOMER SERVICE">CUSTOMER SERVICE</option>
-                    <option value="KASIR UTAMA">KASIR UTAMA</option>
-                  </select>
+                    {selectedQueue.currentNumber}
+                  </div>
+                  <div
+                    style={{
+                      display: 'inline-block',
+                      padding: '4px 16px',
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                      border: '1px solid rgba(245, 158, 11, 0.3)',
+                      color: '#fbbf24',
+                      fontSize: '1rem',
+                      fontWeight: 800,
+                    }}
+                  >
+                    {selectedQueue.currentCounter}
+                  </div>
+
+                  {/* Marquee Banner */}
+                  <div
+                    style={{
+                      marginTop: '12px',
+                      overflow: 'hidden',
+                      whiteSpace: 'nowrap',
+                      backgroundColor: 'var(--bg-surface-elevated)',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      color: 'var(--text-secondary)',
+                      fontSize: '0.75rem',
+                    }}
+                  >
+                    <Marquee>{selectedQueue.marqueeText}</Marquee>
+                  </div>
+                </div>
+
+                {/* Configuration / Selectors */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Target Layar:</label>
+                    <select
+                      value={targetDeviceId}
+                      onChange={(e) => setTargetDeviceId(e.target.value)}
+                      style={{
+                        backgroundColor: 'var(--input-bg)',
+                        color: 'var(--text-primary)',
+                        border: '1px solid var(--input-border)',
+                        borderRadius: '6px',
+                        padding: '5px 10px',
+                        fontSize: '0.75rem',
+                        maxWidth: '220px',
+                      }}
+                    >
+                      <option value="all">Otomatis (Layar Aktif)</option>
+                      {devices.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name} {d.isOnline ? '● Online' : '○ Offline'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Meja / Loket:</label>
+                    <select
+                      value={selectedQueue.currentCounter}
+                      onChange={(e) => handleCounterChange(e.target.value)}
+                      style={{
+                        backgroundColor: 'var(--input-bg)',
+                        color: 'var(--text-primary)',
+                        border: '1px solid var(--input-border)',
+                        borderRadius: '6px',
+                        padding: '5px 10px',
+                        fontSize: '0.75rem',
+                        maxWidth: '220px',
+                      }}
+                    >
+                      <option value="LOKET 01">LOKET 01</option>
+                      <option value="LOKET 02">LOKET 02</option>
+                      <option value="LOKET 03">LOKET 03</option>
+                      <option value="CUSTOMER SERVICE">CUSTOMER SERVICE</option>
+                      <option value="KASIR UTAMA">KASIR UTAMA</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '8px', marginTop: '4px' }}>
+                  <button
+                    onClick={handleRepeatCall}
+                    className="btn btn-secondary"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '9px 12px',
+                      fontSize: '0.8125rem',
+                    }}
+                  >
+                    <Volume2 size={16} />
+                    <span>Panggil Ulang</span>
+                  </button>
+                  <button
+                    onClick={handleCallNext}
+                    className="btn btn-primary"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '9px 12px',
+                      fontSize: '0.8125rem',
+                      fontWeight: 800,
+                    }}
+                  >
+                    <Bell size={16} />
+                    <span>Panggil Selanjutnya (+1)</span>
+                  </button>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <button
-                  onClick={handleRepeatCall}
-                  className="btn btn-secondary"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              {/* Call History Card */}
+              <div
+                className="card-elevated"
+                style={{
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  backgroundColor: 'var(--bg-surface)',
+                  border: '1px solid var(--border-subtle)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <History size={16} color="var(--primary-400)" />
+                    <span style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      Riwayat Pemanggilan
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '0.6875rem',
+                        fontWeight: 700,
+                        padding: '1px 6px',
+                        borderRadius: '10px',
+                        backgroundColor: 'var(--bg-surface-elevated)',
+                        color: 'var(--text-muted)',
+                        border: '1px solid var(--border-subtle)',
+                      }}
+                    >
+                      {callHistory.length}
+                    </span>
+                  </div>
+
+                  {callHistory.length > 0 && (
+                    <button
+                      onClick={handleClearHistory}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '0.75rem',
+                      }}
+                      title="Bersihkan riwayat panggilan"
+                    >
+                      <RotateCcw size={12} />
+                      <span>Bersihkan</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* History List */}
+                <div
+                  style={{
+                    maxHeight: '260px',
+                    overflowY: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                    paddingRight: '4px',
+                  }}
                 >
-                  <Volume2 size={16} />
-                  <span>Panggil Ulang</span>
-                </button>
-                <button
-                  onClick={handleCallNext}
-                  className="btn btn-primary"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <Bell size={16} />
-                  <span>Panggil Selanjutnya (+1)</span>
-                </button>
+                  {callHistory.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '24px 12px', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
+                      Belum ada riwayat panggilan tiket hari ini.
+                    </div>
+                  ) : (
+                    callHistory.map((h) => {
+                      const isRecall = h.callType === 'recall';
+                      const isPlayerTap = h.callType === 'player_tap';
+                      return (
+                        <div
+                          key={h.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '8px 10px',
+                            borderRadius: '8px',
+                            backgroundColor: 'var(--bg-primary)',
+                            border: '1px solid var(--border-subtle)',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Clock size={12} style={{ color: 'var(--text-muted)' }} />
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                              {h.calledAt}
+                            </span>
+                            <span style={{ fontWeight: 800, fontSize: '0.875rem', color: 'var(--primary-400)' }}>
+                              {h.ticketNumber}
+                            </span>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                              {h.counterName}
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span
+                              style={{
+                                fontSize: '0.6875rem',
+                                fontWeight: 700,
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                                backgroundColor: isPlayerTap
+                                  ? 'rgba(168, 85, 247, 0.15)'
+                                  : isRecall
+                                  ? 'rgba(245, 158, 11, 0.15)'
+                                  : 'rgba(16, 185, 129, 0.15)',
+                                color: isPlayerTap ? '#c084fc' : isRecall ? '#fbbf24' : '#34d399',
+                                border: isPlayerTap
+                                  ? '1px solid rgba(168, 85, 247, 0.3)'
+                                  : isRecall
+                                  ? '1px solid rgba(245, 158, 11, 0.3)'
+                                  : '1px solid rgba(16, 185, 129, 0.3)',
+                              }}
+                            >
+                              {isPlayerTap ? 'Sentuh Player' : isRecall ? 'Panggil Ulang' : 'Panggilan Baru'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
+            </>
+          ) : (
+            <div className="card-elevated" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+              Pilih salah satu antrian di tabel untuk mengontrol pemanggilan.
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

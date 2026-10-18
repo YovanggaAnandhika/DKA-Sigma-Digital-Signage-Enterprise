@@ -604,6 +604,42 @@ class PlayerActivity : AppCompatActivity() {
                             onUserTapNext = { ticketNum, counterNm ->
                                 android.util.Log.i("PlayerActivity", "Layar player disentuh! Memanggil nomor antrian: $ticketNum di $counterNm")
                                 speakQueueTicket(ticketNum, counterNm)
+
+                                // Broadcast ke server via SSE POST agar CMS web dan perangkat lain langsung sinkron
+                                try {
+                                    val currentDevId = deviceRepo.getSavedDeviceId() ?: ""
+                                    val baseUrl = try {
+                                        getString(com.dkaapis.sigma.R.string.server_http_base_url)
+                                    } catch (_: Exception) {
+                                        "http://100.99.242.84:80"
+                                    }
+                                    val payload = JSONObject().apply {
+                                        put("deviceId", "all")
+                                        put("type", "CALL_QUEUE")
+                                        put("queueId", activeQueueDisplayId)
+                                        put("queueName", "Layar Antrian")
+                                        put("ticketNumber", ticketNum)
+                                        put("counterName", counterNm)
+                                        put("source", "player_touch")
+                                        put("sourceDeviceId", currentDevId)
+                                    }
+                                    val mediaType = "application/json; charset=utf-8".toMediaType()
+                                    val body = payload.toString().toRequestBody(mediaType)
+                                    val postReq = Request.Builder()
+                                        .url("$baseUrl/api/stream/device")
+                                        .post(body)
+                                        .build()
+                                    streamingHttpClient.newCall(postReq).enqueue(object : okhttp3.Callback {
+                                        override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+                                            android.util.Log.w("PlayerActivity", "Gagal sync sentuh antrian ke server: ${e.message}")
+                                        }
+                                        override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                                            response.close()
+                                        }
+                                    })
+                                } catch (e: Exception) {
+                                    android.util.Log.w("PlayerActivity", "Gagal kirim broadcast sentuh antrian: ${e.message}")
+                                }
                             }
                         )
                         activeQueueRenderer = renderer
@@ -864,6 +900,14 @@ class PlayerActivity : AppCompatActivity() {
                     val targetQueueId = data.optString("queueId", data.optString("queue_id", ""))
                     val ticketNumber = data.optString("ticketNumber", data.optString("ticket_number", ""))
                     val counterName = data.optString("counterName", data.optString("counter_name", "LOKET 01"))
+                    val source = data.optString("source", "")
+                    val sourceDeviceId = data.optString("sourceDeviceId", "")
+                    val currentDevId = deviceRepo.getSavedDeviceId() ?: ""
+
+                    // Bila event berasal dari sentuhan layar player ini sendiri, abaikan echo
+                    if (source == "player_touch" && sourceDeviceId.isNotBlank() && sourceDeviceId == currentDevId) {
+                        return@runOnUiThread
+                    }
 
                     val queueRenderer = activeQueueRenderer ?: run {
                         android.util.Log.i("PlayerActivity", "Panggilan diabaikan: player saat ini tidak sedang memutar antrian.")

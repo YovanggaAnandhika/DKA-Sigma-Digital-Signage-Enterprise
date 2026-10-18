@@ -204,6 +204,20 @@ export function createDefaultQueueLayoutItems(theme: 'clean-light' | 'solid-dark
   ];
 }
 
+export interface QueueCallHistoryItem {
+  id: string;
+  queueId: string;
+  queueName: string;
+  ticketNumber: string;
+  counterName: string;
+  targetDevice: string;
+  calledAt: string;
+  timestamp: number;
+  callType: 'next' | 'recall' | 'player_tap';
+}
+
+export const QUEUE_HISTORY_STORAGE_KEY = 'dka_signage_queue_call_history';
+
 export const DEFAULT_QUEUES: QueueDisplayConfig[] = [
   {
     id: '76a3e570-9807-40a5-ad74-e7bb28e382dc',
@@ -218,6 +232,22 @@ export const DEFAULT_QUEUES: QueueDisplayConfig[] = [
     backgroundColor: '#0f172a',
     themePreset: 'medical-green',
     items: createDefaultQueueLayoutItems('medical-green'),
+    counters: [],
+    audios: [],
+  },
+  {
+    id: 'b12c34d5-8901-4ef2-bc34-f56a78b901cd',
+    name: 'Layar Antrian Farmasi / Kasir 2',
+    prefix: 'B',
+    currentNumber: 'B-001',
+    currentCounter: 'LOKET 02',
+    audioChimeEnabled: true,
+    marqueeText: 'PENGUMUMAN: Silakan menuju LOKET 02 saat nomor B-001 dipanggil.',
+    canvasWidth: 1920,
+    canvasHeight: 1080,
+    backgroundColor: '#0f172a',
+    themePreset: 'executive-blue',
+    items: createDefaultQueueLayoutItems('executive-blue'),
     counters: [],
     audios: [],
   },
