@@ -55,6 +55,7 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var storageRepo: MediaStorageRepositoryImpl
     private lateinit var canvasLayout: SignageCanvasLayout
     private lateinit var loadingOverlay: FrameLayout
+    private lateinit var badgeText: TextView
     private lateinit var loadingText: TextView
     private lateinit var subDetailText: TextView
     private lateinit var progressBar: ProgressBar
@@ -169,69 +170,72 @@ class PlayerActivity : AppCompatActivity() {
         root.addView(canvasLayout)
 
         loadingOverlay = FrameLayout(this).apply {
-            setBackgroundColor(Color.parseColor("#B3050B14"))
+            setBackgroundColor(Color.parseColor("#E60B0F19"))
             layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
         }
 
-        val cardContainer = android.widget.LinearLayout(this).apply {
+        val overlayContent = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
             gravity = android.view.Gravity.CENTER_HORIZONTAL
-            val bgDrawable = android.graphics.drawable.GradientDrawable().apply {
-                setColor(Color.parseColor("#141E33"))
-                cornerRadius = 24f
-                setStroke(2, Color.parseColor("#2563EB"))
-            }
-            background = bgDrawable
-            setPadding(48, 36, 48, 36)
             layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
             ).apply {
                 gravity = android.view.Gravity.CENTER
+                setMargins(64, 0, 64, 0)
             }
         }
 
-        val badgeText = TextView(this).apply {
+        badgeText = TextView(this).apply {
             text = "● SINKRONISASI KONTEN REALTIME"
             setTextColor(Color.parseColor("#10B981"))
-            textSize = 12f
+            textSize = 14f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
-            setPadding(0, 0, 0, 12)
+            gravity = android.view.Gravity.CENTER
+            setPadding(0, 0, 0, 16)
         }
-        cardContainer.addView(badgeText)
+        overlayContent.addView(badgeText)
+
+        loadingText = TextView(this).apply {
+            text = "Memulai DKASigma Player..."
+            setTextColor(Color.WHITE)
+            textSize = 24f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            gravity = android.view.Gravity.CENTER
+            setPadding(0, 0, 0, 24)
+        }
+        overlayContent.addView(loadingText)
 
         progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             isIndeterminate = false
             max = 100
             progress = 0
-            val lp = android.widget.LinearLayout.LayoutParams(600, 16)
-            lp.setMargins(0, 8, 0, 16)
+            val lp = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                24
+            ).apply {
+                maxWidth = 1000
+                setMargins(120, 0, 120, 24)
+                gravity = android.view.Gravity.CENTER_HORIZONTAL
+            }
             layoutParams = lp
         }
-        cardContainer.addView(progressBar)
-
-        loadingText = TextView(this).apply {
-            text = "Memulai DKASigma Player..."
-            setTextColor(Color.WHITE)
-            textSize = 15f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            gravity = android.view.Gravity.CENTER
-        }
-        cardContainer.addView(loadingText)
+        overlayContent.addView(progressBar)
 
         subDetailText = TextView(this).apply {
             text = ""
             setTextColor(Color.parseColor("#94A3B8"))
-            textSize = 12f
+            textSize = 14f
             gravity = android.view.Gravity.CENTER
-            setPadding(0, 6, 0, 0)
+            setLineSpacing(8f, 1f)
+            setPadding(0, 0, 0, 0)
         }
-        cardContainer.addView(subDetailText)
+        overlayContent.addView(subDetailText)
 
-        loadingOverlay.addView(cardContainer)
+        loadingOverlay.addView(overlayContent)
         root.addView(loadingOverlay)
 
         setContentView(root)
@@ -249,6 +253,10 @@ class PlayerActivity : AppCompatActivity() {
                     is PlayerUiState.SyncingManifest -> {
                         WatchdogService.setPlaybackActive(this@PlayerActivity, false)
                         loadingOverlay.visibility = View.VISIBLE
+                        badgeText.text = "● SINKRONISASI JADWAL"
+                        badgeText.setTextColor(Color.parseColor("#38BDF8"))
+                        loadingText.setTextColor(Color.WHITE)
+                        subDetailText.setTextColor(Color.parseColor("#94A3B8"))
                         progressBar.isIndeterminate = true
                         loadingText.text = state.message
                         subDetailText.text = "Mengecek pembaruan jadwal dan integritas manifest..."
@@ -256,6 +264,10 @@ class PlayerActivity : AppCompatActivity() {
                     is PlayerUiState.DownloadingAssets -> {
                         WatchdogService.setPlaybackActive(this@PlayerActivity, false)
                         loadingOverlay.visibility = View.VISIBLE
+                        badgeText.text = "● MENGUNDUH ASET MEDIA"
+                        badgeText.setTextColor(Color.parseColor("#10B981"))
+                        loadingText.setTextColor(Color.WHITE)
+                        subDetailText.setTextColor(Color.parseColor("#94A3B8"))
                         progressBar.isIndeterminate = false
                         progressBar.progress = state.progressPercent
 
@@ -272,6 +284,10 @@ class PlayerActivity : AppCompatActivity() {
                     }
                     is PlayerUiState.Error -> {
                         loadingOverlay.visibility = View.VISIBLE
+                        badgeText.text = "⚠ KENDALA"
+                        badgeText.setTextColor(Color.parseColor("#EF4444"))
+                        loadingText.setTextColor(Color.parseColor("#EF4444"))
+                        subDetailText.setTextColor(Color.parseColor("#FCA5A5"))
                         progressBar.isIndeterminate = false
                         progressBar.progress = 0
                         loadingText.text = "Kendala: ${state.message}"
@@ -577,6 +593,11 @@ class PlayerActivity : AppCompatActivity() {
                     val fileName = data.optString("fileName", "Media Asset")
 
                     loadingOverlay.visibility = View.VISIBLE
+                    badgeText.text = "● SINKRONISASI KONTEN REALTIME"
+                    badgeText.setTextColor(Color.parseColor("#10B981"))
+                    loadingText.setTextColor(Color.WHITE)
+                    subDetailText.setTextColor(Color.parseColor("#94A3B8"))
+
                     progressBar.isIndeterminate = false
                     progressBar.progress = percent
 
@@ -591,7 +612,13 @@ class PlayerActivity : AppCompatActivity() {
                     val fileName = data.optString("fileName", "Media")
                     progressBar.isIndeterminate = false
                     progressBar.progress = 100
-                    loadingText.text = "✓ Transmisi Seluruh Chunk Selesai (SHA-256 Valid)"
+
+                    badgeText.text = "✓ TERVERIFIKASI"
+                    badgeText.setTextColor(Color.parseColor("#10B981"))
+                    loadingText.setTextColor(Color.WHITE)
+                    subDetailText.setTextColor(Color.parseColor("#94A3B8"))
+
+                    loadingText.text = "Transmisi Seluruh Chunk Selesai (SHA-256 Valid)"
                     subDetailText.text = "${fileName}\nSeluruh ${totalChunks} chunk berhasil diterima & terverifikasi."
 
                     watchdogHandler.postDelayed({
@@ -605,18 +632,26 @@ class PlayerActivity : AppCompatActivity() {
                     loadingOverlay.visibility = View.VISIBLE
                     progressBar.isIndeterminate = false
                     progressBar.progress = 0
-                    loadingText.text = "✖ Transmisi Chunk Dibatalkan"
+
+                    // Warna merah menyala untuk status dibatalkan
+                    badgeText.text = "✖ DIBATALKAN"
+                    badgeText.setTextColor(Color.parseColor("#EF4444"))
+
+                    loadingText.text = "Transmisi Chunk Dibatalkan"
+                    loadingText.setTextColor(Color.parseColor("#EF4444"))
+
                     subDetailText.text = if (fileName.isNotBlank()) {
-                        "${fileName}\nPengunggahan berkas dibatalkan oleh CMS."
+                        "${fileName}\nPengunggahan berkas dibatalkan oleh pengguna dari CMS."
                     } else {
-                        "Pengunggahan berkas dibatalkan oleh CMS."
+                        "Pengunggahan berkas dibatalkan oleh pengguna dari CMS."
                     }
+                    subDetailText.setTextColor(Color.parseColor("#FCA5A5"))
 
                     watchdogHandler.postDelayed({
                         if (viewModel.uiState.value is PlayerUiState.Playing) {
                             loadingOverlay.visibility = View.GONE
                         }
-                    }, 2000)
+                    }, 2500)
                 }
                 "RELOAD" -> {
                     viewModel.syncManifest()
