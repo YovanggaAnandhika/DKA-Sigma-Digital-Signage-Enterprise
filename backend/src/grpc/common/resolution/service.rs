@@ -91,7 +91,14 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
         )
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| Status::internal(e.to_string()))?;
+        .map_err(|e| {
+            if let sqlx::Error::Database(db_err) = &e {
+                if db_err.is_unique_violation() {
+                    return Status::already_exists(format!("Resolusi dengan dimensi {}x{} sudah terdaftar di sistem", req.width, req.height));
+                }
+            }
+            Status::internal(e.to_string())
+        })?;
 
         Ok(Response::new(Resolution {
             id: row.id.to_string(),
@@ -126,7 +133,14 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| Status::internal(e.to_string()))?
+        .map_err(|e| {
+            if let sqlx::Error::Database(db_err) = &e {
+                if db_err.is_unique_violation() {
+                    return Status::already_exists(format!("Resolusi dengan dimensi {}x{} sudah terdaftar di sistem", req.width, req.height));
+                }
+            }
+            Status::internal(e.to_string())
+        })?
         .ok_or_else(|| Status::not_found("Resolution not found"))?;
 
         Ok(Response::new(Resolution {
