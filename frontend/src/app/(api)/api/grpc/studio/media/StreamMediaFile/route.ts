@@ -17,6 +17,8 @@ export async function GET(req: NextRequest) {
 
     const request = new StreamMediaFileRequest();
     request.setFilename(filename);
+    request.setStartByte(0);
+    request.setEndByte(-1);
 
     return new Promise<NextResponse>((resolve, reject) => {
       const chunks: Uint8Array[] = [];

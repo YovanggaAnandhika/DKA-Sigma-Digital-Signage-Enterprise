@@ -424,7 +424,7 @@ export default function ViewDisplayPage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div
-                onClick={() => setSelectedScreenshot(getMediaStreamUrl(screenshots[0].fileUrl))}
+                onClick={() => setSelectedScreenshot(`${getMediaStreamUrl(screenshots[0].fileUrl)}&t=${new Date(screenshots[0].capturedAt).getTime()}`)}
                 style={{
                   position: 'relative',
                   width: '100%',
@@ -437,7 +437,7 @@ export default function ViewDisplayPage() {
                 }}
               >
                 <img
-                  src={getMediaStreamUrl(screenshots[0].fileUrl)}
+                  src={`${getMediaStreamUrl(screenshots[0].fileUrl)}&t=${new Date(screenshots[0].capturedAt).getTime()}`}
                   alt="Live Screen Capture"
                   style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 />
