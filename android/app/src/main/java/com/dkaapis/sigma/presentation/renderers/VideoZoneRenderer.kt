@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.dkaapis.sigma.data.analytics.AssetStatsData
@@ -35,7 +36,22 @@ class VideoZoneRenderer(
 
     fun createPlaylistView(parent: ViewGroup, playlist: List<VideoPlaylistItem>): PlayerView {
         this.playlistItems = playlist
-        val player = ExoPlayer.Builder(context).build().apply {
+
+        // Optimized load control: 2.5s min buffer, 6s max buffer (local offline files don't need 50s RAM buffer)
+        val loadControl = DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                /* minBufferMs = */ 2_500,
+                /* maxBufferMs = */ 6_000,
+                /* bufferForPlaybackMs = */ 500,
+                /* bufferForPlaybackAfterRebufferMs = */ 1_000
+            )
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .build()
+
+        val player = ExoPlayer.Builder(context)
+            .setLoadControl(loadControl)
+            .build()
+            .apply {
             repeatMode = Player.REPEAT_MODE_ALL
 
             for (item in playlist) {

@@ -1,5 +1,6 @@
 package com.dkaapis.sigma.presentation.player
 
+import android.content.ComponentCallbacks2
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
@@ -897,6 +898,36 @@ class PlayerActivity : AppCompatActivity() {
                 android.util.Log.e("PlayerActivity", "Gagal restart: ${e.message}")
             }
         }
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        when (level) {
+            ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL,
+            ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> {
+                android.util.Log.w("PlayerActivity", "Alokasi memori mendekati batas kritis (level $level). Membebaskan cache sekunder...")
+                try {
+                    coil.Coil.imageLoader(this).memoryCache?.clear()
+                } catch (_: Exception) {}
+                System.gc()
+            }
+            ComponentCallbacks2.TRIM_MEMORY_BACKGROUND,
+            ComponentCallbacks2.TRIM_MEMORY_MODERATE,
+            ComponentCallbacks2.TRIM_MEMORY_COMPLETE -> {
+                try {
+                    coil.Coil.imageLoader(this).memoryCache?.clear()
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        android.util.Log.w("PlayerActivity", "onLowMemory diterima dari sistem OS Android! Membebaskan seluruh cache sekunder...")
+        try {
+            coil.Coil.imageLoader(this).memoryCache?.clear()
+        } catch (_: Exception) {}
+        System.gc()
     }
 
     override fun onDestroy() {
