@@ -192,6 +192,10 @@ export default function TicketPage() {
     queuesRef.current = queues;
   }, [queues]);
 
+  // Unique tab client ID & local call timestamp to ignore self-broadcast echoes
+  const clientIdRef = useRef<string>(`client-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`);
+  const lastLocalCallTimeRef = useRef<number>(0);
+
   // Initialize and load saved state from localStorage, and sync from backend
   useEffect(() => {
     try {
@@ -307,13 +311,23 @@ export default function TicketPage() {
       })
       .catch(() => {});
 
-    // Load Call History
+    // Load Call History (and automatically clean up any existing duplicate entries)
     try {
       const historyStored = localStorage.getItem(QUEUE_HISTORY_STORAGE_KEY);
       if (historyStored) {
         const parsedHistory = JSON.parse(historyStored);
         if (Array.isArray(parsedHistory)) {
-          setCallHistory(parsedHistory);
+          const deduplicated: QueueCallHistoryItem[] = [];
+          for (const item of parsedHistory) {
+            const prev = deduplicated[deduplicated.length - 1];
+            if (!prev || prev.ticketNumber !== item.ticketNumber || prev.counterName !== item.counterName || Math.abs((prev.timestamp || 0) - (item.timestamp || 0)) > 2500) {
+              deduplicated.push(item);
+            }
+          }
+          setCallHistory(deduplicated);
+          try {
+            localStorage.setItem(QUEUE_HISTORY_STORAGE_KEY, JSON.stringify(deduplicated));
+          } catch {}
         }
       }
     } catch {}
@@ -336,6 +350,14 @@ export default function TicketPage() {
         try {
           const data = JSON.parse(event.data);
           if (data && (data.type === 'CALL_QUEUE' || data.type === 'QUEUE_CALL')) {
+            // Ignore echo broadcast originating from THIS tab to prevent duplicate TTS & duplicate history
+            if (data.senderClientId && data.senderClientId === clientIdRef.current) {
+              return;
+            }
+            if (data.source === 'web_studio' && Date.now() - lastLocalCallTimeRef.current < 2500) {
+              return;
+            }
+
             const ticketNum = data.ticketNumber;
             const counterNm = data.counterName || 'LOKET 01';
             const targetQId = data.queueId;
@@ -392,6 +414,9 @@ export default function TicketPage() {
             };
 
             setCallHistory((prev) => {
+              if (prev.length > 0 && prev[0].ticketNumber === ticketNum && prev[0].counterName === counterNm && Math.abs(Date.now() - prev[0].timestamp) < 2500) {
+                return prev;
+              }
               const next = [newHistoryItem, ...prev].slice(0, 50);
               try {
                 localStorage.setItem(QUEUE_HISTORY_STORAGE_KEY, JSON.stringify(next));
@@ -515,6 +540,8 @@ export default function TicketPage() {
       localStorage.setItem(QUEUE_HISTORY_STORAGE_KEY, JSON.stringify(nextHistory));
     } catch {}
 
+    lastLocalCallTimeRef.current = Date.now();
+
     // 4. Broadcast via SSE to Android Player & other screens
     try {
       await fetch('/api/stream/device', {
@@ -528,6 +555,7 @@ export default function TicketPage() {
           ticketNumber: newFormatted,
           counterName: selectedQueue.currentCounter,
           source: 'web_studio',
+          senderClientId: clientIdRef.current,
           callType: 'next',
         }),
       });
@@ -569,6 +597,8 @@ export default function TicketPage() {
       localStorage.setItem(QUEUE_HISTORY_STORAGE_KEY, JSON.stringify(nextHistory));
     } catch {}
 
+    lastLocalCallTimeRef.current = Date.now();
+
     // Broadcast via SSE
     try {
       await fetch('/api/stream/device', {
@@ -582,6 +612,7 @@ export default function TicketPage() {
           ticketNumber: selectedQueue.currentNumber,
           counterName: selectedQueue.currentCounter,
           source: 'web_studio',
+          senderClientId: clientIdRef.current,
           callType: 'recall',
         }),
       });

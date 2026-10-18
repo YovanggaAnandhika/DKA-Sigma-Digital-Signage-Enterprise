@@ -251,6 +251,14 @@ export default function WebKioskPlayerPage() {
     activeChimeTimerRef.current = setTimeout(triggerTTS, 1100);
   }, [playChime, queueState.counter, queueState.ticket, manifest]);
 
+  const triggerQueueCallRef = useRef(triggerQueueCall);
+  useEffect(() => {
+    triggerQueueCallRef.current = triggerQueueCall;
+  }, [triggerQueueCall]);
+
+  const lastCalledKeyRef = useRef<string>('');
+  const lastCalledTimeRef = useRef<number>(0);
+
   // Real-time SSE listener for queue calls sent to this device or all devices
   useEffect(() => {
     let eventSource: EventSource | null = null;
@@ -265,7 +273,13 @@ export default function WebKioskPlayerPage() {
             const counterNm = data.counterName;
             const isRecall = data.callType === 'recall';
             if (ticketNum) {
-              triggerQueueCall(ticketNum, counterNm, isRecall);
+              const key = `${ticketNum}_${counterNm || ''}_${isRecall}`;
+              if (key === lastCalledKeyRef.current && Date.now() - lastCalledTimeRef.current < 2500) {
+                return;
+              }
+              lastCalledKeyRef.current = key;
+              lastCalledTimeRef.current = Date.now();
+              triggerQueueCallRef.current(ticketNum, counterNm, isRecall);
             }
           }
         } catch (_) {}
@@ -275,7 +289,7 @@ export default function WebKioskPlayerPage() {
     return () => {
       if (eventSource) eventSource.close();
     };
-  }, [params.id, triggerQueueCall]);
+  }, [params.id]);
 
   // Clock ticker
   useEffect(() => {
