@@ -224,7 +224,40 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         .await
         .map_err(|e| Status::internal(format!("Failed to create schedule: {}", e)))?;
 
-        // 2. Add schedule_event
+        // 2. Resolve latest version_hash for layout
+        let version_hash = match sqlx::query_scalar::<_, String>(
+            "SELECT version_hash FROM layout_history WHERE layout_id = $1 ORDER BY created_at DESC LIMIT 1"
+        )
+        .bind(layout_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(format!("Database error querying layout history: {}", e)))? {
+            Some(h) => h,
+            None => {
+                if let Ok(full_dto) = crate::modules::studio::layout::services::LayoutService::get_layout_by_id(&self.pool, layout_id).await {
+                    use sha2::{Digest, Sha256};
+                    let mut hasher = Sha256::new();
+                    hasher.update(serde_json::to_string(&full_dto).unwrap_or_default().as_bytes());
+                    let vh = format!("{:x}", hasher.finalize());
+                    if let Ok(snapshot_val) = serde_json::to_value(&full_dto) {
+                        let _ = sqlx::query(
+                            "INSERT INTO layout_history (layout_id, version_hash, snapshot_json, description) VALUES ($1, $2, $3, $4)"
+                        )
+                        .bind(layout_id)
+                        .bind(&vh)
+                        .bind(snapshot_val)
+                        .bind("Snapshot awal saat push penjadwalan")
+                        .execute(&mut *tx)
+                        .await;
+                    }
+                    vh
+                } else {
+                    "v1".to_string()
+                }
+            }
+        };
+
+        // 3. Add schedule_event with version_hash
         let start_time = chrono::NaiveTime::parse_from_str(&req.start_time, "%H:%M:%S")
             .or_else(|_| chrono::NaiveTime::parse_from_str(&req.start_time, "%H:%M"))
             .unwrap_or_else(|_| chrono::NaiveTime::from_hms_opt(8, 0, 0).unwrap());
@@ -240,8 +273,8 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
             r#"
             INSERT INTO schedule_events (
                 schedule_id, layout_id, start_time, end_time, days_of_week,
-                priority, start_date, end_date, created_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+                priority, start_date, end_date, version_hash, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
             "#,
         )
         .bind(schedule_id)
@@ -252,6 +285,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         .bind(req.priority)
         .bind(start_date)
         .bind(end_date)
+        .bind(&version_hash)
         .execute(&mut *tx)
         .await
         .map_err(|e| Status::internal(format!("Failed to create schedule event: {}", e)))?;

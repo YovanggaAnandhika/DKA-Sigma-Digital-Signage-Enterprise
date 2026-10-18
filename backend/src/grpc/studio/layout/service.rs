@@ -48,6 +48,9 @@ impl LayoutServiceImpl {
             updated_at: dto.layout.updated_at.to_rfc3339(),
             layers: dto.layers.into_iter().map(LayerServiceImpl::map_layer_with_blocks).collect(),
             resolution_id: dto.layout.resolution_id.map(|id| id.to_string()),
+            version_hash: None,
+            scheduled_version_hash: None,
+            is_schedule_synced: false,
         }
     }
 }
@@ -111,7 +114,33 @@ impl LayoutServiceTrait for LayoutServiceImpl {
                 _ => Status::internal(e.to_string()),
             })?;
 
-        Ok(Response::new(Self::map_layout_with_layers(dto)))
+        let mut proto_l = Self::map_layout_with_layers(dto);
+        let latest_hash = sqlx::query_scalar::<_, String>(
+            "SELECT version_hash FROM layout_history WHERE layout_id = $1 ORDER BY created_at DESC LIMIT 1"
+        )
+        .bind(layout_id)
+        .fetch_optional(&self.pool)
+        .await
+        .unwrap_or(None);
+
+        let scheduled_hash = sqlx::query_scalar::<_, String>(
+            "SELECT version_hash FROM schedule_events WHERE layout_id = $1 AND version_hash IS NOT NULL ORDER BY created_at DESC LIMIT 1"
+        )
+        .bind(layout_id)
+        .fetch_optional(&self.pool)
+        .await
+        .unwrap_or(None);
+
+        let is_synced = match (&latest_hash, &scheduled_hash) {
+            (Some(lh), Some(sh)) => !lh.is_empty() && lh == sh,
+            _ => false,
+        };
+
+        proto_l.version_hash = latest_hash;
+        proto_l.scheduled_version_hash = scheduled_hash;
+        proto_l.is_schedule_synced = is_synced;
+
+        Ok(Response::new(proto_l))
     }
 
     async fn list_layouts(
@@ -128,7 +157,34 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             let dto = LayoutService::get_layout_by_id(&self.pool, l.id)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
-            items.push(Self::map_layout_with_layers(dto));
+            let mut proto_l = Self::map_layout_with_layers(dto);
+
+            let latest_hash = sqlx::query_scalar::<_, String>(
+                "SELECT version_hash FROM layout_history WHERE layout_id = $1 ORDER BY created_at DESC LIMIT 1"
+            )
+            .bind(l.id)
+            .fetch_optional(&self.pool)
+            .await
+            .unwrap_or(None);
+
+            let scheduled_hash = sqlx::query_scalar::<_, String>(
+                "SELECT version_hash FROM schedule_events WHERE layout_id = $1 AND version_hash IS NOT NULL ORDER BY created_at DESC LIMIT 1"
+            )
+            .bind(l.id)
+            .fetch_optional(&self.pool)
+            .await
+            .unwrap_or(None);
+
+            let is_synced = match (&latest_hash, &scheduled_hash) {
+                (Some(lh), Some(sh)) => !lh.is_empty() && lh == sh,
+                _ => false,
+            };
+
+            proto_l.version_hash = latest_hash;
+            proto_l.scheduled_version_hash = scheduled_hash;
+            proto_l.is_schedule_synced = is_synced;
+
+            items.push(proto_l);
         }
 
         Ok(Response::new(ListLayoutsResponse {
@@ -173,6 +229,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         // Simpan snapshot ke layout_history hanya saat tombol Simpan ditekan di editor
+        let mut version_hash_opt = None;
         if let Ok(snapshot_val) = serde_json::to_value(&full_dto) {
             use sha2::{Digest, Sha256};
             let mut hasher = Sha256::new();
@@ -185,9 +242,28 @@ impl LayoutServiceTrait for LayoutServiceImpl {
                 snapshot_val,
                 Some("Perubahan disimpan dari Layout Designer"),
             ).await;
+            version_hash_opt = Some(version_hash);
         }
 
-        Ok(Response::new(Self::map_layout_with_layers(full_dto)))
+        let scheduled_hash = sqlx::query_scalar::<_, String>(
+            "SELECT version_hash FROM schedule_events WHERE layout_id = $1 AND version_hash IS NOT NULL ORDER BY created_at DESC LIMIT 1"
+        )
+        .bind(layout_id)
+        .fetch_optional(&self.pool)
+        .await
+        .unwrap_or(None);
+
+        let is_synced = match (&version_hash_opt, &scheduled_hash) {
+            (Some(lh), Some(sh)) => !lh.is_empty() && lh == sh,
+            _ => false,
+        };
+
+        let mut proto_l = Self::map_layout_with_layers(full_dto);
+        proto_l.version_hash = version_hash_opt;
+        proto_l.scheduled_version_hash = scheduled_hash;
+        proto_l.is_schedule_synced = is_synced;
+
+        Ok(Response::new(proto_l))
     }
 
     async fn delete_layout(

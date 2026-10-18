@@ -10,6 +10,9 @@ export interface Layout {
   layersList: Layer[];
   createdAt: string;
   updatedAt: string;
+  versionHash?: string;
+  scheduledVersionHash?: string;
+  isScheduleSynced?: boolean;
 }
 
 export interface Layer {
