@@ -28,6 +28,7 @@ class MediaDiskCache(context: Context) {
 
     fun verifyFileSha256(file: File, expectedHash: String): Boolean {
         if (!file.exists() || file.length() == 0L) return false
+        if (expectedHash.isBlank()) return true
         val computedHash = calculateSha256(file)
         return computedHash.equals(expectedHash.trim(), ignoreCase = true)
     }
