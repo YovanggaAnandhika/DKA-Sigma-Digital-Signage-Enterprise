@@ -57,3 +57,9 @@ You are a lazy senior developer. The best code is the code never written. Solve 
 ### 5. Canvas & Studio Editor
 - Visual canvas editor uses `react-rnd` for absolute positioning (`x`, `y`, `width`, `height`, `zIndex`).
 - Coordinate calculations must preserve aspect ratios when constrained, and handle snap-to-grid cleanly.
+
+### 6. Larangan Menjalankan Build Frontend (`bun run build`)
+- **DILARANG KERAS menjalankan `bun run build` atau `next build`.**
+- Lingkungan kerja frontend sudah aktif dan terkelola secara fleksibel melalui Docker Compose (`compose.yml`) development server.
+- Dev server menyediakan fast hot-reloading (HMR). Cukup edit dan simpan berkas TypeScript/CSS; perubahan langsung aktif tanpa kompilasi build produksi.
+

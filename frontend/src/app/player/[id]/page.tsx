@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { invokeApi } from '@/lib/core/invokeApi';
 import { getMediaStreamUrl } from '@/lib/services/studio/media.service';
 import { api } from '@/lib/services';
+import { AlertTriangle, Sun, Volume2 } from 'lucide-react';
 import { speakQueueAnnouncement, stopQueueAnnouncement } from '@/app/(dashboard)/studio/components/ticket/types';
 
 interface ManifestAsset {
@@ -439,7 +440,7 @@ export default function WebKioskPlayerPage() {
         textAlign: 'center',
         fontFamily: 'sans-serif'
       }}>
-        <div style={{ fontSize: '2rem' }}>⚠️</div>
+        <AlertTriangle size={36} color="#f43f5e" />
         <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f43f5e' }}>Koneksi Display Player Gagal</h2>
         <p style={{ maxWidth: '500px', color: '#94a3b8', fontSize: '0.875rem' }}>{error}</p>
         <p style={{ fontSize: '0.75rem', color: '#64748b' }}>
@@ -534,7 +535,7 @@ export default function WebKioskPlayerPage() {
                   padding: '16px',
                   textAlign: 'center',
                 }}>
-                  <div style={{ fontSize: '1.75rem' }}>☀️</div>
+                  <div style={{ display: 'flex', justifyContent: 'center' }}><Sun size={32} color="#fbbf24" /></div>
                   <div style={{ fontSize: 'clamp(1.5rem, 3vw, 2.5rem)', fontWeight: 800 }}>
                     {weatherData ? `${weatherData.temp}°C` : '31°C'}
                   </div>
@@ -647,7 +648,7 @@ export default function WebKioskPlayerPage() {
                       borderRadius: '9999px',
                       border: '1px solid rgba(16, 185, 129, 0.3)',
                     }}>
-                      <span>📢</span>
+                      <Volume2 size={14} />
                       <span>SEDANG DIPANGGIL (AUDIO DUCKING 15%)</span>
                     </div>
                   )}
@@ -671,7 +672,8 @@ export default function WebKioskPlayerPage() {
                     paddingLeft: '100%',
                     animation: 'marquee 15s linear infinite',
                   }}>
-                    🔴 LIVE FEED: Selamat Datang di Layar Informasi Digital Signage Enterprise • Suhu Kota Makassar {weatherData?.temp ?? 31}°C Cerah • Update Berita & Penawaran Spesial Terkini
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#ef4444', display: 'inline-block', marginRight: 6, verticalAlign: 'middle' }} />
+                    LIVE FEED: Selamat Datang di Layar Informasi Digital Signage Enterprise • Suhu Kota Makassar {weatherData?.temp ?? 31}°C Cerah • Update Berita & Penawaran Spesial Terkini
                   </span>
                   <style>{`@keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }`}</style>
                 </div>
@@ -795,7 +797,7 @@ export default function WebKioskPlayerPage() {
           }}
           title="Klik untuk mensimulasikan panggilan suara TTS antrian dan audio ducking video"
         >
-          <span>📢</span>
+          <Volume2 size={13} />
           <span>{queueState.isCalling ? 'Memanggil...' : 'Simulasi Panggil A-001'}</span>
         </button>
 

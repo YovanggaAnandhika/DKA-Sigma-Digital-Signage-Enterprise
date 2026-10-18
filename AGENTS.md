@@ -67,3 +67,9 @@ This project is an enterprise-grade digital signage management and streaming pla
 ### 5. Player Streaming & Offline-First Invariants
 - Android players operate offline-first: media must be downloaded and verified against `sha256_hash` before manifest playback transitions.
 - Real-time player commands and telemetry rely on the bidirectional HTTP/2 gRPC stream (`DisplayStream`).
+
+### 6. Larangan Eksekusi Build Frontend (`bun run build`)
+- **DILARANG KERAS menjalankan `bun run build` atau `next build`.**
+- Lingkungan kerja sudah berjalan fleksibel menggunakan Docker Compose (`compose.yml`) dalam mode dev dengan live HMR (Hot Module Replacement) / auto-reload.
+- Cukup ubah berkas kode langsung, Next.js dev server di container akan me-reload otomatis tanpa perlu kompilasi produksi manual.
+

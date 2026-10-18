@@ -1014,7 +1014,7 @@ export default function TicketPage() {
                       <option value="all">Otomatis (Layar Aktif)</option>
                       {devices.map((d) => (
                         <option key={d.id} value={d.id}>
-                          {d.name} {d.isOnline ? '● Online' : '○ Offline'}
+                          {d.name} ({d.isOnline ? 'Online' : 'Offline'})
                         </option>
                       ))}
                     </select>
