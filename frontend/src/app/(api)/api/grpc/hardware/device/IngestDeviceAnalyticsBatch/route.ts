@@ -18,7 +18,8 @@ export async function POST(req: NextRequest) {
     request.setDeviceId(deviceId);
     request.setDeviceToken(body.deviceToken || body.device_token || '');
 
-    const snapshotsList = (body.snapshots || []).map((s: any) => {
+    const rawSnapshots = body.snapshots || body.snapshotsList || body.items || [];
+    const snapshotsList = rawSnapshots.map((s: any) => {
       const snap = new AnalyticsSnapshot();
       snap.setId(s.id || '');
       snap.setInputOutputJson(

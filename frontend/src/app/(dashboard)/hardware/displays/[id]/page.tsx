@@ -206,6 +206,116 @@ export default function ViewDisplayPage() {
     }
   };
 
+  // Sorted history records for timeseries chart
+  const sortedHistory = [...analyticsHistory].sort(
+    (a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime()
+  );
+
+  const chartWidth = 760;
+  const chartHeight = 180;
+  const padding = { top: 20, right: 20, bottom: 30, left: 45 };
+  const plotWidth = chartWidth - padding.left - padding.right;
+  const plotHeight = chartHeight - padding.top - padding.bottom;
+
+  const cpuData = sortedHistory.map(
+    (r) => r.inputOutput?.cpu_percent ?? r.inputOutput?.cpuPercent ?? 0
+  );
+  const ramData = sortedHistory.map(
+    (r) => r.inputOutput?.ram_percent ?? r.inputOutput?.ramPercent ?? 0
+  );
+
+  const getPoints = (data: number[]) => {
+    if (data.length === 0) return [];
+    return data.map((val, idx) => {
+      const clamped = Math.max(0, Math.min(100, val));
+      const x = padding.left + (data.length > 1 ? idx * (plotWidth / (data.length - 1)) : plotWidth / 2);
+      const y = padding.top + plotHeight * (1 - clamped / 100);
+      return { x, y, val };
+    });
+  };
+
+  const cpuPoints = getPoints(cpuData);
+  const ramPoints = getPoints(ramData);
+
+  const cpuLine = cpuPoints.reduce((acc, pt, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${pt.x},${pt.y}`, '');
+  const ramLine = ramPoints.reduce((acc, pt, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${pt.x},${pt.y}`, '');
+
+  const cpuArea = cpuPoints.length > 0
+    ? `${cpuLine} L ${cpuPoints[cpuPoints.length - 1].x},${padding.top + plotHeight} L ${cpuPoints[0].x},${padding.top + plotHeight} Z`
+    : '';
+  const ramArea = ramPoints.length > 0
+    ? `${ramLine} L ${ramPoints[ramPoints.length - 1].x},${padding.top + plotHeight} L ${ramPoints[0].x},${padding.top + plotHeight} Z`
+    : '';
+
+  // Asset Diagnostic & Bottleneck Detection
+  const currentAsset = realtimeMetrics?.assets;
+  const currentCpu = realtimeMetrics?.io?.cpu_percent ?? realtimeMetrics?.io?.cpuPercent ?? 0;
+  const currentRam = realtimeMetrics?.io?.ram_percent ?? realtimeMetrics?.io?.ramPercent ?? 0;
+  const droppedFrames = currentAsset?.dropped_frames ?? currentAsset?.droppedFrames ?? 0;
+  const bitrateKbps = currentAsset?.bitrate_kbps ?? currentAsset?.bitrateKbps ?? 0;
+  const isHw = currentAsset?.is_hardware_accelerated ?? currentAsset?.isHardwareAccelerated ?? true;
+  const codecName = currentAsset?.codec || 'video/avc';
+  const mediaName = currentAsset?.media_name || currentAsset?.mediaName;
+
+  const getDiagnosticVerdict = () => {
+    if (!mediaName) {
+      return {
+        type: 'idle',
+        color: 'var(--text-muted)',
+        bg: 'var(--bg-surface-elevated)',
+        border: 'var(--border-subtle)',
+        icon: <Film size={18} style={{ color: 'var(--text-muted)' }} />,
+        title: 'Player Siaga (Standby / Idle)',
+        desc: 'Tidak ada video streaming yang sedang aktif diputar atau layar sedang menampilkan layout statis / gambar.',
+      };
+    }
+    if (droppedFrames > 20) {
+      if (currentCpu > 80) {
+        return {
+          type: 'danger',
+          color: 'var(--accent-rose)',
+          bg: 'rgba(244, 63, 94, 0.08)',
+          border: 'rgba(244, 63, 94, 0.3)',
+          icon: <AlertTriangle size={18} color="var(--accent-rose)" />,
+          title: 'Bottleneck Terdeteksi: Overload Perangkat Keras (CPU Jenuh)',
+          desc: `Terjadi ${droppedFrames} frame drop bersamaan dengan utilisasi CPU sistem mencapai ${currentCpu.toFixed(1)}%. Penyebab perlambatan adalah kapasitas komputasi prosesor Android yang jenuh, bukan codec file.`,
+        };
+      } else {
+        return {
+          type: 'warning',
+          color: 'var(--accent-amber)',
+          bg: 'rgba(234, 179, 8, 0.08)',
+          border: 'rgba(234, 179, 8, 0.3)',
+          icon: <AlertTriangle size={18} color="var(--accent-amber)" />,
+          title: 'Bottleneck Terdeteksi: Bitrate / Profil Codec Video Terlalu Berat',
+          desc: `Terjadi ${droppedFrames} frame drop meskipun utilisasi CPU normal (${currentCpu.toFixed(1)}%). Pipeline decoder video (${codecName}, ${(bitrateKbps / 1000).toFixed(1)} Mbps) melebihi kapasitas throughput MediaCodec hardware. Disarankan re-encode video ke format H.264 standar atau kompresi bitrate lebih rendah.`,
+        };
+      }
+    }
+    if (!isHw) {
+      return {
+        type: 'warning',
+        color: 'var(--accent-amber)',
+        bg: 'rgba(234, 179, 8, 0.08)',
+        border: 'rgba(234, 179, 8, 0.3)',
+        icon: <AlertTriangle size={18} color="var(--accent-amber)" />,
+        title: 'Peringatan: Pemutaran Menggunakan Software Decoding',
+        desc: 'Akselerasi hardware MediaCodec tidak aktif untuk codec ini. Pemutaran software membebani CPU lebih besar dan rentan stuttering pada resolusi tinggi.',
+      };
+    }
+    return {
+      type: 'success',
+      color: 'var(--accent-emerald)',
+      bg: 'rgba(16, 185, 129, 0.08)',
+      border: 'rgba(16, 185, 129, 0.3)',
+      icon: <CheckCircle2 size={18} color="var(--accent-emerald)" />,
+      title: 'Pemutaran Optimal (Akselerasi Hardware Mulus)',
+      desc: `Video diproses lancar oleh ${currentAsset?.decoder_name || 'Hardware MediaCodec'} tanpa frame drop (${droppedFrames} drop). Throughput decoder bekerja stabil dan sinkron.`,
+    };
+  };
+
+  const verdict = getDiagnosticVerdict();
+
   if (loading || !device) {
     return (
       <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -624,6 +734,367 @@ export default function ViewDisplayPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Audit Beban & Diagnostik Pemutaran Media (Live Asset Diagnostics) */}
+      <div className="card-elevated" style={{ padding: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Film size={18} style={{ color: 'var(--accent-indigo)' }} />
+              <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Audit Beban & Diagnostik Pemutaran Media (Live Profiling)
+              </h2>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Analisis mendalam per-aset: codec, resolusi, throughput bitrate, akselerasi decoder, dan deteksi penyebab video lag.
+            </p>
+          </div>
+          <span
+            style={{
+              padding: '4px 10px',
+              borderRadius: '9999px',
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              backgroundColor: isHw ? 'rgba(16, 185, 129, 0.12)' : 'rgba(234, 179, 8, 0.12)',
+              color: isHw ? 'var(--accent-emerald)' : 'var(--accent-amber)',
+              border: isHw ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(234, 179, 8, 0.3)',
+            }}
+          >
+            {isHw ? '⚡ HARDWARE ACCELERATED' : '⚠️ SOFTWARE DECODING'}
+          </span>
+        </div>
+
+        {/* Granular Asset Stats Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '16px' }}>
+          <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'var(--bg-surface-elevated)' }}>
+            <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)' }}>MEDIA AKTIF</div>
+            <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={mediaName || 'Idle'}>
+              {mediaName || 'Tidak ada video aktif (Standby)'}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+              <span style={{ fontSize: '0.6875rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.06)', color: 'var(--accent-cyan)', fontWeight: 700 }}>
+                {codecName}
+              </span>
+              <span style={{ fontSize: '0.6875rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)' }}>
+                {currentAsset?.resolution || (device.screenWidth ? `${device.screenWidth}x${device.screenHeight}` : '1920x1080')}
+              </span>
+            </div>
+          </div>
+
+          <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'var(--bg-surface-elevated)' }}>
+            <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)' }}>STREAM BITRATE</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-cyan)', marginTop: '4px' }}>
+              {bitrateKbps > 0 ? (bitrateKbps >= 1000 ? `${(bitrateKbps / 1000).toFixed(1)} Mbps` : `${bitrateKbps} Kbps`) : 'N/A'}
+            </div>
+            <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Throughput decoding video
+            </div>
+          </div>
+
+          <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'var(--bg-surface-elevated)' }}>
+            <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)' }}>DECODER HARDWARE</div>
+            <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '4px' }}>
+              {currentAsset?.decoder_name || currentAsset?.decoderName || 'MediaCodec'}
+            </div>
+            <div style={{ fontSize: '0.6875rem', color: isHw ? 'var(--accent-emerald)' : 'var(--accent-amber)', marginTop: '4px', fontWeight: 600 }}>
+              {isHw ? 'Akselerasi GPU/DSP Aktif' : 'Software Fallback'}
+            </div>
+          </div>
+
+          <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'var(--bg-surface-elevated)' }}>
+            <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)' }}>FRAME DROP & INTEGRITAS</div>
+            <div style={{
+              fontSize: '1.25rem',
+              fontWeight: 800,
+              color: droppedFrames > 20 ? 'var(--accent-rose)' : droppedFrames > 0 ? 'var(--accent-amber)' : 'var(--accent-emerald)',
+              marginTop: '4px'
+            }}>
+              {droppedFrames} Frame Drop
+            </div>
+            <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Status: {currentAsset?.playback_status || 'STABIL'}
+            </div>
+          </div>
+        </div>
+
+        {/* Dynamic Diagnostic Verdict Box */}
+        <div
+          style={{
+            padding: '14px 18px',
+            borderRadius: '12px',
+            backgroundColor: verdict.bg,
+            border: `1px solid ${verdict.border}`,
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '12px',
+          }}
+        >
+          <div style={{ marginTop: '2px' }}>{verdict.icon}</div>
+          <div>
+            <div style={{ fontSize: '0.875rem', fontWeight: 700, color: verdict.color }}>
+              {verdict.title}
+            </div>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '3px', lineHeight: 1.45 }}>
+              {verdict.desc}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Grafik Tren Performa Hardware dari Waktu ke Waktu (Timeseries Chart) */}
+      <div className="card-elevated" style={{ padding: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Activity size={18} style={{ color: 'var(--accent-cyan)' }} />
+              <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Grafik Tren Performa Hardware dari Waktu ke Waktu
+              </h2>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Pantau kestabilan beban CPU dan memori RAM secara berkelanjutan untuk mencegah hardware throttling.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', backgroundColor: 'var(--bg-surface-elevated)', borderRadius: '8px', padding: '3px' }}>
+              {(['15m', '1h', '6h', '24h'] as const).map((rng) => (
+                <button
+                  key={rng}
+                  onClick={() => setTimeRange(rng)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: timeRange === rng ? 'var(--primary-600)' : 'transparent',
+                    color: timeRange === rng ? '#ffffff' : 'var(--text-muted)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  {rng === '15m' ? '15 Menit' : rng === '1h' ? '1 Jam' : rng === '6h' ? '6 Jam' : '24 Jam'}
+                </button>
+              ))}
+            </div>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, padding: '4px 8px', borderRadius: '6px', backgroundColor: 'var(--bg-surface-elevated)' }}>
+              {sortedHistory.length} Snapshot
+            </span>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px', fontSize: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '2px', backgroundColor: 'var(--accent-cyan)' }} />
+            <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Beban CPU Sistem (%)</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '2px', backgroundColor: 'var(--accent-emerald)' }} />
+            <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Penggunaan RAM (%)</span>
+          </div>
+        </div>
+
+        {/* Native SVG Timeseries Chart */}
+        <div style={{ width: '100%', overflowX: 'auto', backgroundColor: 'var(--bg-surface-elevated)', borderRadius: '12px', padding: '16px' }}>
+          {sortedHistory.length === 0 ? (
+            <div style={{ height: '180px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
+              <Activity size={24} style={{ opacity: 0.4 }} />
+              <span>Belum ada snapshot histori performa untuk rentang waktu {timeRange}. Menunggu telemetri player...</span>
+            </div>
+          ) : (
+            <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+              <defs>
+                <linearGradient id="cpuGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent-cyan)" stopOpacity="0.35" />
+                  <stop offset="100%" stopColor="var(--accent-cyan)" stopOpacity="0.0" />
+                </linearGradient>
+                <linearGradient id="ramGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent-emerald)" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="var(--accent-emerald)" stopOpacity="0.0" />
+                </linearGradient>
+              </defs>
+
+              {/* Grid Lines & Y-axis labels */}
+              {[0, 25, 50, 75, 100].map((percent) => {
+                const y = padding.top + plotHeight * (1 - percent / 100);
+                return (
+                  <g key={percent}>
+                    <line
+                      x1={padding.left}
+                      y1={y}
+                      x2={chartWidth - padding.right}
+                      y2={y}
+                      stroke="rgba(255, 255, 255, 0.07)"
+                      strokeDasharray="4 4"
+                    />
+                    <text
+                      x={padding.left - 8}
+                      y={y + 3}
+                      fill="var(--text-muted)"
+                      fontSize="9"
+                      textAnchor="end"
+                      fontFamily="monospace"
+                    >
+                      {percent}%
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Area fills */}
+              {cpuArea && <path d={cpuArea} fill="url(#cpuGrad)" />}
+              {ramArea && <path d={ramArea} fill="url(#ramGrad)" />}
+
+              {/* Lines */}
+              {ramLine && (
+                <path
+                  d={ramLine}
+                  fill="none"
+                  stroke="var(--accent-emerald)"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+              {cpuLine && (
+                <path
+                  d={cpuLine}
+                  fill="none"
+                  stroke="var(--accent-cyan)"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+
+              {/* Interactive Data Points */}
+              {cpuPoints.map((pt, idx) => {
+                const record = sortedHistory[idx];
+                const isHovered = hoveredPoint?.id === record?.id;
+                return (
+                  <g key={`cpu-pt-${idx}`}>
+                    <circle
+                      cx={pt.x}
+                      cy={pt.y}
+                      r={isHovered ? 6 : 3}
+                      fill="var(--accent-cyan)"
+                      stroke="var(--bg-surface)"
+                      strokeWidth="1.5"
+                      style={{ cursor: 'pointer', transition: 'r 0.15s ease' }}
+                      onMouseEnter={() => setHoveredPoint(record)}
+                    />
+                  </g>
+                );
+              })}
+
+              {ramPoints.map((pt, idx) => {
+                const record = sortedHistory[idx];
+                const isHovered = hoveredPoint?.id === record?.id;
+                return (
+                  <g key={`ram-pt-${idx}`}>
+                    <circle
+                      cx={pt.x}
+                      cy={pt.y}
+                      r={isHovered ? 6 : 3}
+                      fill="var(--accent-emerald)"
+                      stroke="var(--bg-surface)"
+                      strokeWidth="1.5"
+                      style={{ cursor: 'pointer', transition: 'r 0.15s ease' }}
+                      onMouseEnter={() => setHoveredPoint(record)}
+                    />
+                  </g>
+                );
+              })}
+
+              {/* X-axis Timestamps */}
+              {sortedHistory.length > 0 && (
+                <g>
+                  <text
+                    x={padding.left}
+                    y={chartHeight - 6}
+                    fill="var(--text-muted)"
+                    fontSize="9"
+                    textAnchor="start"
+                    fontFamily="monospace"
+                  >
+                    {new Date(sortedHistory[0].recordedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </text>
+                  {sortedHistory.length > 2 && (
+                    <text
+                      x={padding.left + plotWidth / 2}
+                      y={chartHeight - 6}
+                      fill="var(--text-muted)"
+                      fontSize="9"
+                      textAnchor="middle"
+                      fontFamily="monospace"
+                    >
+                      {new Date(sortedHistory[Math.floor(sortedHistory.length / 2)].recordedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </text>
+                  )}
+                  <text
+                    x={chartWidth - padding.right}
+                    y={chartHeight - 6}
+                    fill="var(--text-muted)"
+                    fontSize="9"
+                    textAnchor="end"
+                    fontFamily="monospace"
+                  >
+                    {new Date(sortedHistory[sortedHistory.length - 1].recordedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </text>
+                </g>
+              )}
+            </svg>
+          )}
+        </div>
+
+        {/* Hovered Point Details Bar */}
+        {hoveredPoint && (
+          <div
+            style={{
+              marginTop: '12px',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              backgroundColor: 'var(--bg-surface-elevated)',
+              border: '1px solid var(--border-subtle)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '10px',
+              fontSize: '0.75rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                Waktu: {new Date(hoveredPoint.recordedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </span>
+              <span style={{ color: 'var(--text-muted)' }}>•</span>
+              <span style={{ color: 'var(--accent-cyan)', fontWeight: 700 }}>
+                CPU: {hoveredPoint.inputOutput?.cpu_percent ?? hoveredPoint.inputOutput?.cpuPercent ?? 0}%
+              </span>
+              <span style={{ color: 'var(--text-muted)' }}>•</span>
+              <span style={{ color: 'var(--accent-emerald)', fontWeight: 700 }}>
+                RAM: {hoveredPoint.inputOutput?.ram_percent ?? hoveredPoint.inputOutput?.ramPercent ?? 0}%
+              </span>
+              <span style={{ color: 'var(--text-muted)' }}>•</span>
+              <span style={{ color: 'var(--accent-rose)' }}>
+                Suhu: {hoveredPoint.inputOutput?.battery_temp_celsius ?? hoveredPoint.inputOutput?.batteryTempCelsius ?? 34}°C
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Media:</span>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                {hoveredPoint.assetsStats?.media_name || hoveredPoint.assetsStats?.mediaName || 'Idle'}
+              </span>
+              <span style={{ color: (hoveredPoint.assetsStats?.dropped_frames ?? 0) > 0 ? 'var(--accent-amber)' : 'var(--accent-emerald)', fontWeight: 700 }}>
+                ({hoveredPoint.assetsStats?.dropped_frames ?? hoveredPoint.assetsStats?.droppedFrames ?? 0} drop)
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Proof-of-Play (Audit & Impression Logs) */}
