@@ -32,6 +32,7 @@ impl ManifestService {
 
         let mut active_layout_id = device.current_layout_id;
         let mut active_schedule_id = device.schedule_id;
+        let mut scheduled_version_hash: Option<String> = None;
 
         // Display Group Fallback
         if let Some(group_id) = device.display_group_id {
@@ -54,7 +55,7 @@ impl ManifestService {
                 let current_time = now_local.time();
                 let current_day = now_local.weekday().number_from_monday().to_string(); // 1 = Monday, 7 = Sunday
 
-                let mut best_match: Option<(i32, chrono::DateTime<Utc>, Uuid)> = None;
+                let mut best_match: Option<(i32, chrono::DateTime<Utc>, Uuid, Option<String>)> = None;
 
                 for event in schedule_with_events.events {
                     let is_date_match = match (event.start_date, event.end_date) {
@@ -76,20 +77,34 @@ impl ManifestService {
                         if days.contains(&current_day.as_str()) {
                             let is_better = match &best_match {
                                 None => true,
-                                Some((best_priority, best_created, _)) => {
+                                Some((best_priority, best_created, _, _)) => {
                                     event.priority > *best_priority
                                         || (event.priority == *best_priority && event.created_at > *best_created)
                                 }
                             };
                             if is_better {
-                                best_match = Some((event.priority, event.created_at, event.layout_id));
+                                best_match = Some((event.priority, event.created_at, event.layout_id, event.version_hash));
                             }
                         }
                     }
                 }
 
-                // If a schedule is assigned, it strictly governs active content
-                active_layout_id = best_match.map(|(_, _, layout_id)| layout_id);
+                // If a schedule is assigned, it strictly governs active content and version
+                active_layout_id = best_match.as_ref().map(|(_, _, layout_id, _)| *layout_id);
+                scheduled_version_hash = best_match.and_then(|(_, _, _, vh)| vh);
+            }
+        }
+
+        // If scheduled_version_hash is set and matches client_hash, the device is already playing
+        // the pushed scheduled version. Draft saves in Studio Designer MUST NOT trigger a sync!
+        if let Some(sh) = &scheduled_version_hash {
+            if let Some(client_h) = &client_hash {
+                if client_h == sh {
+                    return Ok(ManifestSyncResponseDto {
+                        is_up_to_date: true,
+                        manifest: None,
+                    });
+                }
             }
         }
 
@@ -253,7 +268,12 @@ impl ManifestService {
         for a in &assets_vec {
             hasher.update(format!("{}:{}", a.media_id, a.sha256_hash).as_bytes());
         }
-        let version_hash = format!("{:x}", hasher.finalize());
+
+        let version_hash = if let Some(sh) = &scheduled_version_hash {
+            sh.clone()
+        } else {
+            format!("{:x}", hasher.finalize())
+        };
 
         if let Some(client_h) = client_hash {
             if client_h == version_hash {
