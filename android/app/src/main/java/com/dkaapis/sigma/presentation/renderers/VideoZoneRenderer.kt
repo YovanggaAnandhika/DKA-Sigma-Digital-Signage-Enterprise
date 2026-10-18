@@ -187,7 +187,8 @@ class VideoZoneRenderer(
         if (currentItemMuted) {
             exoPlayer?.volume = 0f
         } else {
-            exoPlayer?.volume = if (duck) 0.15f else 1.0f
+            // Mute total (0f) saat speech panggilan antrian aktif, lalu pulihkan (1.0f) saat selesai
+            exoPlayer?.volume = if (duck) 0f else 1.0f
         }
     }
 

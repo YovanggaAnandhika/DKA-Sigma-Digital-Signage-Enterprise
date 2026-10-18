@@ -251,6 +251,8 @@ class PlayerActivity : AppCompatActivity() {
                     textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                         override fun onStart(utteranceId: String?) {
                             runOnUiThread {
+                                val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
+                                audioManager?.requestAudioFocus(null, android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
                                 videoRenderers.forEach { it.setDuckedVolume(true) }
                             }
                         }
@@ -258,12 +260,16 @@ class PlayerActivity : AppCompatActivity() {
                         override fun onDone(utteranceId: String?) {
                             runOnUiThread {
                                 videoRenderers.forEach { it.setDuckedVolume(false) }
+                                val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
+                                audioManager?.abandonAudioFocus(null)
                             }
                         }
 
                         override fun onError(utteranceId: String?) {
                             runOnUiThread {
                                 videoRenderers.forEach { it.setDuckedVolume(false) }
+                                val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
+                                audioManager?.abandonAudioFocus(null)
                             }
                         }
                     })
@@ -280,6 +286,9 @@ class PlayerActivity : AppCompatActivity() {
     fun speakQueueTicket(ticketNumber: String, counterName: String) {
         runOnUiThread {
             try {
+                // Mute seluruh audio pemutar video & minta audio focus sistem seketika
+                val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
+                audioManager?.requestAudioFocus(null, android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
                 videoRenderers.forEach { it.setDuckedVolume(true) }
 
                 val prefix = ticketNumber.substringBefore("-", "").trim()
@@ -316,11 +325,14 @@ class PlayerActivity : AppCompatActivity() {
                 } else {
                     watchdogHandler.postDelayed({
                         videoRenderers.forEach { it.setDuckedVolume(false) }
+                        audioManager?.abandonAudioFocus(null)
                     }, 3500)
                 }
             } catch (e: Exception) {
                 android.util.Log.e("PlayerActivity", "Error speakQueueTicket: ${e.message}")
                 videoRenderers.forEach { it.setDuckedVolume(false) }
+                val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
+                audioManager?.abandonAudioFocus(null)
             }
         }
     }
@@ -1048,5 +1060,10 @@ class PlayerActivity : AppCompatActivity() {
         realtimeStreamJob?.cancel()
         watchdogHandler.removeCallbacks(watchdogHeartbeatRunnable)
         releaseRenderers()
+        try {
+            textToSpeech?.stop()
+            textToSpeech?.shutdown()
+            textToSpeech = null
+        } catch (_: Exception) {}
     }
 }
