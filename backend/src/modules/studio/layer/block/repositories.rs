@@ -64,14 +64,17 @@ impl LayerBlockRepository {
         .fetch_one(pool)
         .await?;
 
-        let next_order = max_order.0.unwrap_or(0) + 1;
+        let next_order = dto.order_index.unwrap_or(max_order.0.unwrap_or(0) + 1);
+        let is_muted = dto.is_muted.unwrap_or(false);
+        let volume_level = dto.volume_level.unwrap_or(100);
 
         let block = sqlx::query_as::<_, LayerBlockEntity>(
             r#"
             INSERT INTO layer_blocks (
                 layer_id, playlist_id, media_item_id, ticker_id, clock_id, webview_id, queue_id, album_id,
-                start_time_seconds, duration_seconds, order_index, trim_start_seconds, trim_end_seconds, transition_id, visual_filter_id
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE($12, 0), $13, $14, $15)
+                start_time_seconds, duration_seconds, order_index, trim_start_seconds, trim_end_seconds, transition_id, visual_filter_id,
+                is_muted, volume_level
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE($12, 0), $13, $14, $15, $16, $17)
             RETURNING *
             "#
         )
@@ -90,6 +93,8 @@ impl LayerBlockRepository {
         .bind(dto.trim_end_seconds)
         .bind(dto.transition_id)
         .bind(dto.visual_filter_id)
+        .bind(is_muted)
+        .bind(volume_level)
         .fetch_one(pool)
         .await?;
 

@@ -55,6 +55,9 @@ message CreateLayerBlockRequest {
   optional int32 trim_end_seconds = 7;
   optional string transition_id = 8;
   optional string visual_filter_id = 9;
+  optional bool is_muted = 15;
+  optional int32 volume_level = 16;
+  optional int32 order_index = 17;
 }
 
 message GetLayerBlockRequest {

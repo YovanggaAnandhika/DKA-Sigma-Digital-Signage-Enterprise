@@ -51,6 +51,7 @@ pub struct CompiledManifestDto {
     pub orientation: String,
     pub background_color: String,
     pub background_image_url: Option<String>,
+    pub resolution_id: Option<Uuid>,
     pub layers: Vec<LayerWithBlocksDto>,
     pub required_assets: Vec<ManifestAssetDto>,
     pub total_download_size_bytes: i64,

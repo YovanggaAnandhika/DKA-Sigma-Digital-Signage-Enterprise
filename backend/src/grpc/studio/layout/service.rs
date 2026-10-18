@@ -43,6 +43,7 @@ impl LayoutServiceImpl {
             created_at: dto.layout.created_at.to_rfc3339(),
             updated_at: dto.layout.updated_at.to_rfc3339(),
             layers: dto.layers.into_iter().map(LayerServiceImpl::map_layer_with_blocks).collect(),
+            resolution_id: dto.layout.resolution_id.map(|id| id.to_string()),
         }
     }
 }
@@ -53,6 +54,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         &self,
         request: Request<CreateLayoutRequest>,
     ) -> Result<Response<ProtoLayout>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let orientation_id = if req.orientation_id.is_empty() {
             let orientation_value = if req.canvas_width >= req.canvas_height { "landscape" } else { "portrait" };
@@ -66,6 +68,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
                 .map_err(|_| Status::invalid_argument("Invalid orientation_id"))?
         };
 
+        let resolution_id = req.resolution_id.and_then(|id| Uuid::from_str(&id).ok());
         let dto = CreateLayoutDto {
             name: req.name,
             description: if req.description.is_empty() { None } else { Some(req.description) },
@@ -74,6 +77,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             orientation_id,
             background_color: if req.background_color.is_empty() { None } else { Some(req.background_color) },
             background_image_url: if req.background_image_url.is_empty() { None } else { Some(req.background_image_url) },
+            resolution_id,
         };
 
         let layout = LayoutService::create_layout(&self.pool, dto)
@@ -91,6 +95,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         &self,
         request: Request<GetLayoutRequest>,
     ) -> Result<Response<ProtoLayout>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_view_layouts")?;
         let req = request.into_inner();
         let layout_id = Uuid::from_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid layout id"))?;
@@ -107,8 +112,9 @@ impl LayoutServiceTrait for LayoutServiceImpl {
 
     async fn list_layouts(
         &self,
-        _request: Request<ListLayoutsRequest>,
+        request: Request<ListLayoutsRequest>,
     ) -> Result<Response<ListLayoutsResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_view_layouts")?;
         let layouts = LayoutService::list_layouts(&self.pool)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -131,6 +137,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         &self,
         request: Request<UpdateLayoutRequest>,
     ) -> Result<Response<ProtoLayout>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let layout_id = Uuid::from_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid layout id"))?;
@@ -141,6 +148,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             Some(Uuid::from_str(&req.orientation_id).map_err(|_| Status::invalid_argument("Invalid orientation_id"))?)
         };
 
+        let resolution_id = req.resolution_id.and_then(|id| Uuid::from_str(&id).ok());
         let dto = UpdateLayoutDto {
             name: if req.name.is_empty() { None } else { Some(req.name) },
             description: if req.description.is_empty() { None } else { Some(req.description) },
@@ -149,6 +157,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             orientation_id,
             background_color: if req.background_color.is_empty() { None } else { Some(req.background_color) },
             background_image_url: if req.background_image_url.is_empty() { None } else { Some(req.background_image_url) },
+            resolution_id,
         };
 
         LayoutService::update_layout(&self.pool, layout_id, dto)
@@ -166,6 +175,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         &self,
         request: Request<DeleteLayoutRequest>,
     ) -> Result<Response<DeleteLayoutResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let layout_id = Uuid::from_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid layout id"))?;

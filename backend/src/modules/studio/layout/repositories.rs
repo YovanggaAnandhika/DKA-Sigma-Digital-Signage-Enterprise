@@ -13,9 +13,9 @@ impl LayoutRepository {
             r#"
             INSERT INTO layouts (
                 name, description, canvas_width, canvas_height, orientation_id,
-                background_color, background_image_url
+                background_color, background_image_url, resolution_id
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
             "#,
         )
@@ -26,6 +26,7 @@ impl LayoutRepository {
         .bind(dto.orientation_id)
         .bind(dto.background_color.unwrap_or_else(|| "#000000".to_string()))
         .bind(dto.background_image_url)
+        .bind(dto.resolution_id)
         .fetch_one(pool)
         .await?;
 
@@ -67,6 +68,7 @@ impl LayoutRepository {
                 orientation_id = COALESCE($6, orientation_id),
                 background_color = COALESCE($7, background_color),
                 background_image_url = COALESCE($8, background_image_url),
+                resolution_id = COALESCE($9, resolution_id),
                 updated_at = NOW()
             WHERE id = $1
             RETURNING *
@@ -80,6 +82,7 @@ impl LayoutRepository {
         .bind(dto.orientation_id)
         .bind(dto.background_color)
         .bind(dto.background_image_url)
+        .bind(dto.resolution_id)
         .fetch_one(pool)
         .await?;
 

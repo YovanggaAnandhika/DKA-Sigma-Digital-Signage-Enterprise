@@ -92,6 +92,7 @@ impl LayerServiceTrait for LayerServiceImpl {
         &self,
         request: Request<CreateLayerRequest>,
     ) -> Result<Response<ProtoLayer>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let layout_id = Uuid::from_str(&req.layout_id)
             .map_err(|_| Status::invalid_argument("Invalid layout_id"))?;
@@ -123,6 +124,7 @@ impl LayerServiceTrait for LayerServiceImpl {
         &self,
         request: Request<GetLayerRequest>,
     ) -> Result<Response<ProtoLayer>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_view_layouts")?;
         let req = request.into_inner();
         let layer_id = Uuid::from_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid layer id"))?;
@@ -144,6 +146,7 @@ impl LayerServiceTrait for LayerServiceImpl {
         &self,
         request: Request<crate::grpc::proto::studio::v1::layer::ListLayersRequest>,
     ) -> Result<Response<crate::grpc::proto::studio::v1::layer::ListLayersResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_view_layouts")?;
         Ok(Response::new(crate::grpc::proto::studio::v1::layer::ListLayersResponse {
             layers: vec![],
             total: 0,
@@ -156,6 +159,7 @@ impl LayerServiceTrait for LayerServiceImpl {
         &self,
         request: Request<UpdateLayerRequest>,
     ) -> Result<Response<ProtoLayer>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let layer_id = Uuid::from_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid layer id"))?;
@@ -186,6 +190,7 @@ impl LayerServiceTrait for LayerServiceImpl {
         &self,
         request: Request<DeleteLayerRequest>,
     ) -> Result<Response<DeleteLayerResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let layer_id = Uuid::from_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid layer id"))?;
@@ -196,8 +201,4 @@ impl LayerServiceTrait for LayerServiceImpl {
 
         Ok(Response::new(DeleteLayerResponse { success }))
     }
-
-    
-
-    
 }

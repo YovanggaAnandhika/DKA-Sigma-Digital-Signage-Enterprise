@@ -43,6 +43,9 @@ pub struct CreateLayerBlockDto {
     pub trim_end_seconds: Option<i32>,
     pub transition_id: Option<Uuid>,
     pub visual_filter_id: Option<Uuid>,
+    pub is_muted: Option<bool>,
+    pub volume_level: Option<i32>,
+    pub order_index: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

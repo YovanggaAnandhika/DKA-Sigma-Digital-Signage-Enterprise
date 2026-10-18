@@ -38,6 +38,7 @@ pub struct CreateLayoutDto {
     pub orientation_id: Uuid,
     pub background_color: Option<String>,
     pub background_image_url: Option<String>,
+    pub resolution_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -49,4 +50,5 @@ pub struct UpdateLayoutDto {
     pub orientation_id: Option<Uuid>,
     pub background_color: Option<String>,
     pub background_image_url: Option<String>,
+    pub resolution_id: Option<Uuid>,
 }

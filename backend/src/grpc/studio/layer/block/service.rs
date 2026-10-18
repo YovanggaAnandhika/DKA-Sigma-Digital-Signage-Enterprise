@@ -60,6 +60,7 @@ impl LayerBlockServiceTrait for LayerBlockServiceImpl {
         &self,
         request: Request<CreateLayerBlockRequest>,
     ) -> Result<Response<ProtoLayerBlock>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let layer_id = Uuid::from_str(&req.layer_id)
             .map_err(|_| Status::invalid_argument("Invalid layer_id"))?;
@@ -71,6 +72,26 @@ impl LayerBlockServiceTrait for LayerBlockServiceImpl {
         let webview_id = req.webview_id.and_then(|id| Uuid::from_str(&id).ok());
         let queue_id = req.queue_id.and_then(|id| Uuid::from_str(&id).ok());
         let album_id = req.album_id.and_then(|id| Uuid::from_str(&id).ok());
+
+        let content_count = [
+            playlist_id.is_some(),
+            media_item_id.is_some(),
+            ticker_id.is_some(),
+            clock_id.is_some(),
+            webview_id.is_some(),
+            queue_id.is_some(),
+            album_id.is_some(),
+        ]
+        .iter()
+        .filter(|&&c| c)
+        .count();
+
+        if content_count != 1 {
+            return Err(Status::invalid_argument(format!(
+                "Layer block must contain exactly one content type, found {}",
+                content_count
+            )));
+        }
 
         let dto = CreateLayerBlockDto {
             layer_id,
@@ -87,6 +108,9 @@ impl LayerBlockServiceTrait for LayerBlockServiceImpl {
             trim_end_seconds: req.trim_end_seconds,
             transition_id: req.transition_id.and_then(|id| Uuid::from_str(&id).ok()),
             visual_filter_id: req.visual_filter_id.and_then(|id| Uuid::from_str(&id).ok()),
+            is_muted: req.is_muted,
+            volume_level: req.volume_level,
+            order_index: req.order_index,
         };
 
         let block = LayerBlockService::create(&self.pool, dto)
@@ -100,6 +124,7 @@ impl LayerBlockServiceTrait for LayerBlockServiceImpl {
         &self,
         request: Request<GetLayerBlockRequest>,
     ) -> Result<Response<ProtoLayerBlock>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_view_layouts")?;
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid id"))?;
@@ -115,6 +140,7 @@ impl LayerBlockServiceTrait for LayerBlockServiceImpl {
         &self,
         request: Request<ListLayerBlocksRequest>,
     ) -> Result<Response<ListLayerBlocksResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_view_layouts")?;
         let req = request.into_inner();
         let layer_id = req.layer_id.and_then(|id| Uuid::from_str(&id).ok());
 
@@ -134,6 +160,7 @@ impl LayerBlockServiceTrait for LayerBlockServiceImpl {
         &self,
         request: Request<UpdateLayerBlockRequest>,
     ) -> Result<Response<ProtoLayerBlock>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid id"))?;
@@ -161,6 +188,7 @@ impl LayerBlockServiceTrait for LayerBlockServiceImpl {
         &self,
         request: Request<DeleteLayerBlockRequest>,
     ) -> Result<Response<DeleteLayerBlockResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid id"))?;

@@ -28,13 +28,42 @@ impl UserServiceImpl {
             .await
             .map_err(|e| Status::internal(format!("Failed to query user permissions: {}", e)))?;
 
+        let roles_entities = UserRepository::get_user_roles(&self.pool, user.id)
+            .await
+            .map_err(|e| Status::internal(format!("Failed to query user roles: {}", e)))?;
+
+        let role_groups_entities = UserRepository::get_user_role_groups(&self.pool, user.id)
+            .await
+            .map_err(|e| Status::internal(format!("Failed to query user role groups: {}", e)))?;
+
+        let roles = roles_entities.into_iter().map(|r| crate::grpc::proto::iam::v1::role::Role {
+            id: r.id.to_string(),
+            name: r.name,
+            slug: r.slug,
+            description: r.description.unwrap_or_default(),
+            is_system: r.is_system,
+            created_at: r.created_at.to_rfc3339(),
+            updated_at: r.updated_at.to_rfc3339(),
+            permissions: vec![],
+        }).collect();
+
+        let role_groups = role_groups_entities.into_iter().map(|rg| crate::grpc::proto::iam::v1::role_group::RoleGroup {
+            id: rg.id.to_string(),
+            name: rg.name,
+            slug: rg.slug,
+            description: rg.description.unwrap_or_default(),
+            roles: vec![],
+            created_at: rg.created_at.to_rfc3339(),
+            updated_at: rg.updated_at.to_rfc3339(),
+        }).collect();
+
         Ok(User {
             id: user.id.to_string(),
             email: user.email,
             full_name: user.full_name,
             is_active: user.is_active,
-            roles: vec![],
-            role_groups: vec![],
+            roles,
+            role_groups,
             effective_permissions,
             created_at: user.created_at.to_rfc3339(),
             updated_at: user.updated_at.to_rfc3339(),

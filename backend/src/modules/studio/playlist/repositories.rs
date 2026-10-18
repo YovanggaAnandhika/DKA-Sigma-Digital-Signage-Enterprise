@@ -103,7 +103,6 @@ impl PlaylistRepository {
                 m.media_type,
                 pi.position,
                 pi.duration_seconds,
-                pi.duration_seconds,
                 pi.transition_type,
                 pi.is_muted
             FROM playlist_items pi

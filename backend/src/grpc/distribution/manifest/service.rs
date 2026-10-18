@@ -57,13 +57,10 @@ impl ManifestServiceImpl {
                     item_overrides: b.item_overrides.into_iter().map(|o| {
                         crate::grpc::proto::studio::v1::layer::LayerPlaylistItemOverride {
                             id: o.id.to_string(),
-                            layer_block_id: o.layer_block_id.to_string(),
+                            layer_playlist_id: o.layer_block_id.to_string(),
                             playlist_item_id: o.playlist_item_id.to_string(),
-                            custom_duration_seconds: o.custom_duration_seconds,
-                            is_disabled: o.is_disabled,
-                            custom_transition_type: o.custom_transition_type.unwrap_or_default(),
-                            custom_volume_level: o.custom_volume_level,
-                            custom_is_muted: o.custom_is_muted,
+                            is_muted: o.is_muted.unwrap_or(false),
+                            volume_level: o.volume_level.unwrap_or(100),
                         }
                     }).collect(),
                     transition: None,
@@ -92,6 +89,7 @@ impl ManifestServiceImpl {
             layers,
             created_at: dto.generated_at.clone(),
             updated_at: dto.generated_at.clone(),
+            resolution_id: dto.resolution_id.map(|id| id.to_string()),
         };
 
         let required_assets = dto.required_assets.into_iter().map(|a| {
@@ -146,7 +144,7 @@ impl ManifestServiceTrait for ManifestServiceImpl {
         // Validate device token if registered
         let device = crate::modules::hardware::device::repositories::DeviceRepository::find_by_id(&self.pool, device_id)
             .await
-            .map_err(Status::from)?
+            .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("Device not found"))?;
 
         if let Some(expected_hash) = &device.device_token_hash {

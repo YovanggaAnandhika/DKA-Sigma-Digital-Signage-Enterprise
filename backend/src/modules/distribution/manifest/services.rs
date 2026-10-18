@@ -297,6 +297,7 @@ impl ManifestService {
             orientation: layout.orientation_id.to_string(),
             background_color: layout.background_color,
             background_image_url: layout.background_image_url,
+            resolution_id: layout.resolution_id,
             layers: enriched_zones,
             required_assets: assets_vec,
             total_download_size_bytes: total_size,

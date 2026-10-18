@@ -803,48 +803,29 @@ impl QueueServiceTrait for QueueServiceImpl {
         let (tid, tnum, tprefix, tseq) = match next_ticket {
             Some(t) => (t.id, t.ticket_number, t.prefix, t.sequence_number),
             None => {
-                // If none waiting, auto-issue next
-                let prefix = sqlx::query!("SELECT prefix FROM queue_displays WHERE id = $1", display_id)
-                    .fetch_optional(&self.pool)
-                    .await
-                    .ok()
-                    .flatten()
-                    .map(|p| p.prefix)
-                    .unwrap_or_else(|| "A".to_string());
-
-                let max_seq = sqlx::query!(
-                    r#"
-                    SELECT COALESCE(MAX(sequence_number), 0) as "max_seq!"
-                    FROM queue_tickets
-                    WHERE queue_display_id = $1
-                    "#,
-                    display_id
+                let counter_row = sqlx::query!(
+                    "SELECT id, queue_display_id, counter_number, counter_name, operator_name, is_active, created_at, updated_at FROM queue_counters WHERE id = $1",
+                    counter_id
                 )
-                .fetch_one(&self.pool)
-                .await
-                .map_err(|e| Status::internal(e.to_string()))?
-                .max_seq;
-
-                let next_seq = max_seq + 1;
-                let ticket_num = format!("{}-{:03}", prefix, next_seq);
-                let id = Uuid::new_v4();
-
-                sqlx::query!(
-                    r#"
-                    INSERT INTO queue_tickets (id, queue_display_id, ticket_number, prefix, sequence_number, status)
-                    VALUES ($1, $2, $3, $4, $5, 'waiting')
-                    "#,
-                    id,
-                    display_id,
-                    ticket_num,
-                    prefix,
-                    next_seq,
-                )
-                .execute(&self.pool)
+                .fetch_optional(&self.pool)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
 
-                (id, ticket_num, prefix, next_seq)
+                return Ok(Response::new(CallNextTicketResponse {
+                    ticket: None,
+                    counter: counter_row.map(|c| QueueCounter {
+                        id: c.id.to_string(),
+                        queue_display_id: c.queue_display_id.to_string(),
+                        counter_number: c.counter_number,
+                        counter_name: c.counter_name,
+                        operator_name: c.operator_name.unwrap_or_default(),
+                        is_active: c.is_active,
+                        current_ticket_number: String::new(),
+                        last_called_at: String::new(),
+                        created_at: c.created_at.to_rfc3339(),
+                        updated_at: c.updated_at.to_rfc3339(),
+                    }),
+                }));
             }
         };
 
