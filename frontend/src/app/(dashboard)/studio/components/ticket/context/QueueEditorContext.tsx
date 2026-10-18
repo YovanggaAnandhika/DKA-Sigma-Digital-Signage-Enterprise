@@ -12,7 +12,7 @@ import {
   createDefaultQueueLayoutItems,
 } from '../types';
 import { modal } from '@/components/ui/ModalDialog';
-import { createQueueDisplay, updateQueueDisplay } from '@/lib/services/studio/queue.service';
+import { createQueueDisplay, updateQueueDisplay, getQueueDisplay } from '@/lib/services/studio/queue.service';
 
 interface SimulatorState {
   currentSeq: number;
@@ -187,6 +187,44 @@ export function QueueEditorProvider({
     } finally {
       setLoading(false);
     }
+
+    // Also sync latest data from backend
+    getQueueDisplay(initialId)
+      .then((res) => {
+        if (res && res.id) {
+          const mappedAudios: QueueAudio[] = (res.audiosList || res.audios || []).map((a: any) => ({
+            id: a.id,
+            name: a.name,
+            audioType: a.audioType || 'media_item',
+            mediaItemId: a.mediaItemId,
+            fileUrl: a.fileUrl || (a.mediaItemId ? `/api/assets/${a.mediaItemId}` : undefined),
+            volumePercent: a.volumePercent ?? 100,
+            isActive: a.isActive !== false,
+          }));
+
+          const mappedCounters: QueueCounter[] = (res.countersList || res.counters || []).map((c: any) => ({
+            id: c.id,
+            counterNumber: c.counterNumber,
+            counterName: c.counterName,
+            operatorName: c.operatorName,
+            isActive: c.isActive !== false,
+          }));
+
+          setQueue((prev) => ({
+            ...prev,
+            name: res.name || prev.name,
+            prefix: res.prefix || prev.prefix,
+            backgroundColor: res.backgroundColor || prev.backgroundColor,
+            backgroundImageUrl: res.backgroundImageUrl || prev.backgroundImageUrl,
+            themePreset: res.themePreset || prev.themePreset,
+            autoRecallEnabled: res.autoRecallEnabled ?? prev.autoRecallEnabled,
+            items: res.itemsList && res.itemsList.length > 0 ? res.itemsList : prev.items,
+            counters: mappedCounters.length > 0 ? mappedCounters : prev.counters,
+            audios: mappedAudios.length > 0 ? mappedAudios : prev.audios,
+          }));
+        }
+      })
+      .catch(() => {});
   }, [initialId, isNew, router]);
 
   const updateField = useCallback(<K extends keyof QueueDisplayConfig>(field: K, value: QueueDisplayConfig[K]) => {
@@ -317,17 +355,24 @@ export function QueueEditorProvider({
 
   const triggerChime = useCallback(() => {
     setSimulator((prev) => ({ ...prev, isChiming: true }));
-    const audioConf = queue.audios?.[0];
-    if (audioConf?.fileUrl) {
-      const customAud = new Audio(audioConf.fileUrl);
-      customAud.volume = (audioConf.volumePercent || 80) / 100;
+    const audioConf = queue.audios?.find((a) => a.isActive !== false && (a.fileUrl || a.mediaItemId)) || queue.audios?.[0];
+    const audioUrl = audioConf?.fileUrl || (audioConf?.mediaItemId ? `/api/assets/${audioConf.mediaItemId}` : null);
+    if (audioUrl) {
+      const customAud = new Audio(audioUrl);
+      customAud.volume = (audioConf?.volumePercent || 80) / 100;
       customAud.play().catch(() => playDingDongChime());
+      customAud.onended = () => {
+        setSimulator((prev) => ({ ...prev, isChiming: false }));
+      };
+      setTimeout(() => {
+        setSimulator((prev) => ({ ...prev, isChiming: false }));
+      }, 3500);
     } else {
       playDingDongChime();
+      setTimeout(() => {
+        setSimulator((prev) => ({ ...prev, isChiming: false }));
+      }, 1500);
     }
-    setTimeout(() => {
-      setSimulator((prev) => ({ ...prev, isChiming: false }));
-    }, 1500);
   }, [queue.audios]);
 
   const callNextTicket = useCallback(() => {
@@ -361,17 +406,18 @@ export function QueueEditorProvider({
       let items: QueueDisplayConfig[] = stored ? JSON.parse(stored) : [];
       if (!Array.isArray(items)) items = [];
 
+      const formattedAudios = (queue.audios || []).map((a) => ({
+        ...a,
+        isActive: queue.audioChimeEnabled ? (a.isActive ?? true) : false,
+      }));
+
       const payload: QueueDisplayConfig = {
         ...queue,
         name: queue.name.trim(),
         currentNumber: simulator.currentNumber,
         currentCounter: simulator.currentCounter,
+        audios: formattedAudios,
       };
-
-      const formattedAudios = (payload.audios || []).map((a) => ({
-        ...a,
-        isActive: payload.audioChimeEnabled ? (a.isActive ?? true) : false,
-      }));
 
       if (isNew) {
         items.unshift(payload);

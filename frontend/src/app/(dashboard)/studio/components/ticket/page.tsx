@@ -23,6 +23,8 @@ import { Pagination } from '@/components/ui/Pagination';
 import { modal } from '@/components/ui/ModalDialog';
 import {
   QueueDisplayConfig,
+  QueueAudio,
+  QueueCounter,
   QUEUE_STORAGE_KEY,
   DEFAULT_QUEUES,
   QueueCallHistoryItem,
@@ -30,10 +32,11 @@ import {
 } from './types';
 import { getDevices } from '@/lib/services/hardware/device.service';
 import { Device } from '@/lib/services/hardware/types';
+import { listQueueDisplays } from '@/lib/services/studio/queue.service';
 
 const Marquee = 'marquee' as any;
 
-// Audio chime generator using Web Audio API
+// Audio chime generator using Web Audio API (Ding-Dong fallback)
 function playDingDongChime() {
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -68,6 +71,101 @@ function playDingDongChime() {
   }
 }
 
+// Active audio and timeout tracking to prevent glitches when triggered rapidly
+let activeChimeAudio: HTMLAudioElement | null = null;
+let activeChimeTimer: any = null;
+
+function playQueueCallAudio(
+  queue: QueueDisplayConfig | null,
+  ticketNumber: string,
+  counterName: string,
+  isRecall: boolean = false,
+  onFinished?: () => void
+) {
+  // 1. Immediately halt any previous playing audio & speech synthesis
+  if (activeChimeAudio) {
+    try {
+      activeChimeAudio.pause();
+      activeChimeAudio.currentTime = 0;
+    } catch (_) {}
+    activeChimeAudio = null;
+  }
+  if (activeChimeTimer) {
+    clearTimeout(activeChimeTimer);
+    activeChimeTimer = null;
+  }
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+  }
+
+  const triggerTTS = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      if (onFinished) onFinished();
+      return;
+    }
+    const cleanCounter = counterName || 'Loket';
+    const spelledTicket = ticketNumber.replace('-', ' ').split('').join(' ');
+    const text = isRecall
+      ? `Panggilan ulang, nomor antrian ${spelledTicket}, menuju ${cleanCounter}`
+      : `Nomor antrian ${spelledTicket}, menuju ${cleanCounter}`;
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'id-ID';
+    utterance.rate = 0.9;
+    utterance.pitch = 1.0;
+
+    utterance.onend = () => {
+      if (onFinished) onFinished();
+    };
+    utterance.onerror = () => {
+      if (onFinished) onFinished();
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Check if custom audio chime exists and is active
+  const activeAudioConf = queue?.audios?.find(
+    (a) => a.isActive !== false && (a.fileUrl || a.mediaItemId)
+  );
+  const audioUrl = activeAudioConf?.fileUrl || (activeAudioConf?.mediaItemId ? `/api/assets/${activeAudioConf.mediaItemId}` : null);
+
+  if (audioUrl) {
+    try {
+      const audio = new Audio(audioUrl);
+      activeChimeAudio = audio;
+      const vol = (activeAudioConf?.volumePercent ?? 100) / 100;
+      audio.volume = Math.max(0, Math.min(1, vol));
+
+      audio.onended = () => {
+        if (activeChimeAudio === audio) activeChimeAudio = null;
+        triggerTTS();
+      };
+      audio.onerror = () => {
+        if (activeChimeAudio === audio) activeChimeAudio = null;
+        playDingDongChime();
+        activeChimeTimer = setTimeout(triggerTTS, 1100);
+      };
+
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn('Custom audio playback failed, falling back to Ding-Dong:', err);
+          playDingDongChime();
+          activeChimeTimer = setTimeout(triggerTTS, 1100);
+        });
+      }
+      return;
+    } catch (e) {
+      console.warn('Audio init error:', e);
+    }
+  }
+
+  // Fallback to Web Audio Ding-Dong chime
+  playDingDongChime();
+  activeChimeTimer = setTimeout(triggerTTS, 1100);
+}
+
 export default function TicketPage() {
   const [queues, setQueues] = useState<QueueDisplayConfig[]>(DEFAULT_QUEUES);
   const [search, setSearch] = useState('');
@@ -89,7 +187,12 @@ export default function TicketPage() {
   // Active selected queue
   const selectedQueue = queues.find((q) => q.id === selectedQueueId) || queues[0] || null;
 
-  // Initialize and load saved state from localStorage
+  const queuesRef = useRef(queues);
+  useEffect(() => {
+    queuesRef.current = queues;
+  }, [queues]);
+
+  // Initialize and load saved state from localStorage, and sync from backend
   useEffect(() => {
     try {
       const stored = localStorage.getItem(QUEUE_STORAGE_KEY);
@@ -112,6 +215,97 @@ export default function TicketPage() {
         setSelectedQueueId(DEFAULT_QUEUES[0]?.id || '');
       }
     } catch {}
+
+    // Sync latest queue definitions, custom audios, and counters from backend
+    listQueueDisplays()
+      .then((res) => {
+        if (res && res.itemsList && Array.isArray(res.itemsList) && res.itemsList.length > 0) {
+          setQueues((prevQueues) => {
+            const backendMap = new Map(res.itemsList.map((b: any) => [b.id, b]));
+            const updated = prevQueues.map((localQ) => {
+              const b = backendMap.get(localQ.id) as any;
+              if (!b) return localQ;
+
+              const mappedAudios: QueueAudio[] = (b.audiosList || b.audios || []).map((a: any) => ({
+                id: a.id,
+                name: a.name,
+                audioType: a.audioType || 'media_item',
+                mediaItemId: a.mediaItemId,
+                fileUrl: a.fileUrl || (a.mediaItemId ? `/api/assets/${a.mediaItemId}` : undefined),
+                volumePercent: a.volumePercent ?? 100,
+                isActive: a.isActive !== false,
+              }));
+
+              const mappedCounters: QueueCounter[] = (b.countersList || b.counters || []).map((c: any) => ({
+                id: c.id,
+                counterNumber: c.counterNumber,
+                counterName: c.counterName,
+                operatorName: c.operatorName,
+                isActive: c.isActive !== false,
+              }));
+
+              return {
+                ...localQ,
+                name: b.name || localQ.name,
+                prefix: b.prefix || localQ.prefix,
+                backgroundColor: b.backgroundColor || localQ.backgroundColor,
+                backgroundImageUrl: b.backgroundImageUrl || localQ.backgroundImageUrl,
+                themePreset: b.themePreset || localQ.themePreset,
+                autoRecallEnabled: b.autoRecallEnabled ?? localQ.autoRecallEnabled,
+                items: b.itemsList && b.itemsList.length > 0 ? b.itemsList : localQ.items,
+                counters: mappedCounters.length > 0 ? mappedCounters : localQ.counters,
+                audios: mappedAudios.length > 0 ? mappedAudios : localQ.audios,
+              };
+            });
+
+            // Also include any new backend queues not in local cache
+            res.itemsList.forEach((b: any) => {
+              if (!prevQueues.some((q) => q.id === b.id)) {
+                const mappedAudios: QueueAudio[] = (b.audiosList || b.audios || []).map((a: any) => ({
+                  id: a.id,
+                  name: a.name,
+                  audioType: a.audioType || 'media_item',
+                  mediaItemId: a.mediaItemId,
+                  fileUrl: a.fileUrl || (a.mediaItemId ? `/api/assets/${a.mediaItemId}` : undefined),
+                  volumePercent: a.volumePercent ?? 100,
+                  isActive: a.isActive !== false,
+                }));
+                const mappedCounters: QueueCounter[] = (b.countersList || b.counters || []).map((c: any) => ({
+                  id: c.id,
+                  counterNumber: c.counterNumber,
+                  counterName: c.counterName,
+                  operatorName: c.operatorName,
+                  isActive: c.isActive !== false,
+                }));
+                updated.push({
+                  id: b.id,
+                  name: b.name,
+                  prefix: b.prefix || 'A',
+                  currentNumber: b.latestCalledNumber || `${b.prefix || 'A'}-001`,
+                  currentCounter: mappedCounters[0]?.counterName || 'LOKET 01',
+                  audioChimeEnabled: true,
+                  marqueeText: `PENGUMUMAN: Silakan menuju ${mappedCounters[0]?.counterName || 'LOKET 01'} saat nomor dipanggil.`,
+                  canvasWidth: b.canvasWidth || 1920,
+                  canvasHeight: b.canvasHeight || 1080,
+                  backgroundColor: b.backgroundColor || '#0f172a',
+                  backgroundImageUrl: b.backgroundImageUrl,
+                  themePreset: b.themePreset || 'clean-light',
+                  autoRecallEnabled: b.autoRecallEnabled || false,
+                  items: b.itemsList || [],
+                  counters: mappedCounters,
+                  audios: mappedAudios,
+                });
+              }
+            });
+
+            try {
+              localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(updated));
+            } catch {}
+            return updated;
+          });
+        }
+      })
+      .catch(() => {});
 
     // Load Call History
     try {
@@ -168,10 +362,19 @@ export default function TicketPage() {
               return updated;
             });
 
-            // Trigger chime feedback on web if chime is enabled
-            setIsChiming(true);
-            playDingDongChime();
-            setTimeout(() => setIsChiming(false), 1400);
+            // Trigger custom audio chime & Indonesian TTS announcement
+            const currentQueues = queuesRef.current;
+            const matchingQ = currentQueues.find((q) => !targetQId || q.id === targetQId) || currentQueues[0];
+            if (matchingQ && matchingQ.audioChimeEnabled !== false) {
+              setIsChiming(true);
+              playQueueCallAudio(
+                matchingQ,
+                ticketNum,
+                counterNm,
+                data.callType === 'recall',
+                () => setIsChiming(false)
+              );
+            }
 
             // Record to calling history
             const newHistoryItem: QueueCallHistoryItem = {
@@ -282,11 +485,16 @@ export default function TicketPage() {
       localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(updatedQueues));
     } catch {}
 
-    // 2. Audio Chime
+    // 2. Custom Audio Chime & TTS announcement
     if (selectedQueue.audioChimeEnabled) {
       setIsChiming(true);
-      playDingDongChime();
-      setTimeout(() => setIsChiming(false), 1400);
+      playQueueCallAudio(
+        selectedQueue,
+        newFormatted,
+        selectedQueue.currentCounter,
+        false,
+        () => setIsChiming(false)
+      );
     }
 
     // 3. Add to History
@@ -307,7 +515,7 @@ export default function TicketPage() {
       localStorage.setItem(QUEUE_HISTORY_STORAGE_KEY, JSON.stringify(nextHistory));
     } catch {}
 
-    // 4. Broadcast via SSE to Android Player
+    // 4. Broadcast via SSE to Android Player & other screens
     try {
       await fetch('/api/stream/device', {
         method: 'POST',
@@ -334,8 +542,13 @@ export default function TicketPage() {
 
     if (selectedQueue.audioChimeEnabled) {
       setIsChiming(true);
-      playDingDongChime();
-      setTimeout(() => setIsChiming(false), 1400);
+      playQueueCallAudio(
+        selectedQueue,
+        selectedQueue.currentNumber,
+        selectedQueue.currentCounter,
+        true,
+        () => setIsChiming(false)
+      );
     }
 
     // Add to History as recall
@@ -577,18 +790,30 @@ export default function TicketPage() {
                             </span>
                           </td>
                           <td>
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                fontSize: '0.75rem',
-                                color: q.audioChimeEnabled ? 'var(--accent-emerald)' : 'var(--text-muted)',
-                              }}
-                            >
-                              <Volume2 size={12} />
-                              {q.audioChimeEnabled ? 'Chime Ding-Dong' : 'Mute'}
-                            </span>
+                            {(() => {
+                              const customAud = q.audios?.find((a) => a.isActive !== false && (a.fileUrl || a.mediaItemId));
+                              return (
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    fontSize: '0.75rem',
+                                    color: q.audioChimeEnabled ? 'var(--accent-emerald)' : 'var(--text-muted)',
+                                    maxWidth: '180px',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                  title={customAud ? `Audio: ${customAud.name}` : (q.audioChimeEnabled ? 'Chime Ding-Dong' : 'Mute')}
+                                >
+                                  <Volume2 size={12} style={{ flexShrink: 0 }} />
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {customAud ? customAud.name : (q.audioChimeEnabled ? 'Chime Ding-Dong' : 'Mute')}
+                                  </span>
+                                </span>
+                              );
+                            })()}
                           </td>
                           <td style={{ textAlign: 'right' }}>
                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>

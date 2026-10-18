@@ -26,6 +26,8 @@ interface LayerBlock {
   webviewId?: string;
   queueId?: string;
   albumId?: string;
+  widgetData?: any;
+  widgetDataJson?: string;
 }
 
 interface Layer {
@@ -81,7 +83,7 @@ export default function WebKioskPlayerPage() {
   const [isMuted, setIsMuted] = useState(false);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
 
-  // Web Audio 2-tone Chime (Ding-Dong: C5 523.25Hz -> E5 659.25Hz)
+  // Web Audio 2-tone Chime (Ding-Dong fallback: C5 523.25Hz -> E5 659.25Hz)
   const playChime = useCallback(() => {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -119,10 +121,29 @@ export default function WebKioskPlayerPage() {
     }
   }, []);
 
-  // Announce Queue Ticket with Automatic Video Audio Ducking (100% -> 15% -> 100%)
-  const triggerQueueCall = useCallback((customTicket?: string, customCounter?: string) => {
+  const activeChimeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const activeChimeTimerRef = useRef<any>(null);
+
+  // Announce Queue Ticket with Custom Audio Chime + Indonesian TTS and Automatic Video Ducking
+  const triggerQueueCall = useCallback((customTicket?: string, customCounter?: string, isRecall: boolean = false) => {
     const ticket = customTicket || queueState.ticket;
     const counter = customCounter || queueState.counter;
+
+    // Immediately stop previous audio / speech to avoid overlapping voice glitch
+    if (activeChimeAudioRef.current) {
+      try {
+        activeChimeAudioRef.current.pause();
+        activeChimeAudioRef.current.currentTime = 0;
+      } catch (_) {}
+      activeChimeAudioRef.current = null;
+    }
+    if (activeChimeTimerRef.current) {
+      clearTimeout(activeChimeTimerRef.current);
+      activeChimeTimerRef.current = null;
+    }
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
 
     setQueueState({ ticket, counter, isCalling: true });
     setIsAudioDucked(true);
@@ -135,25 +156,25 @@ export default function WebKioskPlayerPage() {
       }
     });
 
-    playChime();
+    const restoreAudio = () => {
+      setQueueState((prev) => ({ ...prev, isCalling: false }));
+      setIsAudioDucked(false);
+      videoRefs.current.forEach((video) => {
+        if (video) video.volume = 1.0;
+      });
+    };
 
-    setTimeout(() => {
+    const triggerTTS = () => {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const spelled = ticket.replace('-', ' ').split('').join(' ');
-        const utterance = new SpeechSynthesisUtterance(`Nomor antrian ${spelled}, menuju ${counter}`);
+        const text = isRecall
+          ? `Panggilan ulang, nomor antrian ${spelled}, menuju ${counter}`
+          : `Nomor antrian ${spelled}, menuju ${counter}`;
+        const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'id-ID';
         utterance.rate = 0.88;
         utterance.pitch = 1.0;
-
-        const restoreAudio = () => {
-          setQueueState((prev) => ({ ...prev, isCalling: false }));
-          setIsAudioDucked(false);
-          // Restore video volumes smoothly to 100%
-          videoRefs.current.forEach((video) => {
-            if (video) video.volume = 1.0;
-          });
-        };
 
         utterance.onend = () => {
           setTimeout(restoreAudio, 600);
@@ -164,16 +185,97 @@ export default function WebKioskPlayerPage() {
 
         window.speechSynthesis.speak(utterance);
       } else {
-        setTimeout(() => {
-          setQueueState((prev) => ({ ...prev, isCalling: false }));
-          setIsAudioDucked(false);
-          videoRefs.current.forEach((video) => {
-            if (video) video.volume = 1.0;
-          });
-        }, 3500);
+        setTimeout(restoreAudio, 3500);
       }
-    }, 700);
-  }, [playChime, queueState.counter, queueState.ticket]);
+    };
+
+    // Find custom chime audio from manifest layers/widgetData or requiredAssetsList
+    let customAudioUrl: string | null = null;
+    if (manifest?.layout?.layersList) {
+      for (const layer of manifest.layout.layersList) {
+        const blocks = layer.blocksList || (layer as any).timelineBlocksList;
+        if (blocks) {
+          for (const block of blocks) {
+            if (block.widgetData?.audiosList?.length) {
+              const act = block.widgetData.audiosList.find((a: any) => a.isActive !== false && (a.fileUrl || a.mediaItemId));
+              if (act) {
+                customAudioUrl = act.fileUrl || (act.mediaItemId ? `/api/assets/${act.mediaItemId}` : null);
+                break;
+              }
+            }
+            if (block.widgetDataJson) {
+              try {
+                const parsed = JSON.parse(block.widgetDataJson);
+                const act = (parsed.audiosList || parsed.audios || []).find((a: any) => a.isActive !== false && (a.fileUrl || a.mediaItemId));
+                if (act) {
+                  customAudioUrl = act.fileUrl || (act.mediaItemId ? `/api/assets/${act.mediaItemId}` : null);
+                  break;
+                }
+              } catch (_) {}
+            }
+          }
+        }
+        if (customAudioUrl) break;
+      }
+    }
+    if (!customAudioUrl && manifest?.requiredAssetsList) {
+      const audioAsset = manifest.requiredAssetsList.find((a) => a.mediaType === 1);
+      if (audioAsset?.url) customAudioUrl = audioAsset.url;
+    }
+
+    if (customAudioUrl) {
+      try {
+        const audio = new Audio(customAudioUrl);
+        activeChimeAudioRef.current = audio;
+        audio.onended = () => {
+          if (activeChimeAudioRef.current === audio) activeChimeAudioRef.current = null;
+          triggerTTS();
+        };
+        audio.onerror = () => {
+          if (activeChimeAudioRef.current === audio) activeChimeAudioRef.current = null;
+          playChime();
+          activeChimeTimerRef.current = setTimeout(triggerTTS, 1100);
+        };
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            playChime();
+            activeChimeTimerRef.current = setTimeout(triggerTTS, 1100);
+          });
+        }
+        return;
+      } catch (_) {}
+    }
+
+    playChime();
+    activeChimeTimerRef.current = setTimeout(triggerTTS, 1100);
+  }, [playChime, queueState.counter, queueState.ticket, manifest]);
+
+  // Real-time SSE listener for queue calls sent to this device or all devices
+  useEffect(() => {
+    let eventSource: EventSource | null = null;
+    try {
+      const devId = params.id || 'all';
+      eventSource = new EventSource(`/api/stream/device?deviceId=${devId}`);
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && (data.type === 'CALL_QUEUE' || data.type === 'QUEUE_CALL')) {
+            const ticketNum = data.ticketNumber;
+            const counterNm = data.counterName;
+            const isRecall = data.callType === 'recall';
+            if (ticketNum) {
+              triggerQueueCall(ticketNum, counterNm, isRecall);
+            }
+          }
+        } catch (_) {}
+      };
+    } catch (_) {}
+
+    return () => {
+      if (eventSource) eventSource.close();
+    };
+  }, [params.id, triggerQueueCall]);
 
   // Clock ticker
   useEffect(() => {
