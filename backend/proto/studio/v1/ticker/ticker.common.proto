@@ -14,6 +14,12 @@ message Ticker {
   int32 font_size = 7;
   string created_at = 8;
   string updated_at = 9;
+  string background_color = 10;
+  string text_color = 11;
+  string badge_background_color = 12;
+  string badge_text_color = 13;
+  string border_color = 14;
+  int32 border_radius = 15;
 }
 
 message CreateTickerRequest {
@@ -23,6 +29,12 @@ message CreateTickerRequest {
   string speed = 4;
   string theme = 5;
   int32 font_size = 6;
+  string background_color = 7;
+  string text_color = 8;
+  string badge_background_color = 9;
+  string badge_text_color = 10;
+  string border_color = 11;
+  int32 border_radius = 12;
 }
 
 message GetTickerRequest {
@@ -47,6 +59,12 @@ message UpdateTickerRequest {
   string speed = 5;
   string theme = 6;
   int32 font_size = 7;
+  string background_color = 8;
+  string text_color = 9;
+  string badge_background_color = 10;
+  string badge_text_color = 11;
+  string border_color = 12;
+  int32 border_radius = 13;
 }
 
 message DeleteTickerRequest {

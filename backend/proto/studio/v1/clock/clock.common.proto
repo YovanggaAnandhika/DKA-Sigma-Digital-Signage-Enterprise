@@ -13,6 +13,13 @@ message Clock {
   string theme = 6;
   string created_at = 7;
   string updated_at = 8;
+  string background_color = 9;
+  string text_color = 10;
+  string subtitle_color = 11;
+  string border_color = 12;
+  int32 border_radius = 13;
+  int32 time_font_size = 14;
+  int32 date_font_size = 15;
 }
 
 message CreateClockRequest {
@@ -21,6 +28,13 @@ message CreateClockRequest {
   bool show_seconds = 3;
   bool is_24_hour = 4;
   string theme = 5;
+  string background_color = 6;
+  string text_color = 7;
+  string subtitle_color = 8;
+  string border_color = 9;
+  int32 border_radius = 10;
+  int32 time_font_size = 11;
+  int32 date_font_size = 12;
 }
 
 message GetClockRequest {
@@ -44,6 +58,13 @@ message UpdateClockRequest {
   bool show_seconds = 4;
   bool is_24_hour = 5;
   string theme = 6;
+  string background_color = 7;
+  string text_color = 8;
+  string subtitle_color = 9;
+  string border_color = 10;
+  int32 border_radius = 11;
+  int32 time_font_size = 12;
+  int32 date_font_size = 13;
 }
 
 message DeleteClockRequest {

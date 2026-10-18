@@ -31,9 +31,22 @@ impl TickerServiceTrait for TickerServiceImpl {
 
         let row = sqlx::query!(
             r#"
-            INSERT INTO tickers (id, name, badge, messages, speed, theme, font_size)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING id, name, badge, messages, speed, theme, font_size, created_at, updated_at
+            INSERT INTO tickers (
+                id, name, badge, messages, speed, theme, font_size,
+                background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius
+            )
+            VALUES (
+                $1, $2, $3, $4, $5, $6, $7,
+                COALESCE(NULLIF($8, ''), '#1e3a8a'),
+                COALESCE(NULLIF($9, ''), '#ffffff'),
+                COALESCE(NULLIF($10, ''), '#2563eb'),
+                COALESCE(NULLIF($11, ''), '#ffffff'),
+                COALESCE(NULLIF($12, ''), '#60a5fa'),
+                CASE WHEN $13 > 0 THEN $13 ELSE 8 END
+            )
+            RETURNING id, name, badge, messages, speed, theme, font_size,
+                      background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius,
+                      created_at, updated_at
             "#,
             id,
             req.name,
@@ -42,6 +55,12 @@ impl TickerServiceTrait for TickerServiceImpl {
             req.speed,
             req.theme,
             req.font_size,
+            req.background_color,
+            req.text_color,
+            req.badge_background_color,
+            req.badge_text_color,
+            req.border_color,
+            req.border_radius,
         )
         .fetch_one(&self.pool)
         .await
@@ -57,6 +76,12 @@ impl TickerServiceTrait for TickerServiceImpl {
             font_size: row.font_size,
             created_at: row.created_at.to_rfc3339(),
             updated_at: row.updated_at.to_rfc3339(),
+            background_color: row.background_color,
+            text_color: row.text_color,
+            badge_background_color: row.badge_background_color,
+            badge_text_color: row.badge_text_color,
+            border_color: row.border_color,
+            border_radius: row.border_radius,
         }))
     }
 
@@ -66,7 +91,7 @@ impl TickerServiceTrait for TickerServiceImpl {
     ) -> Result<Response<Ticker>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
         let row = sqlx::query!(
-            "SELECT id, name, badge, messages, speed, theme, font_size, created_at, updated_at FROM tickers WHERE id = $1",
+            "SELECT id, name, badge, messages, speed, theme, font_size, background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius, created_at, updated_at FROM tickers WHERE id = $1",
             id
         )
         .fetch_optional(&self.pool)
@@ -84,6 +109,12 @@ impl TickerServiceTrait for TickerServiceImpl {
             font_size: row.font_size,
             created_at: row.created_at.to_rfc3339(),
             updated_at: row.updated_at.to_rfc3339(),
+            background_color: row.background_color,
+            text_color: row.text_color,
+            badge_background_color: row.badge_background_color,
+            badge_text_color: row.badge_text_color,
+            border_color: row.border_color,
+            border_radius: row.border_radius,
         }))
     }
 
@@ -96,7 +127,9 @@ impl TickerServiceTrait for TickerServiceImpl {
 
         let rows = sqlx::query!(
             r#"
-            SELECT id, name, badge, messages, speed, theme, font_size, created_at, updated_at
+            SELECT id, name, badge, messages, speed, theme, font_size,
+                   background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius,
+                   created_at, updated_at
             FROM tickers
             WHERE name ILIKE $1 OR badge ILIKE $1
             ORDER BY created_at DESC
@@ -118,6 +151,12 @@ impl TickerServiceTrait for TickerServiceImpl {
             font_size: r.font_size,
             created_at: r.created_at.to_rfc3339(),
             updated_at: r.updated_at.to_rfc3339(),
+            background_color: r.background_color,
+            text_color: r.text_color,
+            badge_background_color: r.badge_background_color,
+            badge_text_color: r.badge_text_color,
+            border_color: r.border_color,
+            border_radius: r.border_radius,
         }).collect();
 
         Ok(Response::new(ListTickersResponse {
@@ -147,9 +186,17 @@ impl TickerServiceTrait for TickerServiceImpl {
                 speed = COALESCE(NULLIF($5, ''), speed),
                 theme = COALESCE(NULLIF($6, ''), theme),
                 font_size = CASE WHEN $7 > 0 THEN $7 ELSE font_size END,
+                background_color = COALESCE(NULLIF($8, ''), background_color),
+                text_color = COALESCE(NULLIF($9, ''), text_color),
+                badge_background_color = COALESCE(NULLIF($10, ''), badge_background_color),
+                badge_text_color = COALESCE(NULLIF($11, ''), badge_text_color),
+                border_color = COALESCE(NULLIF($12, ''), border_color),
+                border_radius = CASE WHEN $13 > 0 THEN $13 ELSE border_radius END,
                 updated_at = NOW()
             WHERE id = $1
-            RETURNING id, name, badge, messages, speed, theme, font_size, created_at, updated_at
+            RETURNING id, name, badge, messages, speed, theme, font_size,
+                      background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius,
+                      created_at, updated_at
             "#,
             id,
             req.name,
@@ -158,6 +205,12 @@ impl TickerServiceTrait for TickerServiceImpl {
             req.speed,
             req.theme,
             req.font_size,
+            req.background_color,
+            req.text_color,
+            req.badge_background_color,
+            req.badge_text_color,
+            req.border_color,
+            req.border_radius,
         )
         .fetch_one(&self.pool)
         .await
@@ -173,6 +226,12 @@ impl TickerServiceTrait for TickerServiceImpl {
             font_size: row.font_size,
             created_at: row.created_at.to_rfc3339(),
             updated_at: row.updated_at.to_rfc3339(),
+            background_color: row.background_color,
+            text_color: row.text_color,
+            badge_background_color: row.badge_background_color,
+            badge_text_color: row.badge_text_color,
+            border_color: row.border_color,
+            border_radius: row.border_radius,
         }))
     }
 
