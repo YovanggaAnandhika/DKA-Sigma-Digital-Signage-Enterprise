@@ -21,6 +21,8 @@ import com.dkaapis.sigma.data.local.TokenStorage
 import com.dkaapis.sigma.data.repository.DeviceRepositoryImpl
 import com.dkaapis.sigma.data.repository.ManifestRepositoryImpl
 import com.dkaapis.sigma.data.repository.MediaStorageRepositoryImpl
+import com.dkaapis.sigma.domain.model.LayerBlock
+import com.dkaapis.sigma.domain.model.LayerZone
 import com.dkaapis.sigma.domain.model.Manifest
 import com.dkaapis.sigma.domain.model.MediaType
 import com.dkaapis.sigma.domain.model.QueueDisplayData
