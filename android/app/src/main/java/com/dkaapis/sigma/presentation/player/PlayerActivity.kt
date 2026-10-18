@@ -581,14 +581,19 @@ class PlayerActivity : AppCompatActivity() {
                     }
                     ZoneWidgetType.QUEUE -> {
                         val renderer = QueueZoneRenderer(
-                            this,
+                            context = this,
                             onCallAudioStarted = {
                                 videoRenderers.forEach { it.setDuckedVolume(true) }
                             },
                             onCallAudioFinished = {
                                 videoRenderers.forEach { it.setDuckedVolume(false) }
+                            },
+                            onUserTapNext = { ticketNum, counterNm ->
+                                android.util.Log.i("PlayerActivity", "Layar player disentuh! Memanggil nomor antrian: $ticketNum di $counterNm")
+                                speakQueueTicket(ticketNum, counterNm)
                             }
                         )
+                        activeQueueRenderer = renderer
                         val view = renderer.createView(zoneView, widgetBlock.widgetDataJson)
                         zoneView.addView(view)
                     }
