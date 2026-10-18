@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package signage.studio.v1.layer;
 
-import "common/v1/types.proto";
-
 message LayerPlaylistItemOverride {
   string id = 1;
   string layer_playlist_id = 2;

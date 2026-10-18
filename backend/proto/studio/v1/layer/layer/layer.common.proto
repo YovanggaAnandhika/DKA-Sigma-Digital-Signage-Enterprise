@@ -1,8 +1,6 @@
 syntax = "proto3";
 
 package signage.studio.v1.layer;
-
-import "common/v1/types.proto";
 import "studio/v1/layer/block/layer_block.common.proto";
 
 message Layer {

@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package signage.studio.v1.visual_filter;
 
-import "common/v1/types.proto";
-
 message VisualFilter {
   string id = 1;
   string name = 2;

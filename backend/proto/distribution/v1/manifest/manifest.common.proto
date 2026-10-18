@@ -1,8 +1,6 @@
 syntax = "proto3";
 
 package signage.distribution.v1.manifest;
-
-import "hardware/v1/device/device.common.proto";
 import "studio/v1/layout/layout.common.proto";
 import "studio/v1/media/media.common.proto";
 
