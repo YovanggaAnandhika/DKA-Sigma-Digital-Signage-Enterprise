@@ -12,6 +12,11 @@ class SignageCanvasLayout @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : ViewGroup(context, attrs, defStyleAttr) {
 
+    init {
+        clipChildren = true
+        clipToPadding = true
+    }
+
     var virtualWidth: Int = 1920
         set(value) {
             field = if (value > 0) value else 1920

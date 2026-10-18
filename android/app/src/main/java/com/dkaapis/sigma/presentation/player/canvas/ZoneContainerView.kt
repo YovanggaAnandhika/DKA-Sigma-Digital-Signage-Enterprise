@@ -12,6 +12,12 @@ class ZoneContainerView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
+    init {
+        clipChildren = true
+        clipToPadding = true
+        clipToOutline = true
+    }
+
     var zoneX: Int = 0
     var zoneY: Int = 0
     var zoneWidth: Int = 400

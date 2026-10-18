@@ -38,13 +38,8 @@ class VideoZoneRenderer(
         }
         exoPlayer = player
 
-        val view = PlayerView(context).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-            useController = false
-            resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+        val inflater = android.view.LayoutInflater.from(context)
+        val view = (inflater.inflate(com.dkaapis.sigma.R.layout.item_video_player, parent, false) as PlayerView).apply {
             this.player = player
         }
         playerView = view
