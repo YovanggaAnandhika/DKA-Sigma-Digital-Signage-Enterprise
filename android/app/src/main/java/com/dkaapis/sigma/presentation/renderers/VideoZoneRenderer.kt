@@ -119,7 +119,7 @@ class VideoZoneRenderer(
             codec = format?.codecs ?: codecStr,
             resolution = resStr,
             bitrateKbps = bitrate,
-            decoderName = decoderCounters?.decoderName ?: "Hardware MediaCodec",
+            decoderName = "Hardware MediaCodec",
             isHardwareAccelerated = true,
             droppedFrames = dropped,
             totalFrames = total,

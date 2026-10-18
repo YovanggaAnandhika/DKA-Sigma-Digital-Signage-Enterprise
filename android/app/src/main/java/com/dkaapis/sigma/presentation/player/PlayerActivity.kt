@@ -20,7 +20,12 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.dkaapis.sigma.R
+import com.dkaapis.sigma.data.analytics.AnalyticsSnapshotData
+import com.dkaapis.sigma.data.analytics.AnalyticsSyncManager
+import com.dkaapis.sigma.data.analytics.AssetStatsData
+import com.dkaapis.sigma.data.analytics.DeviceHardwareProfiler
 import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
+import com.dkaapis.sigma.data.local.AnalyticsLocalBuffer
 import com.dkaapis.sigma.data.local.ManifestStorage
 import com.dkaapis.sigma.data.local.MediaDiskCache
 import com.dkaapis.sigma.data.local.TokenStorage
@@ -68,6 +73,9 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var loadingText: TextView
     private lateinit var subDetailText: TextView
     private lateinit var progressBar: ProgressBar
+
+    private lateinit var hardwareProfiler: DeviceHardwareProfiler
+    private lateinit var analyticsSyncManager: AnalyticsSyncManager
 
     private var realtimeStreamJob: Job? = null
     private val streamingHttpClient = OkHttpClient.Builder()
@@ -118,6 +126,22 @@ class PlayerActivity : AppCompatActivity() {
                                     viewModel.syncManifest()
                                 }
                             }
+                        }
+
+                        // Kirim data hardware & asset analytics realtime (Hybrid Offline-First)
+                        if (::hardwareProfiler.isInitialized && ::analyticsSyncManager.isInitialized) {
+                            val hwMetrics = hardwareProfiler.sampleMetrics()
+                            val activeAssetStats = videoRenderers.firstOrNull()?.getCurrentPlaybackStats()
+                                ?: AssetStatsData(
+                                    mediaName = "Standby / Static Content",
+                                    playbackStatus = "IDLE",
+                                    diagnosticFlag = "OPTIMAL"
+                                )
+                            val snap = AnalyticsSnapshotData(
+                                inputOutputJson = hwMetrics.toJson(),
+                                assetsStatsJson = activeAssetStats.toJson()
+                            )
+                            analyticsSyncManager.recordAndSync(snap)
                         }
                     }
                 } catch (_: Exception) {}
@@ -178,6 +202,11 @@ class PlayerActivity : AppCompatActivity() {
         deviceRepo = DeviceRepositoryImpl(this, tokenStorage, channelFactory)
         val manifestRepo = ManifestRepositoryImpl(this, manifestStorage, channelFactory)
         storageRepo = MediaStorageRepositoryImpl(diskCache)
+
+        val hardwareProfiler = DeviceHardwareProfiler(this)
+        val analyticsBuffer = AnalyticsLocalBuffer(this)
+        this.hardwareProfiler = hardwareProfiler
+        this.analyticsSyncManager = AnalyticsSyncManager(this, tokenStorage, analyticsBuffer)
 
         val registerUseCase = RegisterAndPairUseCase(deviceRepo)
         val syncUseCase = SyncManifestUseCase(deviceRepo, manifestRepo)
@@ -488,7 +517,9 @@ class PlayerActivity : AppCompatActivity() {
                             VideoPlaylistItem(
                                 file = file,
                                 durationSeconds = block.durationSeconds,
-                                isMuted = block.isMuted
+                                isMuted = block.isMuted,
+                                mediaId = mediaId,
+                                mediaName = asset?.localFilename ?: file.name
                             )
                         )
                     } else if (firstImageFile == null) {
