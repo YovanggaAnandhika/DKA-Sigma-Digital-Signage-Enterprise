@@ -119,6 +119,8 @@ export const api = {
   deleteMedia: studioModule.deleteMedia,
   uploadMediaChunk: studioModule.uploadMediaChunk,
   uploadFileViaGrpc: studioModule.uploadFileViaGrpc,
+  finalizeUpload: studioModule.finalizeUpload,
+  cancelUpload: studioModule.cancelUpload,
   getMediaFile: studioModule.getMediaFile,
 
   // Studio — Transitions
