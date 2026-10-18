@@ -13,4 +13,6 @@ service ScheduleService {
   
   rpc AddScheduleEvent(AddScheduleEventRequest) returns (ScheduleEvent) {}
   rpc RemoveScheduleEvent(RemoveScheduleEventRequest) returns (RemoveScheduleEventResponse) {}
+  
+  rpc PushLayoutToSchedule(PushLayoutToScheduleRequest) returns (PushLayoutToScheduleResponse) {}
 }

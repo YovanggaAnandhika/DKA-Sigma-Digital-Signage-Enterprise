@@ -11,6 +11,7 @@ use crate::grpc::proto::studio::v1::schedule::{
     AddScheduleEventRequest, CreateScheduleRequest, DeleteScheduleRequest, DeleteScheduleResponse,
     GetScheduleRequest, ListSchedulesRequest, ListSchedulesResponse, RemoveScheduleEventRequest,
     RemoveScheduleEventResponse, Schedule, ScheduleEvent, UpdateScheduleRequest,
+    PushLayoutToScheduleRequest, PushLayoutToScheduleResponse,
 };
 
 pub struct ScheduleServiceImpl {
@@ -189,5 +190,106 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
             .map_err(Status::from)?;
 
         Ok(Response::new(RemoveScheduleEventResponse { success }))
+    }
+
+    async fn push_layout_to_schedule(
+        &self,
+        request: Request<PushLayoutToScheduleRequest>,
+    ) -> Result<Response<PushLayoutToScheduleResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
+        let req = request.into_inner();
+        let layout_id = Uuid::parse_str(&req.layout_id)
+            .map_err(|_| Status::invalid_argument("Invalid layout_id"))?;
+
+        let mut tx = self.pool.begin().await
+            .map_err(|e| Status::internal(format!("Database error: {}", e)))?;
+
+        // 1. Create schedule
+        let schedule_name = if req.schedule_name.trim().is_empty() {
+            "Jadwal Layout".to_string()
+        } else {
+            req.schedule_name.trim().to_string()
+        };
+
+        let schedule_id = sqlx::query_scalar::<_, Uuid>(
+            r#"
+            INSERT INTO schedules (name, description, created_at, updated_at)
+            VALUES ($1, $2, NOW(), NOW())
+            RETURNING id
+            "#,
+        )
+        .bind(&schedule_name)
+        .bind(format!("Dipush dari template layout {}", layout_id))
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(format!("Failed to create schedule: {}", e)))?;
+
+        // 2. Add schedule_event
+        let start_time = chrono::NaiveTime::parse_from_str(&req.start_time, "%H:%M:%S")
+            .or_else(|_| chrono::NaiveTime::parse_from_str(&req.start_time, "%H:%M"))
+            .unwrap_or_else(|_| chrono::NaiveTime::from_hms_opt(8, 0, 0).unwrap());
+
+        let end_time = chrono::NaiveTime::parse_from_str(&req.end_time, "%H:%M:%S")
+            .or_else(|_| chrono::NaiveTime::parse_from_str(&req.end_time, "%H:%M"))
+            .unwrap_or_else(|_| chrono::NaiveTime::from_hms_opt(22, 0, 0).unwrap());
+
+        let start_date = req.start_date.as_deref().and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok());
+        let end_date = req.end_date.as_deref().and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok());
+
+        sqlx::query(
+            r#"
+            INSERT INTO schedule_events (
+                schedule_id, layout_id, start_time, end_time, days_of_week,
+                priority, start_date, end_date, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+            "#,
+        )
+        .bind(schedule_id)
+        .bind(layout_id)
+        .bind(start_time)
+        .bind(end_time)
+        .bind(if req.days_of_week.is_empty() { "1,2,3,4,5,6,7" } else { &req.days_of_week })
+        .bind(req.priority)
+        .bind(start_date)
+        .bind(end_date)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(format!("Failed to create schedule event: {}", e)))?;
+
+        // 3. Assign schedule_id to selected devices
+        let mut affected = 0i32;
+        for dev_str in &req.device_ids {
+            if let Ok(dev_id) = Uuid::parse_str(dev_str) {
+                let res = sqlx::query("UPDATE devices SET schedule_id = $1, updated_at = NOW() WHERE id = $2")
+                    .bind(schedule_id)
+                    .bind(dev_id)
+                    .execute(&mut *tx)
+                    .await;
+                if let Ok(r) = res {
+                    affected += r.rows_affected() as i32;
+                }
+            }
+        }
+
+        // 4. Assign schedule_id to selected display groups
+        for grp_str in &req.display_group_ids {
+            if let Ok(grp_id) = Uuid::parse_str(grp_str) {
+                let _ = sqlx::query("UPDATE display_groups SET schedule_id = $1, updated_at = NOW() WHERE id = $2")
+                    .bind(schedule_id)
+                    .bind(grp_id)
+                    .execute(&mut *tx)
+                    .await;
+            }
+        }
+
+        tx.commit().await
+            .map_err(|e| Status::internal(format!("Commit failed: {}", e)))?;
+
+        Ok(Response::new(PushLayoutToScheduleResponse {
+            success: true,
+            schedule_id: schedule_id.to_string(),
+            message: format!("Berhasil mempublikasikan ke jadwal '{}'", schedule_name),
+            affected_devices_count: affected,
+        }))
     }
 }

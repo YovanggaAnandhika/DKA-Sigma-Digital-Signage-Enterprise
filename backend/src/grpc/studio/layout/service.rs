@@ -7,6 +7,8 @@ use crate::grpc::proto::studio::v1::layout::{
     layout_service_server::LayoutService as LayoutServiceTrait,
     CreateLayoutRequest, DeleteLayoutRequest, DeleteLayoutResponse, GetLayoutRequest,
     Layout as ProtoLayout, ListLayoutsRequest, ListLayoutsResponse, UpdateLayoutRequest,
+    LayoutHistoryItem, ListLayoutHistoryRequest, ListLayoutHistoryResponse,
+    RollbackLayoutRequest, RollbackLayoutResponse,
 };
 use crate::grpc::proto::common::v1::orientation::Orientation as ProtoOrientation;
 use crate::grpc::proto::studio::v1::layer::Layer as ProtoLayer;
@@ -170,6 +172,21 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
+        // Simpan snapshot ke layout_history hanya saat tombol Simpan ditekan di editor
+        if let Ok(snapshot_val) = serde_json::to_value(&full_dto) {
+            use sha2::{Digest, Sha256};
+            let mut hasher = Sha256::new();
+            hasher.update(serde_json::to_string(&full_dto).unwrap_or_default().as_bytes());
+            let version_hash = format!("{:x}", hasher.finalize());
+            let _ = crate::modules::studio::layout::LayoutHistoryRepository::create(
+                &self.pool,
+                layout_id,
+                &version_hash,
+                snapshot_val,
+                Some("Perubahan disimpan dari Layout Designer"),
+            ).await;
+        }
+
         Ok(Response::new(Self::map_layout_with_layers(full_dto)))
     }
 
@@ -187,5 +204,68 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(DeleteLayoutResponse { success }))
+    }
+
+    async fn list_layout_history(
+        &self,
+        request: Request<ListLayoutHistoryRequest>,
+    ) -> Result<Response<ListLayoutHistoryResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_view_layouts")?;
+        let req = request.into_inner();
+        let layout_id = req.layout_id.and_then(|id| Uuid::from_str(&id).ok());
+        let search = if req.search.is_empty() { None } else { Some(req.search) };
+
+        let page = req.pagination.as_ref().map(|p| p.page as i64).unwrap_or(1).max(1);
+        let limit = req.pagination.as_ref().map(|p| p.limit as i64).unwrap_or(20).clamp(1, 100);
+        let offset = (page - 1) * limit;
+
+        let total = crate::modules::studio::layout::LayoutHistoryRepository::count(&self.pool, layout_id, search.clone())
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let items = crate::modules::studio::layout::LayoutHistoryRepository::find_all(&self.pool, layout_id, search, limit, offset)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .into_iter()
+            .map(|h| LayoutHistoryItem {
+                id: h.id.to_string(),
+                layout_id: h.layout_id.to_string(),
+                layout_name: h.layout_name.unwrap_or_default(),
+                version_hash: h.version_hash,
+                snapshot_json: h.snapshot_json.to_string(),
+                description: h.description.unwrap_or_default(),
+                created_at: h.created_at.to_rfc3339(),
+            })
+            .collect();
+
+        Ok(Response::new(ListLayoutHistoryResponse {
+            items,
+            pagination: Some(crate::grpc::proto::common::v1::PaginationResponse {
+                total_items: total,
+                total_pages: ((total + limit - 1) / limit) as i32,
+                current_page: page as i32,
+                limit: limit as i32,
+            }),
+        }))
+    }
+
+    async fn rollback_layout(
+        &self,
+        request: Request<RollbackLayoutRequest>,
+    ) -> Result<Response<RollbackLayoutResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
+        let req = request.into_inner();
+        let history_id = Uuid::from_str(&req.history_id)
+            .map_err(|_| Status::invalid_argument("Invalid history_id"))?;
+
+        let layout_id = crate::modules::studio::layout::LayoutHistoryRepository::rollback(&self.pool, history_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(RollbackLayoutResponse {
+            success: true,
+            message: "Berhasil melakukan rollback layout".to_string(),
+            layout_id: layout_id.to_string(),
+        }))
     }
 }

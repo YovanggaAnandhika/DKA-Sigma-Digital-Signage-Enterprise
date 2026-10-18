@@ -10,4 +10,7 @@ service LayoutService {
   rpc ListLayouts(ListLayoutsRequest) returns (ListLayoutsResponse);
   rpc UpdateLayout(UpdateLayoutRequest) returns (Layout);
   rpc DeleteLayout(DeleteLayoutRequest) returns (DeleteLayoutResponse);
+  
+  rpc ListLayoutHistory(ListLayoutHistoryRequest) returns (ListLayoutHistoryResponse);
+  rpc RollbackLayout(RollbackLayoutRequest) returns (RollbackLayoutResponse);
 }

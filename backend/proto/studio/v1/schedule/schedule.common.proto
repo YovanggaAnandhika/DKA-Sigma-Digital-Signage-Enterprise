@@ -79,3 +79,23 @@ message RemoveScheduleEventRequest {
 message RemoveScheduleEventResponse {
   bool success = 1;
 }
+
+message PushLayoutToScheduleRequest {
+  string layout_id = 1;
+  string schedule_name = 2;
+  string start_time = 3; // HH:MM:SS format
+  string end_time = 4;   // HH:MM:SS format
+  string days_of_week = 5; // e.g. "1,2,3,4,5,6,7"
+  int32 priority = 6;      // default 0 (paling terakhir)
+  optional string start_date = 7; // YYYY-MM-DD
+  optional string end_date = 8;   // YYYY-MM-DD
+  repeated string device_ids = 9;
+  repeated string display_group_ids = 10;
+}
+
+message PushLayoutToScheduleResponse {
+  bool success = 1;
+  string schedule_id = 2;
+  string message = 3;
+  int32 affected_devices_count = 4;
+}

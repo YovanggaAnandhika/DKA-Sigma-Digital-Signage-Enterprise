@@ -88,27 +88,19 @@ impl ManifestService {
                     }
                 }
 
-                if let Some((_, _, layout_id)) = best_match {
-                    active_layout_id = Some(layout_id);
-                }
+                // If a schedule is assigned, it strictly governs active content
+                active_layout_id = best_match.map(|(_, _, layout_id)| layout_id);
             }
         }
 
         let base_layout_id = match active_layout_id {
             Some(id) => id,
             None => {
-                if let Ok(Some(fallback_id)) = sqlx::query_scalar::<_, Uuid>(
-                    "SELECT id FROM layouts ORDER BY created_at ASC LIMIT 1"
-                )
-                .fetch_optional(pool)
-                .await {
-                    fallback_id
-                } else {
-                    return Ok(ManifestSyncResponseDto {
-                        is_up_to_date: true,
-                        manifest: None,
-                    });
-                }
+                // Di luar jam tayang jadwal atau belum ada jadwal aktif: Jangan push layout
+                return Ok(ManifestSyncResponseDto {
+                    is_up_to_date: true,
+                    manifest: None,
+                });
             }
         };
 
