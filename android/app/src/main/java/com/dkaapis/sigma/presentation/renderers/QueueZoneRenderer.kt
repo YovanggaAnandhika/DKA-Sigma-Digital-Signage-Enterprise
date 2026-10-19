@@ -63,16 +63,18 @@ class QueueCanvasView(
 
         if (width <= 0 || height <= 0) return
 
-        val scale = width.toFloat() / canvasWidth.toFloat()
+        val scaleX = width.toFloat() / canvasWidth.toFloat()
+        val scaleY = height.toFloat() / canvasHeight.toFloat()
 
         for (i in 0 until childCount) {
             val child = getChildAt(i)
             val meta = child.tag as? QueueItemMeta ?: continue
-            val childW = (meta.width * scale).toInt().coerceAtLeast(1)
-            val childH = (meta.height * scale).toInt().coerceAtLeast(1)
+            val childW = (meta.width * scaleX).toInt().coerceAtLeast(1)
+            val childH = (meta.height * scaleY).toInt().coerceAtLeast(1)
 
             if (child is TextView) {
-                val fontPx = meta.fontSize * scale
+                // Skala font proporsional mengikuti lebar kontainer, persis CSS container queries (100cqw)
+                val fontPx = meta.fontSize * scaleX
                 child.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontPx)
                 child.includeFontPadding = false
             }
@@ -94,15 +96,23 @@ class QueueCanvasView(
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
         val width = r - l
-        if (width <= 0) return
+        val height = b - t
+        if (width <= 0 || height <= 0) return
 
-        val scale = width.toFloat() / canvasWidth.toFloat()
+        val scaleX = width.toFloat() / canvasWidth.toFloat()
+        val scaleY = height.toFloat() / canvasHeight.toFloat()
 
         for (i in 0 until childCount) {
             val child = getChildAt(i)
             val meta = child.tag as? QueueItemMeta ?: continue
-            val left = (meta.x * scale).toInt()
-            val top = (meta.y * scale).toInt()
+            val boxLeft = (meta.x * scaleX).toInt()
+            val boxTop = (meta.y * scaleY).toInt()
+            val boxW = (meta.width * scaleX).toInt().coerceAtLeast(1)
+            val boxH = (meta.height * scaleY).toInt().coerceAtLeast(1)
+
+            // Posisikan dan pusatkan view di dalam kotak targetnya secara presisi
+            val left = boxLeft + (boxW - child.measuredWidth) / 2
+            val top = boxTop + (boxH - child.measuredHeight) / 2
             val right = left + child.measuredWidth
             val bottom = top + child.measuredHeight
             child.layout(left, top, right, bottom)
