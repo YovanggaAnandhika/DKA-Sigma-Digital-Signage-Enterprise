@@ -263,57 +263,61 @@ class PlayerActivity : AppCompatActivity() {
     private fun initTextToSpeech() {
         try {
             textToSpeech = TextToSpeech(this) { status ->
-                if (status == TextToSpeech.SUCCESS) {
-                    val idLocale = Locale("id", "ID")
-                    val available = textToSpeech?.isLanguageAvailable(idLocale)
-                    if (available != TextToSpeech.LANG_MISSING_DATA && available != TextToSpeech.LANG_NOT_SUPPORTED) {
-                        textToSpeech?.language = idLocale
+                try {
+                    if (status == TextToSpeech.SUCCESS) {
+                        val idLocale = Locale("id", "ID")
+                        val available = textToSpeech?.isLanguageAvailable(idLocale)
+                        if (available != TextToSpeech.LANG_MISSING_DATA && available != TextToSpeech.LANG_NOT_SUPPORTED) {
+                            textToSpeech?.language = idLocale
+                        } else {
+                            textToSpeech?.language = Locale.getDefault()
+                        }
+                        textToSpeech?.setSpeechRate(0.92f)
+                        textToSpeech?.setPitch(1.0f)
+                        isTtsReady = true
+
+                        textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                            override fun onStart(utteranceId: String?) {
+                                runOnUiThread {
+                                    if (utteranceId != null && utteranceId == currentUtteranceId) {
+                                        val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
+                                        audioManager?.requestAudioFocus(null, android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                                        videoRenderers.forEach { it.setDuckedVolume(true) }
+                                    }
+                                }
+                            }
+
+                            override fun onDone(utteranceId: String?) {
+                                runOnUiThread {
+                                    if (utteranceId != null && utteranceId == currentUtteranceId) {
+                                        videoRenderers.forEach { it.setDuckedVolume(false) }
+                                        val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
+                                        audioManager?.abandonAudioFocus(null)
+                                        activeQueueRenderer?.stopCallEffect()
+                                    }
+                                }
+                            }
+
+                            override fun onError(utteranceId: String?) {
+                                runOnUiThread {
+                                    if (utteranceId != null && utteranceId == currentUtteranceId) {
+                                        videoRenderers.forEach { it.setDuckedVolume(false) }
+                                        val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
+                                        audioManager?.abandonAudioFocus(null)
+                                        activeQueueRenderer?.stopCallEffect()
+                                    }
+                                }
+                            }
+                        })
+                        android.util.Log.i("PlayerActivity", "Android TextToSpeech engine siap (Bahasa Indonesia)")
                     } else {
-                        textToSpeech?.language = Locale.getDefault()
+                        android.util.Log.w("PlayerActivity", "Inisialisasi TextToSpeech gagal, status: $status")
                     }
-                    textToSpeech?.setSpeechRate(0.92f)
-                    textToSpeech?.setPitch(1.0f)
-                    isTtsReady = true
-
-                    textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                        override fun onStart(utteranceId: String?) {
-                            runOnUiThread {
-                                if (utteranceId != null && utteranceId == currentUtteranceId) {
-                                    val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
-                                    audioManager?.requestAudioFocus(null, android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-                                    videoRenderers.forEach { it.setDuckedVolume(true) }
-                                }
-                            }
-                        }
-
-                        override fun onDone(utteranceId: String?) {
-                            runOnUiThread {
-                                if (utteranceId != null && utteranceId == currentUtteranceId) {
-                                    videoRenderers.forEach { it.setDuckedVolume(false) }
-                                    val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
-                                    audioManager?.abandonAudioFocus(null)
-                                    activeQueueRenderer?.stopCallEffect()
-                                }
-                            }
-                        }
-
-                        override fun onError(utteranceId: String?) {
-                            runOnUiThread {
-                                if (utteranceId != null && utteranceId == currentUtteranceId) {
-                                    videoRenderers.forEach { it.setDuckedVolume(false) }
-                                    val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
-                                    audioManager?.abandonAudioFocus(null)
-                                    activeQueueRenderer?.stopCallEffect()
-                                }
-                            }
-                        }
-                    })
-                    android.util.Log.i("PlayerActivity", "Android TextToSpeech engine siap (Bahasa Indonesia)")
-                } else {
-                    android.util.Log.w("PlayerActivity", "Inisialisasi TextToSpeech gagal, status: $status")
+                } catch (t: Throwable) {
+                    android.util.Log.w("PlayerActivity", "Gagal inisialisasi TextToSpeech callback: ${t.message}")
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             android.util.Log.e("PlayerActivity", "Gagal inisialisasi TTS: ${e.message}")
         }
     }
