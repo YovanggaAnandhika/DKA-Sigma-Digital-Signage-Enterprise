@@ -28,11 +28,7 @@ class AnalyticsSyncManager(
     suspend fun recordAndSync(snapshot: AnalyticsSnapshotData) = withContext(Dispatchers.IO) {
         val deviceId = tokenStorage.getDeviceId() ?: return@withContext
         val deviceToken = tokenStorage.getDeviceToken() ?: ""
-        val baseUrl = try {
-            context.getString(R.string.server_http_base_url)
-        } catch (_: Exception) {
-            "http://192.168.1.46:80"
-        }
+        val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(context)
 
         val isDirectSuccess = try {
             val jsonBody = JSONObject().apply {

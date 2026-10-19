@@ -7,6 +7,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -19,19 +20,29 @@ sealed class PairingUiState {
 }
 
 class PairingViewModel(
-    private val registerAndPairUseCase: RegisterAndPairUseCase
+    private var registerAndPairUseCase: RegisterAndPairUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<PairingUiState>(PairingUiState.Initial)
     val uiState: StateFlow<PairingUiState> = _uiState.asStateFlow()
 
+    private var activeJob: kotlinx.coroutines.Job? = null
+
+    fun updateUseCase(newUseCase: RegisterAndPairUseCase) {
+        activeJob?.cancel()
+        this.registerAndPairUseCase = newUseCase
+        _uiState.value = PairingUiState.Initial
+        startPairing()
+    }
+
     fun startPairing() {
+        activeJob?.cancel()
         if (registerAndPairUseCase.isAlreadyPaired()) {
             _uiState.value = PairingUiState.PairedSuccess
             return
         }
 
-        viewModelScope.launch {
+        activeJob = viewModelScope.launch {
             _uiState.value = PairingUiState.Registering
             val regResult = registerAndPairUseCase.register()
             if (regResult.isSuccess) {
@@ -46,8 +57,8 @@ class PairingViewModel(
     }
 
     private fun pollPairingStatus(pairingCode: String) {
-        viewModelScope.launch {
-            while (true) {
+        activeJob = viewModelScope.launch {
+            while (isActive) {
                 delay(5_000.milliseconds)
                 val statusResult = registerAndPairUseCase.checkStatus(pairingCode)
                 if (statusResult.isSuccess && statusResult.getOrNull()?.isSuccess == true) {

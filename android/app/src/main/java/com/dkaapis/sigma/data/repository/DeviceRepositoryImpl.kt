@@ -73,11 +73,7 @@ class DeviceRepositoryImpl(
     override suspend fun registerDevice(): Result<PairingResult> = withContext(Dispatchers.IO) {
         try {
             val info = getLocalDeviceInfo()
-            val baseUrl = try {
-                context.getString(R.string.server_http_base_url)
-            } catch (_: Exception) {
-                "http://192.168.1.46:80"
-            }
+            val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(context)
 
             val jsonBody = JSONObject().apply {
                 put("deviceName", info.name.ifEmpty { "Android Display" })
@@ -153,11 +149,7 @@ class DeviceRepositoryImpl(
                 )
             }
 
-            val baseUrl = try {
-                context.getString(R.string.server_http_base_url)
-            } catch (_: Exception) {
-                "http://192.168.1.46:80"
-            }
+            val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(context)
 
             val jsonBody = JSONObject().apply {
                 put("pairingCode", pairingCode)
@@ -243,11 +235,7 @@ class DeviceRepositoryImpl(
         try {
             val deviceId = getSavedDeviceId() ?: return@withContext Result.failure(Exception("Device ID not found"))
             val deviceToken = getSavedDeviceToken() ?: ""
-            val baseUrl = try {
-                context.getString(R.string.server_http_base_url)
-            } catch (_: Exception) {
-                "http://192.168.1.46:80"
-            }
+            val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(context)
 
             val stat = android.os.StatFs(context.filesDir.absolutePath)
             val freeBytes = stat.availableBytes

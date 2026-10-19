@@ -878,11 +878,7 @@ class PlayerActivity : AppCompatActivity() {
                                 // Broadcast ke server via SSE POST agar CMS web dan perangkat lain langsung sinkron
                                 try {
                                     val currentDevId = deviceRepo.getSavedDeviceId() ?: ""
-                                    val baseUrl = try {
-                                        getString(R.string.server_http_base_url)
-                                    } catch (_: Exception) {
-                                        "http://100.99.242.84:80"
-                                    }
+                                    val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(this@PlayerActivity)
                                     val payload = JSONObject().apply {
                                         put("deviceId", "all")
                                         put("type", "CALL_QUEUE")
@@ -1072,11 +1068,7 @@ class PlayerActivity : AppCompatActivity() {
 
         realtimeStreamJob?.cancel()
         realtimeStreamJob = lifecycleScope.launch(Dispatchers.IO) {
-            val baseUrl = try {
-                getString(com.dkaapis.sigma.R.string.server_http_base_url)
-            } catch (_: Exception) {
-                "http://100.99.242.84:80"
-            }
+            val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(this@PlayerActivity)
 
             while (isActive) {
                 try {
@@ -1343,11 +1335,7 @@ class PlayerActivity : AppCompatActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val deviceId = deviceRepo.getSavedDeviceId() ?: return@launch
-                val baseUrl = try {
-                    getString(R.string.server_http_base_url)
-                } catch (_: Exception) {
-                    "http://192.168.1.46:80"
-                }
+                val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(this@PlayerActivity)
 
                 val base64Image = Base64.encodeToString(imageBytes, Base64.NO_WRAP)
                 val jsonBody = JSONObject().apply {

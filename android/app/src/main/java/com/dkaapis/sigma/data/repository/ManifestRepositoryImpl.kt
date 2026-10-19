@@ -29,11 +29,7 @@ class ManifestRepositoryImpl(
 
     override suspend fun fetchActiveManifest(deviceId: String, currentHash: String): Result<Manifest?> = withContext(Dispatchers.IO) {
         try {
-            val baseUrl = try {
-                context.getString(R.string.server_http_base_url)
-            } catch (_: Exception) {
-                "http://192.168.1.46:80"
-            }
+            val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(context)
 
             val jsonBody = JSONObject().apply {
                 put("deviceId", deviceId)
@@ -87,11 +83,7 @@ class ManifestRepositoryImpl(
     override suspend fun getLocalCachedManifest(): Manifest? = withContext(Dispatchers.IO) {
         val json = manifestStorage.getActiveManifestJson() ?: return@withContext null
         try {
-            val baseUrl = try {
-                context.getString(R.string.server_http_base_url)
-            } catch (_: Exception) {
-                "http://192.168.1.46:80"
-            }
+            val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(context)
             parseManifestJson(JSONObject(json), baseUrl)
         } catch (_: Exception) {
             null

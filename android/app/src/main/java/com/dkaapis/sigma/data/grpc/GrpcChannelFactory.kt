@@ -19,19 +19,19 @@ class GrpcChannelFactory(
 
     companion object {
         private fun resolveHost(context: Context): String = try {
-            context.getString(R.string.server_host)
+            com.dkaapis.sigma.data.local.ServerConfig.getHost(context)
         } catch (_: Exception) {
-            "10.0.2.2"
+            "192.168.1.46"
         }
 
         private fun resolvePort(context: Context): Int = try {
-            context.getString(R.string.server_port).toInt()
+            com.dkaapis.sigma.data.local.ServerConfig.getGrpcPort(context)
         } catch (_: Exception) {
             50051
         }
 
         private fun resolveTls(context: Context): Boolean = try {
-            context.getString(R.string.server_use_tls).toBoolean()
+            com.dkaapis.sigma.data.local.ServerConfig.isTls(context)
         } catch (_: Exception) {
             false
         }

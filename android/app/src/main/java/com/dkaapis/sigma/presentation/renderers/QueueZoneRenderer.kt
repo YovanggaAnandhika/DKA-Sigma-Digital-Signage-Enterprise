@@ -405,7 +405,7 @@ class QueueZoneRenderer(
 
         // Background image (center-crop = CSS background-size: cover) behind the canvas
         val resolvedUrl = if (bgImageUrl.startsWith("/")) {
-            val base = try { context.getString(R.string.server_http_base_url) } catch (_: Exception) { "" }
+            val base = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(context)
             "${base.trimEnd('/')}$bgImageUrl"
         } else bgImageUrl
 
