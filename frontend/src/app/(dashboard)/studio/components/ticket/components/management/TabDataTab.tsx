@@ -103,8 +103,10 @@ export default function TabDataTab() {
               ) : (
                 paginatedQueues.map((q, idx) => {
                   const sectorName = sectors.find((s) => s.id === q.sectorType)?.name || q.sectorType || 'Layanan Antrian';
-                  const activeCounter = q.counters?.[0]?.counterName || q.currentCounter || 'LOKET 01';
-                  const opName = q.counters?.[0]?.operatorName;
+                  const activeCounterObj = q.counters?.find((c) => c.counterName === q.currentCounter) || q.counters?.[0];
+                  const activeCounter = activeCounterObj?.counterName || q.currentCounter || 'LOKET 01';
+                  const opName = activeCounterObj?.operatorName;
+                  const counterStatus = activeCounterObj?.status || 'ACTIVE';
                   const activeAudio = q.audios?.[0]?.name || 'Chime Klasik (Ding-Dong)';
 
                   return (
@@ -164,16 +166,46 @@ export default function TabDataTab() {
                             color: 'var(--primary-400)',
                           }}
                         >
-                          {q.currentNumber || `${q.prefix}-001`}
+                          {q.currentNumber || `${q.prefix || 'A'}-000`}
                         </span>
                       </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <Users size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontWeight: 600, fontSize: '0.8125rem', color: 'var(--text-primary)' }}>
-                              {activeCounter}
-                            </span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontWeight: 600, fontSize: '0.8125rem', color: 'var(--text-primary)' }}>
+                                {activeCounter}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: '0.6rem',
+                                  fontWeight: 700,
+                                  padding: '1px 5px',
+                                  borderRadius: '4px',
+                                  backgroundColor:
+                                    counterStatus === 'LOCKED'
+                                      ? 'rgba(239, 68, 68, 0.12)'
+                                      : counterStatus === 'BREAK'
+                                      ? 'rgba(245, 158, 11, 0.12)'
+                                      : 'rgba(16, 185, 129, 0.12)',
+                                  color:
+                                    counterStatus === 'LOCKED'
+                                      ? 'var(--accent-rose)'
+                                      : counterStatus === 'BREAK'
+                                      ? 'var(--accent-amber)'
+                                      : 'var(--accent-emerald)',
+                                  border:
+                                    counterStatus === 'LOCKED'
+                                      ? '1px solid rgba(239, 68, 68, 0.25)'
+                                      : counterStatus === 'BREAK'
+                                      ? '1px solid rgba(245, 158, 11, 0.25)'
+                                      : '1px solid rgba(16, 185, 129, 0.25)',
+                                }}
+                              >
+                                {counterStatus === 'LOCKED' ? 'TUTUP' : counterStatus === 'BREAK' ? 'ISTIRAHAT' : 'BUKA'}
+                              </span>
+                            </div>
                             {opName && (
                               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                                 {opName}

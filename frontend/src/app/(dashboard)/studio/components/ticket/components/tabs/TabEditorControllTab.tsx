@@ -10,6 +10,7 @@ import {
   LockOpen,
   CheckCircle2,
   Users,
+  ChevronDown,
 } from 'lucide-react';
 import { useQueueEditor } from '../../context/QueueEditorContext';
 import { injectQueueVariables, speakQueueAnnouncement, speakCounterStatusAnnouncement, QUEUE_HISTORY_STORAGE_KEY, QueueCallHistoryItem } from '../../types';
@@ -21,6 +22,7 @@ const Marquee = 'marquee' as any;
 export default function TabEditorControllTab() {
   const { queue, setQueue, simulator, setSimulator, triggerChime } = useQueueEditor();
   const [calling, setCalling] = useState(false);
+  const [counterMenuOpen, setCounterMenuOpen] = useState(false);
 
   const activeCounter = queue.counters.find((c) => c.counterName === queue.currentCounter) || queue.counters[0] || {
     id: 'cnt-1',
@@ -341,7 +343,7 @@ export default function TabEditorControllTab() {
         overflow: 'hidden',
       }}
     >
-      {/* Top Floating Control Bar (Pilihan Pos / Counter, Status, & Resolusi) */}
+      {/* Top Floating Control Bar (Pilihan Pos / Counter & Status) */}
       <div
         style={{
           position: 'absolute',
@@ -351,8 +353,8 @@ export default function TabEditorControllTab() {
           zIndex: 10,
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
-          padding: '6px 14px',
+          gap: '8px',
+          padding: '5px 12px',
           borderRadius: '10px',
           backgroundColor: 'rgba(15, 23, 42, 0.85)',
           backdropFilter: 'blur(12px)',
@@ -360,16 +362,16 @@ export default function TabEditorControllTab() {
           boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
         }}
       >
-        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: isLocked ? 'var(--accent-rose)' : isBreak ? 'var(--accent-amber)' : 'var(--accent-emerald)', display: 'inline-block' }} />
-        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f8fafc', whiteSpace: 'nowrap' }}>
+        <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: isLocked ? 'var(--accent-rose)' : isBreak ? 'var(--accent-amber)' : 'var(--accent-emerald)', display: 'inline-block' }} />
+        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f8fafc', whiteSpace: 'nowrap' }}>
           Monitor Live
         </span>
 
-        <div style={{ height: '14px', width: '1px', backgroundColor: 'rgba(255,255,255,0.15)' }} />
+        <div style={{ height: '12px', width: '1px', backgroundColor: 'rgba(255,255,255,0.15)' }} />
 
         {/* Dropdown Pos / Counter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', whiteSpace: 'nowrap' }}>
             {counterLabel}:
           </span>
           <select
@@ -380,15 +382,15 @@ export default function TabEditorControllTab() {
               setSimulator((prev) => ({ ...prev, currentCounter: val }));
             }}
             style={{
-              height: '26px',
-              padding: '0 8px',
-              fontSize: '0.72rem',
+              height: '24px',
+              padding: '0 6px',
+              fontSize: '0.7rem',
               fontWeight: 600,
-              minWidth: '150px',
-              maxWidth: '220px',
+              minWidth: '130px',
+              maxWidth: '200px',
               backgroundColor: 'rgba(30, 41, 59, 0.8)',
               borderColor: 'rgba(255, 255, 255, 0.12)',
-              borderRadius: '6px',
+              borderRadius: '5px',
               cursor: 'pointer',
               color: '#f8fafc',
               outline: 'none',
@@ -406,10 +408,10 @@ export default function TabEditorControllTab() {
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '5px',
-            fontSize: '0.65rem',
+            gap: '4px',
+            fontSize: '0.625rem',
             fontWeight: 600,
-            padding: '2px 8px',
+            padding: '2px 7px',
             borderRadius: '5px',
             backgroundColor: isLocked ? 'rgba(239, 68, 68, 0.2)' : isBreak ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.2)',
             color: isLocked ? '#f87171' : isBreak ? '#fbbf24' : '#34d399',
@@ -417,150 +419,77 @@ export default function TabEditorControllTab() {
             whiteSpace: 'nowrap',
           }}
         >
-          {isLocked ? <Lock size={11} /> : isBreak ? <Coffee size={11} /> : <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'currentColor' }} />}
-          <span>{liveCounterName} • {isLocked ? 'DITUTUP' : isBreak ? 'ISTIRAHAT' : 'BUKA'}</span>
+          {isLocked ? <Lock size={10} /> : isBreak ? <Coffee size={10} /> : <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'currentColor' }} />}
+          <span>{liveCounterName}</span>
         </div>
-
-        <span style={{ fontSize: '0.6875rem', color: '#64748b', whiteSpace: 'nowrap' }}>
-          {queue.canvasWidth} × {queue.canvasHeight}
-        </span>
       </div>
 
-      {/* Floating Square Docking Kiri (Kontrol Akses Pos/Loket) */}
+      {/* Floating Square Docking Kiri (Kontrol Akses Pos/Loket - Simple & Compact) */}
       <div
         style={{
           position: 'absolute',
-          top: '20px',
-          left: '20px',
+          top: '16px',
+          left: '16px',
           zIndex: 10,
-          width: '170px',
-          padding: '12px 10px',
-          borderRadius: '12px',
+          padding: '8px',
+          borderRadius: '10px',
           backgroundColor: 'rgba(15, 23, 42, 0.85)',
           backdropFilter: 'blur(16px)',
           border: '1px solid rgba(255, 255, 255, 0.1)',
-          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '10px',
+          alignItems: 'center',
+          gap: '6px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingBottom: '6px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
-          <Users size={14} color="#38bdf8" />
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f8fafc' }}>
-            {counterLabel}
-          </span>
-        </div>
-
-        {/* Info Pos Aktif */}
-        <div
-          style={{
-            padding: '6px 8px',
-            borderRadius: '6px',
-            backgroundColor: 'rgba(30, 41, 59, 0.6)',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '2px',
-          }}
-        >
-          <span style={{ fontSize: '0.625rem', color: '#94a3b8', fontWeight: 600 }}>
-            {counterLabel} Aktif:
-          </span>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {activeCounter.counterName}
-          </span>
-          {activeCounter.operatorName && (
-            <span style={{ fontSize: '0.625rem', color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {activeCounter.operatorName}
-            </span>
-          )}
-        </div>
-
-        {/* Tombol Buka/Tutup */}
+        {/* Tombol Toggle Buka & Tutup */}
         <button
           type="button"
           onClick={handleToggleLock}
           style={{
-            width: '100%',
-            padding: '7px 8px',
+            width: '42px',
+            height: '42px',
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '2px',
-            borderRadius: '6px',
-            backgroundColor: isLocked ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)',
-            border: isLocked ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(16, 185, 129, 0.4)',
+            borderRadius: '8px',
+            backgroundColor: isLocked ? 'rgba(239, 68, 68, 0.25)' : 'rgba(16, 185, 129, 0.25)',
+            border: isLocked ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid rgba(16, 185, 129, 0.5)',
             color: isLocked ? '#f87171' : '#34d399',
-            fontWeight: 600,
             cursor: 'pointer',
             transition: 'all 0.15s ease',
           }}
-          title={isLocked ? `Buka kembali ${counterLabel} ini` : `Tutup ${counterLabel} ini`}
+          title={isLocked ? `Buka kembali ${counterLabel} (${activeCounter.counterName})` : `Tutup ${counterLabel} (${activeCounter.counterName})`}
+          aria-label={isLocked ? 'Buka Loket' : 'Tutup Loket'}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            {isLocked ? <Lock size={12} /> : <LockOpen size={12} />}
-            <span style={{ fontSize: '0.72rem' }}>{isLocked ? 'Ditutup' : 'Dibuka'}</span>
-          </div>
-          <span style={{ fontSize: '0.58rem', opacity: 0.85 }}>
-            {isLocked ? 'Klik Buka' : 'Klik Tutup'}
-          </span>
+          {isLocked ? <Lock size={18} /> : <LockOpen size={18} />}
         </button>
 
-        {/* Tombol Istirahat */}
+        {/* Tombol Istirahat (Icon Only, No Text) */}
         <button
           type="button"
           onClick={handleToggleBreak}
           disabled={isLocked}
           style={{
-            width: '100%',
-            padding: '6px 8px',
+            width: '42px',
+            height: '42px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '6px',
-            borderRadius: '6px',
-            backgroundColor: isBreak ? 'rgba(245, 158, 11, 0.25)' : 'rgba(30, 41, 59, 0.6)',
-            border: isBreak ? '1px solid rgba(245, 158, 11, 0.5)' : '1px solid rgba(255, 255, 255, 0.08)',
-            color: isBreak ? '#fbbf24' : '#cbd5e1',
-            fontWeight: isBreak ? 600 : 500,
-            fontSize: '0.72rem',
+            borderRadius: '8px',
+            backgroundColor: isBreak ? 'rgba(245, 158, 11, 0.3)' : 'rgba(30, 41, 59, 0.7)',
+            border: isBreak ? '1px solid rgba(245, 158, 11, 0.6)' : '1px solid rgba(255, 255, 255, 0.1)',
+            color: isBreak ? '#fbbf24' : '#94a3b8',
             cursor: isLocked ? 'not-allowed' : 'pointer',
-            opacity: isLocked ? 0.4 : 1,
+            opacity: isLocked ? 0.35 : 1,
             transition: 'all 0.15s ease',
           }}
-          title={isLocked ? `Buka ${counterLabel} terlebih dahulu sebelum istirahat` : isBreak ? 'Selesaikan jam istirahat' : 'Mulai jam istirahat'}
+          title={isLocked ? `Buka ${counterLabel} terlebih dahulu sebelum istirahat` : isBreak ? 'Selesai Istirahat' : 'Mulai Jam Istirahat'}
+          aria-label="Jam Istirahat"
         >
-          <Coffee size={12} />
-          <span>{isBreak ? 'Selesai Istirahat' : 'Istirahat'}</span>
+          <Coffee size={18} />
         </button>
-
-        {/* Status Operasional */}
-        <div
-          style={{
-            padding: '6px 8px',
-            borderRadius: '6px',
-            backgroundColor: 'rgba(30, 41, 59, 0.4)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-          }}
-        >
-          <span
-            style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              backgroundColor: isLocked ? '#f87171' : isBreak ? '#fbbf24' : '#34d399',
-              flexShrink: 0,
-            }}
-          />
-          <span style={{ fontSize: '0.625rem', fontWeight: 700, color: isLocked ? '#f87171' : isBreak ? '#fbbf24' : '#34d399', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {isLocked ? 'DITUTUP' : isBreak ? 'ISTIRAHAT' : 'SIAP MELAYANI'}
-          </span>
-        </div>
       </div>
 
       {/* Floating Square Docking Kanan (Tombol Aksi Panggil Tiket) */}
