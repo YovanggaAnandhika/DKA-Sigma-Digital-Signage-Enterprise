@@ -96,10 +96,16 @@ export async function POST(req: NextRequest) {
             await Promise.all(
               manifestObj.manifest.layout.layersList.flatMap((layer: any) =>
                 (layer.blocksList || []).map(async (block: any) => {
-                  const widgetData = await fetchWidgetData(block, meta);
-                  if (widgetData) {
-                    block.widgetData = widgetData;
-                    block.widgetDataJson = JSON.stringify(widgetData);
+                  if (block.widgetDataJson) {
+                    try {
+                      block.widgetData = JSON.parse(block.widgetDataJson);
+                    } catch (_) {}
+                  } else {
+                    const widgetData = await fetchWidgetData(block, meta);
+                    if (widgetData) {
+                      block.widgetData = widgetData;
+                      block.widgetDataJson = JSON.stringify(widgetData);
+                    }
                   }
                 })
               )

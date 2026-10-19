@@ -107,7 +107,7 @@ class ManifestRepositoryImpl(
                         mediaItemId = block.mediaItemId.takeIf { it.isNotBlank() },
                         playlistId = block.playlistId.takeIf { it.isNotBlank() },
                         widgetType = wType,
-                        widgetDataJson = null,
+                        widgetDataJson = if (block.hasWidgetDataJson()) block.widgetDataJson else null,
                         startTimeSeconds = block.startTimeSeconds,
                         durationSeconds = block.durationSeconds,
                         isMuted = block.isMuted,
