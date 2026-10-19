@@ -18,7 +18,7 @@ import { modal } from '@/components/ui/ModalDialog';
 const Marquee = 'marquee' as any;
 
 export default function TabEditorControllTab() {
-  const { queue, setQueue, simulator, triggerChime } = useQueueEditor();
+  const { queue, setQueue, simulator, setSimulator, triggerChime } = useQueueEditor();
   const [calling, setCalling] = useState(false);
 
   const activeCounter = queue.counters.find((c) => c.counterName === queue.currentCounter) || queue.counters[0] || {
@@ -57,21 +57,33 @@ export default function TabEditorControllTab() {
     if (calling) return;
     setCalling(true);
     try {
-      let nextNumber = simulator.currentNumber;
+      let nextNumber = queue.currentNumber || simulator.currentNumber || `${queue.prefix || 'A'}-000`;
       if (queue.id) {
         const res = await apiCallNextTicket(queue.id, activeCounter.id).catch(() => null);
         if (res && res.ticket && res.ticket.ticketNumber) {
           nextNumber = res.ticket.ticketNumber;
         } else {
-          const nextSeq = (simulator.currentSeq || 1) + 1;
+          const curSeq = parseInt(nextNumber.replace(/[^0-9]/g, ''), 10) || 0;
+          const nextSeq = curSeq + 1;
           nextNumber = `${queue.prefix || 'A'}-${String(nextSeq).padStart(3, '0')}`;
         }
+      } else {
+        const curSeq = parseInt(nextNumber.replace(/[^0-9]/g, ''), 10) || 0;
+        const nextSeq = curSeq + 1;
+        nextNumber = `${queue.prefix || 'A'}-${String(nextSeq).padStart(3, '0')}`;
       }
 
       setQueue((prev) => ({
         ...prev,
         currentNumber: nextNumber,
         currentCounter: activeCounter.counterName,
+      }));
+
+      setSimulator((prev) => ({
+        ...prev,
+        currentNumber: nextNumber,
+        currentCounter: activeCounter.counterName,
+        currentSeq: parseInt(nextNumber.replace(/[^0-9]/g, ''), 10) || prev.currentSeq + 1,
       }));
 
       recordCallHistory(nextNumber, activeCounter.counterName, 'next');
@@ -96,14 +108,15 @@ export default function TabEditorControllTab() {
   const handleRecall = () => {
     if (calling) return;
     setCalling(true);
-    recordCallHistory(simulator.currentNumber, activeCounter.counterName, 'recall');
+    const curNumber = queue.currentNumber || simulator.currentNumber || `${queue.prefix || 'A'}-001`;
+    recordCallHistory(curNumber, activeCounter.counterName, 'recall');
 
     if (queue.audioChimeEnabled) {
       triggerChime();
     }
 
     speakQueueAnnouncement(
-      simulator.currentNumber,
+      curNumber,
       activeCounter.counterName,
       true,
       () => setCalling(false),
@@ -116,22 +129,33 @@ export default function TabEditorControllTab() {
     if (calling) return;
     setCalling(true);
     try {
-      let prevNumber = simulator.currentNumber;
+      let prevNumber = queue.currentNumber || simulator.currentNumber || `${queue.prefix || 'A'}-001`;
       if (queue.id) {
         const res = await apiCallPreviousTicket(queue.id, activeCounter.id).catch(() => null);
         if (res && res.ticket && res.ticket.ticketNumber) {
           prevNumber = res.ticket.ticketNumber;
         } else {
-          const curSeq = parseInt(simulator.currentNumber.replace(/[^0-9]/g, ''), 10) || 1;
-          const prevSeq = Math.max(1, curSeq - 1);
+          const curSeq = parseInt(prevNumber.replace(/[^0-9]/g, ''), 10) || 1;
+          const prevSeq = Math.max(0, curSeq - 1);
           prevNumber = `${queue.prefix || 'A'}-${String(prevSeq).padStart(3, '0')}`;
         }
+      } else {
+        const curSeq = parseInt(prevNumber.replace(/[^0-9]/g, ''), 10) || 1;
+        const prevSeq = Math.max(0, curSeq - 1);
+        prevNumber = `${queue.prefix || 'A'}-${String(prevSeq).padStart(3, '0')}`;
       }
 
       setQueue((prev) => ({
         ...prev,
         currentNumber: prevNumber,
         currentCounter: activeCounter.counterName,
+      }));
+
+      setSimulator((prev) => ({
+        ...prev,
+        currentNumber: prevNumber,
+        currentCounter: activeCounter.counterName,
+        currentSeq: parseInt(prevNumber.replace(/[^0-9]/g, ''), 10) || 0,
       }));
 
       recordCallHistory(prevNumber, activeCounter.counterName, 'back');
@@ -189,11 +213,17 @@ export default function TabEditorControllTab() {
       if (queue.id) {
         await apiResetQueue(queue.id, 0).catch(() => null);
       }
-      const initialNum = `${queue.prefix || 'A'}-001`;
+      const initialNum = `${queue.prefix || 'A'}-000`;
       setQueue((prev) => ({
         ...prev,
         currentNumber: initialNum,
         currentSequence: 0,
+      }));
+      setSimulator((prev) => ({
+        ...prev,
+        currentNumber: initialNum,
+        currentCounter: activeCounter.counterName,
+        currentSeq: 0,
       }));
       await modal.alert({
         title: 'Berhasil Direset',
@@ -204,7 +234,9 @@ export default function TabEditorControllTab() {
   };
 
   const counterLabel = queue.counterLabel || 'Loket';
-  const ticketLabel = queue.ticketLabel || 'Nomor Antrian';
+
+  const liveTicketNumber = queue.currentNumber || simulator.currentNumber || `${queue.prefix || 'A'}-000`;
+  const liveCounterName = queue.currentCounter || simulator.currentCounter || activeCounter.counterName;
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 0.75fr', gap: '20px', width: '100%', alignItems: 'start' }}>
@@ -250,8 +282,8 @@ export default function TabEditorControllTab() {
               const heightPercent = (item.height / canvasH) * 100;
 
               const content = injectQueueVariables(item.templateContent, {
-                queueNumber: simulator.currentNumber,
-                queueCounter: activeCounter.counterName,
+                queueNumber: liveTicketNumber,
+                queueCounter: liveCounterName,
                 queuePrefix: queue.prefix,
                 queueName: queue.name,
                 operatorName: activeCounter.operatorName || 'Petugas',
@@ -290,59 +322,6 @@ export default function TabEditorControllTab() {
 
       {/* Kolom Kanan: Operator Calling Console (Icon-Only Buttons) */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {/* Ticket Monitor Card */}
-        <div
-          className="card-elevated"
-          style={{
-            padding: '24px 20px',
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '8px',
-            border: simulator.isChiming ? '2px solid var(--primary-500)' : '1px solid var(--border-subtle)',
-            boxShadow: simulator.isChiming ? '0 0 24px rgba(59, 130, 246, 0.3)' : undefined,
-            transition: 'all 0.2s ease',
-          }}
-        >
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-            {ticketLabel}
-          </span>
-          <span
-            style={{
-              fontSize: '3.75rem',
-              fontWeight: 800,
-              fontFamily: 'monospace',
-              letterSpacing: '0.04em',
-              color: 'var(--text-primary)',
-              lineHeight: 1,
-              margin: '4px 0',
-            }}
-          >
-            {simulator.currentNumber}
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <span
-              style={{
-                padding: '4px 14px',
-                borderRadius: '6px',
-                backgroundColor: 'var(--bg-surface-elevated)',
-                border: '1px solid var(--border-subtle)',
-                color: 'var(--text-primary)',
-                fontSize: '0.875rem',
-                fontWeight: 700,
-              }}
-            >
-              {activeCounter.counterName}
-            </span>
-            {activeCounter.operatorName && (
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Petugas: <strong style={{ color: 'var(--text-secondary)' }}>{activeCounter.operatorName}</strong>
-              </span>
-            )}
-          </div>
-        </div>
-
         {/* Counter Selection & Status Pills */}
         <div className="card-elevated" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
@@ -351,7 +330,11 @@ export default function TabEditorControllTab() {
             </label>
             <select
               value={queue.currentCounter}
-              onChange={(e) => setQueue((prev) => ({ ...prev, currentCounter: e.target.value }))}
+              onChange={(e) => {
+                const val = e.target.value;
+                setQueue((prev) => ({ ...prev, currentCounter: val }));
+                setSimulator((prev) => ({ ...prev, currentCounter: val }));
+              }}
               className="form-input"
               style={{ height: '32px', padding: '0 8px', fontSize: '0.75rem', width: 'auto', maxWidth: '200px' }}
             >

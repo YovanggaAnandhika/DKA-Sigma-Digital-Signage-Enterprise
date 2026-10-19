@@ -498,6 +498,15 @@ class QueueZoneRenderer(
             else -> counterName
         }
         counterTextView?.text = displayCounter
+
+        val bgDrawable = counterTextView?.background
+        if (bgDrawable is android.graphics.drawable.GradientDrawable) {
+            when (status.uppercase()) {
+                "BREAK" -> bgDrawable.setColor(Color.parseColor("#F59E0B"))
+                "LOCKED" -> bgDrawable.setColor(Color.parseColor("#EF4444"))
+                else -> bgDrawable.setColor(Color.parseColor("#10B981"))
+            }
+        }
     }
 
     private fun getTargetView(): View? = parentZoneView ?: canvasView

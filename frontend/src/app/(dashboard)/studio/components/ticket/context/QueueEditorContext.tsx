@@ -31,6 +31,7 @@ interface QueueEditorContextType {
   loading: boolean;
   saving: boolean;
   simulator: SimulatorState;
+  setSimulator: React.Dispatch<React.SetStateAction<SimulatorState>>;
   callNextTicket: () => void;
   triggerChime: () => void;
   updateField: <K extends keyof QueueDisplayConfig>(field: K, value: QueueDisplayConfig[K]) => void;
@@ -563,6 +564,7 @@ export function QueueEditorProvider({
         loading,
         saving,
         simulator,
+        setSimulator,
         callNextTicket,
         triggerChime,
         updateField,
