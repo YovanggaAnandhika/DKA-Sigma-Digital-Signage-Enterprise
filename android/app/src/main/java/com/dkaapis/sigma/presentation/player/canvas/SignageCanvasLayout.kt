@@ -58,6 +58,8 @@ class SignageCanvasLayout @JvmOverloads constructor(
         for (i in 0 until childCount) {
             val child = getChildAt(i)
             if (child.visibility != GONE && child is ZoneContainerView) {
+                child.scaleFactorX = scaleFactorX
+                child.scaleFactorY = scaleFactorY
                 val childW = (child.zoneWidth * scaleFactorX).toInt()
                 val childH = (child.zoneHeight * scaleFactorY).toInt()
                 child.measure(

@@ -12,6 +12,8 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 
+import android.util.TypedValue
+
 class TickerZoneRenderer(
     private val context: Context
 ) {
@@ -25,9 +27,23 @@ class TickerZoneRenderer(
         badgeBackgroundColorHex: String = "transparent",
         badgeTextColorHex: String = "#ffffff",
         borderColorHex: String = "transparent",
-        borderRadiusDp: Int = 0
+        borderRadiusDp: Int = 0,
+        speed: String = "normal"
     ): View {
-        val density = context.resources.displayMetrics.density
+        val zoneContainer = parent as? com.dkaapis.sigma.presentation.player.canvas.ZoneContainerView
+        val scaleFactor = zoneContainer?.scaleFactorX ?: 1.0f
+
+        val effectiveFontSizePx = (if (fontSize > 0f) fontSize else 16f) * scaleFactor
+        val effectiveBadgeFontSizePx = 12f * scaleFactor
+
+        val containerPad = (12f * scaleFactor).toInt().coerceAtLeast(1)
+        val badgePadH = (8f * scaleFactor).toInt().coerceAtLeast(1)
+        val badgePadV = (2f * scaleFactor).toInt().coerceAtLeast(1)
+        val badgeMarginR = (12f * scaleFactor).toInt().coerceAtLeast(1)
+        val badgeCornerR = 4f * scaleFactor
+        val containerCornerR = borderRadiusDp.toFloat() * scaleFactor
+        val borderW = (1f * scaleFactor).toInt().coerceAtLeast(1)
+
         val bgColor = parseColor(backgroundColorHex, Color.TRANSPARENT)
         val textColor = parseColor(textColorHex, Color.WHITE)
         val badgeBg = parseColor(badgeBackgroundColorHex, Color.TRANSPARENT)
@@ -41,17 +57,17 @@ class TickerZoneRenderer(
             )
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding((12 * density).toInt(), 0, (12 * density).toInt(), 0)
+            setPadding(containerPad, 0, containerPad, 0)
 
             if (borderRadiusDp > 0 || hasBorder) {
                 val bgDrawable = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
                     setColor(bgColor)
                     if (borderRadiusDp > 0) {
-                        cornerRadius = borderRadiusDp * density
+                        cornerRadius = containerCornerR
                     }
                     if (hasBorder) {
-                        setStroke((1 * density).toInt(), parseColor(borderColorHex, Color.TRANSPARENT))
+                        setStroke(borderW, parseColor(borderColorHex, Color.TRANSPARENT))
                     }
                 }
                 background = bgDrawable
@@ -64,13 +80,14 @@ class TickerZoneRenderer(
             val badge = TextView(context).apply {
                 text = badgeText
                 setTextColor(badgeTextCol)
-                textSize = 12f
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, effectiveBadgeFontSizePx)
+                includeFontPadding = false
                 setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD))
-                setPadding((8 * density).toInt(), (2 * density).toInt(), (8 * density).toInt(), (2 * density).toInt())
+                setPadding(badgePadH, badgePadV, badgePadH, badgePadV)
 
                 val badgeDrawable = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
-                    cornerRadius = 4f * density
+                    cornerRadius = badgeCornerR
                     setColor(badgeBg)
                 }
                 background = badgeDrawable
@@ -79,7 +96,7 @@ class TickerZoneRenderer(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    rightMargin = (12 * density).toInt()
+                    rightMargin = badgeMarginR
                 }
             }
             container.addView(badge)
@@ -88,9 +105,14 @@ class TickerZoneRenderer(
         val marqueeText = MarqueeTextView(context).apply {
             text = textMessage.ifBlank { "DKASigma Teks Berjalan" }
             setTextColor(textColor)
-            textSize = if (fontSize > 0f) fontSize else 16f
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, effectiveFontSizePx)
+            includeFontPadding = false
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-            speedPixelsPerSec = 110f
+            speedPixelsPerSec = when (speed.lowercase()) {
+                "fast" -> 160f * scaleFactor
+                "slow" -> 50f * scaleFactor
+                else -> 95f * scaleFactor
+            }
             layoutParams = LinearLayout.LayoutParams(
                 0,
                 ViewGroup.LayoutParams.WRAP_CONTENT,

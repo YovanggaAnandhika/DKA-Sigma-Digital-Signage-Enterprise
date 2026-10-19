@@ -917,8 +917,13 @@ class PlayerActivity : AppCompatActivity() {
 
         val zoneViewPairs = mutableListOf<Pair<LayerZone, ZoneContainerView>>()
 
+        val initialScaleX = canvasLayout.virtualWidth.takeIf { it > 0 }?.let { resources.displayMetrics.widthPixels.toFloat() / it } ?: 1.0f
+        val initialScaleY = canvasLayout.virtualHeight.takeIf { it > 0 }?.let { resources.displayMetrics.heightPixels.toFloat() / it } ?: 1.0f
+
         for (zone in manifest.zones) {
             val zoneView = ZoneContainerView(this).apply {
+                this.scaleFactorX = initialScaleX
+                this.scaleFactorY = initialScaleY
                 bindZone(zone)
             }
             zoneViewPairs.add(Pair(zone, zoneView))
@@ -971,6 +976,7 @@ class PlayerActivity : AppCompatActivity() {
                         var textMessage = ""
                         var badgeText = ""
                         var fontSize = 16f
+                        var speed = "normal"
                         var bgColor = "transparent"
                         var textColor = "#ffffff"
                         var badgeBgColor = "transparent"
@@ -982,6 +988,7 @@ class PlayerActivity : AppCompatActivity() {
                                 val json = org.json.JSONObject(widgetBlock.widgetDataJson)
                                 badgeText = json.optString("badge", "")
                                 fontSize = json.optDouble("fontSize", 16.0).toFloat()
+                                speed = json.optString("speed", "normal")
                                 bgColor = json.optString("backgroundColor", "transparent").ifBlank { "transparent" }
                                 textColor = json.optString("textColor", "#ffffff").ifBlank { "#ffffff" }
                                 badgeBgColor = json.optString("badgeBackgroundColor", "transparent").ifBlank { "transparent" }
@@ -1014,7 +1021,8 @@ class PlayerActivity : AppCompatActivity() {
                             badgeBackgroundColorHex = badgeBgColor,
                             badgeTextColorHex = badgeTextColor,
                             borderColorHex = borderColor,
-                            borderRadiusDp = borderRadius
+                            borderRadiusDp = borderRadius,
+                            speed = speed
                         )
                         zoneView.addView(view)
                     }

@@ -16,6 +16,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import android.util.TypedValue
+
 class ClockZoneRenderer(
     private val context: Context
 ) {
@@ -31,10 +33,19 @@ class ClockZoneRenderer(
         subtitleColorHex: String = "#94a3b8",
         borderColorHex: String = "transparent",
         borderRadiusDp: Int = 0,
-        timeFontSizeSp: Float = 56f,
+        timeFontSizeSp: Float = 52f,
         dateFontSizeSp: Float = 14f
     ): View {
-        val density = context.resources.displayMetrics.density
+        val zoneContainer = parent as? com.dkaapis.sigma.presentation.player.canvas.ZoneContainerView
+        val scaleFactor = zoneContainer?.scaleFactorX ?: 1.0f
+
+        val containerPad = (16f * scaleFactor).toInt().coerceAtLeast(1)
+        val containerCornerR = borderRadiusDp.toFloat() * scaleFactor
+        val borderW = (1f * scaleFactor).toInt().coerceAtLeast(1)
+        val timeFontPx = ((if (timeFontSizeSp > 0f) timeFontSizeSp else 52f) * 0.7f) * scaleFactor
+        val dateFontPx = (if (dateFontSizeSp > 0f) dateFontSizeSp else 14f) * scaleFactor
+        val subtitlePadTop = (6f * scaleFactor).toInt().coerceAtLeast(1)
+
         val bgColor = parseColor(backgroundColorHex, Color.TRANSPARENT)
         val textColor = parseColor(textColorHex, Color.WHITE)
         val subColor = parseColor(subtitleColorHex, Color.parseColor("#94a3b8"))
@@ -47,17 +58,17 @@ class ClockZoneRenderer(
             )
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding((16 * density).toInt(), (16 * density).toInt(), (16 * density).toInt(), (16 * density).toInt())
+            setPadding(containerPad, containerPad, containerPad, containerPad)
 
             if (borderRadiusDp > 0 || hasBorder) {
                 val bgDrawable = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
                     setColor(bgColor)
                     if (borderRadiusDp > 0) {
-                        cornerRadius = borderRadiusDp * density
+                        cornerRadius = containerCornerR
                     }
                     if (hasBorder) {
-                        setStroke((1 * density).toInt(), parseColor(borderColorHex, Color.TRANSPARENT))
+                        setStroke(borderW, parseColor(borderColorHex, Color.TRANSPARENT))
                     }
                 }
                 background = bgDrawable
@@ -69,8 +80,8 @@ class ClockZoneRenderer(
         // Line 1: Time (matches Web Studio layout and sans-serif font)
         val timeText = TextView(context).apply {
             setTextColor(textColor)
-            val baseSize = if (timeFontSizeSp > 0f) (timeFontSizeSp * 0.65f) else 36f
-            textSize = baseSize
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, timeFontPx)
+            includeFontPadding = false
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
             gravity = Gravity.CENTER
             isSingleLine = true
@@ -82,10 +93,11 @@ class ClockZoneRenderer(
         val cityText = TextView(context).apply {
             text = "$city • Cerah 31°C"
             setTextColor(subColor)
-            textSize = if (dateFontSizeSp > 0f) dateFontSizeSp else 14f
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, dateFontPx)
+            includeFontPadding = false
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
             gravity = Gravity.CENTER
-            setPadding(0, (6 * density).toInt(), 0, 0)
+            setPadding(0, subtitlePadTop, 0, 0)
         }
 
         container.addView(timeText)

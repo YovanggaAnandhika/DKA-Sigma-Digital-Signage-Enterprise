@@ -29,6 +29,8 @@ class ZoneContainerView @JvmOverloads constructor(
     var zoneY: Int = 0
     var zoneWidth: Int = 400
     var zoneHeight: Int = 300
+    var scaleFactorX: Float = 1.0f
+    var scaleFactorY: Float = 1.0f
 
     fun bindZone(zone: LayerZone) {
         this.zoneX = zone.x
@@ -41,7 +43,6 @@ class ZoneContainerView @JvmOverloads constructor(
         this.alpha = zone.opacity.coerceIn(0.0f, 1.0f)
 
         // Background & Border styling
-        val density = context.resources.displayMetrics.density
         val bgDrawable = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             val bgCol = if (!zone.backgroundColor.isNullOrBlank() && !zone.backgroundColor.equals("transparent", ignoreCase = true)) {
@@ -52,11 +53,12 @@ class ZoneContainerView @JvmOverloads constructor(
             setColor(bgCol)
 
             if (zone.borderRadius > 0) {
-                cornerRadius = zone.borderRadius * density
+                cornerRadius = zone.borderRadius * scaleFactorX
             }
 
             if (zone.borderWidth > 0 && !zone.borderColor.isNullOrBlank() && !zone.borderColor.equals("transparent", ignoreCase = true)) {
-                setStroke((zone.borderWidth * density).toInt(), parseColor(zone.borderColor, Color.TRANSPARENT))
+                val bw = (zone.borderWidth * scaleFactorX).toInt().coerceAtLeast(1)
+                setStroke(bw, parseColor(zone.borderColor, Color.TRANSPARENT))
             }
         }
         background = bgDrawable
