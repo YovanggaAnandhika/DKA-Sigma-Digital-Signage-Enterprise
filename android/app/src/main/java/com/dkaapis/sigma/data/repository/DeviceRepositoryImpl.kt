@@ -73,60 +73,48 @@ class DeviceRepositoryImpl(
     override suspend fun registerDevice(): Result<PairingResult> = withContext(Dispatchers.IO) {
         try {
             val info = getLocalDeviceInfo()
-            val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(context)
+            val orientation = if (info.isLandscape) {
+                signage.hardware.v1.device.DeviceCommon.DeviceOrientation.ORIENTATION_LANDSCAPE
+            } else {
+                signage.hardware.v1.device.DeviceCommon.DeviceOrientation.ORIENTATION_PORTRAIT
+            }
 
-            val jsonBody = JSONObject().apply {
-                put("deviceName", info.name.ifEmpty { "Android Display" })
-                put("macAddress", info.macAddress.ifEmpty { "02:00:00:00:00:00" })
-                put("appVersion", info.appVersion)
-                put("androidVersion", info.androidVersion)
-                put("screenWidth", info.screenWidth)
-                put("screenHeight", info.screenHeight)
-                put("orientation", if (info.isLandscape) 1 else 2)
-            }.toString()
-
-            val request = Request.Builder()
-                .url("$baseUrl/api/grpc/hardware/device/RegisterDevice")
-                .post(jsonBody.toRequestBody("application/json".toMediaType()))
+            val request = signage.hardware.v1.device.DeviceCommon.RegisterDeviceRequest.newBuilder()
+                .setDeviceName(info.name.ifEmpty { "Android Display" })
+                .setMacAddress(info.macAddress.ifEmpty { "02:00:00:00:00:00" })
+                .setAppVersion(info.appVersion)
+                .setAndroidVersion(info.androidVersion)
+                .setScreenWidth(info.screenWidth)
+                .setScreenHeight(info.screenHeight)
+                .setOrientation(orientation)
                 .build()
 
-            val response = httpClient.newCall(request).execute()
-            if (response.isSuccessful) {
-                val bodyStr = response.body?.string() ?: ""
-                val json = JSONObject(bodyStr)
-                val realDeviceId = json.optString("deviceId", "")
-                val realPairingCode = json.optString("pairingCode", "").uppercase()
+            val stub = signage.hardware.v1.device.DeviceServiceGrpcKt.DeviceServiceCoroutineStub(channelFactory.getChannel())
+            val response = stub.registerDevice(request)
 
-                if (realDeviceId.isNotEmpty()) {
-                    tokenStorage.saveDeviceId(realDeviceId)
-                }
+            val realDeviceId = response.deviceId
+            val realPairingCode = response.pairingCode.uppercase()
 
-                Result.success(
-                    PairingResult(
-                        isSuccess = true,
-                        deviceId = realDeviceId,
-                        deviceToken = "",
-                        pairingCode = realPairingCode
-                    )
-                )
-            } else {
-                val fallbackCode = "DKA-" + (100..999).random()
-                val fallbackId = ("DEV-" + info.macAddress.replace(":", "").takeLast(6).ifEmpty { "123456" }).uppercase()
-                Result.success(
-                    PairingResult(
-                        isSuccess = true,
-                        deviceId = fallbackId,
-                        deviceToken = "",
-                        pairingCode = fallbackCode
-                    )
-                )
+            if (realDeviceId.isNotEmpty()) {
+                tokenStorage.saveDeviceId(realDeviceId)
             }
-        } catch (e: Exception) {
-            val fallbackCode = "DKA-" + (100..999).random()
+
             Result.success(
                 PairingResult(
                     isSuccess = true,
-                    deviceId = "DEV-LOCAL",
+                    deviceId = realDeviceId,
+                    deviceToken = "",
+                    pairingCode = realPairingCode
+                )
+            )
+        } catch (e: Exception) {
+            val info = getLocalDeviceInfo()
+            val fallbackCode = "DKA-" + (100..999).random()
+            val fallbackId = ("DEV-" + info.macAddress.replace(":", "").takeLast(6).ifEmpty { "123456" }).uppercase()
+            Result.success(
+                PairingResult(
+                    isSuccess = true,
+                    deviceId = fallbackId,
                     deviceToken = "",
                     pairingCode = fallbackCode,
                     errorMessage = e.message
@@ -149,51 +137,32 @@ class DeviceRepositoryImpl(
                 )
             }
 
-            val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(context)
-
-            val jsonBody = JSONObject().apply {
-                put("pairingCode", pairingCode)
-            }.toString()
-
-            val request = Request.Builder()
-                .url("$baseUrl/api/grpc/hardware/device/CheckPairingStatus")
-                .post(jsonBody.toRequestBody("application/json".toMediaType()))
+            val request = signage.hardware.v1.device.DeviceCommon.CheckPairingStatusRequest.newBuilder()
+                .setPairingCode(pairingCode)
                 .build()
 
-            val response = httpClient.newCall(request).execute()
-            if (response.isSuccessful) {
-                val bodyStr = response.body?.string() ?: ""
-                val json = JSONObject(bodyStr)
-                val isPaired = json.optBoolean("isPaired", false)
-                val deviceId = json.optString("deviceId", "")
-                val deviceToken = json.optString("deviceToken", "")
+            val stub = signage.hardware.v1.device.DeviceServiceGrpcKt.DeviceServiceCoroutineStub(channelFactory.getChannel())
+            val response = stub.checkPairingStatus(request)
 
-                if (isPaired && deviceToken.isNotEmpty()) {
-                    tokenStorage.saveCredentials(deviceId, deviceToken)
-                    Result.success(
-                        PairingResult(
-                            isSuccess = true,
-                            deviceId = deviceId,
-                            deviceToken = deviceToken,
-                            pairingCode = pairingCode
-                        )
+            val isPaired = response.isPaired
+            val deviceId = response.deviceId
+            val deviceToken = response.deviceToken
+
+            if (isPaired && deviceToken.isNotEmpty()) {
+                tokenStorage.saveCredentials(deviceId, deviceToken)
+                Result.success(
+                    PairingResult(
+                        isSuccess = true,
+                        deviceId = deviceId,
+                        deviceToken = deviceToken,
+                        pairingCode = pairingCode
                     )
-                } else {
-                    Result.success(
-                        PairingResult(
-                            isSuccess = false,
-                            deviceId = deviceId,
-                            deviceToken = "",
-                            pairingCode = pairingCode,
-                            errorMessage = "Menunggu verifikasi admin di CMS"
-                        )
-                    )
-                }
+                )
             } else {
                 Result.success(
                     PairingResult(
                         isSuccess = false,
-                        deviceId = "",
+                        deviceId = deviceId,
                         deviceToken = "",
                         pairingCode = pairingCode,
                         errorMessage = "Menunggu verifikasi admin di CMS"
@@ -235,42 +204,37 @@ class DeviceRepositoryImpl(
         try {
             val deviceId = getSavedDeviceId() ?: return@withContext Result.failure(Exception("Device ID not found"))
             val deviceToken = getSavedDeviceToken() ?: ""
-            val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(context)
 
             val stat = android.os.StatFs(context.filesDir.absolutePath)
             val freeBytes = stat.availableBytes
             val totalBytes = stat.totalBytes
 
-            val jsonBody = JSONObject().apply {
-                put("deviceId", deviceId)
-                put("deviceToken", deviceToken)
-                put("storageFreeBytes", freeBytes)
-                put("storageTotalBytes", totalBytes)
-                put("memoryUsagePercent", 30)
-                if (!currentMediaId.isNullOrEmpty()) put("currentPlayingMediaId", currentMediaId)
-                if (!activeLayoutId.isNullOrEmpty()) put("activeLayoutId", activeLayoutId)
-                if (!manifestHash.isNullOrEmpty()) put("activeManifestHash", manifestHash)
-            }.toString()
+            val reqBuilder = signage.hardware.v1.device.DeviceCommon.HeartbeatRequest.newBuilder()
+                .setDeviceId(deviceId)
+                .setDeviceToken(deviceToken)
+                .setStorageFreeBytes(freeBytes)
+                .setStorageTotalBytes(totalBytes)
+                .setMemoryUsagePercent(30)
 
-            val request = Request.Builder()
-                .url("$baseUrl/api/grpc/hardware/device/SendHeartbeat")
-                .post(jsonBody.toRequestBody("application/json".toMediaType()))
-                .build()
+            if (!currentMediaId.isNullOrEmpty()) reqBuilder.setCurrentPlayingMediaId(currentMediaId)
+            if (!activeLayoutId.isNullOrEmpty()) reqBuilder.setActiveLayoutId(activeLayoutId)
+            if (!manifestHash.isNullOrEmpty()) reqBuilder.setActiveManifestHash(manifestHash)
 
-            val response = httpClient.newCall(request).execute()
-            if (response.isSuccessful) {
-                val json = JSONObject(response.body?.string() ?: "")
-                val pendingCmd = json.optString("pendingCommand", "")
-                    .ifBlank { json.optString("pending_command", "") }
-                    .takeIf { it.isNotBlank() }
-                val hasReload = pendingCmd?.contains("Reload", ignoreCase = true) == true
-                val needsSync = json.optBoolean("needsManifestSync", false) || json.optBoolean("needs_manifest_sync", false) || hasReload
-                Result.success(com.dkaapis.sigma.domain.repository.HeartbeatResult(needsManifestSync = needsSync, pendingCommand = pendingCmd))
-            } else {
-                android.util.Log.w("DeviceRepository", "Heartbeat status non-200 (HTTP ${response.code}), skipping cycle without clearing credentials")
-                Result.success(com.dkaapis.sigma.domain.repository.HeartbeatResult(needsManifestSync = false, pendingCommand = null))
-            }
+            val stub = signage.hardware.v1.device.DeviceServiceGrpcKt.DeviceServiceCoroutineStub(channelFactory.getChannel())
+            val response = stub.sendHeartbeat(reqBuilder.build())
+
+            val pendingCmd = response.pendingCommand.takeIf { it.isNotBlank() }
+            val hasReload = pendingCmd?.contains("Reload", ignoreCase = true) == true
+            val needsSync = response.needsManifestSync || hasReload
+
+            Result.success(
+                com.dkaapis.sigma.domain.repository.HeartbeatResult(
+                    needsManifestSync = needsSync,
+                    pendingCommand = pendingCmd
+                )
+            )
         } catch (e: Exception) {
+            android.util.Log.w("DeviceRepository", "gRPC SendHeartbeat error: ${e.message}")
             Result.failure(e)
         }
     }

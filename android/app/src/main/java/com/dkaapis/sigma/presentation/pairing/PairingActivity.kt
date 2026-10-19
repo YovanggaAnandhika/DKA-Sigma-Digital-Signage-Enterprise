@@ -152,9 +152,8 @@ class PairingActivity : AppCompatActivity() {
 
     private fun updateServerInfoText() {
         val host = ServerConfig.getHost(this)
-        val httpPort = ServerConfig.getHttpPort(this)
         val grpcPort = ServerConfig.getGrpcPort(this)
-        serverInfoTextView.text = "Server: $host:$httpPort (gRPC :$grpcPort) • Geser 2 jari ke bawah untuk ubah"
+        serverInfoTextView.text = "Server gRPC: $host:$grpcPort • Geser 2 jari ke bawah untuk ubah"
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
@@ -238,7 +237,6 @@ class PairingActivity : AppCompatActivity() {
         serverConfigDialog = dialog
 
         val etHost = dialog.findViewById<EditText>(R.id.etServerHost) ?: return
-        val etHttpPort = dialog.findViewById<EditText>(R.id.etHttpPort) ?: return
         val etGrpcPort = dialog.findViewById<EditText>(R.id.etGrpcPort) ?: return
         val tvPreview = dialog.findViewById<TextView>(R.id.tvResolvedPreview) ?: return
         val btnSave = dialog.findViewById<Button>(R.id.btnSave) ?: return
@@ -247,7 +245,6 @@ class PairingActivity : AppCompatActivity() {
 
         fun refreshInputs() {
             etHost.setText(ServerConfig.getHost(this))
-            etHttpPort.setText(ServerConfig.getHttpPort(this).toString())
             etGrpcPort.setText(ServerConfig.getGrpcPort(this).toString())
         }
 
@@ -257,9 +254,8 @@ class PairingActivity : AppCompatActivity() {
                 .removePrefix("https://")
                 .trimEnd('/')
             val host = if (rawHost.isEmpty()) "192.168.1.46" else rawHost
-            val httpPort = etHttpPort.text.toString().toIntOrNull() ?: 80
             val grpcPort = etGrpcPort.text.toString().toIntOrNull() ?: 50051
-            tvPreview.text = "Target: http://$host:$httpPort | gRPC :$grpcPort"
+            tvPreview.text = "Target gRPC: $host:$grpcPort"
         }
 
         refreshInputs()
@@ -273,7 +269,6 @@ class PairingActivity : AppCompatActivity() {
             override fun afterTextChanged(s: Editable?) {}
         }
         etHost.addTextChangedListener(watcher)
-        etHttpPort.addTextChangedListener(watcher)
         etGrpcPort.addTextChangedListener(watcher)
 
         btnReset.setOnClickListener {
@@ -294,10 +289,9 @@ class PairingActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val httpPort = etHttpPort.text.toString().toIntOrNull() ?: 80
             val grpcPort = etGrpcPort.text.toString().toIntOrNull() ?: 50051
 
-            ServerConfig.saveConfig(this, inputHost, grpcPort, httpPort)
+            ServerConfig.saveConfig(this, inputHost, grpcPort, 80)
             updateServerInfoText()
 
             // Reset credentials so the device pairs cleanly with the new server
@@ -318,7 +312,7 @@ class PairingActivity : AppCompatActivity() {
 
             Toast.makeText(
                 this,
-                "Server disimpan: ${ServerConfig.getHost(this)}:$httpPort",
+                "Server disimpan: ${ServerConfig.getHost(this)}:$grpcPort",
                 Toast.LENGTH_SHORT
             ).show()
         }

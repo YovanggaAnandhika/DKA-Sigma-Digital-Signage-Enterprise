@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package signage.studio.v1.layer;
+
+import "studio/v1/layer/block/layer_block.common.proto";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+service LayerBlockService {
+  rpc CreateLayerBlock(CreateLayerBlockRequest) returns (LayerPlaylist);
+  rpc GetLayerBlock(GetLayerBlockRequest) returns (LayerPlaylist);
+  rpc ListLayerBlocks(ListLayerBlocksRequest) returns (ListLayerBlocksResponse);
+  rpc UpdateLayerBlock(UpdateLayerBlockRequest) returns (LayerPlaylist);
+  rpc DeleteLayerBlock(DeleteLayerBlockRequest) returns (DeleteLayerBlockResponse);
+}

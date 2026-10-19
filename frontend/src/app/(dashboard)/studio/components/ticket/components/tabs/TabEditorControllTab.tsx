@@ -40,6 +40,72 @@ export default function TabEditorControllTab() {
   // Sesuai permintaan: saat ditutup tombol kontrol pemanggil dinonaktifkan
   const isCallingDisabled = calling || isLocked;
 
+  // Real-time synchronization: saat layar disentuh di Android (player touch), konsol web ikut terupdate
+  React.useEffect(() => {
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/stream/device?deviceId=all');
+      eventSource.onmessage = (event) => {
+        if (!event.data) return;
+        try {
+          const data = JSON.parse(event.data);
+          if (data && (data.type === 'CALL_QUEUE' || data.type === 'QUEUE_CALL')) {
+            // Abaikan jika ditujukan ke antrian spesifik lain
+            if (data.queueId && queue.id && data.queueId !== queue.id) return;
+
+            const ticketNum = data.ticketNumber;
+            const counterNm = data.counterName;
+            if (ticketNum) {
+              setQueue((prev) => ({
+                ...prev,
+                currentNumber: ticketNum,
+                ...(counterNm ? { currentCounter: counterNm } : {}),
+              }));
+
+              setSimulator((prev) => ({
+                ...prev,
+                currentNumber: ticketNum,
+                ...(counterNm ? { currentCounter: counterNm } : {}),
+                currentSeq: parseInt(ticketNum.replace(/[^0-9]/g, ''), 10) || prev.currentSeq,
+              }));
+
+              if (counterNm) {
+                recordCallHistory(ticketNum, counterNm, data.callType || 'next');
+              }
+            }
+          } else if (data && data.type === 'COUNTER_STATUS_CHANGED') {
+            if (data.counterName && data.status) {
+              setQueue((prev) => ({
+                ...prev,
+                counters: prev.counters.map((c) =>
+                  c.counterName.trim().toUpperCase() === data.counterName.trim().toUpperCase()
+                    ? { ...c, status: data.status }
+                    : c
+                ),
+              }));
+            }
+          } else if (data && data.type === 'RESET_QUEUE') {
+            const resetNum = data.resetToNumber || `${queue.prefix || 'A'}-000`;
+            setQueue((prev) => ({
+              ...prev,
+              currentNumber: resetNum,
+              currentSequence: 0,
+            }));
+            setSimulator((prev) => ({
+              ...prev,
+              currentNumber: resetNum,
+              currentSeq: 0,
+            }));
+          }
+        } catch (_) {}
+      };
+    } catch (_) {}
+
+    return () => {
+      if (eventSource) eventSource.close();
+    };
+  }, [queue.id, queue.prefix]);
+
   const broadcastToAndroid = (payload: Record<string, any>) => {
     try {
       fetch('/api/stream/device', {

@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package signage.common.v1.orientation;
+
+import "common/v1/orientation/orientation.common.proto";
+
+service OrientationService {
+  rpc ListOrientations(ListOrientationsRequest) returns (ListOrientationsResponse);
+  rpc GetOrientation(GetOrientationRequest) returns (Orientation);
+  rpc CreateOrientation(CreateOrientationRequest) returns (Orientation);
+  rpc UpdateOrientation(UpdateOrientationRequest) returns (Orientation);
+  rpc DeleteOrientation(DeleteOrientationRequest) returns (DeleteOrientationResponse);
+}

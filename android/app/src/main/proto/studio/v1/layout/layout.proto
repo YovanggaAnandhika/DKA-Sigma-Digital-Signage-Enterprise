@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package signage.studio.v1.layout;
+
+import "studio/v1/layout/layout.common.proto";
+
+service LayoutService {
+  rpc CreateLayout(CreateLayoutRequest) returns (Layout);
+  rpc GetLayout(GetLayoutRequest) returns (Layout);
+  rpc ListLayouts(ListLayoutsRequest) returns (ListLayoutsResponse);
+  rpc UpdateLayout(UpdateLayoutRequest) returns (Layout);
+  rpc DeleteLayout(DeleteLayoutRequest) returns (DeleteLayoutResponse);
+  
+  rpc ListLayoutHistory(ListLayoutHistoryRequest) returns (ListLayoutHistoryResponse);
+  rpc RollbackLayout(RollbackLayoutRequest) returns (RollbackLayoutResponse);
+  rpc DeleteLayoutHistory(DeleteLayoutHistoryRequest) returns (DeleteLayoutHistoryResponse);
+}

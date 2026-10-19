@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package signage.studio.v1.ticker;
+
+import "common/v1/types.proto";
+
+message Ticker {
+  string id = 1;
+  string name = 2;
+  string badge = 3;
+  repeated string messages = 4;
+  string speed = 5;
+  string theme = 6;
+  int32 font_size = 7;
+  string created_at = 8;
+  string updated_at = 9;
+  string background_color = 10;
+  string text_color = 11;
+  string badge_background_color = 12;
+  string badge_text_color = 13;
+  string border_color = 14;
+  int32 border_radius = 15;
+}
+
+message CreateTickerRequest {
+  string name = 1;
+  string badge = 2;
+  repeated string messages = 3;
+  string speed = 4;
+  string theme = 5;
+  int32 font_size = 6;
+  string background_color = 7;
+  string text_color = 8;
+  string badge_background_color = 9;
+  string badge_text_color = 10;
+  string border_color = 11;
+  int32 border_radius = 12;
+}
+
+message GetTickerRequest {
+  string id = 1;
+}
+
+message ListTickersRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+}
+
+message ListTickersResponse {
+  repeated Ticker items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateTickerRequest {
+  string id = 1;
+  string name = 2;
+  string badge = 3;
+  repeated string messages = 4;
+  string speed = 5;
+  string theme = 6;
+  int32 font_size = 7;
+  string background_color = 8;
+  string text_color = 9;
+  string badge_background_color = 10;
+  string badge_text_color = 11;
+  string border_color = 12;
+  int32 border_radius = 13;
+}
+
+message DeleteTickerRequest {
+  string id = 1;
+}
+
+message DeleteTickerResponse {
+  bool success = 1;
+}

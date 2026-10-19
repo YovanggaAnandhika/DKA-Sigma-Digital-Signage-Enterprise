@@ -1,0 +1,150 @@
+syntax = "proto3";
+
+package signage.distribution.v1.stream;
+
+enum ServerCommandType {
+  COMMAND_UNSPECIFIED = 0;
+  COMMAND_RELOAD_MANIFEST = 1;
+  COMMAND_CAPTURE_SCREENSHOT = 2;
+  COMMAND_REBOOT_PLAYER = 3;
+  COMMAND_EMERGENCY_BROADCAST = 4;
+  COMMAND_CLEAR_CACHE = 5;
+}
+
+message StreamServerMessage {
+  string message_id = 1;
+  int64 timestamp = 2;
+  ServerCommandType command_type = 3;
+  string payload_json = 4; // Extra parameters e.g. alert text, target URL
+}
+
+message StreamClientMessage {
+  string device_id = 1;
+  string device_token = 2;
+  int64 timestamp = 3;
+  oneof payload {
+    HeartbeatPing ping = 4;
+    CommandAck command_ack = 5;
+    ScreenshotUpload screenshot = 6;
+  }
+}
+
+message HeartbeatPing {
+  int32 memory_percent = 1;
+  int64 storage_free_bytes = 2;
+  string current_playing_media_id = 3;
+}
+
+message CommandAck {
+  string message_id = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message ScreenshotUpload {
+  string request_id = 1;
+  bytes image_data = 2;
+  string mime_type = 3;
+}
+
+message PushCommandRequest {
+  string device_id = 1;
+  ServerCommandType command_type = 2;
+  string payload_json = 3;
+}
+
+message PushCommandResponse {
+  bool queued = 1;
+  string command_id = 2;
+}
+
+message PlaybackLogItem {
+  string media_id = 1;
+  string layout_id = 2;
+  int64 started_at = 3; // Epoch seconds
+  int32 duration_seconds = 4;
+  bool is_completed = 5;
+}
+
+message ReportPlaybackBatchRequest {
+  string device_id = 1;
+  string device_token = 2;
+  repeated PlaybackLogItem items = 3;
+}
+
+message ReportPlaybackBatchResponse {
+  bool success = 1;
+  int32 recorded_count = 2;
+}
+
+message PlaybackRecord {
+  string id = 1;
+  string device_id = 2;
+  string device_name = 3;
+  string media_id = 4;
+  string media_name = 5;
+  string layout_id = 6;
+  string layout_name = 7;
+  string started_at = 8;
+  int32 duration_seconds = 9;
+  bool is_completed = 10;
+}
+
+message ListPlaybackLogsRequest {
+  optional string device_id = 1;
+  optional string media_id = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message ListPlaybackLogsResponse {
+  repeated PlaybackRecord items = 1;
+  int32 total_count = 2;
+}
+
+message DeviceScreenshotItem {
+  string id = 1;
+  string device_id = 2;
+  string file_url = 3;
+  string captured_at = 4;
+}
+
+message ListDeviceScreenshotsRequest {
+  string device_id = 1;
+  int32 limit = 2;
+}
+
+message ListDeviceScreenshotsResponse {
+  repeated DeviceScreenshotItem items = 1;
+}
+
+message LatestTelemetryData {
+  int32 memory_percent = 1;
+  int64 storage_free_bytes = 2;
+  int64 storage_total_bytes = 3;
+  string ip_address = 4;
+  string current_playing_media_id = 5;
+  string reported_at = 6;
+}
+
+message GetLatestDeviceTelemetryRequest {
+  string device_id = 1;
+}
+
+message GetLatestDeviceTelemetryResponse {
+  optional LatestTelemetryData telemetry = 1;
+}
+
+message UploadScreenshotRequest {
+  string device_id = 1;
+  bytes image_data = 2;
+  string mime_type = 3;
+}
+
+message UploadScreenshotResponse {
+  bool success = 1;
+  string file_url = 2;
+}
+
+
+

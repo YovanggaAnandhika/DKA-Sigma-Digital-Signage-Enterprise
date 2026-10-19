@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package signage.distribution.v1.manifest;
+
+import "distribution/v1/manifest/manifest.common.proto";
+
+service ManifestService {
+  rpc GetActiveManifest(GetActiveManifestRequest) returns (GetActiveManifestResponse);
+  rpc AssignLayoutToDevice(AssignLayoutToDeviceRequest) returns (AssignLayoutToDeviceResponse);
+}

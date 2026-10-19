@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package signage.studio.v1.album;
+
+import "common/v1/types.proto";
+import "studio/v1/media/media.common.proto";
+
+message AlbumPhoto {
+  string id = 1;
+  string album_id = 2;
+  string media_item_id = 3;
+  int32 order_index = 4;
+  string caption = 5;
+  int32 duration_seconds = 6;
+  string created_at = 7;
+  optional signage.studio.v1.media.MediaItem media_item = 8;
+}
+
+message AlbumDetail {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string transition_effect = 4;
+  int32 slide_duration_seconds = 5;
+  repeated AlbumPhoto photos = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message CreateAlbumRequest {
+  string name = 1;
+  string description = 2;
+  string transition_effect = 3;
+  int32 slide_duration_seconds = 4;
+  repeated AddAlbumPhotoInput photos = 5;
+}
+
+message AddAlbumPhotoInput {
+  string media_item_id = 1;
+  int32 order_index = 2;
+  string caption = 3;
+  int32 duration_seconds = 4;
+}
+
+message GetAlbumRequest {
+  string id = 1;
+}
+
+message ListAlbumsRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+}
+
+message ListAlbumsResponse {
+  repeated AlbumDetail items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateAlbumRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string transition_effect = 4;
+  int32 slide_duration_seconds = 5;
+  repeated AddAlbumPhotoInput photos = 6;
+}
+
+message DeleteAlbumRequest {
+  string id = 1;
+}
+
+message DeleteAlbumResponse {
+  bool success = 1;
+}
+
+message AddAlbumPhotoRequest {
+  string album_id = 1;
+  string media_item_id = 2;
+  int32 order_index = 3;
+  string caption = 4;
+  int32 duration_seconds = 5;
+}
+
+message DeleteAlbumPhotoRequest {
+  string id = 1;
+}
+
+message DeleteAlbumPhotoResponse {
+  bool success = 1;
+}

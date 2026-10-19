@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package signage.studio.v1.visual_filter;
+
+import "studio/v1/visual_filter/visual_filter.common.proto";
+
+service VisualFilterService {
+  rpc ListVisualFilters(ListVisualFiltersRequest) returns (ListVisualFiltersResponse);
+  rpc GetVisualFilter(GetVisualFilterRequest) returns (VisualFilter);
+  rpc CreateVisualFilter(CreateVisualFilterRequest) returns (VisualFilter);
+  rpc UpdateVisualFilter(UpdateVisualFilterRequest) returns (VisualFilter);
+  rpc DeleteVisualFilter(DeleteVisualFilterRequest) returns (DeleteVisualFilterResponse);
+}

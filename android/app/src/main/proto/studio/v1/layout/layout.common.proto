@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package signage.studio.v1.layout;
+
+import "common/v1/types.proto";
+import "common/v1/orientation/orientation.common.proto";
+import "studio/v1/layer/layer/layer.common.proto";
+
+message Layout {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int32 canvas_width = 4;
+  int32 canvas_height = 5;
+  signage.common.v1.orientation.Orientation orientation = 6;
+  string background_color = 7;
+  string background_image_url = 8;
+  repeated signage.studio.v1.layer.Layer layers = 9;
+  string created_at = 10;
+  string updated_at = 11;
+  optional string resolution_id = 12;
+  optional string version_hash = 13;
+  optional string scheduled_version_hash = 14;
+  bool is_schedule_synced = 15;
+}
+
+message CreateLayoutRequest {
+  string name = 1;
+  string description = 2;
+  int32 canvas_width = 3;
+  int32 canvas_height = 4;
+  string orientation_id = 5;
+  string background_color = 6;
+  string background_image_url = 7;
+  optional string resolution_id = 8;
+}
+
+message GetLayoutRequest {
+  string id = 1;
+}
+
+message ListLayoutsRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+  string orientation_id = 3;
+}
+
+message ListLayoutsResponse {
+  repeated Layout items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateLayoutRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int32 canvas_width = 4;
+  int32 canvas_height = 5;
+  string orientation_id = 6;
+  string background_color = 7;
+  string background_image_url = 8;
+  optional string resolution_id = 9;
+}
+
+message DeleteLayoutRequest {
+  string id = 1;
+}
+
+message DeleteLayoutResponse {
+  bool success = 1;
+}
+
+message LayoutHistoryItem {
+  string id = 1;
+  string layout_id = 2;
+  string layout_name = 3;
+  string version_hash = 4;
+  string snapshot_json = 5;
+  string description = 6;
+  string created_at = 7;
+}
+
+message ListLayoutHistoryRequest {
+  optional string layout_id = 1;
+  signage.common.v1.PaginationRequest pagination = 2;
+  string search = 3;
+}
+
+message ListLayoutHistoryResponse {
+  repeated LayoutHistoryItem items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message RollbackLayoutRequest {
+  string history_id = 1;
+}
+
+message RollbackLayoutResponse {
+  bool success = 1;
+  string message = 2;
+  string layout_id = 3;
+}
+
+message DeleteLayoutHistoryRequest {
+  repeated string ids = 1;
+  bool delete_all = 2;
+  optional string layout_id = 3;
+}
+
+message DeleteLayoutHistoryResponse {
+  bool success = 1;
+  int32 deleted_count = 2;
+  string message = 3;
+}
+

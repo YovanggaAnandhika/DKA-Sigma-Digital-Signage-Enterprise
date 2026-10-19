@@ -72,96 +72,44 @@
                 android:inputType="textUri"
                 android:singleLine="true" />
 
-            <!-- Ports Row -->
+            <!-- Single Port Configuration (gRPC Backend) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
-                android:orientation="horizontal"
-                android:baselineAligned="false">
+                android:orientation="vertical">
 
-                <!-- HTTP Port -->
-                <LinearLayout
-                    android:layout_width="0dp"
+                <TextView
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="8dp"
-                    android:orientation="vertical">
+                    android:text="PORT gRPC BACKEND"
+                    android:textColor="#0284c7"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.05" />
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="PORT HTTP / API"
-                        android:textColor="#0284c7"
-                        android:textSize="11sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.05" />
+                <EditText
+                    android:id="@+id/etGrpcPort"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_input_field"
+                    android:hint="50051"
+                    android:textColorHint="#94a3b8"
+                    android:textColor="#0f172a"
+                    android:textSize="15sp"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:inputType="number"
+                    android:singleLine="true" />
 
-                    <EditText
-                        android:id="@+id/etHttpPort"
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:layout_marginTop="6dp"
-                        android:background="@drawable/bg_input_field"
-                        android:hint="80"
-                        android:textColorHint="#94a3b8"
-                        android:textColor="#0f172a"
-                        android:textSize="15sp"
-                        android:paddingStart="14dp"
-                        android:paddingEnd="14dp"
-                        android:inputType="number"
-                        android:singleLine="true" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Port web &amp; register (default: 80)"
-                        android:textColor="#64748b"
-                        android:textSize="11sp" />
-                </LinearLayout>
-
-                <!-- gRPC Port -->
-                <LinearLayout
-                    android:layout_width="0dp"
+                <TextView
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="8dp"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="PORT gRPC (STREAM)"
-                        android:textColor="#0284c7"
-                        android:textSize="11sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.05" />
-
-                    <EditText
-                        android:id="@+id/etGrpcPort"
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:layout_marginTop="6dp"
-                        android:background="@drawable/bg_input_field"
-                        android:hint="50051"
-                        android:textColorHint="#94a3b8"
-                        android:textColor="#0f172a"
-                        android:textSize="15sp"
-                        android:paddingStart="14dp"
-                        android:paddingEnd="14dp"
-                        android:inputType="number"
-                        android:singleLine="true" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Port backend tonic (default: 50051)"
-                        android:textColor="#64748b"
-                        android:textSize="11sp" />
-                </LinearLayout>
-
+                    android:layout_marginTop="4dp"
+                    android:text="Port backend tonic digital signage (default: 50051)"
+                    android:textColor="#64748b"
+                    android:textSize="11sp" />
             </LinearLayout>
 
             <!-- Resolved Preview Info -->

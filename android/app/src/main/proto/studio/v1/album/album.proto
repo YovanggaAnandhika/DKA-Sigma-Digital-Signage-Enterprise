@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package signage.studio.v1.album;
+
+import "studio/v1/album/album.common.proto";
+
+service AlbumService {
+  rpc CreateAlbum(CreateAlbumRequest) returns (AlbumDetail);
+  rpc GetAlbum(GetAlbumRequest) returns (AlbumDetail);
+  rpc ListAlbums(ListAlbumsRequest) returns (ListAlbumsResponse);
+  rpc UpdateAlbum(UpdateAlbumRequest) returns (AlbumDetail);
+  rpc DeleteAlbum(DeleteAlbumRequest) returns (DeleteAlbumResponse);
+  
+  rpc AddAlbumPhoto(AddAlbumPhotoRequest) returns (AlbumPhoto);
+  rpc DeleteAlbumPhoto(DeleteAlbumPhotoRequest) returns (DeleteAlbumPhotoResponse);
+}
