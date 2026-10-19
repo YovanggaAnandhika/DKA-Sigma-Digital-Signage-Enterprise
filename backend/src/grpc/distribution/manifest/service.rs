@@ -78,6 +78,10 @@ impl ManifestServiceImpl {
                     "isActive": a.is_active,
                 })).collect();
 
+                let primary_counter = detail.counters.first();
+                let counter_status = primary_counter.map(|c| c.status.as_str()).unwrap_or("ACTIVE");
+                let counter_name = primary_counter.map(|c| c.counter_name.as_str()).unwrap_or("LOKET 01");
+
                 let json_val = serde_json::json!({
                     "id": detail.id,
                     "name": detail.name,
@@ -100,6 +104,9 @@ impl ManifestServiceImpl {
                     "currentSequence": detail.current_sequence,
                     "waitingTicketsCount": detail.waiting_tickets_count,
                     "latestCalledNumber": detail.latest_called_number,
+                    "status": counter_status,
+                    "counterStatus": counter_status,
+                    "currentCounterName": counter_name,
                     "itemsList": items_arr,
                     "countersList": counters_arr,
                     "audios": audios_arr

@@ -923,7 +923,7 @@ impl QueueServiceTrait for QueueServiceImpl {
             r#"
             SELECT COALESCE(MAX(sequence_number), 0) as "max_seq!"
             FROM queue_tickets
-            WHERE queue_display_id = $1 AND created_at >= CURRENT_DATE
+            WHERE queue_display_id = $1 AND created_at >= CURRENT_DATE AND status != 'archived'
             "#,
             display_id
         )
@@ -1019,7 +1019,7 @@ impl QueueServiceTrait for QueueServiceImpl {
                     r#"
                     SELECT COALESCE(MAX(sequence_number), 0) as "max_seq!"
                     FROM queue_tickets
-                    WHERE queue_display_id = $1 AND created_at >= CURRENT_DATE
+                    WHERE queue_display_id = $1 AND created_at >= CURRENT_DATE AND status != 'archived'
                     "#,
                     display_id
                 )

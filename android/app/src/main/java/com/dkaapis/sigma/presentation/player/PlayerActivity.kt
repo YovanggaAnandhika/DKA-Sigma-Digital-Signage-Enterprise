@@ -1707,7 +1707,7 @@ class PlayerActivity : AppCompatActivity() {
 
                 loadingOverlay.visibility = View.VISIBLE
                 progressBar.isIndeterminate = true
-                badgeText.text = "● BERSIHKAN CACHE"
+                badgeText.text = "BERSIHKAN CACHE"
                 badgeText.setTextColor(Color.parseColor("#F59E0B"))
                 loadingText.text = "Membersihkan Cache Media Lokal..."
                 loadingText.setTextColor(Color.WHITE)
