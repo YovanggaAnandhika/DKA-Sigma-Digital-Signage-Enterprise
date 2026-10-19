@@ -1,178 +1,72 @@
 package com.dkaapis.sigma.presentation.renderers
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
-import android.animation.ValueAnimator
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
 import android.graphics.Color
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
-import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
-import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.AccelerateDecelerateInterpolator
-import android.view.animation.DecelerateInterpolator
-import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
 import coil.load
-import com.dkaapis.sigma.R
+import com.dkaapis.sigma.presentation.renderers.queue.QueueCanvasView
+import com.dkaapis.sigma.presentation.renderers.queue.QueueStatusOverlayHelper
+import com.dkaapis.sigma.presentation.renderers.queue.QueueVisualEffectHelper
+import com.dkaapis.sigma.presentation.renderers.queue.model.QueueCallbacksPayload
+import com.dkaapis.sigma.presentation.renderers.queue.model.QueueItemMeta
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.Locale
 
-data class QueueItemMeta(
-    val id: String,
-    val itemType: String,
-    val x: Int,
-    val y: Int,
-    val width: Int,
-    val height: Int,
-    val zIndex: Int,
-    val backgroundColor: String,
-    val textColor: String,
-    val fontSize: Float,
-    val fontWeight: String,
-    val textAlign: String,
-    val templateContent: String,
-    val borderRadius: Float = 0f,
-    val borderWidth: Int = 0,
-    val borderColor: String = "#00000000",
-    val speed: String = "normal",
-    val opacity: Float = 1.0f
-)
-
-class QueueCanvasView(
-    context: Context,
-    private val canvasWidth: Int = 1920,
-    private val canvasHeight: Int = 1080
-) : ViewGroup(context) {
-
-    init {
-        clipChildren = false
-        clipToPadding = false
-    }
-
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val width = MeasureSpec.getSize(widthMeasureSpec)
-        val height = MeasureSpec.getSize(heightMeasureSpec)
-        setMeasuredDimension(width, height)
-
-        if (width <= 0 || height <= 0) return
-
-        val scaleX = width.toFloat() / canvasWidth.toFloat()
-        val scaleY = height.toFloat() / canvasHeight.toFloat()
-
-        for (i in 0 until childCount) {
-            val child = getChildAt(i)
-            val meta = child.tag as? QueueItemMeta ?: continue
-            val childW = (meta.width * scaleX).toInt().coerceAtLeast(1)
-            val childH = (meta.height * scaleY).toInt().coerceAtLeast(1)
-
-            if (child is TextView) {
-                // Skala font proporsional mengikuti lebar kontainer, persis CSS container queries (100cqw)
-                val fontPx = meta.fontSize * scaleX
-                child.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontPx)
-                child.includeFontPadding = false
-            }
-
-            val widthSpec = MeasureSpec.makeMeasureSpec(childW, MeasureSpec.EXACTLY)
-            val heightSpec = if (child is TextView && meta.itemType != "marquee") {
-                // Ukur ketinggian alami teks tanpa pembatasan terlebih dahulu agar font besar tidak terpotong
-                child.measure(widthSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
-                val paddingBuffer = (4 * context.resources.displayMetrics.density).toInt()
-                val neededH = maxOf(childH, child.measuredHeight + paddingBuffer)
-                MeasureSpec.makeMeasureSpec(neededH, MeasureSpec.EXACTLY)
-            } else {
-                MeasureSpec.makeMeasureSpec(childH, MeasureSpec.EXACTLY)
-            }
-
-            child.measure(widthSpec, heightSpec)
-        }
-    }
-
-    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-        val width = r - l
-        val height = b - t
-        if (width <= 0 || height <= 0) return
-
-        val scaleX = width.toFloat() / canvasWidth.toFloat()
-        val scaleY = height.toFloat() / canvasHeight.toFloat()
-
-        for (i in 0 until childCount) {
-            val child = getChildAt(i)
-            val meta = child.tag as? QueueItemMeta ?: continue
-            val boxLeft = (meta.x * scaleX).toInt()
-            val boxTop = (meta.y * scaleY).toInt()
-            val boxW = (meta.width * scaleX).toInt().coerceAtLeast(1)
-            val boxH = (meta.height * scaleY).toInt().coerceAtLeast(1)
-
-            // Posisikan dan pusatkan view di dalam kotak targetnya secara presisi
-            val left = boxLeft + (boxW - child.measuredWidth) / 2
-            val top = boxTop + (boxH - child.measuredHeight) / 2
-            val right = left + child.measuredWidth
-            val bottom = top + child.measuredHeight
-            child.layout(left, top, right, bottom)
-        }
-    }
-}
-
+/**
+ * Renderer Zona Antrean (Queue Zone Renderer):
+ * Mengkoordinasikan kanvas antrean, tata letak blok item, efek visual panggilan,
+ * dan overlay status loket ("ISTIRAHAT" / "TUTUP").
+ */
 class QueueZoneRenderer(
     private val context: Context,
-    private val onCallAudioStarted: () -> Unit = {},
-    private val onCallAudioFinished: () -> Unit = {},
-    var onUserTapNext: ((ticketNumber: String, counterName: String) -> Unit)? = null
+    private val callbacks: QueueCallbacksPayload = QueueCallbacksPayload()
 ) {
-    private var numberTextView: TextView? = null
-    private var counterTextView: TextView? = null
-    private var currentPrefix: String = "A"
-    private var currentName: String = "Layar Antrian"
-    private var currentSequence: Int = 1
-    private var currentCounter: String = "LOKET 01"
-    private var currentCounterLabel: String = "Loket"
-    private var currentStatus: String = "ACTIVE"
-    private val countersList = mutableListOf<String>()
-    private val counterStatusMap = mutableMapOf<String, String>()
+    constructor(
+        context: Context,
+        onCallAudioStarted: () -> Unit = {},
+        onCallAudioFinished: () -> Unit = {},
+        onUserTapNext: (ticketNumber: String, counterName: String) -> Unit = { _, _ -> }
+    ) : this(context, QueueCallbacksPayload(onCallAudioStarted, onCallAudioFinished, onUserTapNext))
 
-    fun getCurrentCounter(): String = currentCounter
-
-    private fun isInactive(): Boolean {
-        return currentStatus.equals("LOCKED", ignoreCase = true) || 
-               currentStatus.equals("BREAK", ignoreCase = true)
-    }
+    private val visualEffectHelper = QueueVisualEffectHelper()
+    private val statusOverlayHelper = QueueStatusOverlayHelper(context)
 
     private var parentZoneView: ViewGroup? = null
     private var canvasView: QueueCanvasView? = null
-    private var isCallingActive = false
-    private var invertAnimator: ValueAnimator? = null
-    private var currentInvertProgress = 0f
-    private val invertPaint = Paint()
-
+    private var numberTextView: TextView? = null
+    private var counterTextView: TextView? = null
     private var originalCounterBgColor: Int = Color.TRANSPARENT
-    private var statusOverlayView: View? = null
-    private var callEffectWatchdog: Runnable? = null
-    private val mainHandler = Handler(Looper.getMainLooper())
 
-    private fun stopWatchdog() {
-        callEffectWatchdog?.let { mainHandler.removeCallbacks(it) }
-        callEffectWatchdog = null
-    }
-
+    private var currentSequence: Int = 1
+    private var currentPrefix: String = "A"
+    private var currentCounter: String = "LOKET 01"
+    private var currentCounterLabel: String = "Loket"
+    private var currentName: String = "Layar Antrian"
+    private var currentStatus: String = "ACTIVE"
     private var canvasW: Int = 1920
     private var canvasH: Int = 1080
 
-    fun createView(
-        parent: ViewGroup,
-        widgetDataJson: String?
-    ): View {
+    private val countersList = mutableListOf<String>()
+    private val counterStatusMap = mutableMapOf<String, String>()
+    private val itemViews = mutableMapOf<String, Pair<View, QueueItemMeta>>()
+
+    fun getCurrentCounter(): String = currentCounter
+    fun getCurrentTicketNumber(): String = "$currentPrefix-${String.format(Locale.US, "%03d", currentSequence)}"
+    fun getCurrentCounterName(): String = currentCounter
+
+    private fun isInactive(): Boolean =
+        currentStatus.equals("BREAK", ignoreCase = true) || currentStatus.equals("LOCKED", ignoreCase = true)
+
+    fun createView(parent: ViewGroup, widgetDataJson: String?): View {
         canvasW = 1920
         canvasH = 1080
         var bgColor = "transparent"
@@ -185,7 +79,7 @@ class QueueZoneRenderer(
         var itemsJsonArray: JSONArray? = null
 
         if (!widgetDataJson.isNullOrBlank()) {
-            try {
+            runCatching {
                 val json = JSONObject(widgetDataJson)
                 canvasW = json.optInt("canvasWidth", 1920).takeIf { it > 0 } ?: 1920
                 canvasH = json.optInt("canvasHeight", 1080).takeIf { it > 0 } ?: 1080
@@ -195,9 +89,9 @@ class QueueZoneRenderer(
                 latestNumber = json.optString("latestCalledNumber", "$currentPrefix-001")
                 bgColor = json.optString("backgroundColor", "transparent").ifBlank { "transparent" }
                 bgImageUrl = json.optString("backgroundImageUrl", "").ifBlank { json.optString("background_image_url", "") }
-                canvasOpacity = (if (json.has("opacity")) json.optDouble("opacity", 1.0) else 1.0).toFloat()
+                canvasOpacity = json.optDouble("opacity", 1.0).toFloat()
                 overlayColor = json.optString("overlayColor", "").ifEmpty { json.optString("overlay_color", "") }
-                overlayOpacity = (if (json.has("overlayOpacity")) json.optDouble("overlayOpacity", 0.0) else json.optDouble("overlay_opacity", 0.0)).toFloat()
+                overlayOpacity = json.optDouble("overlayOpacity", json.optDouble("overlay_opacity", 0.0)).toFloat()
 
                 val countersArr = json.optJSONArray("countersList") ?: json.optJSONArray("counters")
                 countersList.clear()
@@ -217,9 +111,7 @@ class QueueZoneRenderer(
                     countersList.addAll(listOf("LOKET 01", "LOKET 02", "LOKET 03"))
                 }
 
-                val initialStatus = json.optString("status", 
-                    json.optString("counterStatus", 
-                    if (firstCounterStatus.isNotBlank()) firstCounterStatus else "ACTIVE"))
+                val initialStatus = json.optString("status", json.optString("counterStatus", firstCounterStatus.ifBlank { "ACTIVE" }))
                 if (initialStatus.equals("BREAK", ignoreCase = true) || initialStatus.equals("LOCKED", ignoreCase = true)) {
                     currentStatus = initialStatus.uppercase()
                 } else if (counterStatusMap.containsKey(counterName)) {
@@ -227,40 +119,28 @@ class QueueZoneRenderer(
                 }
 
                 itemsJsonArray = json.optJSONArray("itemsList") ?: json.optJSONArray("items")
-            } catch (_: Exception) {}
+            }
         } else {
             countersList.addAll(listOf("LOKET 01", "LOKET 02", "LOKET 03"))
         }
 
         currentCounter = counterName
         currentSequence = latestNumber.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 1
-        isCallingActive = false
-        currentInvertProgress = 0f
-        invertAnimator?.cancel()
 
-        val canvasView = QueueCanvasView(context, canvasW, canvasH).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
+        val cv = QueueCanvasView(context, canvasW, canvasH).apply {
+            layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             setBackgroundColor(parseColor(bgColor, Color.TRANSPARENT))
             alpha = canvasOpacity.coerceIn(0.0f, 1.0f)
             val canClick = !isInactive()
             isClickable = canClick
             isFocusable = canClick
-            setOnClickListener {
-                if (!isInactive()) {
-                    callNext()
-                }
-            }
+            setOnClickListener { if (!isInactive()) callNext() }
         }
 
         this.parentZoneView = parent
-        this.canvasView = canvasView
+        this.canvasView = cv
 
         val parsedItems = mutableListOf<QueueItemMeta>()
-
-        // Scrim overlay item if defined
         if (overlayOpacity > 0f && overlayColor.isNotBlank() && !overlayColor.equals("transparent", ignoreCase = true)) {
             parsedItems.add(
                 QueueItemMeta(
@@ -275,46 +155,44 @@ class QueueZoneRenderer(
             )
         }
 
-        if (itemsJsonArray != null && itemsJsonArray.length() > 0) {
+        if (itemsJsonArray != null) {
             for (i in 0 until itemsJsonArray.length()) {
                 val itemObj = itemsJsonArray.optJSONObject(i) ?: continue
                 if (!itemObj.optBoolean("isVisible", true)) continue
 
-                var itemOpacity = (if (itemObj.has("opacity")) itemObj.optDouble("opacity", 1.0) else 1.0).toFloat()
-                var br = if (itemObj.has("borderRadius")) itemObj.optDouble("borderRadius", 0.0).toFloat()
-                         else itemObj.optDouble("border_radius", 0.0).toFloat()
-                var bw = if (itemObj.has("borderWidth")) itemObj.optInt("borderWidth", 0)
-                         else itemObj.optInt("border_width", 0)
-                var bc = if (itemObj.has("borderColor") && itemObj.optString("borderColor").isNotBlank()) itemObj.optString("borderColor")
-                         else itemObj.optString("border_color", "transparent")
+                var itemOpacity = itemObj.optDouble("opacity", 1.0).toFloat()
+                var br = itemObj.optDouble("borderRadius", itemObj.optDouble("border_radius", 0.0)).toFloat()
+                var bw = itemObj.optInt("borderWidth", itemObj.optInt("border_width", 0))
+                var bc = itemObj.optString("borderColor", itemObj.optString("border_color", "transparent"))
                 var spd = "normal"
+
                 val configStr = itemObj.optString("configJson", "")
                 if (configStr.isNotBlank()) {
-                    try {
+                    runCatching {
                         val cfg = JSONObject(configStr)
                         if (!itemObj.has("borderRadius") && !itemObj.has("border_radius")) br = cfg.optDouble("borderRadius", 0.0).toFloat()
                         if (!itemObj.has("borderWidth") && !itemObj.has("border_width")) bw = cfg.optInt("borderWidth", 0)
                         if (!itemObj.has("borderColor") && !itemObj.has("border_color")) bc = cfg.optString("borderColor", "transparent")
                         if (!itemObj.has("opacity")) itemOpacity = cfg.optDouble("opacity", 1.0).toFloat()
                         spd = cfg.optString("speed", "normal")
-                    } catch (_: Exception) {}
+                    }
                 }
 
                 parsedItems.add(
                     QueueItemMeta(
                         id = itemObj.optString("id", "item-$i"),
-                        itemType = itemObj.optString("itemType", "text_label"),
+                        itemType = itemObj.optString("itemType", itemObj.optString("item_type", "text")),
                         x = itemObj.optInt("x", 0),
                         y = itemObj.optInt("y", 0),
-                        width = itemObj.optInt("width", 200),
-                        height = itemObj.optInt("height", 100),
-                        zIndex = itemObj.optInt("zIndex", i + 1),
-                        backgroundColor = itemObj.optString("backgroundColor", "transparent"),
-                        textColor = itemObj.optString("textColor", "#ffffff"),
-                        fontSize = itemObj.optDouble("fontSize", 24.0).toFloat(),
-                        fontWeight = itemObj.optString("fontWeight", "bold"),
-                        textAlign = itemObj.optString("textAlign", "center"),
-                        templateContent = itemObj.optString("templateContent", ""),
+                        width = itemObj.optInt("width", 200).coerceAtLeast(1),
+                        height = itemObj.optInt("height", 100).coerceAtLeast(1),
+                        zIndex = itemObj.optInt("zIndex", itemObj.optInt("z_index", i)),
+                        backgroundColor = itemObj.optString("backgroundColor", itemObj.optString("background_color", "transparent")),
+                        textColor = itemObj.optString("textColor", itemObj.optString("text_color", "#ffffff")),
+                        fontSize = itemObj.optDouble("fontSize", itemObj.optDouble("font_size", 24.0)).toFloat(),
+                        fontWeight = itemObj.optString("fontWeight", itemObj.optString("font_weight", "bold")),
+                        textAlign = itemObj.optString("textAlign", itemObj.optString("text_align", "center")),
+                        templateContent = itemObj.optString("templateContent", itemObj.optString("template_content", "")),
                         borderRadius = br,
                         borderWidth = bw,
                         borderColor = bc,
@@ -323,298 +201,164 @@ class QueueZoneRenderer(
                     )
                 )
             }
-        } else {
-            // Database-synced fallback matching migration 0042
-            parsedItems.add(
-                QueueItemMeta(
-                    id = "fallback-title",
-                    itemType = "text_label",
-                    x = 60, y = 60, width = 1800, height = 70, zIndex = 1,
-                    backgroundColor = "transparent", textColor = "#10b981", fontSize = 36f,
-                    fontWeight = "800", textAlign = "center", templateContent = "\$queue_name\$"
-                )
-            )
-            parsedItems.add(
-                QueueItemMeta(
-                    id = "fallback-ticket",
-                    itemType = "ticket_number",
-                    x = 360, y = 190, width = 1200, height = 440, zIndex = 2,
-                    backgroundColor = "transparent", textColor = "#10b981", fontSize = 150f,
-                    fontWeight = "900", textAlign = "center", templateContent = "\$queue_number\$"
-                )
-            )
-            parsedItems.add(
-                QueueItemMeta(
-                    id = "fallback-counter",
-                    itemType = "counter_loket",
-                    x = 710, y = 680, width = 500, height = 90, zIndex = 3,
-                    backgroundColor = "#059669", textColor = "#ffffff", fontSize = 32f,
-                    fontWeight = "800", textAlign = "center", templateContent = "\$queue_counter\$",
-                    borderRadius = 14f
-                )
-            )
-            parsedItems.add(
-                QueueItemMeta(
-                    id = "fallback-marquee",
-                    itemType = "marquee",
-                    x = 0, y = 990, width = 1920, height = 90, zIndex = 4,
-                    backgroundColor = "#064e3b", textColor = "#ffffff", fontSize = 24f,
-                    fontWeight = "bold", textAlign = "left",
-                    templateContent = "PENGUMUMAN: Silakan menuju \$queue_counter\$ saat nomor \$queue_number\$ dipanggil. Terima kasih.",
-                    speed = "normal"
-                )
-            )
         }
 
-        parsedItems.sortBy { it.zIndex }
+        itemViews.clear()
+        numberTextView = null
+        counterTextView = null
 
-        for (meta in parsedItems) {
-            if (meta.itemType == "overlay_scrim") {
-                val scrimView = View(context).apply {
-                    tag = meta
-                    setBackgroundColor(parseColor(meta.backgroundColor, Color.TRANSPARENT))
-                    alpha = meta.opacity.coerceIn(0.0f, 1.0f)
-                }
-                canvasView.addView(scrimView)
-                continue
+        if (bgImageUrl.isNotBlank()) {
+            val bgIv = ImageView(context).apply {
+                scaleType = ImageView.ScaleType.FIT_XY
+                tag = QueueItemMeta(
+                    id = "queue-bg-image", itemType = "image",
+                    x = 0, y = 0, width = canvasW, height = canvasH, zIndex = -1,
+                    backgroundColor = "transparent", textColor = "transparent",
+                    fontSize = 0f, fontWeight = "normal", textAlign = "left", templateContent = bgImageUrl
+                )
+                load(bgImageUrl)
             }
+            cv.addView(bgIv)
+        }
 
-            val textContent = interpolate(meta.templateContent, latestNumber, counterName)
-            val isBold = meta.fontWeight == "800" || meta.fontWeight == "900" || meta.fontWeight.equals("bold", ignoreCase = true)
-            val density = context.resources.displayMetrics.density
+        for (meta in parsedItems.sortedBy { it.zIndex }) {
+            val childView = createItemView(meta, latestNumber, counterName)
+            childView.tag = meta
+            cv.addView(childView)
+            itemViews[meta.id] = Pair(childView, meta)
+        }
 
-            val textView = if (meta.itemType == "marquee") {
-                MarqueeTextView(context).apply {
-                    cycleDurationMs = when (meta.speed.lowercase()) {
-                        "fast" -> 12_000L
-                        "slow" -> 25_000L
-                        else -> 18_000L
-                    }
-                }
-            } else {
-                TextView(context)
-            }.apply {
-                tag = meta
-                text = textContent
+        statusOverlayHelper.updateStatusScreen(cv, currentStatus, currentCounter, currentCounterLabel, canvasW, canvasH, numberTextView, counterTextView)
+        return cv
+    }
+
+    private fun createItemView(meta: QueueItemMeta, queueNumber: String, queueCounter: String): View {
+        val bgDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            if (meta.borderRadius > 0f) cornerRadius = meta.borderRadius
+            val bgCol = parseColor(meta.backgroundColor, Color.TRANSPARENT)
+            setColor(bgCol)
+            if (meta.borderWidth > 0 && meta.borderColor.isNotBlank()) {
+                setStroke(meta.borderWidth, parseColor(meta.borderColor, Color.TRANSPARENT))
+            }
+        }
+
+        return when (meta.itemType) {
+            "image" -> ImageView(context).apply {
+                background = bgDrawable
+                scaleType = ImageView.ScaleType.FIT_XY
                 alpha = meta.opacity.coerceIn(0.0f, 1.0f)
+                if (meta.templateContent.isNotBlank()) load(meta.templateContent)
+            }
+            "marquee" -> MarqueeTextView(context).apply {
+                background = bgDrawable
                 setTextColor(parseColor(meta.textColor, Color.WHITE))
-                includeFontPadding = false
-                gravity = when (meta.textAlign.lowercase()) {
-                    "left", "start" -> Gravity.START or Gravity.CENTER_VERTICAL
-                    "right", "end" -> Gravity.END or Gravity.CENTER_VERTICAL
-                    else -> Gravity.CENTER
+                typeface = resolveTypeface(meta.fontWeight)
+                alpha = meta.opacity.coerceIn(0.0f, 1.0f)
+                speedPixelsPerSec = when (meta.speed.lowercase()) {
+                    "fast" -> 160f
+                    "slow" -> 50f
+                    else -> 95f
                 }
-                typeface = Typeface.create(
-                    Typeface.SANS_SERIF,
-                    if (isBold) Typeface.BOLD else Typeface.NORMAL
-                )
-                if (meta.itemType == "ticket_number") {
-                    isSingleLine = true
-                    maxLines = 1
-                    letterSpacing = 0.02f
-                } else if (meta.itemType == "counter_loket") {
-                    isSingleLine = true
-                    maxLines = 1
-                }
-
-                val hasBg = meta.backgroundColor.isNotBlank() && !meta.backgroundColor.equals("transparent", ignoreCase = true)
-                val hasBorder = meta.borderWidth > 0 && meta.borderColor.isNotBlank() && !meta.borderColor.equals("transparent", ignoreCase = true) && !meta.borderColor.equals("#00000000", ignoreCase = true)
-
-                if (hasBg || hasBorder || meta.borderRadius > 0f) {
-                    val gd = GradientDrawable().apply {
-                        shape = GradientDrawable.RECTANGLE
-                        setColor(if (hasBg) parseColor(meta.backgroundColor, Color.TRANSPARENT) else Color.TRANSPARENT)
-                        if (meta.borderRadius > 0f) {
-                            cornerRadius = meta.borderRadius * density
-                        }
-                        if (hasBorder) {
-                            setStroke((meta.borderWidth * density).toInt(), parseColor(meta.borderColor, Color.TRANSPARENT))
-                        }
-                    }
-                    background = gd
-                } else {
-                    background = null
-                }
-
-                if (meta.itemType == "marquee") {
-                    setPadding((16 * density).toInt(), 0, (16 * density).toInt(), 0)
-                } else if (meta.itemType == "counter_loket" && hasBg) {
-                    setPadding((16 * density).toInt(), 0, (16 * density).toInt(), 0)
-                }
+                text = interpolate(meta.templateContent.ifBlank { "DKASigma Layanan Antrian" }, queueNumber, queueCounter)
             }
+            else -> TextView(context).apply {
+                background = bgDrawable
+                setTextColor(parseColor(meta.textColor, Color.WHITE))
+                typeface = resolveTypeface(meta.fontWeight)
+                gravity = resolveGravity(meta.textAlign)
+                alpha = meta.opacity.coerceIn(0.0f, 1.0f)
+                text = interpolate(meta.templateContent, queueNumber, queueCounter)
 
-            if (meta.itemType == "ticket_number") {
-                numberTextView = textView
-                val canClick = !isInactive()
-                textView.isClickable = canClick
-                textView.setOnClickListener {
-                    if (!isInactive()) {
-                        callNext()
+                when (meta.itemType) {
+                    "number" -> {
+                        numberTextView = this
+                        val canClick = !isInactive()
+                        isClickable = canClick
+                        isFocusable = canClick
+                        setOnClickListener { if (!isInactive()) callNext() }
                     }
-                }
-            } else if (meta.itemType == "counter_loket") {
-                counterTextView = textView
-                val hasCounterBg = meta.backgroundColor.isNotBlank() && !meta.backgroundColor.equals("transparent", ignoreCase = true)
-                originalCounterBgColor = if (hasCounterBg) parseColor(meta.backgroundColor, Color.TRANSPARENT) else Color.TRANSPARENT
-                val canClick = !isInactive()
-                textView.isClickable = canClick
-                textView.setOnClickListener {
-                    if (!isInactive()) {
-                        cycleNextCounter()
+                    "counter" -> {
+                        counterTextView = this
+                        originalCounterBgColor = parseColor(meta.backgroundColor, Color.TRANSPARENT)
+                        val canClick = !isInactive()
+                        isClickable = canClick
+                        isFocusable = canClick
+                        setOnClickListener { if (!isInactive()) cycleNextCounter() }
                     }
                 }
             }
-
-            canvasView.addView(textView)
-        }
-
-        if (isInactive()) {
-            val displayCounter = when (currentStatus) {
-                "BREAK" -> "$currentCounter [ISTIRAHAT]"
-                "LOCKED" -> "$currentCounter [TUTUP]"
-                else -> currentCounter
-            }
-            counterTextView?.text = displayCounter
-            showDedicatedStatusScreen(currentStatus, currentCounter)
-        }
-
-        if (bgImageUrl.isBlank()) return canvasView
-
-        // Background image (center-crop = CSS background-size: cover) behind the canvas
-        val resolvedUrl = if (bgImageUrl.startsWith("/")) {
-            val base = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(context)
-            "${base.trimEnd('/')}$bgImageUrl"
-        } else bgImageUrl
-
-        return FrameLayout(context).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-            addView(ImageView(context).apply {
-                layoutParams = FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-                scaleType = ImageView.ScaleType.CENTER_CROP
-                alpha = canvasOpacity.coerceIn(0.0f, 1.0f)
-                load(resolvedUrl) { crossfade(300) }
-            })
-            addView(canvasView)
         }
     }
 
-    private fun interpolate(template: String, queueNumber: String, queueCounter: String): String {
-        val labelRegex = Regex("^(?:${Regex.escape(currentCounterLabel)}|loket|poli|teller|kasir|meja|counter|pickup point)\\s*", RegexOption.IGNORE_CASE)
-        var cleanNum = queueCounter.replace(labelRegex, "").trim()
-        if (cleanNum.matches(Regex("^0+\\d+$"))) {
-            cleanNum = cleanNum.replace(Regex("^0+"), "")
-        }
-        if (cleanNum.isBlank()) {
-            cleanNum = queueCounter.filter { it.isDigit() }.ifEmpty { "1" }
-        }
-        val formattedCounter = "${currentCounterLabel.uppercase()} $cleanNum"
-
-        return template
-            .replace("\$queue_number\$", queueNumber)
-            .replace("\$queue_counter\$", formattedCounter)
-            .replace("\$queue_prefix\$", currentPrefix)
-            .replace("\$queue_name\$", currentName)
-    }
+    private fun interpolate(template: String, queueNumber: String, queueCounter: String): String =
+        template
+            .replace("{ticket_number}", queueNumber)
+            .replace("{number}", queueNumber)
+            .replace("{nomor_antrian}", queueNumber)
+            .replace("{counter_name}", queueCounter)
+            .replace("{counter}", queueCounter)
+            .replace("{loket}", queueCounter)
+            .replace("{name}", currentName)
+            .replace("{prefix}", currentPrefix)
 
     fun callNext(): String {
-        if (isInactive()) {
-            return getCurrentTicketNumber()
-        }
         currentSequence++
-        val newTicket = "$currentPrefix-${String.format(java.util.Locale.US, "%03d", currentSequence)}"
-        updateDisplay(newTicket, currentCounter)
-        onCallAudioStarted()
-        onUserTapNext?.invoke(newTicket, currentCounter)
-        return newTicket
+        val formattedNumber = "$currentPrefix-${String.format(Locale.US, "%03d", currentSequence)}"
+        updateDisplay(formattedNumber, currentCounter)
+        callbacks.onUserTapNext(formattedNumber, currentCounter)
+        return formattedNumber
     }
 
     fun cycleNextCounter(): String {
-        if (isInactive()) {
-            return currentCounter
-        }
-        if (countersList.isNotEmpty()) {
-            val currIdx = countersList.indexOf(currentCounter)
-            val nextIdx = if (currIdx >= 0) (currIdx + 1) % countersList.size else 0
-            currentCounter = countersList[nextIdx]
-            currentStatus = counterStatusMap[currentCounter] ?: "ACTIVE"
-            val displayCounter = when (currentStatus) {
-                "BREAK" -> "$currentCounter [ISTIRAHAT]"
-                "LOCKED" -> "$currentCounter [TUTUP]"
-                else -> currentCounter
-            }
-            counterTextView?.text = displayCounter
-            counterTextView?.animate()?.scaleX(1.08f)?.scaleY(1.08f)?.setDuration(100)?.withEndAction {
-                counterTextView?.animate()?.scaleX(1.0f)?.scaleY(1.0f)?.setDuration(150)?.start()
-            }?.start()
-            showDedicatedStatusScreen(currentStatus, currentCounter)
-            onUserTapNext?.invoke(getCurrentTicketNumber(), currentCounter)
-        }
+        if (countersList.isEmpty()) return currentCounter
+        val nextIdx = (countersList.indexOf(currentCounter) + 1) % countersList.size
+        currentCounter = countersList[nextIdx]
+        currentStatus = counterStatusMap[currentCounter] ?: "ACTIVE"
+        val formattedNumber = "$currentPrefix-${String.format(Locale.US, "%03d", currentSequence)}"
+        setCounterStatus(currentCounter, currentStatus)
+        applyDisplayText(formattedNumber, currentCounter)
         return currentCounter
     }
 
     fun syncTicketDisplay(ticketNumber: String, counterName: String? = null) {
-        val numPart = ticketNumber.replace(Regex("[^0-9]"), "").toIntOrNull()
-        if (numPart != null) {
-            currentSequence = numPart
-        }
-        if (!counterName.isNullOrBlank()) {
-            currentCounter = counterName
-        }
+        val seq = ticketNumber.replace(Regex("[^0-9]"), "").toIntOrNull()
+        if (seq != null) currentSequence = seq
+        val pfx = ticketNumber.substringBefore("-", "").trim()
+        if (pfx.isNotBlank()) currentPrefix = pfx
+        if (!counterName.isNullOrBlank()) currentCounter = counterName
         applyDisplayText(ticketNumber, currentCounter)
     }
 
     fun applyDisplayText(ticketNumber: String, counterName: String) {
-        numberTextView?.text = ticketNumber
-        val displayCounter = when (currentStatus) {
-            "BREAK" -> "$counterName [ISTIRAHAT]"
-            "LOCKED" -> "$counterName [TUTUP]"
-            else -> counterName
+        for ((_, pair) in itemViews) {
+            val (view, meta) = pair
+            if (view is TextView) {
+                view.text = interpolate(meta.templateContent, ticketNumber, counterName)
+            }
         }
-        counterTextView?.text = displayCounter
     }
 
     fun updateCall(ticketNumber: String, counterName: String) {
-        currentStatus = "ACTIVE"
-        if (counterName.isNotBlank()) {
-            currentCounter = counterName
-            counterStatusMap[counterName] = "ACTIVE"
-        }
-        canvasView?.isClickable = true
-        canvasView?.isFocusable = true
-        numberTextView?.isClickable = true
-        counterTextView?.isClickable = true
-        statusOverlayView?.isClickable = false
-        statusOverlayView?.isFocusable = false
-        statusOverlayView?.visibility = View.GONE
-        val numPart = ticketNumber.replace(Regex("[^0-9]"), "").toIntOrNull()
-        if (numPart != null) {
-            currentSequence = numPart
-        }
-        updateDisplay(ticketNumber, currentCounter)
-        onCallAudioStarted()
+        val seq = ticketNumber.replace(Regex("[^0-9]"), "").toIntOrNull()
+        if (seq != null) currentSequence = seq
+        val pfx = ticketNumber.substringBefore("-", "").trim()
+        if (pfx.isNotBlank()) currentPrefix = pfx
+        currentCounter = counterName
+        updateDisplay(ticketNumber, counterName)
     }
 
     fun resetQueue(resetToNumber: String? = null) {
-        currentStatus = "ACTIVE"
-        counterStatusMap[currentCounter] = "ACTIVE"
-        canvasView?.isClickable = true
-        canvasView?.isFocusable = true
-        numberTextView?.isClickable = true
-        counterTextView?.isClickable = true
-        statusOverlayView?.isClickable = false
-        statusOverlayView?.isFocusable = false
-        statusOverlayView?.visibility = View.GONE
-        val target = resetToNumber?.ifBlank { null } ?: "$currentPrefix-000"
-        val numPart = target.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
-        currentSequence = numPart
-        applyDisplayText(target, currentCounter)
-        stopCallEffect()
+        currentSequence = if (!resetToNumber.isNullOrBlank()) {
+            val seq = resetToNumber.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 1
+            val pfx = resetToNumber.substringBefore("-", "").trim()
+            if (pfx.isNotBlank()) currentPrefix = pfx
+            seq
+        } else {
+            1
+        }
+        val formattedNumber = "$currentPrefix-${String.format(Locale.US, "%03d", currentSequence)}"
+        applyDisplayText(formattedNumber, currentCounter)
     }
 
     fun setCounterStatus(counterName: String, status: String) {
@@ -624,236 +368,23 @@ class QueueZoneRenderer(
             currentCounter = counterName
         }
         currentStatus = upperStatus
-        val displayCounter = when (currentStatus) {
+        counterTextView?.text = when (currentStatus) {
             "BREAK" -> "$currentCounter [ISTIRAHAT]"
             "LOCKED" -> "$currentCounter [TUTUP]"
             else -> currentCounter
         }
-        counterTextView?.text = displayCounter
 
-        val bgDrawable = counterTextView?.background
-        if (bgDrawable is android.graphics.drawable.GradientDrawable) {
+        val bgDrawable = counterTextView?.background as? GradientDrawable
+        if (bgDrawable != null) {
             when (currentStatus) {
                 "BREAK" -> bgDrawable.setColor(Color.parseColor("#F59E0B"))
                 "LOCKED" -> bgDrawable.setColor(Color.parseColor("#EF4444"))
-                else -> {
-                    if (originalCounterBgColor != Color.TRANSPARENT) {
-                        bgDrawable.setColor(originalCounterBgColor)
-                    } else {
-                        bgDrawable.setColor(Color.TRANSPARENT)
-                    }
-                }
+                else -> bgDrawable.setColor(if (originalCounterBgColor != Color.TRANSPARENT) originalCounterBgColor else Color.TRANSPARENT)
             }
         }
 
-        showDedicatedStatusScreen(currentStatus, currentCounter)
-    }
-
-    private fun showDedicatedStatusScreen(status: String, counterName: String) {
-        val cv = canvasView ?: return
-        val isBreak = status.equals("BREAK", ignoreCase = true)
-        val isLocked = status.equals("LOCKED", ignoreCase = true)
-        val inactive = isBreak || isLocked
-
-        // Nonaktifkan klik pada canvas dan widget antrian jika status ditutup atau istirahat
-        cv.isClickable = !inactive
-        cv.isFocusable = !inactive
-        numberTextView?.isClickable = !inactive
-        counterTextView?.isClickable = !inactive
-
-        if (!inactive) {
-            statusOverlayView?.visibility = View.GONE
-            statusOverlayView?.isClickable = false
-            statusOverlayView?.isFocusable = false
-            return
-        }
-
-        val overlay = (statusOverlayView as? LinearLayout) ?: LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            tag = QueueItemMeta(
-                id = "status-overlay-dedicated",
-                itemType = "status_overlay",
-                x = 0,
-                y = 0,
-                width = canvasW,
-                height = canvasH,
-                zIndex = 9999,
-                backgroundColor = "#00000000",
-                textColor = "#ffffff",
-                fontSize = 16f,
-                fontWeight = "normal",
-                textAlign = "center",
-                templateContent = ""
-            )
-            cv.addView(this)
-            statusOverlayView = this
-        }
-
-        overlay.visibility = View.VISIBLE
-        overlay.isClickable = true
-        overlay.isFocusable = true
-        overlay.setOnClickListener {
-            // Serap event klik agar tidak tembus ke canvasView atau komponen di bawahnya
-        }
-        overlay.removeAllViews()
-        overlay.setBackgroundColor(Color.parseColor(if (isBreak) "#0D111A" else "#0B0E17"))
-
-        val titleText = TextView(context).apply {
-            text = if (isBreak) "SEDANG ISTIRAHAT" else "${currentCounterLabel.uppercase()} DITUTUP"
-            setTextColor(Color.parseColor(if (isBreak) "#F59E0B" else "#EF4444"))
-            textSize = 38f
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-            gravity = Gravity.CENTER
-            includeFontPadding = false
-        }
-
-        val density = context.resources.displayMetrics.density
-        overlay.setPadding(
-            (24 * density).toInt(),
-            (28 * density).toInt(),
-            (24 * density).toInt(),
-            (28 * density).toInt()
-        )
-
-        val counterBadge = TextView(context).apply {
-            text = counterName
-            setTextColor(Color.WHITE)
-            textSize = 22f
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-            setPadding((24 * density).toInt(), (14 * density).toInt(), (24 * density).toInt(), (14 * density).toInt())
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = 14 * density
-                setColor(Color.parseColor(if (isBreak) "#D97706" else "#DC2626"))
-            }
-            gravity = Gravity.CENTER
-            maxWidth = (480 * density).toInt()
-        }
-
-        val badgeParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            gravity = Gravity.CENTER_HORIZONTAL
-            leftMargin = (44 * density).toInt()
-            rightMargin = (44 * density).toInt()
-            topMargin = (22 * density).toInt()
-            bottomMargin = (20 * density).toInt()
-        }
-        counterBadge.layoutParams = badgeParams
-
-        val descText = TextView(context).apply {
-            text = if (isBreak) 
-                "Petugas sedang dalam jam istirahat.\nLayanan akan dibuka kembali segera."
-            else 
-                "Mohon maaf, layanan antrian pada ${currentCounterLabel.lowercase()} ini sedang ditutup.\nSilakan menuju ${currentCounterLabel.lowercase()} lain yang beroperasi."
-            setTextColor(Color.parseColor("#94A3B8"))
-            textSize = 15f
-            gravity = Gravity.CENTER
-            setLineSpacing(4f * density, 1f)
-            setPadding((16 * density).toInt(), 0, (16 * density).toInt(), 0)
-        }
-
-        overlay.addView(titleText)
-        overlay.addView(counterBadge)
-        overlay.addView(descText)
-    }
-
-    private fun getTargetView(): View? = parentZoneView ?: canvasView
-
-    private fun applyColorInversion(target: View, t: Float) {
-        currentInvertProgress = t
-        if (t <= 0.001f) {
-            target.setLayerType(View.LAYER_TYPE_NONE, null)
-            target.invalidate()
-            return
-        }
-
-        val scale = 1.0f - 2.0f * t
-        val offset = 255.0f * t
-        val matrix = ColorMatrix(floatArrayOf(
-            scale, 0f, 0f, 0f, offset,
-            0f, scale, 0f, 0f, offset,
-            0f, 0f, scale, 0f, offset,
-            0f, 0f, 0f, 1f, 0f
-        ))
-        invertPaint.colorFilter = ColorMatrixColorFilter(matrix)
-        target.setLayerType(View.LAYER_TYPE_HARDWARE, invertPaint)
-        target.invalidate()
-    }
-
-    fun startCallEffect(ticketNumber: String, counterName: String) {
-        isCallingActive = true
-        applyDisplayText(ticketNumber, counterName)
-
-        // Safety watchdog: jika setelah 15 detik panggilan selesai/tidak dihentikan, otomatis kembalikan ke warna awal
-        stopWatchdog()
-        val watchdog = Runnable {
-            stopCallEffect()
-        }
-        callEffectWatchdog = watchdog
-        mainHandler.postDelayed(watchdog, 15000L)
-
-        val target = getTargetView() ?: return
-        invertAnimator?.cancel()
-
-        // Jika sebelumnya sudah dalam status ter-invers (misal dipanggil berturut-turut),
-        // berikan efek micro-shutter 120ms (dip ke normal lalu kembali invers) sebagai konfirmasi tiket baru
-        if (currentInvertProgress > 0.8f) {
-            invertAnimator = ValueAnimator.ofFloat(1.0f, 0.0f, 1.0f).apply {
-                duration = 120
-                interpolator = AccelerateDecelerateInterpolator()
-                addUpdateListener { va ->
-                    applyColorInversion(target, va.animatedValue as Float)
-                }
-                start()
-            }
-        } else {
-            // Transisi bersih & rapi (140ms) menuju warna terinversi
-            invertAnimator = ValueAnimator.ofFloat(currentInvertProgress, 1.0f).apply {
-                duration = 140
-                interpolator = DecelerateInterpolator()
-                addUpdateListener { va ->
-                    applyColorInversion(target, va.animatedValue as Float)
-                }
-                start()
-            }
-        }
-    }
-
-    fun stopCallEffect() {
-        stopWatchdog()
-        if (!isCallingActive && currentInvertProgress <= 0.001f) return
-        isCallingActive = false
-
-        // Pastikan warna badge counter kembali ke warna kartu/tombol aslinya jika status aktif
-        if (currentStatus == "ACTIVE") {
-            val bgDrawable = counterTextView?.background
-            if (bgDrawable is android.graphics.drawable.GradientDrawable && originalCounterBgColor != Color.TRANSPARENT) {
-                bgDrawable.setColor(originalCounterBgColor)
-            }
-        }
-
-        val target = getTargetView() ?: return
-        invertAnimator?.cancel()
-
-        // Kembalikan warna ke normal secara mulus (180ms)
-        invertAnimator = ValueAnimator.ofFloat(currentInvertProgress, 0.0f).apply {
-            duration = 180
-            interpolator = AccelerateDecelerateInterpolator()
-            addUpdateListener { va ->
-                applyColorInversion(target, va.animatedValue as Float)
-            }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    applyColorInversion(target, 0.0f)
-                }
-                override fun onAnimationCancel(animation: Animator) {
-                    applyColorInversion(target, 0.0f)
-                }
-            })
-            start()
+        canvasView?.let { cv ->
+            statusOverlayHelper.updateStatusScreen(cv, currentStatus, currentCounter, currentCounterLabel, canvasW, canvasH, numberTextView, counterTextView)
         }
     }
 
@@ -862,27 +393,56 @@ class QueueZoneRenderer(
         startCallEffect(ticketNumber, counterName)
     }
 
-    fun getCurrentTicketNumber(): String = "$currentPrefix-${String.format(java.util.Locale.US, "%03d", currentSequence)}"
-    fun getCurrentCounterName(): String = currentCounter
+    fun startCallEffect(ticketNumber: String, counterName: String) {
+        val target = parentZoneView ?: canvasView ?: return
+        callbacks.onCallAudioStarted()
+        visualEffectHelper.startCallEffect(target) {
+            applyDisplayText(ticketNumber, counterName)
+        }
+    }
+
+    fun stopCallEffect() {
+        val target = parentZoneView ?: canvasView ?: return
+        visualEffectHelper.stopCallEffect(target) {
+            if (currentStatus == "ACTIVE") {
+                val bg = counterTextView?.background as? GradientDrawable
+                if (bg != null && originalCounterBgColor != Color.TRANSPARENT) {
+                    bg.setColor(originalCounterBgColor)
+                }
+            }
+            callbacks.onCallAudioFinished()
+        }
+    }
+
+    private fun resolveGravity(align: String): Int = when (align.lowercase()) {
+        "left", "start" -> Gravity.START or Gravity.CENTER_VERTICAL
+        "right", "end" -> Gravity.END or Gravity.CENTER_VERTICAL
+        else -> Gravity.CENTER
+    }
+
+    private fun resolveTypeface(weight: String): Typeface = when (weight.lowercase()) {
+        "bold", "700", "800", "900" -> Typeface.DEFAULT_BOLD
+        else -> Typeface.DEFAULT
+    }
 
     private fun parseColor(colorStr: String, fallback: Int): Int {
         if (colorStr.isBlank() || colorStr.equals("transparent", ignoreCase = true)) return Color.TRANSPARENT
         val trimmed = colorStr.trim()
         if (trimmed.startsWith("#")) {
-            return try { Color.parseColor(trimmed) } catch (_: Exception) { fallback }
+            return runCatching { Color.parseColor(trimmed) }.getOrDefault(fallback)
         }
         if (trimmed.startsWith("rgba", ignoreCase = true)) {
-            try {
+            return runCatching {
                 val parts = trimmed.substringAfter("(").substringBefore(")").split(",")
                 if (parts.size >= 4) {
                     val r = parts[0].trim().toInt()
                     val g = parts[1].trim().toInt()
                     val b = parts[2].trim().toInt()
                     val a = (parts[3].trim().toFloat() * 255).toInt().coerceIn(0, 255)
-                    return Color.argb(a, r, g, b)
-                }
-            } catch (_: Exception) {}
+                    Color.argb(a, r, g, b)
+                } else fallback
+            }.getOrDefault(fallback)
         }
-        return try { Color.parseColor(trimmed) } catch (_: Exception) { fallback }
+        return runCatching { Color.parseColor(trimmed) }.getOrDefault(fallback)
     }
 }
