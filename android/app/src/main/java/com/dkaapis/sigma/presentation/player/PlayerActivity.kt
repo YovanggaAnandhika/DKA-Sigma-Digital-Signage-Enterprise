@@ -289,7 +289,7 @@ class PlayerActivity : AppCompatActivity() {
                                 android.util.Log.w("PlayerActivity", "Engine TTS lokal tidak mendukung Bahasa Indonesia atau Locale default")
                             }
                         }
-                        textToSpeech?.setSpeechRate(0.92f)
+                        textToSpeech?.setSpeechRate(1.15f)
                         textToSpeech?.setPitch(1.0f)
 
                         textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
@@ -477,8 +477,8 @@ class PlayerActivity : AppCompatActivity() {
                 if (currentSpeechGeneration != expectedGen || Thread.currentThread().isInterrupted) return@Thread
 
                 val sampleRate = 44100
-                val dur1 = 0.40 // Ding (880 Hz / A5)
-                val dur2 = 0.60 // Dong (587.33 Hz / D5)
+                val dur1 = 0.28 // Ding (880 Hz / A5)
+                val dur2 = 0.42 // Dong (587.33 Hz / D5)
                 val totalSamples = ((dur1 + dur2) * sampleRate).toInt()
                 val samples = ShortArray(totalSamples)
 
@@ -540,7 +540,7 @@ class PlayerActivity : AppCompatActivity() {
                 track.play()
                 track.write(samples, 0, samples.size)
                 playedSuccessfully = true
-                Thread.sleep(((dur1 + dur2) * 1000).toLong() + 150)
+                Thread.sleep(((dur1 + dur2) * 1000).toLong() + 60)
             } catch (e: InterruptedException) {
                 return@Thread
             } catch (e: Exception) {
@@ -612,8 +612,8 @@ class PlayerActivity : AppCompatActivity() {
                     .replace("LOKET 0", "Loket ")
                     .replace("LOKET ", "Loket ")
 
-                val prefixIntro = if (isRecall) "Panggilan ulang... Nomor antrian... " else "Nomor antrian... "
-                val utteranceText = "$prefixIntro$prefix... $spokenDigits... Silakan menuju... $counterSpoken"
+                val prefixIntro = if (isRecall) "Panggilan ulang, nomor antrian " else "Nomor antrian "
+                val utteranceText = "$prefixIntro$prefix, $spokenDigits, silakan menuju $counterSpoken"
                 android.util.Log.i("PlayerActivity", "Chime & TTS [gen=$thisGen]: $utteranceText (isRecall=$isRecall)")
 
                 // Putar Bell Chime Ding-Dong dulu, lalu lanjutkan pengucapan suara TTS
@@ -721,6 +721,9 @@ class PlayerActivity : AppCompatActivity() {
                     true
                 }
                 prepare()
+                try {
+                    playbackParams = playbackParams.setSpeed(1.15f)
+                } catch (_: Exception) {}
                 start()
             }
             activeTtsPlayer = mp
