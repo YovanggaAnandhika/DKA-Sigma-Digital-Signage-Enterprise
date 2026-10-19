@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { ArrowLeft, Save, Layout, MessageSquare, Users, Volume2, RefreshCw, Maximize, Minimize } from 'lucide-react';
+import { ArrowLeft, Save, Layout, MessageSquare, Users, Volume2, RefreshCw, Maximize, Minimize, PlaySquare } from 'lucide-react';
 import { useAppContext } from '@/components/AppContext';
 import { useQueueEditor } from '../context/QueueEditorContext';
 
@@ -47,6 +47,11 @@ const TabAudioTab = dynamic(() => import('./tabs/TabAudioTab'), {
   loading: () => <TabLoadingSkeleton label="Memuat pengaturan audio chime..." />,
 });
 
+const TabEditorControllTab = dynamic(() => import('./tabs/TabEditorControllTab'), {
+  ssr: false,
+  loading: () => <TabLoadingSkeleton label="Memuat konsol pemanggil antrian..." />,
+});
+
 export default function QueueEditorShell({ activeTab, children }: { activeTab: string; children?: React.ReactNode }) {
   const { queue, updateField, saveQueue, saving, isNew, loading, sectors, selectSector } = useQueueEditor();
   const { isFullscreen, setFullscreen } = useAppContext();
@@ -63,10 +68,11 @@ export default function QueueEditorShell({ activeTab, children }: { activeTab: s
   const counterLabel = queue?.counterLabel || 'Loket';
 
   const tabs = [
+    { id: 'controll', label: 'Konsol & Monitor', icon: PlaySquare },
     { id: 'layout', label: 'Tata Letak', icon: Layout },
     { id: 'marquee', label: 'Running Text', icon: MessageSquare },
     { id: 'counters', label: `Daftar ${counterLabel}`, icon: Users },
-    { id: 'audio', label: 'Audio & Chime', icon: Volume2 },
+    { id: 'audio', label: 'Audio & TTS', icon: Volume2 },
   ];
 
   if (loading) {
@@ -271,11 +277,12 @@ export default function QueueEditorShell({ activeTab, children }: { activeTab: s
           <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}>{children}</div>
         ) : (
           <>
+            {activeTab === 'controll' && <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}><TabEditorControllTab /></div>}
             {activeTab === 'layout' && <TabLayoutTab />}
             {activeTab === 'marquee' && <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}><TabMarqueeTab /></div>}
             {activeTab === 'counters' && <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}><TabCountersTab /></div>}
             {activeTab === 'audio' && <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}><TabAudioTab /></div>}
-            {!['layout', 'marquee', 'counters', 'audio'].includes(activeTab) && <TabLayoutTab />}
+            {!['controll', 'layout', 'marquee', 'counters', 'audio'].includes(activeTab) && <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}><TabEditorControllTab /></div>}
           </>
         )}
       </div>
