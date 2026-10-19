@@ -50,11 +50,34 @@ export default function TabAudioTab() {
     updateField('ttsTemplateBreak', preset.ttsTemplateBreak);
   };
 
+  const [activeTtsField, setActiveTtsField] = useState<'ttsTemplateCall' | 'ttsTemplateRecall' | 'ttsTemplateBreak'>('ttsTemplateCall');
+
+  const AVAILABLE_TTS_VARIABLES = [
+    { tag: '{ticket_label}', desc: 'Label' },
+    { tag: '{ticket_number}', desc: 'No. Tiket' },
+    { tag: '{counter_label}', desc: 'Label Pos' },
+    { tag: '{counter_name}', desc: 'Nama Pos' },
+    { tag: '{petugas}', desc: 'Petugas' },
+    { tag: '{queue_name}', desc: 'Layanan' },
+    { tag: '{salam}', desc: 'Salam' },
+    { tag: '{ticket_prefix}', desc: 'Awalan' },
+    { tag: '{counter_number}', desc: 'No. Pos' },
+    { tag: '{waiting_count}', desc: 'Sisa' },
+  ];
+
+  const handleInsertVariable = (tag: string) => {
+    const currentVal = (queue[activeTtsField] as string) || '';
+    const newVal = currentVal ? `${currentVal} ${tag}` : tag;
+    updateField(activeTtsField, newVal);
+  };
+
   const handleTestTtsVoice = () => {
     setIsTestingTts(true);
+    const activeCounterObj = queue.counters?.find((c) => c.counterName === queue.currentCounter) || queue.counters?.[0];
+    const testCounterName = activeCounterObj?.counterName || `${queue.counterLabel || 'Loket'} 1`;
     speakQueueAnnouncement(
       'A-005',
-      `${queue.counterLabel || 'Loket'} 1`,
+      testCounterName,
       false,
       () => setIsTestingTts(false),
       queue
@@ -312,12 +335,13 @@ export default function TabAudioTab() {
             <input
               type="text"
               value={queue.ttsTemplateCall || '{ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}'}
+              onFocus={() => setActiveTtsField('ttsTemplateCall')}
               onChange={(e) => updateField('ttsTemplateCall', e.target.value)}
               style={{
                 width: '100%',
                 backgroundColor: 'var(--input-bg)',
                 color: 'var(--text-primary)',
-                border: '1px solid var(--input-border)',
+                border: activeTtsField === 'ttsTemplateCall' ? '1px solid var(--primary-500)' : '1px solid var(--input-border)',
                 borderRadius: '6px',
                 padding: '7px 10px',
                 fontSize: '0.8125rem',
@@ -333,12 +357,13 @@ export default function TabAudioTab() {
             <input
               type="text"
               value={queue.ttsTemplateRecall || 'Panggilan ulang, {ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}'}
+              onFocus={() => setActiveTtsField('ttsTemplateRecall')}
               onChange={(e) => updateField('ttsTemplateRecall', e.target.value)}
               style={{
                 width: '100%',
                 backgroundColor: 'var(--input-bg)',
                 color: 'var(--text-primary)',
-                border: '1px solid var(--input-border)',
+                border: activeTtsField === 'ttsTemplateRecall' ? '1px solid var(--primary-500)' : '1px solid var(--input-border)',
                 borderRadius: '6px',
                 padding: '7px 10px',
                 fontSize: '0.8125rem',
@@ -354,12 +379,13 @@ export default function TabAudioTab() {
             <input
               type="text"
               value={queue.ttsTemplateBreak || '{counter_label} {counter_name} sedang istirahat'}
+              onFocus={() => setActiveTtsField('ttsTemplateBreak')}
               onChange={(e) => updateField('ttsTemplateBreak', e.target.value)}
               style={{
                 width: '100%',
                 backgroundColor: 'var(--input-bg)',
                 color: 'var(--text-primary)',
-                border: '1px solid var(--input-border)',
+                border: activeTtsField === 'ttsTemplateBreak' ? '1px solid var(--primary-500)' : '1px solid var(--input-border)',
                 borderRadius: '6px',
                 padding: '7px 10px',
                 fontSize: '0.8125rem',
@@ -368,23 +394,42 @@ export default function TabAudioTab() {
             />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
-            <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Variabel:</span>
-            {['{ticket_label}', '{ticket_number}', '{counter_label}', '{counter_name}', '{petugas}', '{operator_name}'].map((v) => (
-              <code
-                key={v}
-                style={{
-                  fontSize: '0.6875rem',
-                  padding: '1px 6px',
-                  borderRadius: '4px',
-                  backgroundColor: 'var(--bg-surface-elevated)',
-                  border: '1px solid var(--border-subtle)',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                {v}
-              </code>
-            ))}
+          {/* Variable helper tags */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                Variabel Tersedia (klik untuk menyisipkan ke naskah aktif):
+              </span>
+              <span style={{ fontSize: '0.6875rem', color: 'var(--primary-400)', fontWeight: 600 }}>
+                Target: {activeTtsField === 'ttsTemplateCall' ? 'Panggilan Baru' : activeTtsField === 'ttsTemplateRecall' ? 'Panggilan Ulang' : 'Istirahat'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              {AVAILABLE_TTS_VARIABLES.map((v) => (
+                <button
+                  key={v.tag}
+                  type="button"
+                  onClick={() => handleInsertVariable(v.tag)}
+                  title={`Klik untuk menambahkan ${v.tag} (${v.desc})`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.6875rem',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    backgroundColor: 'var(--bg-surface-elevated)',
+                    border: '1px solid var(--border-subtle)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--primary-400)' }}>{v.tag}</span>
+                  <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>({v.desc})</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>

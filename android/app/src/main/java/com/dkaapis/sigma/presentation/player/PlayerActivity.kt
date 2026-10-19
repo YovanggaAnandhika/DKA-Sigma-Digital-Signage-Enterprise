@@ -651,6 +651,12 @@ class PlayerActivity : AppCompatActivity() {
                     }
                 }
 
+                val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                val timeGreeting = if (hour in 4..10) "selamat pagi" else if (hour in 11..14) "selamat siang" else if (hour in 15..17) "selamat sore" else "selamat malam"
+                val timePeriod = if (hour in 4..10) "pagi" else if (hour in 11..14) "siang" else if (hour in 15..17) "sore" else "malam"
+                val queueName = qObj.optString("name", "")
+                val waitingCount = qObj.optInt("waitingTicketsCount", qObj.optInt("waiting_tickets_count", 0))
+
                 val formattedTicket = if (prefix.isNotBlank()) "$prefix, $spokenDigits" else spokenDigits
                 val counterNumOnly = counterName.filter { it.isDigit() }.ifEmpty { "1" }
 
@@ -664,6 +670,12 @@ class PlayerActivity : AppCompatActivity() {
                     .replace("{counter_number}", counterNumOnly)
                     .replace("{operator_name}", operatorName)
                     .replace("{petugas}", operatorName)
+                    .replace("{queue_name}", queueName)
+                    .replace("{nama_antrian}", queueName)
+                    .replace("{salam}", timeGreeting)
+                    .replace("{waktu}", timePeriod)
+                    .replace("{waiting_count}", waitingCount.toString())
+                    .replace("{sisa_antrian}", waitingCount.toString())
                     .replace(Regex("\\s+"), " ")
                     .trim()
 
@@ -719,11 +731,22 @@ class PlayerActivity : AppCompatActivity() {
                     else -> "{counter_label} {counter_name} siap melayani"
                 }
 
+                val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                val timeGreeting = if (hour in 4..10) "selamat pagi" else if (hour in 11..14) "selamat siang" else if (hour in 15..17) "selamat sore" else "selamat malam"
+                val timePeriod = if (hour in 4..10) "pagi" else if (hour in 11..14) "siang" else if (hour in 15..17) "sore" else "malam"
+                val queueName = qObj.optString("name", "")
+                val counterNumOnly = counterName.filter { it.isDigit() }.ifEmpty { "1" }
+
                 val utteranceText = rawTemplate
                     .replace("{counter_label}", counterLabel)
                     .replace("{counter_name}", counterSpoken)
+                    .replace("{counter_number}", counterNumOnly)
                     .replace("{operator_name}", opName)
                     .replace("{petugas}", opName)
+                    .replace("{queue_name}", queueName)
+                    .replace("{nama_antrian}", queueName)
+                    .replace("{salam}", timeGreeting)
+                    .replace("{waktu}", timePeriod)
                     .replace(Regex("\\s+"), " ")
                     .trim()
 

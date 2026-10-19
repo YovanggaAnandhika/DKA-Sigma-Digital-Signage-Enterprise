@@ -91,6 +91,7 @@ export interface QueueDisplayConfig {
   ttsTemplateRecall?: string;
   ttsTemplateBreak?: string;
   currentSequence?: number;
+  waitingTicketsCount?: number;
   items: QueueLayoutItem[];
   counters: QueueCounter[];
   audios: QueueAudio[];
@@ -389,6 +390,12 @@ export function buildQueueSpokenText(
   const counterObj = queueConfig?.counters?.find((c) => c.counterName === counterName);
   const operatorName = counterObj?.operatorName || '';
 
+  const hour = new Date().getHours();
+  const timeGreeting = hour >= 4 && hour < 11 ? 'selamat pagi' : hour >= 11 && hour < 15 ? 'selamat siang' : hour >= 15 && hour < 18 ? 'selamat sore' : 'selamat malam';
+  const timePeriod = hour >= 4 && hour < 11 ? 'pagi' : hour >= 11 && hour < 15 ? 'siang' : hour >= 15 && hour < 18 ? 'sore' : 'malam';
+  const queueName = queueConfig?.name || '';
+  const waitingCount = queueConfig?.waitingTicketsCount ?? 0;
+
   const ticketLabel = queueConfig?.ticketLabel || 'Nomor Antrian';
   const counterLabel = queueConfig?.counterLabel || 'Loket';
   const rawTemplate = isRecall
@@ -407,6 +414,12 @@ export function buildQueueSpokenText(
     .replaceAll('{counter_number}', counterName.replace(/[^0-9]/g, '') || '1')
     .replaceAll('{operator_name}', operatorName)
     .replaceAll('{petugas}', operatorName)
+    .replaceAll('{queue_name}', queueName)
+    .replaceAll('{nama_antrian}', queueName)
+    .replaceAll('{salam}', timeGreeting)
+    .replaceAll('{waktu}', timePeriod)
+    .replaceAll('{waiting_count}', String(waitingCount))
+    .replaceAll('{sisa_antrian}', String(waitingCount))
     .replaceAll(/\s+/g, ' ')
     .trim();
 }
@@ -565,13 +578,23 @@ export function speakCounterStatusAnnouncement(
   const cleanCounterName = (counterName || 'Loket 1')
     .replace(/LOKET\s*0+(\d+)/gi, 'Loket $1')
     .replace(/LOKET\s*(\d+)/gi, 'Loket $1');
+  const hour = new Date().getHours();
+  const timeGreeting = hour >= 4 && hour < 11 ? 'selamat pagi' : hour >= 11 && hour < 15 ? 'selamat siang' : hour >= 15 && hour < 18 ? 'selamat sore' : 'selamat malam';
+  const timePeriod = hour >= 4 && hour < 11 ? 'pagi' : hour >= 11 && hour < 15 ? 'siang' : hour >= 15 && hour < 18 ? 'sore' : 'malam';
+  const queueName = queueConfig?.name || '';
+
   let text = '';
   if (status === 'BREAK') {
     text = (queueConfig?.ttsTemplateBreak || '{counter_label} {counter_name} sedang istirahat')
       .replaceAll('{counter_label}', counterLabel)
       .replaceAll('{counter_name}', cleanCounterName)
+      .replaceAll('{counter_number}', counterName.replace(/[^0-9]/g, '') || '1')
       .replaceAll('{operator_name}', operatorName)
-      .replaceAll('{petugas}', operatorName);
+      .replaceAll('{petugas}', operatorName)
+      .replaceAll('{queue_name}', queueName)
+      .replaceAll('{nama_antrian}', queueName)
+      .replaceAll('{salam}', timeGreeting)
+      .replaceAll('{waktu}', timePeriod);
   } else if (status === 'LOCKED') {
     text = `${counterLabel} ${cleanCounterName} telah ditutup`;
   } else {

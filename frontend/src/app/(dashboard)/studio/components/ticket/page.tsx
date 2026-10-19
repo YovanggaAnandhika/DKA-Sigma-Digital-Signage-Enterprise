@@ -561,6 +561,28 @@ export default function TicketPage() {
   });
   const [isTestingTts, setIsTestingTts] = useState(false);
   const [isSavingSector, setIsSavingSector] = useState(false);
+  const [activeTtsField, setActiveTtsField] = useState<'ttsTemplateCall' | 'ttsTemplateRecall' | 'ttsTemplateBreak'>('ttsTemplateCall');
+
+  const AVAILABLE_TTS_VARIABLES = [
+    { tag: '{ticket_label}', desc: 'Label' },
+    { tag: '{ticket_number}', desc: 'No. Tiket' },
+    { tag: '{counter_label}', desc: 'Label Pos' },
+    { tag: '{counter_name}', desc: 'Nama Pos' },
+    { tag: '{petugas}', desc: 'Petugas' },
+    { tag: '{queue_name}', desc: 'Layanan' },
+    { tag: '{salam}', desc: 'Salam' },
+    { tag: '{ticket_prefix}', desc: 'Awalan' },
+    { tag: '{counter_number}', desc: 'No. Pos' },
+    { tag: '{waiting_count}', desc: 'Sisa' },
+  ];
+
+  const handleInsertVariable = (tag: string) => {
+    setSectorForm((prev) => {
+      const currentVal = prev[activeTtsField] || '';
+      const newVal = currentVal ? `${currentVal} ${tag}` : tag;
+      return { ...prev, [activeTtsField]: newVal };
+    });
+  };
 
   const handleOpenSectorModal = () => {
     if (!selectedQueue) return;
@@ -604,14 +626,22 @@ export default function TicketPage() {
 
   const handleTestTtsVoice = () => {
     setIsTestingTts(true);
+    const activeCounterObj = selectedQueue?.counters?.find((c) => c.counterName === selectedQueue.currentCounter) || selectedQueue?.counters?.[0];
+    const testCounterName = activeCounterObj?.counterName || `${sectorForm.counterLabel} 1`;
     const sampleConfig: Partial<QueueDisplayConfig> = {
+      name: selectedQueue?.name || 'Layar Antrian',
       prefix: selectedQueue?.prefix || 'A',
       ticketLabel: sectorForm.ticketLabel,
       counterLabel: sectorForm.counterLabel,
       ttsTemplateCall: sectorForm.ttsTemplateCall,
       ttsTemplateRecall: sectorForm.ttsTemplateRecall,
+      ttsTemplateBreak: sectorForm.ttsTemplateBreak,
+      counters: selectedQueue?.counters && selectedQueue.counters.length > 0 ? selectedQueue.counters : [
+        { id: 'c-test', counterNumber: 1, counterName: testCounterName, operatorName: 'Ryan Pratama', isActive: true, status: 'ACTIVE', statusNote: '' }
+      ],
+      waitingTicketsCount: 3,
     };
-    speakQueueAnnouncement('A-005', `${sectorForm.counterLabel} 1`, false, () => setIsTestingTts(false), sampleConfig);
+    speakQueueAnnouncement('A-005', testCounterName, false, () => setIsTestingTts(false), sampleConfig);
   };
 
   const handleSaveSectorSettings = async () => {
@@ -1989,12 +2019,13 @@ export default function TicketPage() {
                 <input
                   type="text"
                   value={sectorForm.ttsTemplateCall}
+                  onFocus={() => setActiveTtsField('ttsTemplateCall')}
                   onChange={(e) => setSectorForm({ ...sectorForm, ttsTemplateCall: e.target.value })}
                   style={{
                     width: '100%',
                     backgroundColor: 'var(--input-bg)',
                     color: 'var(--text-primary)',
-                    border: '1px solid var(--input-border)',
+                    border: activeTtsField === 'ttsTemplateCall' ? '1px solid var(--primary-500)' : '1px solid var(--input-border)',
                     borderRadius: '6px',
                     padding: '7px 10px',
                     fontSize: '0.8125rem',
@@ -2010,12 +2041,13 @@ export default function TicketPage() {
                 <input
                   type="text"
                   value={sectorForm.ttsTemplateRecall}
+                  onFocus={() => setActiveTtsField('ttsTemplateRecall')}
                   onChange={(e) => setSectorForm({ ...sectorForm, ttsTemplateRecall: e.target.value })}
                   style={{
                     width: '100%',
                     backgroundColor: 'var(--input-bg)',
                     color: 'var(--text-primary)',
-                    border: '1px solid var(--input-border)',
+                    border: activeTtsField === 'ttsTemplateRecall' ? '1px solid var(--primary-500)' : '1px solid var(--input-border)',
                     borderRadius: '6px',
                     padding: '7px 10px',
                     fontSize: '0.8125rem',
@@ -2031,12 +2063,13 @@ export default function TicketPage() {
                 <input
                   type="text"
                   value={sectorForm.ttsTemplateBreak}
+                  onFocus={() => setActiveTtsField('ttsTemplateBreak')}
                   onChange={(e) => setSectorForm({ ...sectorForm, ttsTemplateBreak: e.target.value })}
                   style={{
                     width: '100%',
                     backgroundColor: 'var(--input-bg)',
                     color: 'var(--text-primary)',
-                    border: '1px solid var(--input-border)',
+                    border: activeTtsField === 'ttsTemplateBreak' ? '1px solid var(--primary-500)' : '1px solid var(--input-border)',
                     borderRadius: '6px',
                     padding: '7px 10px',
                     fontSize: '0.8125rem',
@@ -2046,23 +2079,41 @@ export default function TicketPage() {
               </div>
 
               {/* Variable helper tags */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
-                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Variabel tersedia:</span>
-                {['{ticket_label}', '{ticket_number}', '{counter_label}', '{counter_name}'].map((v) => (
-                  <code
-                    key={v}
-                    style={{
-                      fontSize: '0.6875rem',
-                      padding: '1px 6px',
-                      borderRadius: '4px',
-                      backgroundColor: 'var(--bg-surface-elevated)',
-                      border: '1px solid var(--border-subtle)',
-                      color: 'var(--text-secondary)',
-                    }}
-                  >
-                    {v}
-                  </code>
-                ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                    Variabel Tersedia (klik untuk menyisipkan ke naskah aktif):
+                  </span>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--primary-400)', fontWeight: 600 }}>
+                    Target: {activeTtsField === 'ttsTemplateCall' ? 'Panggilan Baru' : activeTtsField === 'ttsTemplateRecall' ? 'Panggilan Ulang' : 'Istirahat'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  {AVAILABLE_TTS_VARIABLES.map((v) => (
+                    <button
+                      key={v.tag}
+                      type="button"
+                      onClick={() => handleInsertVariable(v.tag)}
+                      title={`Klik untuk menambahkan ${v.tag} (${v.desc})`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '0.6875rem',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        backgroundColor: 'var(--bg-surface-elevated)',
+                        border: '1px solid var(--border-subtle)',
+                        color: 'var(--text-primary)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--primary-400)' }}>{v.tag}</span>
+                      <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>({v.desc})</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
