@@ -20,12 +20,15 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
+import android.view.KeyEvent
+import android.view.MotionEvent
 import com.dkaapis.sigma.data.local.AnalyticsLocalBuffer
 import com.dkaapis.sigma.data.analytics.AnalyticsSyncManager
 import com.dkaapis.sigma.data.analytics.DeviceHardwareProfiler
 import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
 import com.dkaapis.sigma.data.local.ManifestStorage
 import com.dkaapis.sigma.data.local.MediaDiskCache
+import com.dkaapis.sigma.data.local.PlayerSettingsStorage
 import com.dkaapis.sigma.data.local.ServerConfig
 import com.dkaapis.sigma.data.local.TokenStorage
 import com.dkaapis.sigma.data.repository.DeviceRepositoryImpl
@@ -43,6 +46,9 @@ import com.dkaapis.sigma.presentation.player.audio.model.QueueSpeechPayload
 import com.dkaapis.sigma.presentation.player.canvas.PlayerZoneManager
 import com.dkaapis.sigma.presentation.player.canvas.SignageCanvasLayout
 import com.dkaapis.sigma.presentation.player.canvas.model.ZoneRenderContextPayload
+import com.dkaapis.sigma.presentation.player.gesture.TwoFingerSwipeDetector
+import com.dkaapis.sigma.presentation.player.settings.PlayerSettingsDialog
+import com.dkaapis.sigma.presentation.player.settings.model.PlayerSettingsPayload
 import com.dkaapis.sigma.presentation.player.stream.DeviceSseEventParser
 import com.dkaapis.sigma.presentation.player.stream.OnDeviceEventListener
 import com.dkaapis.sigma.presentation.player.stream.PlayerStreamManager
@@ -68,6 +74,8 @@ import java.util.concurrent.TimeUnit
 class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     private lateinit var viewModel: PlayerViewModel
+    private lateinit var tokenStorage: TokenStorage
+    private lateinit var playerSettingsStorage: PlayerSettingsStorage
     private lateinit var deviceRepo: DeviceRepositoryImpl
     private lateinit var storageRepo: MediaStorageRepositoryImpl
 
@@ -75,6 +83,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private lateinit var telemetryManager: PlayerTelemetryManager
     private lateinit var streamManager: PlayerStreamManager
     private lateinit var zoneManager: PlayerZoneManager
+    private lateinit var swipeDetector: TwoFingerSwipeDetector
+    private lateinit var settingsDialog: PlayerSettingsDialog
 
     private lateinit var canvasLayout: SignageCanvasLayout
     private lateinit var loadingOverlay: FrameLayout
@@ -127,7 +137,13 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     }
 
     private fun initDependencies() {
-        val tokenStorage = TokenStorage(this)
+        tokenStorage = TokenStorage(this)
+        playerSettingsStorage = PlayerSettingsStorage(this)
+        settingsDialog = PlayerSettingsDialog(this)
+        swipeDetector = TwoFingerSwipeDetector(this) {
+            openSettingsBottomSheet()
+        }
+
         val channelFactory = GrpcChannelFactory(this)
         deviceRepo = DeviceRepositoryImpl(this, tokenStorage, channelFactory)
         storageRepo = MediaStorageRepositoryImpl(MediaDiskCache(this))
@@ -279,7 +295,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
                         val devId = deviceRepo.getSavedDeviceId()
                         val now = System.currentTimeMillis()
-                        if (!devId.isNullOrEmpty() && (now - lastDownloadProgressReportTime >= 1000L || state.progressPercent == 100)) {
+                        val canReportProgress = playerSettingsStorage.isProgressUploadEnabled()
+                        if (canReportProgress && !devId.isNullOrEmpty() && (now - lastDownloadProgressReportTime >= 1000L || state.progressPercent == 100)) {
                             lastDownloadProgressReportTime = now
                             val baseUrl = ServerConfig.getHttpBaseUrl(this@PlayerActivity)
                             streamManager.broadcastDownloadProgress(
@@ -530,6 +547,44 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         super.onLowMemory()
         runCatching { coil.Coil.imageLoader(this).memoryCache?.clear() }
         System.gc()
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        swipeDetector.onTouchEvent(ev)
+        return super.dispatchTouchEvent(ev)
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_SETTINGS) {
+            openSettingsBottomSheet()
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    private fun openSettingsBottomSheet() {
+        settingsDialog.show(
+            PlayerSettingsPayload(
+                deviceId = deviceRepo.getSavedDeviceId().orEmpty(),
+                serverHost = ServerConfig.getHost(this),
+                serverGrpcPort = ServerConfig.getGrpcPort(this),
+                isProgressUploadEnabled = playerSettingsStorage.isProgressUploadEnabled(),
+                onProgressUploadToggled = { enabled ->
+                    playerSettingsStorage.setProgressUploadEnabled(enabled)
+                },
+                onUnbindRequested = {
+                    unbindDeviceAndExit()
+                }
+            )
+        )
+    }
+
+    private fun unbindDeviceAndExit() {
+        tokenStorage.clear()
+        WatchdogService.setPlaybackActive(this, false)
+        runCatching { stopService(Intent(this, PlayerForegroundService::class.java)) }
+        startActivity(Intent(this, PairingActivity::class.java))
+        finish()
     }
 
     override fun onDestroy() {
