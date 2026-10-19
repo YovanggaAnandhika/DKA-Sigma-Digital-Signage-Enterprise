@@ -66,18 +66,25 @@ class ResumableDownloader(
             RandomAccessFile(partFile, "rw").use { randomAccess ->
                 randomAccess.seek(existingBytes)
 
-                val buffer = ByteArray(32768)
+                val buffer = ByteArray(65536)
                 var bytesRead: Int
                 var currentBytes = existingBytes
                 val inputStream = body.byteStream()
+                var lastProgressEmitTime = 0L
 
                 inputStream.use { stream ->
                     while (stream.read(buffer).also { bytesRead = it } != -1) {
                         randomAccess.write(buffer, 0, bytesRead)
                         currentBytes += bytesRead
-                        onProgress(currentBytes, totalBytes)
+
+                        val now = System.currentTimeMillis()
+                        if (now - lastProgressEmitTime >= 100L || currentBytes >= totalBytes) {
+                            lastProgressEmitTime = now
+                            onProgress(currentBytes, totalBytes)
+                        }
                     }
                 }
+                onProgress(currentBytes, totalBytes)
 
                 try {
                     randomAccess.fd.sync()

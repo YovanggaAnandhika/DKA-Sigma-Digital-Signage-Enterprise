@@ -64,25 +64,32 @@ class DownloadAndVerifyMediaUseCase(
 
         // 3. Unduh chunk demi chunk secara real-time untuk aset yang belum ada/rusak
         val totalToDownload = uncachedAssets.size
-        uncachedAssets.forEachIndexed { index, asset ->
-            var lastEmittedPercent = -1
+        val totalDownloadBytes = uncachedAssets.sumOf { it.fileSizeBytes }.let { if (it > 0) it else 1L }
+        var accumulatedDownloadedBytes = 0L
+        var lastEmittedPercent = -1
 
-            val downloadResult = storageRepository.downloadAssetResumable(asset) { downloaded, totalBytes ->
-                if (totalBytes > 0) {
-                    val currentPercent = ((downloaded * 100) / totalBytes).toInt()
-                    if (currentPercent != lastEmittedPercent) {
-                        lastEmittedPercent = currentPercent
-                        trySend(
-                            DownloadState.Progress(
-                                assetIndex = index + 1,
-                                totalAssets = totalToDownload,
-                                percent = currentPercent,
-                                downloadedBytes = downloaded,
-                                totalBytes = totalBytes,
-                                currentFileName = asset.localFilename
-                            )
+        uncachedAssets.forEachIndexed { index, asset ->
+            val assetExpectedSize = if (asset.fileSizeBytes > 0) asset.fileSizeBytes else 1L
+            var currentFileDownloaded = 0L
+
+            val downloadResult = storageRepository.downloadAssetResumable(asset) { downloaded, _ ->
+                currentFileDownloaded = downloaded
+                val overallDownloaded = (accumulatedDownloadedBytes + currentFileDownloaded).coerceAtMost(totalDownloadBytes)
+                val rawPercent = ((overallDownloaded * 100) / totalDownloadBytes).toInt()
+                val monotonicPercent = maxOf(lastEmittedPercent, minOf(rawPercent, 99))
+
+                if (monotonicPercent > lastEmittedPercent) {
+                    lastEmittedPercent = monotonicPercent
+                    trySend(
+                        DownloadState.Progress(
+                            assetIndex = index + 1,
+                            totalAssets = totalToDownload,
+                            percent = monotonicPercent,
+                            downloadedBytes = overallDownloaded,
+                            totalBytes = totalDownloadBytes,
+                            currentFileName = asset.localFilename
                         )
-                    }
+                    )
                 }
             }
 
@@ -90,14 +97,19 @@ class DownloadAndVerifyMediaUseCase(
                 val file = downloadResult.getOrThrow()
                 val isHashValid = storageRepository.verifyFileSha256(file, asset.sha256Hash)
                 if (isHashValid) {
+                    accumulatedDownloadedBytes += file.length().coerceAtLeast(assetExpectedSize)
+                    val overallDownloaded = accumulatedDownloadedBytes.coerceAtMost(totalDownloadBytes)
+                    val stepPercent = ((overallDownloaded * 100) / totalDownloadBytes).toInt()
+                    lastEmittedPercent = maxOf(lastEmittedPercent, minOf(stepPercent, if (index + 1 == totalToDownload) 100 else 99))
+
                     trySend(DownloadState.AssetComplete(asset.copy(isCached = true, localPath = file.absolutePath)))
                     trySend(
                         DownloadState.Progress(
                             assetIndex = index + 1,
                             totalAssets = totalToDownload,
-                            percent = 100,
-                            downloadedBytes = file.length(),
-                            totalBytes = file.length(),
+                            percent = lastEmittedPercent,
+                            downloadedBytes = overallDownloaded,
+                            totalBytes = totalDownloadBytes,
                             currentFileName = asset.localFilename
                         )
                     )

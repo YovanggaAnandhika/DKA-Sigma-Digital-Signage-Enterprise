@@ -113,6 +113,7 @@ class PlayerActivity : AppCompatActivity() {
     private var currentSpeechGeneration: Long = 0L
     private var currentUtteranceId: String? = null
     private var speechTimeoutRunnable: Runnable? = null
+    private var lastDownloadProgressReportTime: Long = 0L
 
     private val watchdogHandler = Handler(Looper.getMainLooper())
     private val watchdogHeartbeatRunnable = object : Runnable {
@@ -1032,7 +1033,11 @@ class PlayerActivity : AppCompatActivity() {
                         loadingText.setTextColor(Color.WHITE)
                         subDetailText.setTextColor(Color.parseColor("#94A3B8"))
                         progressBar.isIndeterminate = false
-                        progressBar.progress = state.progressPercent
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                            progressBar.setProgress(state.progressPercent, true)
+                        } else {
+                            progressBar.progress = state.progressPercent
+                        }
 
                         val downloadedMb = String.format(java.util.Locale.US, "%.1f", state.downloadedBytes / (1024.0 * 1024.0))
                         val totalMb = String.format(java.util.Locale.US, "%.1f", state.totalBytes / (1024.0 * 1024.0))
@@ -1040,9 +1045,11 @@ class PlayerActivity : AppCompatActivity() {
                         loadingText.text = "Mengunduh Aset Media (${state.assetIndex}/${state.total}) • ${state.progressPercent}%"
                         subDetailText.text = "${state.currentFileName}\n[ ${downloadedMb} MB / ${totalMb} MB ]\nLokasi: /storage/emulated/0/Android/data/com.dkaapis.sigma/files/assets/"
 
-                        // Broadcast realtime download progress to CMS (Rollout page monitor)
+                        // Broadcast realtime download progress to CMS (Rollout page monitor) - Throttled 1x per detik
                         val devId = deviceRepo.getSavedDeviceId()
-                        if (!devId.isNullOrEmpty()) {
+                        val now = System.currentTimeMillis()
+                        if (!devId.isNullOrEmpty() && (now - lastDownloadProgressReportTime >= 1000L || state.progressPercent == 100)) {
+                            lastDownloadProgressReportTime = now
                             lifecycleScope.launch(Dispatchers.IO) {
                                 try {
                                     val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(this@PlayerActivity)
