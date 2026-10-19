@@ -386,6 +386,9 @@ export function buildQueueSpokenText(
     .replace(/LOKET\s*(\d+)/gi, 'Loket $1')
     .replace(/LOKET/gi, 'Loket');
 
+  const counterObj = queueConfig?.counters?.find((c) => c.counterName === counterName);
+  const operatorName = counterObj?.operatorName || '';
+
   const ticketLabel = queueConfig?.ticketLabel || 'Nomor Antrian';
   const counterLabel = queueConfig?.counterLabel || 'Loket';
   const rawTemplate = isRecall
@@ -402,6 +405,8 @@ export function buildQueueSpokenText(
     .replaceAll('{ticket_digits}', spokenDigits)
     .replaceAll('{counter_name}', counterSpoken)
     .replaceAll('{counter_number}', counterName.replace(/[^0-9]/g, '') || '1')
+    .replaceAll('{operator_name}', operatorName)
+    .replaceAll('{petugas}', operatorName)
     .replaceAll(/\s+/g, ' ')
     .trim();
 }
@@ -555,6 +560,8 @@ export function speakCounterStatusAnnouncement(
 ) {
   stopQueueAnnouncement();
   const counterLabel = queueConfig?.counterLabel || 'Loket';
+  const counterObj = queueConfig?.counters?.find((c) => c.counterName === counterName);
+  const operatorName = counterObj?.operatorName || '';
   const cleanCounterName = (counterName || 'Loket 1')
     .replace(/LOKET\s*0+(\d+)/gi, 'Loket $1')
     .replace(/LOKET\s*(\d+)/gi, 'Loket $1');
@@ -562,7 +569,9 @@ export function speakCounterStatusAnnouncement(
   if (status === 'BREAK') {
     text = (queueConfig?.ttsTemplateBreak || '{counter_label} {counter_name} sedang istirahat')
       .replaceAll('{counter_label}', counterLabel)
-      .replaceAll('{counter_name}', cleanCounterName);
+      .replaceAll('{counter_name}', cleanCounterName)
+      .replaceAll('{operator_name}', operatorName)
+      .replaceAll('{petugas}', operatorName);
   } else if (status === 'LOCKED') {
     text = `${counterLabel} ${cleanCounterName} telah ditutup`;
   } else {

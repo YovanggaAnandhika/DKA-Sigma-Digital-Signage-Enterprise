@@ -60,10 +60,12 @@ export default function QueueEditorShell({ activeTab, children }: { activeTab: s
     ? '/studio/components/ticket/create'
     : `/studio/components/ticket/${queue.id}/edit`;
 
+  const counterLabel = queue?.counterLabel || 'Loket';
+
   const tabs = [
     { id: 'layout', label: 'Tata Letak', icon: Layout },
     { id: 'marquee', label: 'Running Text', icon: MessageSquare },
-    { id: 'counters', label: 'Daftar Loket', icon: Users },
+    { id: 'counters', label: `Daftar ${counterLabel}`, icon: Users },
     { id: 'audio', label: 'Audio & Chime', icon: Volume2 },
   ];
 

@@ -1196,9 +1196,19 @@ export default function TicketPage() {
                             </span>
                           </td>
                           <td>
-                            <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                              {q.currentCounter}
-                            </span>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                                {q.currentCounter}
+                              </span>
+                              {(() => {
+                                const c = q.counters?.find((cnt) => cnt.counterName === q.currentCounter);
+                                return c?.operatorName ? (
+                                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                                    {c.operatorName}
+                                  </span>
+                                ) : null;
+                              })()}
+                            </div>
                           </td>
                           <td>
                             {(() => {
@@ -1415,23 +1425,27 @@ export default function TicketPage() {
                     </div>
                     {(() => {
                       const cObj = selectedQueue.counters?.find((c) => c.counterName === selectedQueue.currentCounter) || selectedQueue.counters?.[0];
-                      if (cObj?.status === 'BREAK') {
-                        return (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.4)', color: '#F59E0B', fontSize: '0.75rem', fontWeight: 700 }}>
-                            <Coffee size={12} />
-                            <span>ISTIRAHAT</span>
-                          </span>
-                        );
-                      }
-                      if (cObj?.status === 'LOCKED') {
-                        return (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#EF4444', fontSize: '0.75rem', fontWeight: 700 }}>
-                            <Lock size={12} />
-                            <span>TUTUP</span>
-                          </span>
-                        );
-                      }
-                      return null;
+                      return (
+                        <>
+                          {cObj?.status === 'BREAK' && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.4)', color: '#F59E0B', fontSize: '0.75rem', fontWeight: 700 }}>
+                              <Coffee size={12} />
+                              <span>ISTIRAHAT</span>
+                            </span>
+                          )}
+                          {cObj?.status === 'LOCKED' && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#EF4444', fontSize: '0.75rem', fontWeight: 700 }}>
+                              <Lock size={12} />
+                              <span>TUTUP</span>
+                            </span>
+                          )}
+                          {cObj?.operatorName && (
+                            <div style={{ width: '100%', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                              Petugas: <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{cObj.operatorName}</span>
+                            </div>
+                          )}
+                        </>
+                      );
                     })()}
                   </div>
 
@@ -1496,11 +1510,15 @@ export default function TicketPage() {
                       }}
                     >
                       {selectedQueue.counters && selectedQueue.counters.length > 0 ? (
-                        selectedQueue.counters.map((c) => (
-                          <option key={c.id || c.counterName} value={c.counterName}>
-                            {c.counterName} {c.status === 'BREAK' ? '⏸️ (Istirahat)' : c.status === 'LOCKED' ? '🔒 (Tutup)' : '🟢 (Aktif)'}
-                          </option>
-                        ))
+                        selectedQueue.counters.map((c) => {
+                          const statusIcon = c.status === 'BREAK' ? '⏸️ (Istirahat)' : c.status === 'LOCKED' ? '🔒 (Tutup)' : '🟢 (Aktif)';
+                          const opText = c.operatorName ? ` • ${c.operatorName}` : '';
+                          return (
+                            <option key={c.id || c.counterName} value={c.counterName}>
+                              {c.counterName}{opText} {statusIcon}
+                            </option>
+                          );
+                        })
                       ) : (
                         <>
                           <option value="LOKET 01">LOKET 01</option>
@@ -1518,7 +1536,14 @@ export default function TicketPage() {
                     const cObj = selectedQueue.counters?.find((c) => c.counterName === selectedQueue.currentCounter) || selectedQueue.counters?.[0];
                     const currStatus = cObj?.status || 'ACTIVE';
                     return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                      <>
+                        {cObj?.operatorName && (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 4px', fontSize: '0.75rem' }}>
+                            <span style={{ color: 'var(--text-muted)' }}>Petugas:</span>
+                            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{cObj.operatorName}</span>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                         <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)' }}>Status:</span>
                         <button
                           type="button"
@@ -1587,8 +1612,9 @@ export default function TicketPage() {
                           <span>Kunci</span>
                         </button>
                       </div>
-                    );
-                  })()}
+                    </>
+                  );
+                })()}
                 </div>
 
                 {/* Action Buttons: Mundur (-1), Ulang, Panggil Selanjutnya (+1) */}

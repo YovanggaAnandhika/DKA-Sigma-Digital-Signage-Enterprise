@@ -638,6 +638,19 @@ class PlayerActivity : AppCompatActivity() {
                         ?: qObj.optString("ttsTemplateCall", qObj.optString("tts_template_call", defaultCallTemplate)).ifBlank { defaultCallTemplate }
                 }
 
+                var operatorName = ""
+                val countersArr = qObj.optJSONArray("counters")
+                if (countersArr != null) {
+                    for (i in 0 until countersArr.length()) {
+                        val c = countersArr.optJSONObject(i)
+                        val cName = c?.optString("counterName", c.optString("counter_name", ""))
+                        if (cName.equals(counterName, ignoreCase = true)) {
+                            operatorName = c?.optString("operatorName", c.optString("operator_name", "")) ?: ""
+                            break
+                        }
+                    }
+                }
+
                 val formattedTicket = if (prefix.isNotBlank()) "$prefix, $spokenDigits" else spokenDigits
                 val counterNumOnly = counterName.filter { it.isDigit() }.ifEmpty { "1" }
 
@@ -649,6 +662,8 @@ class PlayerActivity : AppCompatActivity() {
                     .replace("{ticket_digits}", spokenDigits)
                     .replace("{counter_name}", counterSpoken)
                     .replace("{counter_number}", counterNumOnly)
+                    .replace("{operator_name}", operatorName)
+                    .replace("{petugas}", operatorName)
                     .replace(Regex("\\s+"), " ")
                     .trim()
 
@@ -684,6 +699,19 @@ class PlayerActivity : AppCompatActivity() {
                     .replace(Regex("(?i)LOKET\\s*0+(\\d+)"), "Loket $1")
                     .replace(Regex("(?i)LOKET\\s*(\\d+)"), "Loket $1")
 
+                var opName = ""
+                val cArr = qObj.optJSONArray("counters")
+                if (cArr != null) {
+                    for (i in 0 until cArr.length()) {
+                        val c = cArr.optJSONObject(i)
+                        val cName = c?.optString("counterName", c.optString("counter_name", ""))
+                        if (cName.equals(counterName, ignoreCase = true)) {
+                            opName = c?.optString("operatorName", c.optString("operator_name", "")) ?: ""
+                            break
+                        }
+                    }
+                }
+
                 val defaultBreakTemplate = "{counter_label} {counter_name} sedang istirahat"
                 val rawTemplate = when (status.uppercase()) {
                     "BREAK" -> qObj.optString("ttsTemplateBreak", qObj.optString("tts_template_break", defaultBreakTemplate)).ifBlank { defaultBreakTemplate }
@@ -694,6 +722,8 @@ class PlayerActivity : AppCompatActivity() {
                 val utteranceText = rawTemplate
                     .replace("{counter_label}", counterLabel)
                     .replace("{counter_name}", counterSpoken)
+                    .replace("{operator_name}", opName)
+                    .replace("{petugas}", opName)
                     .replace(Regex("\\s+"), " ")
                     .trim()
 

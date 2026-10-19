@@ -365,7 +365,7 @@ export default function TabAudioTab() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
             <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Variabel:</span>
-            {['{ticket_label}', '{ticket_number}', '{counter_label}', '{counter_name}'].map((v) => (
+            {['{ticket_label}', '{ticket_number}', '{counter_label}', '{counter_name}', '{petugas}', '{operator_name}'].map((v) => (
               <code
                 key={v}
                 style={{

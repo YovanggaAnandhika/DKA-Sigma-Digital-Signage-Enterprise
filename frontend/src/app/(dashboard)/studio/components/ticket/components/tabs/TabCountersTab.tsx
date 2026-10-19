@@ -8,12 +8,13 @@ import { modal } from '@/components/ui/ModalDialog';
 
 export default function TabCountersTab() {
   const { queue, removeCounter, isNew } = useQueueEditor();
+  const counterLabel = queue?.counterLabel || 'Loket';
   const basePath = isNew ? '/studio/components/ticket/create/counters' : `/studio/components/ticket/${queue.id}/edit/counters`;
 
   const handleConfirmDelete = async (counterId: string, counterName: string) => {
     const ok = await modal.confirm({
-      title: 'Hapus Loket',
-      message: `Hapus loket "${counterName}"?`,
+      title: `Hapus ${counterLabel}`,
+      message: `Hapus ${counterLabel.toLowerCase()} "${counterName}"?`,
       variant: 'danger',
       confirmText: 'Hapus',
     });
@@ -24,12 +25,12 @@ export default function TabCountersTab() {
     <div className="card-elevated" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>Daftar Loket</h4>
-          <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Kelola daftar loket pemanggil antrian.</p>
+          <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>Daftar {counterLabel}</h4>
+          <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Kelola daftar {counterLabel.toLowerCase()} pemanggil antrian.</p>
         </div>
         <Link href={`${basePath}/create`} className="btn btn-primary" style={{ padding: '7px 14px', fontSize: '0.8125rem' }}>
           <Plus size={14} />
-          Tambah Loket
+          Tambah {counterLabel}
         </Link>
       </div>
 
@@ -37,7 +38,7 @@ export default function TabCountersTab() {
         <thead>
           <tr>
             <th style={{ width: '60px' }}>No</th>
-            <th>Nama Loket</th>
+            <th>Nama {counterLabel}</th>
             <th>Petugas</th>
             <th>Status</th>
             <th style={{ width: '100px', textAlign: 'right' }}>Aksi</th>
@@ -56,7 +57,7 @@ export default function TabCountersTab() {
               </td>
               <td style={{ textAlign: 'right' }}>
                 <div style={{ display: 'inline-flex', gap: '6px' }}>
-                  <Link href={`${basePath}/${c.id}`} className="btn btn-outline" style={{ padding: '6px' }} title="Edit loket" aria-label="Edit loket">
+                  <Link href={`${basePath}/${c.id}`} className="btn btn-outline" style={{ padding: '6px' }} title={`Edit ${counterLabel.toLowerCase()}`} aria-label={`Edit ${counterLabel.toLowerCase()}`}>
                     <Edit size={14} />
                   </Link>
                   <button
@@ -65,8 +66,8 @@ export default function TabCountersTab() {
                     disabled={queue.counters.length <= 1}
                     className="btn btn-outline"
                     style={{ padding: '6px', color: 'var(--accent-rose)', opacity: queue.counters.length <= 1 ? 0.4 : 1 }}
-                    title={queue.counters.length <= 1 ? 'Minimal harus ada 1 loket' : 'Hapus loket'}
-                    aria-label="Hapus loket"
+                    title={queue.counters.length <= 1 ? `Minimal harus ada 1 ${counterLabel.toLowerCase()}` : `Hapus ${counterLabel.toLowerCase()}`}
+                    aria-label={`Hapus ${counterLabel.toLowerCase()}`}
                   >
                     <Trash2 size={14} />
                   </button>
