@@ -450,6 +450,12 @@ class QueueZoneRenderer(
         }
 
         if (isInactive()) {
+            val displayCounter = when (currentStatus) {
+                "BREAK" -> "$currentCounter [ISTIRAHAT]"
+                "LOCKED" -> "$currentCounter [TUTUP]"
+                else -> currentCounter
+            }
+            counterTextView?.text = displayCounter
             showDedicatedStatusScreen(currentStatus, currentCounter)
         }
 
@@ -517,10 +523,17 @@ class QueueZoneRenderer(
             val currIdx = countersList.indexOf(currentCounter)
             val nextIdx = if (currIdx >= 0) (currIdx + 1) % countersList.size else 0
             currentCounter = countersList[nextIdx]
-            counterTextView?.text = currentCounter
+            currentStatus = counterStatusMap[currentCounter] ?: "ACTIVE"
+            val displayCounter = when (currentStatus) {
+                "BREAK" -> "$currentCounter [ISTIRAHAT]"
+                "LOCKED" -> "$currentCounter [TUTUP]"
+                else -> currentCounter
+            }
+            counterTextView?.text = displayCounter
             counterTextView?.animate()?.scaleX(1.08f)?.scaleY(1.08f)?.setDuration(100)?.withEndAction {
                 counterTextView?.animate()?.scaleX(1.0f)?.scaleY(1.0f)?.setDuration(150)?.start()
             }?.start()
+            showDedicatedStatusScreen(currentStatus, currentCounter)
             onUserTapNext?.invoke(getCurrentTicketNumber(), currentCounter)
         }
         return currentCounter
@@ -528,8 +541,23 @@ class QueueZoneRenderer(
 
     private var statusOverlayView: View? = null
 
+    fun syncTicketDisplay(ticketNumber: String, counterName: String? = null) {
+        val numPart = ticketNumber.replace(Regex("[^0-9]"), "").toIntOrNull()
+        if (numPart != null) {
+            currentSequence = numPart
+        }
+        if (!counterName.isNullOrBlank()) {
+            currentCounter = counterName
+        }
+        updateDisplay(ticketNumber, currentCounter)
+    }
+
     fun updateCall(ticketNumber: String, counterName: String) {
         currentStatus = "ACTIVE"
+        if (counterName.isNotBlank()) {
+            currentCounter = counterName
+            counterStatusMap[counterName] = "ACTIVE"
+        }
         canvasView?.isClickable = true
         canvasView?.isFocusable = true
         numberTextView?.isClickable = true
@@ -541,15 +569,13 @@ class QueueZoneRenderer(
         if (numPart != null) {
             currentSequence = numPart
         }
-        if (counterName.isNotBlank()) {
-            currentCounter = counterName
-        }
         updateDisplay(ticketNumber, currentCounter)
         onCallAudioStarted()
     }
 
     fun resetQueue(resetToNumber: String? = null) {
         currentStatus = "ACTIVE"
+        counterStatusMap[currentCounter] = "ACTIVE"
         canvasView?.isClickable = true
         canvasView?.isFocusable = true
         numberTextView?.isClickable = true
@@ -565,14 +591,16 @@ class QueueZoneRenderer(
     }
 
     fun setCounterStatus(counterName: String, status: String) {
-        currentStatus = status.uppercase()
+        val upperStatus = status.uppercase()
         if (counterName.isNotBlank()) {
+            counterStatusMap[counterName] = upperStatus
             currentCounter = counterName
         }
+        currentStatus = upperStatus
         val displayCounter = when (currentStatus) {
-            "BREAK" -> "$counterName [ISTIRAHAT]"
-            "LOCKED" -> "$counterName [TUTUP]"
-            else -> counterName
+            "BREAK" -> "$currentCounter [ISTIRAHAT]"
+            "LOCKED" -> "$currentCounter [TUTUP]"
+            else -> currentCounter
         }
         counterTextView?.text = displayCounter
 
@@ -585,7 +613,7 @@ class QueueZoneRenderer(
             }
         }
 
-        showDedicatedStatusScreen(status, counterName)
+        showDedicatedStatusScreen(currentStatus, currentCounter)
     }
 
     private fun showDedicatedStatusScreen(status: String, counterName: String) {

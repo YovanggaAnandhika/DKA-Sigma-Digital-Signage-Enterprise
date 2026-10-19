@@ -1302,6 +1302,8 @@ class PlayerActivity : AppCompatActivity() {
                         } catch (_: Exception) { "" }
                         val view = renderer.createView(zoneView, widgetBlock.widgetDataJson)
                         zoneView.addView(view)
+                        val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(this@PlayerActivity)
+                        syncActiveQueueStateOnReconnect(baseUrl)
                     }
                     ZoneWidgetType.WEBVIEW -> {
                         val renderer = WebviewZoneRenderer(this)
@@ -1511,8 +1513,33 @@ class PlayerActivity : AppCompatActivity() {
                     val respBody = syncResp.body?.string()
                     if (!respBody.isNullOrBlank()) {
                         val syncObj = JSONObject(respBody)
-                        val latestNum = syncObj.optString("latestCalledNumber", syncObj.optString("latest_called_number", ""))
-                        val counterNm = syncObj.optString("currentCounterName", syncObj.optString("current_counter_name", "LOKET 01"))
+                        val latestNum = syncObj.optString("currentTicketNumber",
+                            syncObj.optString("latestCalledNumber",
+                            syncObj.optString("current_ticket_number",
+                            syncObj.optString("latest_called_number", ""))))
+                        var counterNm = syncObj.optString("currentCounterName", syncObj.optString("current_counter_name", ""))
+                        var counterStatus = syncObj.optString("status", syncObj.optString("counterStatus", "ACTIVE")).uppercase()
+
+                        val countersArr = syncObj.optJSONArray("countersList") ?: syncObj.optJSONArray("counters")
+                        if (countersArr != null && countersArr.length() > 0) {
+                            val currentActiveCounter = activeQueueRenderer?.getCurrentCounter() ?: ""
+                            for (i in 0 until countersArr.length()) {
+                                val cObj = countersArr.getJSONObject(i)
+                                val cName = cObj.optString("counterName", cObj.optString("counter_name", ""))
+                                val cStatus = cObj.optString("status", "ACTIVE").uppercase()
+                                if (i == 0 && counterNm.isBlank()) {
+                                    counterNm = cName
+                                    counterStatus = cStatus
+                                }
+                                if (currentActiveCounter.isNotBlank() && cName.equals(currentActiveCounter, ignoreCase = true)) {
+                                    counterNm = cName
+                                    counterStatus = cStatus
+                                    break
+                                }
+                            }
+                        }
+                        if (counterNm.isBlank()) counterNm = "LOKET 01"
+
                         val tLabel = syncObj.optString("ticketLabel", syncObj.optString("ticket_label", ""))
                         val cLabel = syncObj.optString("counterLabel", syncObj.optString("counter_label", ""))
                         val ttsCall = syncObj.optString("ttsTemplateCall", syncObj.optString("tts_template_call", ""))
@@ -1527,15 +1554,19 @@ class PlayerActivity : AppCompatActivity() {
                             if (ttsRecall.isNotBlank()) curJson.put("ttsTemplateRecall", ttsRecall)
                             if (ttsBreak.isNotBlank()) curJson.put("ttsTemplateBreak", ttsBreak)
                             if (latestNum.isNotBlank()) curJson.put("latestCalledNumber", latestNum)
+                            curJson.put("status", counterStatus)
+                            curJson.put("counterStatus", counterStatus)
+                            curJson.put("currentCounterName", counterNm)
                             activeQueueDataJson = curJson.toString()
                         } catch (_: Exception) {}
 
                         runOnUiThread {
-                            val renderer = activeQueueRenderer
-                            if (renderer != null && latestNum.isNotBlank()) {
-                                renderer.updateCall(latestNum, counterNm)
-                                android.util.Log.i("PlayerActivity", "Rekonsiliasi antrian selesai setelah online: $latestNum di $counterNm")
+                            val renderer = activeQueueRenderer ?: return@runOnUiThread
+                            if (latestNum.isNotBlank()) {
+                                renderer.syncTicketDisplay(latestNum, counterNm)
                             }
+                            renderer.setCounterStatus(counterNm, counterStatus)
+                            android.util.Log.i("PlayerActivity", "Rekonsiliasi antrian selesai dari database: nomor=$latestNum, loket=$counterNm, status=$counterStatus")
                         }
                     }
                 }
