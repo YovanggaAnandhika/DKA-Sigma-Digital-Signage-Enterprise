@@ -224,6 +224,11 @@ class PairingActivity : AppCompatActivity() {
             window?.setBackgroundDrawableResource(android.R.color.transparent)
             window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
             behavior.state = BottomSheetBehavior.STATE_EXPANDED
+            behavior.skipCollapsed = true
+            setOnShowListener {
+                behavior.state = BottomSheetBehavior.STATE_EXPANDED
+                behavior.skipCollapsed = true
+            }
             setOnDismissListener {
                 gestureTriggered = false
                 isTwoFingerTracking = false

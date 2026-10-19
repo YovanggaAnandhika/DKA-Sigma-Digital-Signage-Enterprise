@@ -685,7 +685,6 @@ class PlayerActivity : AppCompatActivity() {
                 android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
                 24
             ).apply {
-                maxWidth = 1000
                 setMargins(120, 0, 120, 24)
                 gravity = android.view.Gravity.CENTER_HORIZONTAL
             }
