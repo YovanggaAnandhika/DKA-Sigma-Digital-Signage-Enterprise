@@ -105,14 +105,29 @@ export default function ViewSchedulePage() {
       // Load layout details to resolve assets
       const primaryLayoutId = sched.eventsList?.[0]?.layoutId;
       if (primaryLayoutId) {
-        const layoutRes = await api.getLayout(primaryLayoutId).catch(() => null);
+        const [layoutRes, playlistsRes] = await Promise.all([
+          api.getLayout(primaryLayoutId).catch(() => null),
+          api.getPlaylists({ limit: 1000 }).catch(() => ({ data: [], total: 0 })),
+        ]);
         setLayoutDetails(layoutRes);
 
         if (layoutRes?.layersList) {
           const mediaIdsInLayout = new Set<string>();
+          const playlistMap = new Map<string, any>();
+          (playlistsRes.data || []).forEach((p: any) => playlistMap.set(p.id, p));
+
           layoutRes.layersList.forEach((layer: any) => {
             (layer.blocksList || []).forEach((block: any) => {
               if (block.mediaItemId) mediaIdsInLayout.add(block.mediaItemId);
+              if (block.playlistId) {
+                const pl = playlistMap.get(block.playlistId);
+                if (pl?.items) {
+                  pl.items.forEach((item: any) => {
+                    const mid = item.mediaItemId || item.media_item_id;
+                    if (mid) mediaIdsInLayout.add(mid);
+                  });
+                }
+              }
             });
           });
 
