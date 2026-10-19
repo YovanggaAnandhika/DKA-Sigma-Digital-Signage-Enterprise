@@ -36,6 +36,7 @@ message LayerPlaylist {
   // Computed fields (populated in backend based on relations)
   optional signage.studio.v1.transition.Transition transition = 18;
   optional signage.studio.v1.visual_filter.VisualFilter visual_filter = 19;
+  optional string widget_data_json = 25;
 }
 
 message CreateLayerBlockRequest {

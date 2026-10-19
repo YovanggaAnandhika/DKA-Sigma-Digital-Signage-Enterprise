@@ -50,6 +50,7 @@ impl LayerBlockServiceImpl {
             item_overrides: vec![], // Populated elsewhere if needed
             transition: None,
             visual_filter: None,
+            widget_data_json: None,
         }
     }
 }

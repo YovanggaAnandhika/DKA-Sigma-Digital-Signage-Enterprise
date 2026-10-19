@@ -20,9 +20,247 @@ impl ManifestServiceImpl {
         Self { pool }
     }
 
-    fn map_compiled_manifest(dto: CompiledManifestDto) -> CompiledManifest {
-        let layers = dto.layers.into_iter().map(|z| {
-            Layer {
+    async fn fetch_widget_data_json(
+        pool: &DbPool,
+        queue_id: Option<Uuid>,
+        ticker_id: Option<Uuid>,
+        clock_id: Option<Uuid>,
+        webview_id: Option<Uuid>,
+    ) -> Option<String> {
+        if let Some(qid) = queue_id {
+            let queue_service = crate::grpc::studio::queue::service::QueueServiceImpl::new(pool.clone());
+            if let Ok(detail) = queue_service.fetch_display_detail(qid).await {
+                let items_arr: Vec<_> = detail.items.iter().map(|it| serde_json::json!({
+                    "id": it.id,
+                    "queueDisplayId": it.queue_display_id,
+                    "itemType": it.item_type,
+                    "name": it.name,
+                    "x": it.x,
+                    "y": it.y,
+                    "width": it.width,
+                    "height": it.height,
+                    "zIndex": it.z_index,
+                    "backgroundColor": it.background_color,
+                    "textColor": it.text_color,
+                    "fontSize": it.font_size,
+                    "fontWeight": it.font_weight,
+                    "textAlign": it.text_align,
+                    "templateContent": it.template_content,
+                    "configJson": it.config_json,
+                    "isVisible": it.is_visible,
+                    "opacity": it.opacity,
+                    "borderRadius": it.border_radius,
+                    "borderColor": it.border_color,
+                    "borderWidth": it.border_width,
+                })).collect();
+
+                let counters_arr: Vec<_> = detail.counters.iter().map(|c| serde_json::json!({
+                    "id": c.id,
+                    "queueDisplayId": c.queue_display_id,
+                    "counterNumber": c.counter_number,
+                    "counterName": c.counter_name,
+                    "operatorName": c.operator_name,
+                    "isActive": c.is_active,
+                    "currentTicketNumber": c.current_ticket_number,
+                    "lastCalledAt": c.last_called_at,
+                    "status": c.status,
+                    "statusNote": c.status_note,
+                })).collect();
+
+                let audios_arr: Vec<_> = detail.audios.iter().map(|a| serde_json::json!({
+                    "id": a.id,
+                    "queueDisplayId": a.queue_display_id,
+                    "name": a.name,
+                    "audioType": a.audio_type,
+                    "mediaItemId": a.media_item_id,
+                    "fileUrl": a.file_url,
+                    "volumePercent": a.volume_percent,
+                    "isActive": a.is_active,
+                })).collect();
+
+                let json_val = serde_json::json!({
+                    "id": detail.id,
+                    "name": detail.name,
+                    "prefix": detail.prefix,
+                    "canvasWidth": detail.canvas_width,
+                    "canvasHeight": detail.canvas_height,
+                    "backgroundColor": detail.background_color,
+                    "backgroundImageUrl": detail.background_image_url,
+                    "themePreset": detail.theme_preset,
+                    "autoRecallEnabled": detail.auto_recall_enabled,
+                    "opacity": detail.opacity,
+                    "overlayColor": detail.overlay_color,
+                    "overlayOpacity": detail.overlay_opacity,
+                    "sectorType": detail.sector_type,
+                    "ticketLabel": detail.ticket_label,
+                    "counterLabel": detail.counter_label,
+                    "ttsTemplateCall": detail.tts_template_call,
+                    "ttsTemplateRecall": detail.tts_template_recall,
+                    "ttsTemplateBreak": detail.tts_template_break,
+                    "currentSequence": detail.current_sequence,
+                    "waitingTicketsCount": detail.waiting_tickets_count,
+                    "latestCalledNumber": detail.latest_called_number,
+                    "itemsList": items_arr,
+                    "countersList": counters_arr,
+                    "audios": audios_arr
+                });
+                return Some(json_val.to_string());
+            }
+        }
+
+        if let Some(tid) = ticker_id {
+            if let Ok(Some(row)) = sqlx::query!(
+                "SELECT id, name, badge, messages, speed, theme, font_size, background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius FROM tickers WHERE id = $1",
+                tid
+            ).fetch_optional(pool).await {
+                let json_val = serde_json::json!({
+                    "id": row.id.to_string(),
+                    "name": row.name,
+                    "badge": row.badge,
+                    "messages": row.messages,
+                    "speed": row.speed,
+                    "theme": row.theme,
+                    "fontSize": row.font_size,
+                    "backgroundColor": row.background_color,
+                    "textColor": row.text_color,
+                    "badgeBackgroundColor": row.badge_background_color,
+                    "badgeTextColor": row.badge_text_color,
+                    "borderColor": row.border_color,
+                    "borderRadius": row.border_radius,
+                });
+                return Some(json_val.to_string());
+            }
+        }
+
+        if let Some(cid) = clock_id {
+            if let Ok(Some(row)) = sqlx::query!(
+                "SELECT id, name, city, show_seconds, is_24_hour, theme, background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size FROM clocks WHERE id = $1",
+                cid
+            ).fetch_optional(pool).await {
+                let json_val = serde_json::json!({
+                    "id": row.id.to_string(),
+                    "name": row.name,
+                    "city": row.city,
+                    "showSeconds": row.show_seconds,
+                    "is24Hour": row.is_24_hour,
+                    "theme": row.theme,
+                    "backgroundColor": row.background_color,
+                    "textColor": row.text_color,
+                    "subtitleColor": row.subtitle_color,
+                    "borderColor": row.border_color,
+                    "borderRadius": row.border_radius,
+                    "timeFontSize": row.time_font_size,
+                    "dateFontSize": row.date_font_size,
+                });
+                return Some(json_val.to_string());
+            }
+        }
+
+        if let Some(wid) = webview_id {
+            if let Ok(Some(row)) = sqlx::query!(
+                "SELECT id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation FROM webviews WHERE id = $1",
+                wid
+            ).fetch_optional(pool).await {
+                let json_val = serde_json::json!({
+                    "id": row.id.to_string(),
+                    "name": row.name,
+                    "url": row.url,
+                    "refreshIntervalSeconds": row.refresh_interval_seconds,
+                    "zoomScale": row.zoom_scale,
+                    "zoomPercent": row.zoom_scale,
+                    "bypassCache": row.bypass_cache,
+                    "orientation": row.orientation,
+                });
+                return Some(json_val.to_string());
+            }
+        }
+
+        None
+    }
+
+    async fn map_compiled_manifest(pool: &DbPool, dto: CompiledManifestDto) -> CompiledManifest {
+        let mut layers = Vec::new();
+        for z in dto.layers {
+            let mut blocks = Vec::new();
+            for b in z.blocks {
+                let duration = if b.block.duration_seconds > 0 {
+                    b.block.duration_seconds
+                } else if let Some(ref pl) = b.playlist {
+                    pl.total_duration_seconds
+                } else {
+                    10
+                };
+                let fallback_media_id = b.block.media_item_id
+                    .map(|id| id.to_string())
+                    .or_else(|| b.playlist.as_ref().and_then(|pl| pl.items.first().map(|i| i.media_item_id.to_string())))
+                    .unwrap_or_default();
+                let proto_playlist = b.playlist.map(|pl| crate::grpc::proto::studio::v1::playlist::Playlist {
+                    id: pl.playlist.id.to_string(),
+                    name: pl.playlist.name,
+                    description: pl.playlist.description.unwrap_or_default(),
+                    is_shuffle: pl.playlist.is_shuffle,
+                    items: pl.items.into_iter().map(|item| crate::grpc::proto::studio::v1::playlist::PlaylistItem {
+                        id: item.id.to_string(),
+                        playlist_id: item.playlist_id.to_string(),
+                        media_item_id: item.media_item_id.to_string(),
+                        media_item: None,
+                        position: item.position,
+                        duration_seconds: item.duration_seconds,
+                        transition_type: item.transition_type,
+                        created_at: "".to_string(),
+                        is_muted: item.is_muted,
+                    }).collect(),
+                    total_duration_seconds: pl.total_duration_seconds,
+                    created_at: pl.playlist.created_at.to_rfc3339(),
+                    updated_at: pl.playlist.updated_at.to_rfc3339(),
+                });
+
+                let widget_data_json = Self::fetch_widget_data_json(
+                    pool,
+                    b.block.queue_id,
+                    b.block.ticker_id,
+                    b.block.clock_id,
+                    b.block.webview_id,
+                ).await;
+
+                blocks.push(LayerPlaylist {
+                    id: b.block.id.to_string(),
+                    layer_id: z.layer.id.to_string(),
+                    volume_level: b.block.volume_level,
+                    playlist_id: b.block.playlist_id.map(|id| id.to_string()).unwrap_or_default(),
+                    media_item_id: fallback_media_id,
+                    playlist: proto_playlist,
+                    media_item: None,
+                    start_time_seconds: b.block.start_time_seconds,
+                    duration_seconds: duration,
+                    trim_start_seconds: b.block.trim_start_seconds,
+                    trim_end_seconds: b.block.trim_end_seconds,
+                    transition_id: b.block.transition_id.map(|id| id.to_string()),
+                    visual_filter_id: b.block.visual_filter_id.map(|id| id.to_string()),
+                    order_index: b.block.order_index,
+                    is_muted: b.block.is_muted,
+                    ticker_id: b.block.ticker_id.map(|id| id.to_string()),
+                    clock_id: b.block.clock_id.map(|id| id.to_string()),
+                    webview_id: b.block.webview_id.map(|id| id.to_string()),
+                    queue_id: b.block.queue_id.map(|id| id.to_string()),
+                    album_id: b.block.album_id.map(|id| id.to_string()),
+                    created_at: b.block.created_at.to_rfc3339(),
+                    item_overrides: b.item_overrides.into_iter().map(|o| {
+                        crate::grpc::proto::studio::v1::layer::LayerPlaylistItemOverride {
+                            id: o.id.to_string(),
+                            layer_playlist_id: o.layer_block_id.to_string(),
+                            playlist_item_id: o.playlist_item_id.to_string(),
+                            is_muted: o.is_muted.unwrap_or(false),
+                            volume_level: o.volume_level.unwrap_or(100),
+                        }
+                    }).collect(),
+                    transition: None,
+                    visual_filter: None,
+                    widget_data_json,
+                });
+            }
+
+            layers.push(Layer {
                 id: z.layer.id.to_string(),
                 layout_id: dto.layout_id.to_string(),
                 name: z.layer.name,
@@ -38,78 +276,11 @@ impl ManifestServiceImpl {
                 border_radius: z.layer.border_radius,
                 border_color: z.layer.border_color,
                 border_width: z.layer.border_width,
-                blocks: z.blocks.into_iter().map(|b| {
-                    let duration = if b.block.duration_seconds > 0 {
-                        b.block.duration_seconds
-                    } else if let Some(ref pl) = b.playlist {
-                        pl.total_duration_seconds
-                    } else {
-                        10
-                    };
-                    let fallback_media_id = b.block.media_item_id
-                        .map(|id| id.to_string())
-                        .or_else(|| b.playlist.as_ref().and_then(|pl| pl.items.first().map(|i| i.media_item_id.to_string())))
-                        .unwrap_or_default();
-                    let proto_playlist = b.playlist.map(|pl| crate::grpc::proto::studio::v1::playlist::Playlist {
-                        id: pl.playlist.id.to_string(),
-                        name: pl.playlist.name,
-                        description: pl.playlist.description.unwrap_or_default(),
-                        is_shuffle: pl.playlist.is_shuffle,
-                        items: pl.items.into_iter().map(|item| crate::grpc::proto::studio::v1::playlist::PlaylistItem {
-                            id: item.id.to_string(),
-                            playlist_id: item.playlist_id.to_string(),
-                            media_item_id: item.media_item_id.to_string(),
-                            media_item: None,
-                            position: item.position,
-                            duration_seconds: item.duration_seconds,
-                            transition_type: item.transition_type,
-                            created_at: "".to_string(),
-                            is_muted: item.is_muted,
-                        }).collect(),
-                        total_duration_seconds: pl.total_duration_seconds,
-                        created_at: pl.playlist.created_at.to_rfc3339(),
-                        updated_at: pl.playlist.updated_at.to_rfc3339(),
-                    });
-
-                    LayerPlaylist {
-                        id: b.block.id.to_string(),
-                        layer_id: z.layer.id.to_string(),
-                        volume_level: b.block.volume_level,
-                        playlist_id: b.block.playlist_id.map(|id| id.to_string()).unwrap_or_default(),
-                        media_item_id: fallback_media_id,
-                        playlist: proto_playlist,
-                        media_item: None,
-                        start_time_seconds: b.block.start_time_seconds,
-                        duration_seconds: duration,
-                        trim_start_seconds: b.block.trim_start_seconds,
-                        trim_end_seconds: b.block.trim_end_seconds,
-                        transition_id: b.block.transition_id.map(|id| id.to_string()),
-                        visual_filter_id: b.block.visual_filter_id.map(|id| id.to_string()),
-                        order_index: b.block.order_index,
-                        is_muted: b.block.is_muted,
-                        ticker_id: b.block.ticker_id.map(|id| id.to_string()),
-                        clock_id: b.block.clock_id.map(|id| id.to_string()),
-                        webview_id: b.block.webview_id.map(|id| id.to_string()),
-                        queue_id: b.block.queue_id.map(|id| id.to_string()),
-                        album_id: b.block.album_id.map(|id| id.to_string()),
-                        created_at: b.block.created_at.to_rfc3339(),
-                        item_overrides: b.item_overrides.into_iter().map(|o| {
-                            crate::grpc::proto::studio::v1::layer::LayerPlaylistItemOverride {
-                                id: o.id.to_string(),
-                                layer_playlist_id: o.layer_block_id.to_string(),
-                                playlist_item_id: o.playlist_item_id.to_string(),
-                                is_muted: o.is_muted.unwrap_or(false),
-                                volume_level: o.volume_level.unwrap_or(100),
-                            }
-                        }).collect(),
-                        transition: None,
-                        visual_filter: None,
-                    }
-                }).collect(),
+                blocks,
                 created_at: "".to_string(),
                 updated_at: "".to_string(),
-            }
-        }).collect();
+            });
+        }
 
         let orientation = Some(crate::grpc::proto::common::v1::orientation::Orientation {
             id: String::new(),
@@ -216,7 +387,10 @@ impl ManifestServiceTrait for ManifestServiceImpl {
             .await
             .map_err(Status::from)?;
 
-        let manifest = sync_res.manifest.map(Self::map_compiled_manifest);
+        let manifest = match sync_res.manifest {
+            Some(dto) => Some(Self::map_compiled_manifest(&self.pool, dto).await),
+            None => None,
+        };
 
         Ok(Response::new(GetActiveManifestResponse {
             is_up_to_date: sync_res.is_up_to_date,

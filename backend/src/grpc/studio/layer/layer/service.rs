@@ -88,6 +88,7 @@ impl LayerServiceImpl {
             album_id: dto.block.album_id.map(|id| id.to_string()),
             transition: None,
             visual_filter: None,
+            widget_data_json: None,
         }
     }
 }

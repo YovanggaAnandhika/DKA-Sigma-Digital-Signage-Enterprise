@@ -30,7 +30,7 @@ impl QueueServiceImpl {
         Self { pool }
     }
 
-    async fn fetch_display_detail(&self, id: Uuid) -> Result<QueueDisplayDetail, Status> {
+    pub async fn fetch_display_detail(&self, id: Uuid) -> Result<QueueDisplayDetail, Status> {
         let display = sqlx::query!(
             r#"
             SELECT id, name, prefix, canvas_width, canvas_height, background_color,
