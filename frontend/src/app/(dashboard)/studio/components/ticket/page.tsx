@@ -564,13 +564,27 @@ export default function TicketPage() {
 
   const handleOpenSectorModal = () => {
     if (!selectedQueue) return;
+    const inferredSector = (() => {
+      if (selectedQueue.sectorType && selectedQueue.sectorType !== 'HOSPITAL') return selectedQueue.sectorType;
+      const lower = (selectedQueue.name || '').toLowerCase();
+      if (lower.includes('kafe') || lower.includes('cafe') || lower.includes('resto') || lower.includes('kopi') || lower.includes('pesanan') || lower.includes('f&b')) {
+        return 'RETAIL_FB';
+      }
+      if (lower.includes('bank') || lower.includes('teller')) return 'BANK';
+      if (lower.includes('gudang') || lower.includes('logistik') || lower.includes('muat')) return 'LOGISTICS';
+      if (lower.includes('samsat') || lower.includes('pelayanan')) return 'PUBLIC_SERVICE';
+      return selectedQueue.sectorType || 'HOSPITAL';
+    })();
+
+    const matchedPreset = SECTOR_PRESETS.find((p) => p.id === inferredSector);
+
     setSectorForm({
-      sectorType: selectedQueue.sectorType || 'HOSPITAL',
-      ticketLabel: selectedQueue.ticketLabel || 'Nomor Antrian',
-      counterLabel: selectedQueue.counterLabel || 'Loket',
-      ttsTemplateCall: selectedQueue.ttsTemplateCall || '{ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}',
-      ttsTemplateRecall: selectedQueue.ttsTemplateRecall || 'Panggilan ulang, {ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}',
-      ttsTemplateBreak: selectedQueue.ttsTemplateBreak || '{counter_label} {counter_name} sedang istirahat',
+      sectorType: inferredSector,
+      ticketLabel: selectedQueue.ticketLabel || matchedPreset?.ticketLabel || 'Nomor Antrian',
+      counterLabel: selectedQueue.counterLabel || matchedPreset?.counterLabel || 'Loket',
+      ttsTemplateCall: selectedQueue.ttsTemplateCall || matchedPreset?.ttsTemplateCall || '{ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}',
+      ttsTemplateRecall: selectedQueue.ttsTemplateRecall || matchedPreset?.ttsTemplateRecall || 'Panggilan ulang, {ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}',
+      ttsTemplateBreak: selectedQueue.ttsTemplateBreak || matchedPreset?.ttsTemplateBreak || '{counter_label} {counter_name} sedang istirahat',
     });
     setIsSectorModalOpen(true);
   };

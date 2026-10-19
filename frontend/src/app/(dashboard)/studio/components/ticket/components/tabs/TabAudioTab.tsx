@@ -222,7 +222,12 @@ export default function TabAudioTab() {
           </label>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
             {SECTOR_PRESETS.map((preset) => {
-              const isSelected = (queue.sectorType || 'HOSPITAL') === preset.id;
+              const activeSector = queue.sectorType || (
+                (queue.name?.toLowerCase().includes('kafe') || queue.name?.toLowerCase().includes('cafe') || queue.name?.toLowerCase().includes('resto') || queue.name?.toLowerCase().includes('pesanan'))
+                  ? 'RETAIL_FB'
+                  : 'HOSPITAL'
+              );
+              const isSelected = activeSector === preset.id;
               return (
                 <div
                   key={preset.id}
