@@ -56,14 +56,18 @@ class PairingActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        try {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        } catch (_: Throwable) {}
 
         // Light mode appearance for system bars
-        val insetsController = WindowCompat.getInsetsController(window, window.decorView)
-        insetsController.isAppearanceLightStatusBars = true
-        insetsController.isAppearanceLightNavigationBars = true
-        window.statusBarColor = Color.parseColor("#f8fafc")
-        window.navigationBarColor = Color.parseColor("#f8fafc")
+        try {
+            val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+            insetsController.isAppearanceLightStatusBars = true
+            insetsController.isAppearanceLightNavigationBars = true
+            window.statusBarColor = Color.parseColor("#f8fafc")
+            window.navigationBarColor = Color.parseColor("#f8fafc")
+        } catch (_: Throwable) {}
 
         tokenStorage = TokenStorage(this)
         channelFactory = GrpcChannelFactory(this)

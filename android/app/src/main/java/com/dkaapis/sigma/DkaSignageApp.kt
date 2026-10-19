@@ -6,28 +6,54 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import java.io.File
+import java.util.Date
 
 class DkaSignageApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
         instance = this
+        setupCrashHandler()
         Log.i(TAG, "DKASigma Signage Player Initialized (PID: ${android.os.Process.myPid()})")
         createNotificationChannel()
     }
 
+    private fun setupCrashHandler() {
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            Log.e(TAG, "CRITICAL CRASH pada thread [${thread.name}]: ${throwable.message}", throwable)
+            try {
+                val crashFile = File(filesDir, "last_crash.txt")
+                crashFile.writeText(
+                    "Crash Time: ${Date()}\n" +
+                    "Device: ${Build.MANUFACTURER} ${Build.MODEL} (Android ${Build.VERSION.RELEASE}, API ${Build.VERSION.SDK_INT})\n" +
+                    "Thread: ${thread.name}\n" +
+                    "Exception: ${throwable.javaClass.name}: ${throwable.message}\n" +
+                    "Stacktrace:\n${throwable.stackTraceToString()}"
+                )
+            } catch (_: Throwable) {}
+
+            defaultHandler?.uncaughtException(thread, throwable)
+        }
+    }
+
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "DKASigma Stream Daemon",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Menjaga koneksi gRPC DisplayStream tetap terhubung"
-                setShowBadge(false)
+            try {
+                val channel = NotificationChannel(
+                    CHANNEL_ID,
+                    "DKASigma Stream Daemon",
+                    NotificationManager.IMPORTANCE_LOW
+                ).apply {
+                    description = "Menjaga koneksi gRPC DisplayStream tetap terhubung"
+                    setShowBadge(false)
+                }
+                val manager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                manager?.createNotificationChannel(channel)
+            } catch (t: Throwable) {
+                Log.w(TAG, "Gagal membuat NotificationChannel: ${t.message}")
             }
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
         }
     }
 
