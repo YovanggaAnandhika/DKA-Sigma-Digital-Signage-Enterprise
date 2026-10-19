@@ -577,8 +577,8 @@ export default function QueueItemInspector({ selectedItem, onSelect }: QueueItem
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
             {[
-              { code: '$queue_number$', label: 'Nomor' },
-              { code: '$queue_counter$', label: 'Loket' },
+              { code: '$queue_number$', label: queue.ticketLabel || 'Nomor' },
+              { code: '$queue_counter$', label: queue.counterLabel || 'Loket' },
               { code: '$queue_prefix$', label: 'Prefix' },
               { code: '$queue_name$', label: 'Nama' },
             ].map((v) => (

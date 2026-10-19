@@ -60,7 +60,7 @@ export default function QueueLayersPanel({
       newItem = {
         id: newId,
         itemType: 'counter_loket',
-        name: 'Badge Loket',
+        name: `Badge ${queue.counterLabel || 'Loket'}`,
         x: 710,
         y: 680,
         width: 500,

@@ -625,7 +625,7 @@ class PlayerActivity : AppCompatActivity() {
                 val ticketLabel = ticketLabelOverride?.ifBlank { null }
                     ?: qObj.optString("ticketLabel", qObj.optString("ticket_label", "Nomor Antrian")).ifBlank { "Nomor Antrian" }
                 val counterLabel = counterLabelOverride?.ifBlank { null }
-                    ?: qObj.optString("counterLabel", qObj.optString("counter_label", "Loket")).ifBlank { "Loket" }
+                    ?: qObj.optString("counterLabel", qObj.optString("counter_label", "Loket")).ifBlank { "Loket" }.trim()
 
                 val defaultCallTemplate = "{ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}"
                 val defaultRecallTemplate = "Panggilan ulang, {ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}"
@@ -637,6 +637,17 @@ class PlayerActivity : AppCompatActivity() {
                     ttsTemplateCallOverride?.ifBlank { null }
                         ?: qObj.optString("ttsTemplateCall", qObj.optString("tts_template_call", defaultCallTemplate)).ifBlank { defaultCallTemplate }
                 }
+
+                // Ekstrak nomor/nama spesifik pos tanpa kata awalan (misal: "LOKET 01" -> "1", "POLI 02" -> "2", "Poli Gigi" -> "Gigi")
+                val labelRegex = Regex("^(?:${Regex.escape(counterLabel)}|loket|poli|teller|kasir|meja|counter)\\s*", RegexOption.IGNORE_CASE)
+                var cleanCounterName = counterName.replace(labelRegex, "").trim()
+                if (cleanCounterName.matches(Regex("^0+\\d+$"))) {
+                    cleanCounterName = cleanCounterName.replace(Regex("^0+"), "")
+                }
+                if (cleanCounterName.isBlank()) {
+                    cleanCounterName = counterName.filter { it.isDigit() }.ifEmpty { "1" }
+                }
+                val counterNumOnly = counterName.filter { it.isDigit() }.ifEmpty { cleanCounterName }
 
                 var operatorName = ""
                 val countersArr = qObj.optJSONArray("counters")
@@ -658,7 +669,9 @@ class PlayerActivity : AppCompatActivity() {
                 val waitingCount = qObj.optInt("waitingTicketsCount", qObj.optInt("waiting_tickets_count", 0))
 
                 val formattedTicket = if (prefix.isNotBlank()) "$prefix, $spokenDigits" else spokenDigits
-                val counterNumOnly = counterName.filter { it.isDigit() }.ifEmpty { "1" }
+
+                // Jika template mengandung {counter_label}, {counter_name} adalah nomor/nama spesifik pos
+                val counterNameForTemplate = if (rawTemplate.contains("{counter_label}")) cleanCounterName else "$counterLabel $cleanCounterName".trim()
 
                 val utteranceText = rawTemplate
                     .replace("{ticket_label}", ticketLabel)
@@ -666,7 +679,7 @@ class PlayerActivity : AppCompatActivity() {
                     .replace("{ticket_number}", formattedTicket)
                     .replace("{ticket_prefix}", prefix)
                     .replace("{ticket_digits}", spokenDigits)
-                    .replace("{counter_name}", counterSpoken)
+                    .replace("{counter_name}", counterNameForTemplate)
                     .replace("{counter_number}", counterNumOnly)
                     .replace("{operator_name}", operatorName)
                     .replace("{petugas}", operatorName)
@@ -706,10 +719,18 @@ class PlayerActivity : AppCompatActivity() {
                 videoRenderers.forEach { it.setDuckedVolume(true) }
 
                 val qObj = try { JSONObject(activeQueueDataJson ?: "{}") } catch (_: Exception) { JSONObject() }
-                val counterLabel = qObj.optString("counterLabel", qObj.optString("counter_label", "Loket")).ifBlank { "Loket" }
-                val counterSpoken = counterName
-                    .replace(Regex("(?i)LOKET\\s*0+(\\d+)"), "Loket $1")
-                    .replace(Regex("(?i)LOKET\\s*(\\d+)"), "Loket $1")
+                val counterLabel = qObj.optString("counterLabel", qObj.optString("counter_label", "Loket")).ifBlank { "Loket" }.trim()
+
+                // Ekstrak nomor/nama spesifik pos tanpa kata awalan (misal: "LOKET 01" -> "1", "POLI 02" -> "2", "Poli Gigi" -> "Gigi")
+                val labelRegex = Regex("^(?:${Regex.escape(counterLabel)}|loket|poli|teller|kasir|meja|counter)\\s*", RegexOption.IGNORE_CASE)
+                var cleanCounterName = counterName.replace(labelRegex, "").trim()
+                if (cleanCounterName.matches(Regex("^0+\\d+$"))) {
+                    cleanCounterName = cleanCounterName.replace(Regex("^0+"), "")
+                }
+                if (cleanCounterName.isBlank()) {
+                    cleanCounterName = counterName.filter { it.isDigit() }.ifEmpty { "1" }
+                }
+                val counterNumOnly = counterName.filter { it.isDigit() }.ifEmpty { cleanCounterName }
 
                 var opName = ""
                 val cArr = qObj.optJSONArray("counters")
@@ -724,6 +745,7 @@ class PlayerActivity : AppCompatActivity() {
                     }
                 }
 
+                // Template baku yang mengacu pada {counter_label} dan {counter_name}
                 val defaultBreakTemplate = "{counter_label} {counter_name} sedang istirahat"
                 val rawTemplate = when (status.uppercase()) {
                     "BREAK" -> qObj.optString("ttsTemplateBreak", qObj.optString("tts_template_break", defaultBreakTemplate)).ifBlank { defaultBreakTemplate }
@@ -735,11 +757,12 @@ class PlayerActivity : AppCompatActivity() {
                 val timeGreeting = if (hour in 4..10) "selamat pagi" else if (hour in 11..14) "selamat siang" else if (hour in 15..17) "selamat sore" else "selamat malam"
                 val timePeriod = if (hour in 4..10) "pagi" else if (hour in 11..14) "siang" else if (hour in 15..17) "sore" else "malam"
                 val queueName = qObj.optString("name", "")
-                val counterNumOnly = counterName.filter { it.isDigit() }.ifEmpty { "1" }
+
+                val counterNameForTemplate = if (rawTemplate.contains("{counter_label}")) cleanCounterName else "$counterLabel $cleanCounterName".trim()
 
                 val utteranceText = rawTemplate
                     .replace("{counter_label}", counterLabel)
-                    .replace("{counter_name}", counterSpoken)
+                    .replace("{counter_name}", counterNameForTemplate)
                     .replace("{counter_number}", counterNumOnly)
                     .replace("{operator_name}", opName)
                     .replace("{petugas}", opName)

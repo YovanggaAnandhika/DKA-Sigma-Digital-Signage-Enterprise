@@ -7,7 +7,7 @@ import QueueAudioPickerModal from '../QueueAudioPickerModal';
 import { SECTOR_PRESETS, speakQueueAnnouncement } from '../../types';
 
 export default function TabAudioTab() {
-  const { queue, updateField, updateAudio, triggerChime, simulator, sectors } = useQueueEditor();
+  const { queue, setQueue, updateField, updateAudio, triggerChime, simulator, sectors } = useQueueEditor();
   const availableSectors = sectors && sectors.length > 0 ? sectors : SECTOR_PRESETS;
   const [isAudioPickerOpen, setIsAudioPickerOpen] = useState(false);
   const [isTestingTts, setIsTestingTts] = useState(false);
@@ -43,12 +43,44 @@ export default function TabAudioTab() {
   const handleSelectSectorPreset = (presetId: string) => {
     const preset = availableSectors.find((p) => p.id === presetId);
     if (!preset) return;
-    updateField('sectorType', preset.id);
-    updateField('ticketLabel', preset.ticketLabel);
-    updateField('counterLabel', preset.counterLabel);
-    updateField('ttsTemplateCall', preset.ttsTemplateCall);
-    updateField('ttsTemplateRecall', preset.ttsTemplateRecall);
-    updateField('ttsTemplateBreak', preset.ttsTemplateBreak);
+    const newCounterLabel = preset.counterLabel || 'Loket';
+    const newCounterPrefix = newCounterLabel.toUpperCase();
+
+    setQueue((prev) => {
+      const updatedCounters = (prev.counters || []).map((c, idx) => {
+        const num = c.counterNumber || idx + 1;
+        const numStr = String(num).padStart(2, '0');
+        return {
+          ...c,
+          counterName: `${newCounterPrefix} ${numStr}`,
+        };
+      });
+
+      const updatedCurrentCounter = updatedCounters[0]?.counterName || `${newCounterPrefix} 01`;
+
+      const updatedItems = (prev.items || []).map((it) => {
+        if (it.itemType === 'counter_loket' || it.name.toLowerCase().includes('badge') || it.name.toLowerCase().includes('label loket')) {
+          return {
+            ...it,
+            name: `Badge ${newCounterLabel}`,
+          };
+        }
+        return it;
+      });
+
+      return {
+        ...prev,
+        sectorType: preset.id,
+        ticketLabel: preset.ticketLabel,
+        counterLabel: preset.counterLabel,
+        ttsTemplateCall: preset.ttsTemplateCall,
+        ttsTemplateRecall: preset.ttsTemplateRecall,
+        ttsTemplateBreak: preset.ttsTemplateBreak,
+        currentCounter: updatedCurrentCounter,
+        counters: updatedCounters,
+        items: updatedItems,
+      };
+    });
   };
 
   const [activeTtsField, setActiveTtsField] = useState<'ttsTemplateCall' | 'ttsTemplateRecall' | 'ttsTemplateBreak'>('ttsTemplateCall');

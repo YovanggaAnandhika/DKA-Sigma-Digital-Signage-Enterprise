@@ -133,6 +133,7 @@ class QueueZoneRenderer(
     private var currentName: String = "Layar Antrian"
     private var currentSequence: Int = 1
     private var currentCounter: String = "LOKET 01"
+    private var currentCounterLabel: String = "Loket"
     private val countersList = mutableListOf<String>()
 
     private var parentZoneView: ViewGroup? = null
@@ -142,12 +143,15 @@ class QueueZoneRenderer(
     private var currentInvertProgress = 0f
     private val invertPaint = Paint()
 
+    private var canvasW: Int = 1920
+    private var canvasH: Int = 1080
+
     fun createView(
         parent: ViewGroup,
         widgetDataJson: String?
     ): View {
-        var canvasW = 1920
-        var canvasH = 1080
+        canvasW = 1920
+        canvasH = 1080
         var bgColor = "transparent"
         var bgImageUrl = ""
         var canvasOpacity = 1.0f
@@ -164,6 +168,7 @@ class QueueZoneRenderer(
                 canvasH = json.optInt("canvasHeight", 1080).takeIf { it > 0 } ?: 1080
                 currentPrefix = json.optString("prefix", "A").ifBlank { "A" }
                 currentName = json.optString("name", "Layar Antrian")
+                currentCounterLabel = json.optString("counterLabel", json.optString("counter_label", "Loket")).ifBlank { "Loket" }.trim()
                 latestNumber = json.optString("latestCalledNumber", "$currentPrefix-001")
                 bgColor = json.optString("backgroundColor", "transparent").ifBlank { "transparent" }
                 bgImageUrl = json.optString("backgroundImageUrl", "").ifBlank { json.optString("background_image_url", "") }
@@ -439,9 +444,19 @@ class QueueZoneRenderer(
     }
 
     private fun interpolate(template: String, queueNumber: String, queueCounter: String): String {
+        val labelRegex = Regex("^(?:${Regex.escape(currentCounterLabel)}|loket|poli|teller|kasir|meja|counter|pickup point)\\s*", RegexOption.IGNORE_CASE)
+        var cleanNum = queueCounter.replace(labelRegex, "").trim()
+        if (cleanNum.matches(Regex("^0+\\d+$"))) {
+            cleanNum = cleanNum.replace(Regex("^0+"), "")
+        }
+        if (cleanNum.isBlank()) {
+            cleanNum = queueCounter.filter { it.isDigit() }.ifEmpty { "1" }
+        }
+        val formattedCounter = "${currentCounterLabel.uppercase()} $cleanNum"
+
         return template
             .replace("\$queue_number\$", queueNumber)
-            .replace("\$queue_counter\$", queueCounter)
+            .replace("\$queue_counter\$", formattedCounter)
             .replace("\$queue_prefix\$", currentPrefix)
             .replace("\$queue_name\$", currentName)
     }
@@ -532,7 +547,17 @@ class QueueZoneRenderer(
             tag = QueueItemMeta(
                 id = "status-overlay-dedicated",
                 itemType = "status_overlay",
-                x = 0, y = 0, width = canvasW, height = canvasH, zIndex = 9999
+                x = 0,
+                y = 0,
+                width = canvasW,
+                height = canvasH,
+                zIndex = 9999,
+                backgroundColor = "#00000000",
+                textColor = "#ffffff",
+                fontSize = 16f,
+                fontWeight = "normal",
+                textAlign = "center",
+                templateContent = ""
             )
             cv.addView(this)
             statusOverlayView = this

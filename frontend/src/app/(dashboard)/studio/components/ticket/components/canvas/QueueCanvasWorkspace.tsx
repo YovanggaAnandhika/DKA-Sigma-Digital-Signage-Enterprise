@@ -382,9 +382,10 @@ export default function QueueCanvasWorkspace({
 
               const interpolated = injectQueueVariables(item.templateContent, {
                 queueNumber: simulator.currentNumber,
-                queueCounter: queue.currentCounter,
+                queueCounter: queue.currentCounter || simulator.currentCounter,
                 queuePrefix: queue.prefix,
                 queueName: queue.name,
+                counterLabel: queue.counterLabel,
               });
 
               return (

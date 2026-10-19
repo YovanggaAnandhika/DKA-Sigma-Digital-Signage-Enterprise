@@ -93,9 +93,10 @@ export default function QueuePreviewMonitor() {
             .map((item) => {
               const interpolated = injectQueueVariables(item.templateContent, {
                 queueNumber: simulator.currentNumber,
-                queueCounter: queue.currentCounter,
+                queueCounter: queue.currentCounter || simulator.currentCounter,
                 queuePrefix: queue.prefix,
                 queueName: queue.name,
+                counterLabel: queue.counterLabel,
               });
 
               // Convert canvas pixel coordinates to percentage for responsiveness

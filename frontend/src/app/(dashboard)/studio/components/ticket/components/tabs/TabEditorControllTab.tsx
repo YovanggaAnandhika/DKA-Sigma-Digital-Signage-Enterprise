@@ -242,6 +242,7 @@ export default function TabEditorControllTab() {
 
       setQueue((prev) => ({
         ...prev,
+        currentCounter: activeCounter.counterName,
         counters: prev.counters.map((c) =>
           c.id === activeCounter.id ? { ...c, status: newStatus } : c
         ),
@@ -363,7 +364,7 @@ export default function TabEditorControllTab() {
             Pilih Pos / {counterLabel}:
           </label>
           <select
-            value={queue.currentCounter}
+            value={queue.currentCounter || activeCounter.counterName}
             onChange={(e) => {
               const val = e.target.value;
               setQueue((prev) => ({ ...prev, currentCounter: val }));
@@ -580,281 +581,147 @@ export default function TabEditorControllTab() {
             }}
           >
             {isBreak ? (
-              /* DEDICATED BREAK SCREEN LAYOUT (Layout Khusus Jam Istirahat) */
+              /* DEDICATED BREAK SCREEN LAYOUT (100% Identik dengan Android UI) */
               <div
                 style={{
                   width: '100%',
                   height: '100%',
                   display: 'flex',
                   flexDirection: 'column',
-                  justifyContent: 'space-between',
+                  justifyContent: 'center',
                   alignItems: 'center',
-                  padding: '36px 32px',
-                  background: 'radial-gradient(ellipse at 50% 38%, rgba(245, 158, 11, 0.22) 0%, rgba(13, 16, 26, 0.98) 65%, #080a10 100%)',
+                  padding: '32px 24px',
+                  backgroundColor: '#0D111A',
                   color: '#ffffff',
                   boxSizing: 'border-box',
                   textAlign: 'center',
-                  position: 'relative',
+                  gap: '24px',
                 }}
               >
-                {/* Ambient Glow */}
+                <h1
+                  style={{
+                    margin: 0,
+                    fontSize: 'clamp(2rem, 3.6vw, 3.2rem)',
+                    fontWeight: 900,
+                    letterSpacing: '0.04em',
+                    color: '#F59E0B',
+                    lineHeight: 1.1,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  SEDANG ISTIRAHAT
+                </h1>
+
                 <div
                   style={{
-                    position: 'absolute',
-                    top: '30%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    width: '340px',
-                    height: '340px',
-                    borderRadius: '50%',
-                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                    filter: 'blur(60px)',
-                    pointerEvents: 'none',
+                    width: '85%',
+                    maxWidth: '680px',
+                    padding: '16px 28px',
+                    borderRadius: '14px',
+                    backgroundColor: '#D97706',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 16px rgba(217, 119, 6, 0.3)',
                   }}
-                />
-
-                {/* Top Header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', zIndex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 800, letterSpacing: '0.08em', color: '#f59e0b', textTransform: 'uppercase' }}>
-                      {queue.name || 'Layar Antrian'}
-                    </span>
-                  </div>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'rgba(255, 255, 255, 0.45)', letterSpacing: '0.05em' }}>
-                    INFORMASI LAYANAN
+                >
+                  <span
+                    style={{
+                      color: '#FFFFFF',
+                      fontSize: 'clamp(1.2rem, 2vw, 1.7rem)',
+                      fontWeight: 800,
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {liveCounterName}
                   </span>
                 </div>
 
-                {/* Center Hero Card */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', zIndex: 1, maxWidth: '640px' }}>
-                  <div
-                    style={{
-                      width: '80px',
-                      height: '80px',
-                      borderRadius: '24px',
-                      backgroundColor: 'rgba(245, 158, 11, 0.16)',
-                      border: '2px solid rgba(245, 158, 11, 0.45)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#fbbf24',
-                      boxShadow: '0 0 35px rgba(245, 158, 11, 0.28)',
-                    }}
-                  >
-                    <Coffee size={40} />
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <h2
-                      style={{
-                        margin: 0,
-                        fontSize: '2.4rem',
-                        fontWeight: 900,
-                        letterSpacing: '0.04em',
-                        color: '#ffffff',
-                        lineHeight: 1.1,
-                        textShadow: '0 2px 12px rgba(0,0,0,0.6)',
-                      }}
-                    >
-                      SEDANG ISTIRAHAT
-                    </h2>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '4px' }}>
-                      <span
-                        style={{
-                          padding: '4px 16px',
-                          borderRadius: '8px',
-                          backgroundColor: 'rgba(245, 158, 11, 0.25)',
-                          border: '1px solid rgba(245, 158, 11, 0.5)',
-                          color: '#fef3c7',
-                          fontSize: '0.95rem',
-                          fontWeight: 800,
-                          letterSpacing: '0.04em',
-                        }}
-                      >
-                        {liveCounterName}
-                      </span>
-                      {activeCounter.operatorName && (
-                        <span style={{ fontSize: '0.8125rem', color: '#cbd5e1' }}>
-                          Petugas: <strong style={{ color: '#ffffff' }}>{activeCounter.operatorName}</strong>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <p
-                    style={{
-                      margin: '6px 0 0 0',
-                      fontSize: '0.875rem',
-                      color: '#94a3b8',
-                      lineHeight: 1.6,
-                      maxWidth: '500px',
-                    }}
-                  >
-                    Petugas saat ini sedang dalam jam istirahat. Layanan antrian akan dibuka kembali segera. Mohon menunggu dengan tertib, terima kasih.
-                  </p>
-                </div>
-
-                {/* Bottom Footer Bar */}
                 <div
                   style={{
-                    width: '100%',
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                    border: '1px solid rgba(245, 158, 11, 0.2)',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    fontSize: '0.75rem',
-                    color: '#fde68a',
-                    zIndex: 1,
+                    flexDirection: 'column',
+                    gap: '6px',
+                    color: '#94A3B8',
+                    fontSize: 'clamp(0.95rem, 1.5vw, 1.15rem)',
+                    lineHeight: 1.5,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Coffee size={13} />
-                    <span>Status Operasional: <strong>Istirahat Sementara</strong></span>
-                  </div>
-                  <span style={{ color: 'rgba(255, 255, 255, 0.45)' }}>Silakan menunggu panggilan berikutnya</span>
+                  <span>Petugas sedang dalam jam istirahat.</span>
+                  <span>Layanan akan dibuka kembali segera.</span>
                 </div>
               </div>
             ) : isLocked ? (
-              /* DEDICATED CLOSED SCREEN LAYOUT (Layout Khusus Loket Ditutup) */
+              /* DEDICATED CLOSED SCREEN LAYOUT (100% Identik dengan Android UI) */
               <div
                 style={{
                   width: '100%',
                   height: '100%',
                   display: 'flex',
                   flexDirection: 'column',
-                  justifyContent: 'space-between',
+                  justifyContent: 'center',
                   alignItems: 'center',
-                  padding: '36px 32px',
-                  background: 'radial-gradient(ellipse at 50% 38%, rgba(239, 68, 68, 0.22) 0%, rgba(13, 16, 26, 0.98) 65%, #080a10 100%)',
+                  padding: '32px 24px',
+                  backgroundColor: '#0B0E17',
                   color: '#ffffff',
                   boxSizing: 'border-box',
                   textAlign: 'center',
-                  position: 'relative',
+                  gap: '24px',
                 }}
               >
-                {/* Ambient Glow */}
+                <h1
+                  style={{
+                    margin: 0,
+                    fontSize: 'clamp(2rem, 3.6vw, 3.2rem)',
+                    fontWeight: 900,
+                    letterSpacing: '0.04em',
+                    color: '#EF4444',
+                    lineHeight: 1.1,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  LOKET DITUTUP
+                </h1>
+
                 <div
                   style={{
-                    position: 'absolute',
-                    top: '30%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    width: '340px',
-                    height: '340px',
-                    borderRadius: '50%',
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    filter: 'blur(60px)',
-                    pointerEvents: 'none',
+                    width: '85%',
+                    maxWidth: '680px',
+                    padding: '16px 28px',
+                    borderRadius: '14px',
+                    backgroundColor: '#DC2626',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 16px rgba(220, 38, 38, 0.3)',
                   }}
-                />
-
-                {/* Top Header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', zIndex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 800, letterSpacing: '0.08em', color: '#f87171', textTransform: 'uppercase' }}>
-                      {queue.name || 'Layar Antrian'}
-                    </span>
-                  </div>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'rgba(255, 255, 255, 0.45)', letterSpacing: '0.05em' }}>
-                    PEMBERITAHUAN OPERASIONAL
+                >
+                  <span
+                    style={{
+                      color: '#FFFFFF',
+                      fontSize: 'clamp(1.2rem, 2vw, 1.7rem)',
+                      fontWeight: 800,
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {liveCounterName}
                   </span>
                 </div>
 
-                {/* Center Hero Card */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', zIndex: 1, maxWidth: '640px' }}>
-                  <div
-                    style={{
-                      width: '80px',
-                      height: '80px',
-                      borderRadius: '24px',
-                      backgroundColor: 'rgba(239, 68, 68, 0.16)',
-                      border: '2px solid rgba(239, 68, 68, 0.45)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#f87171',
-                      boxShadow: '0 0 35px rgba(239, 68, 68, 0.28)',
-                    }}
-                  >
-                    <Lock size={38} />
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <h2
-                      style={{
-                        margin: 0,
-                        fontSize: '2.4rem',
-                        fontWeight: 900,
-                        letterSpacing: '0.04em',
-                        color: '#ffffff',
-                        lineHeight: 1.1,
-                        textShadow: '0 2px 12px rgba(0,0,0,0.6)',
-                      }}
-                    >
-                      LOKET DITUTUP
-                    </h2>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '4px' }}>
-                      <span
-                        style={{
-                          padding: '4px 16px',
-                          borderRadius: '8px',
-                          backgroundColor: 'rgba(239, 68, 68, 0.25)',
-                          border: '1px solid rgba(239, 68, 68, 0.5)',
-                          color: '#fecaca',
-                          fontSize: '0.95rem',
-                          fontWeight: 800,
-                          letterSpacing: '0.04em',
-                        }}
-                      >
-                        {liveCounterName}
-                      </span>
-                      {activeCounter.operatorName && (
-                        <span style={{ fontSize: '0.8125rem', color: '#cbd5e1' }}>
-                          Petugas: <strong style={{ color: '#ffffff' }}>{activeCounter.operatorName}</strong>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <p
-                    style={{
-                      margin: '6px 0 0 0',
-                      fontSize: '0.875rem',
-                      color: '#94a3b8',
-                      lineHeight: 1.6,
-                      maxWidth: '500px',
-                    }}
-                  >
-                    Mohon maaf, layanan antrian pada loket ini saat ini sedang ditutup. Silakan menuju loket lain yang sedang buka atau hubungi meja informasi.
-                  </p>
-                </div>
-
-                {/* Bottom Footer Bar */}
                 <div
                   style={{
-                    width: '100%',
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    border: '1px solid rgba(239, 68, 68, 0.2)',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    fontSize: '0.75rem',
-                    color: '#fca5a5',
-                    zIndex: 1,
+                    flexDirection: 'column',
+                    gap: '6px',
+                    color: '#94A3B8',
+                    fontSize: 'clamp(0.95rem, 1.5vw, 1.15rem)',
+                    lineHeight: 1.5,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Lock size={13} />
-                    <span>Status Operasional: <strong>Loket Tidak Beroperasi</strong></span>
-                  </div>
-                  <span style={{ color: 'rgba(255, 255, 255, 0.45)' }}>Silakan menuju loket yang beroperasi</span>
+                  <span>Mohon maaf, layanan antrian pada loket ini sedang ditutup.</span>
+                  <span>Silakan menuju loket lain yang beroperasi.</span>
                 </div>
               </div>
             ) : (
@@ -876,6 +743,7 @@ export default function TabEditorControllTab() {
                     queuePrefix: queue.prefix,
                     queueName: queue.name,
                     operatorName: activeCounter.operatorName || 'Petugas',
+                    counterLabel: queue.counterLabel,
                   });
 
                   return (

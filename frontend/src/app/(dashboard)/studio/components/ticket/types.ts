@@ -207,12 +207,29 @@ export function injectQueueVariables(
     queueName?: string;
     operatorName?: string;
     waitingCount?: number;
+    counterLabel?: string;
   }
 ): string {
   if (!template) return '';
+  const label = (data.counterLabel || 'Loket').trim();
+
+  // Ekstrak nomor atau identitas pos tanpa awalan label lama (misal: "LOKET 01" -> "1", "POLI 02" -> "2", "1" -> "1")
+  const rawCounter = (data.queueCounter || '1').trim();
+  const labelRegex = new RegExp(`^(?:${label}|loket|poli|teller|kasir|meja|counter|pickup point)\\s*`, 'i');
+  let cleanCounterNumber = rawCounter.replace(labelRegex, '').trim();
+  if (/^0+\d+$/.test(cleanCounterNumber)) {
+    cleanCounterNumber = cleanCounterNumber.replace(/^0+/, '');
+  }
+  if (!cleanCounterNumber) {
+    cleanCounterNumber = rawCounter.replace(/[^0-9]/g, '') || '1';
+  }
+
+  // Tampilkan label dinamis sesuai jenis/sektor: "POLI 1", "PICKUP POINT 1", "TELLER 1", "KASIR 1", "LOKET 1"
+  const formattedCounter = `${label.toUpperCase()} ${cleanCounterNumber}`;
+
   return template
     .replaceAll('$queue_number$', data.queueNumber || 'A-001')
-    .replaceAll('$queue_counter$', data.queueCounter || 'LOKET 01')
+    .replaceAll('$queue_counter$', formattedCounter)
     .replaceAll('$queue_prefix$', data.queuePrefix || 'A')
     .replaceAll('$queue_name$', data.queueName || 'Layar Antrian')
     .replaceAll('$operator_name$', data.operatorName || 'Petugas')
@@ -406,11 +423,6 @@ export function buildQueueSpokenText(
 
   const cleanPrefix = prefix.replace(/[0-9]/g, '').trim() || prefix;
 
-  const counterSpoken = (counterName || 'Loket 1')
-    .replace(/LOKET\s*0+(\d+)/gi, 'Loket $1')
-    .replace(/LOKET\s*(\d+)/gi, 'Loket $1')
-    .replace(/LOKET/gi, 'Loket');
-
   const counterObj = queueConfig?.counters?.find((c) => c.counterName === counterName);
   const operatorName = counterObj?.operatorName || '';
 
@@ -420,13 +432,30 @@ export function buildQueueSpokenText(
   const queueName = queueConfig?.name || '';
   const waitingCount = queueConfig?.waitingTicketsCount ?? 0;
 
-  const ticketLabel = queueConfig?.ticketLabel || 'Nomor Antrian';
-  const counterLabel = queueConfig?.counterLabel || 'Loket';
+  // Label pos/loket murni diambil dari konfigurasi (contoh: Poli, Kasir, Teller, Loket)
+  const ticketLabel = (queueConfig?.ticketLabel || 'Nomor Antrian').trim();
+  const counterLabel = (queueConfig?.counterLabel || 'Loket').trim();
   const rawTemplate = isRecall
     ? (queueConfig?.ttsTemplateRecall || 'Panggilan ulang, {ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}')
     : (queueConfig?.ttsTemplateCall || '{ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}');
 
   const formattedTicket = `${cleanPrefix}... ${spokenDigits}`;
+
+  // Ekstrak nama/nomor unik pos tanpa kata awalan (contoh: "LOKET 01" -> "1", "POLI 02" -> "2", "Poli Gigi" -> "Gigi")
+  const labelPrefixRegex = new RegExp(`^(?:${counterLabel}|loket|poli|teller|kasir|meja|counter)\\s*`, 'i');
+  let cleanCounterName = (counterName || '1').trim().replace(labelPrefixRegex, '').trim();
+  if (/^0+\d+$/.test(cleanCounterName)) {
+    cleanCounterName = cleanCounterName.replace(/^0+/, '');
+  }
+  if (!cleanCounterName) {
+    cleanCounterName = counterName.replace(/[^0-9]/g, '') || '1';
+  }
+
+  // Jika template mengandung {counter_label}, {counter_name} cukup nama/nomor posnya (misal: "1" atau "Gigi")
+  // Jika template tidak memiliki {counter_label}, sertakan label di depan agar tetap lengkap
+  const counterNameInTemplate = rawTemplate.includes('{counter_label}')
+    ? cleanCounterName
+    : `${counterLabel} ${cleanCounterName}`.trim();
 
   return rawTemplate
     .replaceAll('{ticket_label}', ticketLabel)
@@ -434,8 +463,8 @@ export function buildQueueSpokenText(
     .replaceAll('{ticket_number}', formattedTicket)
     .replaceAll('{ticket_prefix}', cleanPrefix)
     .replaceAll('{ticket_digits}', spokenDigits)
-    .replaceAll('{counter_name}', counterSpoken)
-    .replaceAll('{counter_number}', counterName.replace(/[^0-9]/g, '') || '1')
+    .replaceAll('{counter_name}', counterNameInTemplate)
+    .replaceAll('{counter_number}', counterName.replace(/[^0-9]/g, '') || cleanCounterName)
     .replaceAll('{operator_name}', operatorName)
     .replaceAll('{petugas}', operatorName)
     .replaceAll('{queue_name}', queueName)
@@ -596,34 +625,50 @@ export function speakCounterStatusAnnouncement(
   onEnd?: () => void
 ) {
   stopQueueAnnouncement();
-  const counterLabel = queueConfig?.counterLabel || 'Loket';
+  // Label pos/loket murni diambil dari konfigurasi (contoh: Poli, Kasir, Teller, Loket)
+  const counterLabel = (queueConfig?.counterLabel || 'Loket').trim();
   const counterObj = queueConfig?.counters?.find((c) => c.counterName === counterName);
   const operatorName = counterObj?.operatorName || '';
-  const cleanCounterName = (counterName || 'Loket 1')
-    .replace(/LOKET\s*0+(\d+)/gi, 'Loket $1')
-    .replace(/LOKET\s*(\d+)/gi, 'Loket $1');
+
+  // Ekstrak nama/nomor unik pos tanpa kata awalan (contoh: "LOKET 01" -> "1", "POLI 02" -> "2", "Poli Gigi" -> "Gigi")
+  const labelPrefixRegex = new RegExp(`^(?:${counterLabel}|loket|poli|teller|kasir|meja|counter)\\s*`, 'i');
+  let cleanCounterName = (counterName || '1').trim().replace(labelPrefixRegex, '').trim();
+  if (/^0+\d+$/.test(cleanCounterName)) {
+    cleanCounterName = cleanCounterName.replace(/^0+/, '');
+  }
+  if (!cleanCounterName) {
+    cleanCounterName = counterName.replace(/[^0-9]/g, '') || '1';
+  }
+
   const hour = new Date().getHours();
   const timeGreeting = hour >= 4 && hour < 11 ? 'selamat pagi' : hour >= 11 && hour < 15 ? 'selamat siang' : hour >= 15 && hour < 18 ? 'selamat sore' : 'selamat malam';
   const timePeriod = hour >= 4 && hour < 11 ? 'pagi' : hour >= 11 && hour < 15 ? 'siang' : hour >= 15 && hour < 18 ? 'sore' : 'malam';
   const queueName = queueConfig?.name || '';
 
-  let text = '';
-  if (status === 'BREAK') {
-    text = (queueConfig?.ttsTemplateBreak || '{counter_label} {counter_name} sedang istirahat')
-      .replaceAll('{counter_label}', counterLabel)
-      .replaceAll('{counter_name}', cleanCounterName)
-      .replaceAll('{counter_number}', counterName.replace(/[^0-9]/g, '') || '1')
-      .replaceAll('{operator_name}', operatorName)
-      .replaceAll('{petugas}', operatorName)
-      .replaceAll('{queue_name}', queueName)
-      .replaceAll('{nama_antrian}', queueName)
-      .replaceAll('{salam}', timeGreeting)
-      .replaceAll('{waktu}', timePeriod);
-  } else if (status === 'LOCKED') {
-    text = `${counterLabel} ${cleanCounterName} telah ditutup`;
-  } else {
-    text = `${counterLabel} ${cleanCounterName} siap melayani`;
-  }
+  // Template baku yang mengacu pada {counter_label} dan {counter_name}
+  const rawTemplate =
+    status === 'BREAK'
+      ? (queueConfig?.ttsTemplateBreak || '{counter_label} {counter_name} sedang istirahat')
+      : status === 'LOCKED'
+      ? '{counter_label} {counter_name} telah ditutup'
+      : '{counter_label} {counter_name} siap melayani';
+
+  const counterNameInTemplate = rawTemplate.includes('{counter_label}')
+    ? cleanCounterName
+    : `${counterLabel} ${cleanCounterName}`.trim();
+
+  const text = rawTemplate
+    .replaceAll('{counter_label}', counterLabel)
+    .replaceAll('{counter_name}', counterNameInTemplate)
+    .replaceAll('{counter_number}', counterName.replace(/[^0-9]/g, '') || cleanCounterName)
+    .replaceAll('{operator_name}', operatorName)
+    .replaceAll('{petugas}', operatorName)
+    .replaceAll('{queue_name}', queueName)
+    .replaceAll('{nama_antrian}', queueName)
+    .replaceAll('{salam}', timeGreeting)
+    .replaceAll('{waktu}', timePeriod)
+    .replaceAll(/\s+/g, ' ')
+    .trim();
 
   playQueueAnnouncementAudio(text, onEnd).then((success) => {
     if (success) return;

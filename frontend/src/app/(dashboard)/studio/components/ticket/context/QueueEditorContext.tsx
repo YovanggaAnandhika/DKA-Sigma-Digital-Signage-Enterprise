@@ -155,14 +155,48 @@ export function QueueEditorProvider({
   const selectSector = useCallback((sectorId: string) => {
     const sec = sectors.find((s) => s.id === sectorId);
     if (!sec) return;
-    setQueue((prev) => ({
+    const newCounterLabel = sec.counterLabel || 'Loket';
+    const newCounterPrefix = newCounterLabel.toUpperCase();
+
+    setQueue((prev) => {
+      const updatedCounters = (prev.counters || []).map((c, idx) => {
+        const num = c.counterNumber || idx + 1;
+        const numStr = String(num).padStart(2, '0');
+        return {
+          ...c,
+          counterName: `${newCounterPrefix} ${numStr}`,
+        };
+      });
+
+      const updatedCurrentCounter = updatedCounters[0]?.counterName || `${newCounterPrefix} 01`;
+
+      const updatedItems = (prev.items || []).map((it) => {
+        if (it.itemType === 'counter_loket' || it.name.toLowerCase().includes('badge') || it.name.toLowerCase().includes('label loket')) {
+          return {
+            ...it,
+            name: `Badge ${newCounterLabel}`,
+          };
+        }
+        return it;
+      });
+
+      return {
+        ...prev,
+        sectorType: sec.id,
+        ticketLabel: sec.ticketLabel,
+        counterLabel: sec.counterLabel,
+        ttsTemplateCall: sec.ttsTemplateCall,
+        ttsTemplateRecall: sec.ttsTemplateRecall,
+        ttsTemplateBreak: sec.ttsTemplateBreak,
+        currentCounter: updatedCurrentCounter,
+        counters: updatedCounters,
+        items: updatedItems,
+      };
+    });
+
+    setSimulator((prev) => ({
       ...prev,
-      sectorType: sec.id,
-      ticketLabel: sec.ticketLabel,
-      counterLabel: sec.counterLabel,
-      ttsTemplateCall: sec.ttsTemplateCall,
-      ttsTemplateRecall: sec.ttsTemplateRecall,
-      ttsTemplateBreak: sec.ttsTemplateBreak,
+      currentCounter: `${newCounterPrefix} 01`,
     }));
   }, [sectors]);
 
