@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Volume2, Music, FolderOpen, Play, CheckCircle2 } from 'lucide-react';
+import { Volume2, Music, FolderOpen, Play, CheckCircle2, Sliders, Check } from 'lucide-react';
 import { useQueueEditor } from '../../context/QueueEditorContext';
 import QueueAudioPickerModal from '../QueueAudioPickerModal';
+import { SECTOR_PRESETS, speakQueueAnnouncement } from '../../types';
 
 export default function TabAudioTab() {
   const { queue, updateField, updateAudio, triggerChime, simulator } = useQueueEditor();
   const [isAudioPickerOpen, setIsAudioPickerOpen] = useState(false);
+  const [isTestingTts, setIsTestingTts] = useState(false);
 
   const audioConf = queue.audios?.[0] || {
     id: 'aud-1',
@@ -35,6 +37,28 @@ export default function TabAudioTab() {
       fileUrl: undefined,
       isActive: true,
     });
+  };
+
+  const handleSelectSectorPreset = (presetId: string) => {
+    const preset = SECTOR_PRESETS.find((p) => p.id === presetId);
+    if (!preset) return;
+    updateField('sectorType', preset.id);
+    updateField('ticketLabel', preset.ticketLabel);
+    updateField('counterLabel', preset.counterLabel);
+    updateField('ttsTemplateCall', preset.ttsTemplateCall);
+    updateField('ttsTemplateRecall', preset.ttsTemplateRecall);
+    updateField('ttsTemplateBreak', preset.ttsTemplateBreak);
+  };
+
+  const handleTestTtsVoice = () => {
+    setIsTestingTts(true);
+    speakQueueAnnouncement(
+      'A-005',
+      `${queue.counterLabel || 'Loket'} 1`,
+      false,
+      () => setIsTestingTts(false),
+      queue
+    );
   };
 
   return (
@@ -162,6 +186,202 @@ export default function TabAudioTab() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Sektor & Naskah TTS Card */}
+      <div className="card-elevated" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Sliders size={18} color="var(--primary-500)" />
+              <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Sektor Industri & Naskah Suara TTS
+              </h4>
+            </div>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Sesuaikan istilah (Tiket/Pesanan, Loket/Poli/Teller) dan susunan pengucapan suara mesin pemanggil.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleTestTtsVoice}
+            disabled={isTestingTts}
+            className="btn btn-secondary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', padding: '6px 12px' }}
+          >
+            <Volume2 size={14} color={isTestingTts ? 'var(--primary-500)' : undefined} />
+            <span>{isTestingTts ? 'Menguji...' : 'Uji Suara Naskah'}</span>
+          </button>
+        </div>
+
+        {/* Sector Presets Grid */}
+        <div>
+          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>
+            Pilih Sektor Industri:
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
+            {SECTOR_PRESETS.map((preset) => {
+              const isSelected = (queue.sectorType || 'HOSPITAL') === preset.id;
+              return (
+                <div
+                  key={preset.id}
+                  onClick={() => handleSelectSectorPreset(preset.id)}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: isSelected ? '2px solid var(--primary-500)' : '1px solid var(--border-subtle)',
+                    backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.12)' : 'var(--bg-surface-elevated)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: isSelected ? 'var(--primary-400)' : 'var(--text-primary)' }}>
+                      {preset.name}
+                    </span>
+                    {isSelected && <Check size={14} color="var(--primary-500)" />}
+                  </div>
+                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                    {preset.ticketLabel} → {preset.counterLabel}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Label Inputs */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+              Label Tiket / Nomor:
+            </label>
+            <input
+              type="text"
+              value={queue.ticketLabel || 'Nomor Antrian'}
+              onChange={(e) => updateField('ticketLabel', e.target.value)}
+              placeholder="Nomor Antrian, Nomor Pesanan"
+              style={{
+                width: '100%',
+                backgroundColor: 'var(--input-bg)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--input-border)',
+                borderRadius: '6px',
+                padding: '7px 10px',
+                fontSize: '0.8125rem',
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+              Label Pos / Loket:
+            </label>
+            <input
+              type="text"
+              value={queue.counterLabel || 'Loket'}
+              onChange={(e) => updateField('counterLabel', e.target.value)}
+              placeholder="Loket, Teller, Pickup Point, Poli"
+              style={{
+                width: '100%',
+                backgroundColor: 'var(--input-bg)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--input-border)',
+                borderRadius: '6px',
+                padding: '7px 10px',
+                fontSize: '0.8125rem',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* TTS Templates */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+              Naskah Panggilan Pertama (TTS):
+            </label>
+            <input
+              type="text"
+              value={queue.ttsTemplateCall || '{ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}'}
+              onChange={(e) => updateField('ttsTemplateCall', e.target.value)}
+              style={{
+                width: '100%',
+                backgroundColor: 'var(--input-bg)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--input-border)',
+                borderRadius: '6px',
+                padding: '7px 10px',
+                fontSize: '0.8125rem',
+                fontFamily: 'monospace',
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+              Naskah Panggilan Ulang (Recall):
+            </label>
+            <input
+              type="text"
+              value={queue.ttsTemplateRecall || 'Panggilan ulang, {ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}'}
+              onChange={(e) => updateField('ttsTemplateRecall', e.target.value)}
+              style={{
+                width: '100%',
+                backgroundColor: 'var(--input-bg)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--input-border)',
+                borderRadius: '6px',
+                padding: '7px 10px',
+                fontSize: '0.8125rem',
+                fontFamily: 'monospace',
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+              Naskah Istirahat Loket:
+            </label>
+            <input
+              type="text"
+              value={queue.ttsTemplateBreak || '{counter_label} {counter_name} sedang istirahat'}
+              onChange={(e) => updateField('ttsTemplateBreak', e.target.value)}
+              style={{
+                width: '100%',
+                backgroundColor: 'var(--input-bg)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--input-border)',
+                borderRadius: '6px',
+                padding: '7px 10px',
+                fontSize: '0.8125rem',
+                fontFamily: 'monospace',
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+            <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Variabel:</span>
+            {['{ticket_label}', '{ticket_number}', '{counter_label}', '{counter_name}'].map((v) => (
+              <code
+                key={v}
+                style={{
+                  fontSize: '0.6875rem',
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  backgroundColor: 'var(--bg-surface-elevated)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                {v}
+              </code>
+            ))}
+          </div>
+        </div>
       </div>
 
       <QueueAudioPickerModal

@@ -12,6 +12,8 @@ use crate::grpc::proto::studio::v1::queue::{
     DeleteQueueLayoutItemRequest, DeleteQueueLayoutItemResponse, AddCounterRequest,
     UpdateCounterRequest, DeleteCounterRequest, DeleteCounterResponse, ListCountersRequest,
     ListCountersResponse, IssueTicketRequest, CallNextTicketRequest, CallNextTicketResponse,
+    CallPreviousTicketRequest, CallPreviousTicketResponse, ResetQueueRequest, ResetQueueResponse,
+    SetCounterStatusRequest, GetQueueSyncStateRequest, GetQueueSyncStateResponse,
     ListTicketsRequest, ListTicketsResponse, UpdateTicketStatusRequest, AddAudioRequest,
     DeleteAudioRequest, DeleteAudioResponse, ListAudiosRequest, ListAudiosResponse,
     QueueDisplayDetail, QueueLayoutItem, QueueCounter, QueueTicket, QueueAudio,
@@ -33,6 +35,8 @@ impl QueueServiceImpl {
             SELECT id, name, prefix, canvas_width, canvas_height, background_color,
                    background_image_url, theme_preset, auto_recall_enabled,
                    opacity, overlay_color, overlay_opacity,
+                   sector_type, ticket_label, counter_label,
+                   tts_template_call, tts_template_recall, tts_template_break, current_sequence,
                    created_at, updated_at
             FROM queue_displays
             WHERE id = $1
@@ -91,7 +95,8 @@ impl QueueServiceImpl {
         let counters = sqlx::query!(
             r#"
             SELECT id, queue_display_id, counter_number, counter_name, operator_name,
-                   is_active, created_at, updated_at
+                   is_active, status, status_note, current_ticket_number, last_called_at,
+                   created_at, updated_at
             FROM queue_counters
             WHERE queue_display_id = $1
             ORDER BY counter_number ASC
@@ -109,10 +114,12 @@ impl QueueServiceImpl {
             counter_name: c.counter_name,
             operator_name: c.operator_name.unwrap_or_default(),
             is_active: c.is_active,
-            current_ticket_number: "".to_string(),
-            last_called_at: "".to_string(),
+            current_ticket_number: c.current_ticket_number.unwrap_or_default(),
+            last_called_at: c.last_called_at.map(|t| t.to_rfc3339()).unwrap_or_default(),
             created_at: c.created_at.to_rfc3339(),
             updated_at: c.updated_at.to_rfc3339(),
+            status: c.status,
+            status_note: c.status_note.unwrap_or_default(),
         })
         .collect();
 
@@ -171,7 +178,10 @@ impl QueueServiceImpl {
         .await
         .map_err(|e| Status::internal(e.to_string()))?
         .map(|t| t.ticket_number)
-        .unwrap_or_else(|| format!("{}-001", display.prefix));
+        .unwrap_or_else(|| {
+            let p = if display.prefix.is_empty() { "A" } else { &display.prefix };
+            format!("{}-{:03}", p, display.current_sequence)
+        });
 
         Ok(QueueDisplayDetail {
             id: display.id.to_string(),
@@ -193,6 +203,13 @@ impl QueueServiceImpl {
             opacity: display.opacity as f32,
             overlay_color: display.overlay_color,
             overlay_opacity: display.overlay_opacity as f32,
+            sector_type: display.sector_type,
+            ticket_label: display.ticket_label,
+            counter_label: display.counter_label,
+            tts_template_call: display.tts_template_call,
+            tts_template_recall: display.tts_template_recall,
+            tts_template_break: display.tts_template_break,
+            current_sequence: display.current_sequence,
         })
     }
 }
@@ -206,13 +223,22 @@ impl QueueServiceTrait for QueueServiceImpl {
         let req = request.into_inner();
         let display_id = Uuid::new_v4();
 
+        let sector_type = req.sector_type.filter(|s| !s.is_empty()).unwrap_or_else(|| "HOSPITAL".to_string());
+        let ticket_label = req.ticket_label.filter(|s| !s.is_empty()).unwrap_or_else(|| "Nomor Antrian".to_string());
+        let counter_label = req.counter_label.filter(|s| !s.is_empty()).unwrap_or_else(|| "Loket".to_string());
+        let tts_call = req.tts_template_call.filter(|s| !s.is_empty()).unwrap_or_else(|| "{ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}".to_string());
+        let tts_recall = req.tts_template_recall.filter(|s| !s.is_empty()).unwrap_or_else(|| "Panggilan ulang, {ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}".to_string());
+        let tts_break = req.tts_template_break.filter(|s| !s.is_empty()).unwrap_or_else(|| "{counter_label} {counter_name} sedang istirahat".to_string());
+
         sqlx::query!(
             r#"
             INSERT INTO queue_displays (
                 id, name, prefix, canvas_width, canvas_height, background_color,
                 background_image_url, theme_preset, auto_recall_enabled,
-                opacity, overlay_color, overlay_opacity
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                opacity, overlay_color, overlay_opacity,
+                sector_type, ticket_label, counter_label,
+                tts_template_call, tts_template_recall, tts_template_break
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
             "#,
             display_id,
             req.name,
@@ -226,6 +252,12 @@ impl QueueServiceTrait for QueueServiceImpl {
             if req.opacity > 0.0 { req.opacity as f64 } else { 1.0 },
             if req.overlay_color.is_empty() { "transparent" } else { &req.overlay_color },
             req.overlay_opacity as f64,
+            sector_type,
+            ticket_label,
+            counter_label,
+            tts_call,
+            tts_recall,
+            tts_break,
         )
         .execute(&self.pool)
         .await
@@ -386,6 +418,12 @@ impl QueueServiceTrait for QueueServiceImpl {
                 opacity = CASE WHEN $10 > 0.0 THEN $10 ELSE opacity END,
                 overlay_color = COALESCE(NULLIF($11, ''), overlay_color),
                 overlay_opacity = $12,
+                sector_type = COALESCE($13, sector_type),
+                ticket_label = COALESCE($14, ticket_label),
+                counter_label = COALESCE($15, counter_label),
+                tts_template_call = COALESCE($16, tts_template_call),
+                tts_template_recall = COALESCE($17, tts_template_recall),
+                tts_template_break = COALESCE($18, tts_template_break),
                 updated_at = NOW()
             WHERE id = $1
             "#,
@@ -401,6 +439,12 @@ impl QueueServiceTrait for QueueServiceImpl {
             req.opacity as f64,
             req.overlay_color,
             req.overlay_opacity as f64,
+            req.sector_type,
+            req.ticket_label,
+            req.counter_label,
+            req.tts_template_call,
+            req.tts_template_recall,
+            req.tts_template_break,
         )
         .execute(&self.pool)
         .await
@@ -752,6 +796,8 @@ impl QueueServiceTrait for QueueServiceImpl {
             last_called_at: "".to_string(),
             created_at: chrono::Utc::now().to_rfc3339(),
             updated_at: chrono::Utc::now().to_rfc3339(),
+            status: "ACTIVE".to_string(),
+            status_note: "".to_string(),
         }))
     }
 
@@ -761,19 +807,26 @@ impl QueueServiceTrait for QueueServiceImpl {
     ) -> Result<Response<QueueCounter>, Status> {
         let req = request.into_inner();
         let cid = Uuid::from_str(&req.id).map_err(|_| Status::invalid_argument("Invalid counter id"))?;
+        let status = req.status.unwrap_or_else(|| "ACTIVE".to_string());
+        let status_note = req.status_note;
 
         let row = sqlx::query!(
             r#"
             UPDATE queue_counters
-            SET counter_number = $2, counter_name = $3, operator_name = $4, is_active = $5, updated_at = NOW()
+            SET counter_number = $2, counter_name = $3, operator_name = $4, is_active = $5,
+                status = COALESCE(NULLIF($6, ''), status),
+                status_note = COALESCE($7, status_note),
+                updated_at = NOW()
             WHERE id = $1
-            RETURNING id, queue_display_id, counter_number, counter_name, operator_name, is_active, created_at, updated_at
+            RETURNING id, queue_display_id, counter_number, counter_name, operator_name, is_active, status, status_note, current_ticket_number, last_called_at, created_at, updated_at
             "#,
             cid,
             req.counter_number,
             req.counter_name,
             req.operator_name,
             req.is_active,
+            status,
+            status_note,
         )
         .fetch_one(&self.pool)
         .await
@@ -786,10 +839,12 @@ impl QueueServiceTrait for QueueServiceImpl {
             counter_name: row.counter_name,
             operator_name: row.operator_name.unwrap_or_default(),
             is_active: row.is_active,
-            current_ticket_number: "".to_string(),
-            last_called_at: "".to_string(),
+            current_ticket_number: row.current_ticket_number.unwrap_or_default(),
+            last_called_at: row.last_called_at.map(|t| t.to_rfc3339()).unwrap_or_default(),
             created_at: row.created_at.to_rfc3339(),
             updated_at: row.updated_at.to_rfc3339(),
+            status: row.status,
+            status_note: row.status_note.unwrap_or_default(),
         }))
     }
 
@@ -814,7 +869,7 @@ impl QueueServiceTrait for QueueServiceImpl {
 
         let rows = sqlx::query!(
             r#"
-            SELECT id, queue_display_id, counter_number, counter_name, operator_name, is_active, created_at, updated_at
+            SELECT id, queue_display_id, counter_number, counter_name, operator_name, is_active, status, status_note, current_ticket_number, last_called_at, created_at, updated_at
             FROM queue_counters
             WHERE queue_display_id = $1
             ORDER BY counter_number ASC
@@ -832,10 +887,12 @@ impl QueueServiceTrait for QueueServiceImpl {
             counter_name: c.counter_name,
             operator_name: c.operator_name.unwrap_or_default(),
             is_active: c.is_active,
-            current_ticket_number: "".to_string(),
-            last_called_at: "".to_string(),
+            current_ticket_number: c.current_ticket_number.unwrap_or_default(),
+            last_called_at: c.last_called_at.map(|t| t.to_rfc3339()).unwrap_or_default(),
             created_at: c.created_at.to_rfc3339(),
             updated_at: c.updated_at.to_rfc3339(),
+            status: c.status,
+            status_note: c.status_note.unwrap_or_default(),
         }).collect();
 
         Ok(Response::new(ListCountersResponse { items }))
@@ -915,6 +972,21 @@ impl QueueServiceTrait for QueueServiceImpl {
         let display_id = Uuid::from_str(&req.queue_display_id).map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
         let counter_id = Uuid::from_str(&req.counter_id).map_err(|_| Status::invalid_argument("Invalid counter_id"))?;
 
+        let counter_check = sqlx::query!(
+            "SELECT status FROM queue_counters WHERE id = $1",
+            counter_id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?
+        .ok_or_else(|| Status::not_found("Counter not found"))?;
+
+        if counter_check.status == "BREAK" {
+            return Err(Status::failed_precondition("Loket sedang dalam masa istirahat (BREAK)"));
+        } else if counter_check.status == "LOCKED" {
+            return Err(Status::failed_precondition("Loket sedang terkunci / tutup (LOCKED)"));
+        }
+
         // Find next waiting ticket
         let next_ticket = sqlx::query!(
             r#"
@@ -933,29 +1005,49 @@ impl QueueServiceTrait for QueueServiceImpl {
         let (tid, tnum, tprefix, tseq) = match next_ticket {
             Some(t) => (t.id, t.ticket_number, t.prefix, t.sequence_number),
             None => {
-                let counter_row = sqlx::query!(
-                    "SELECT id, queue_display_id, counter_number, counter_name, operator_name, is_active, created_at, updated_at FROM queue_counters WHERE id = $1",
-                    counter_id
+                let display_row = sqlx::query!(
+                    "SELECT prefix, current_sequence FROM queue_displays WHERE id = $1",
+                    display_id
                 )
                 .fetch_optional(&self.pool)
                 .await
+                .map_err(|e| Status::internal(e.to_string()))?
+                .ok_or_else(|| Status::not_found("Queue display not found"))?;
+
+                let max_seq_row = sqlx::query!(
+                    r#"
+                    SELECT COALESCE(MAX(sequence_number), 0) as "max_seq!"
+                    FROM queue_tickets
+                    WHERE queue_display_id = $1 AND created_at >= CURRENT_DATE
+                    "#,
+                    display_id
+                )
+                .fetch_one(&self.pool)
+                .await
                 .map_err(|e| Status::internal(e.to_string()))?;
 
-                return Ok(Response::new(CallNextTicketResponse {
-                    ticket: None,
-                    counter: counter_row.map(|c| QueueCounter {
-                        id: c.id.to_string(),
-                        queue_display_id: c.queue_display_id.to_string(),
-                        counter_number: c.counter_number,
-                        counter_name: c.counter_name,
-                        operator_name: c.operator_name.unwrap_or_default(),
-                        is_active: c.is_active,
-                        current_ticket_number: String::new(),
-                        last_called_at: String::new(),
-                        created_at: c.created_at.to_rfc3339(),
-                        updated_at: c.updated_at.to_rfc3339(),
-                    }),
-                }));
+                let next_seq = std::cmp::max(display_row.current_sequence, max_seq_row.max_seq) + 1;
+                let prefix = if display_row.prefix.is_empty() { "A".to_string() } else { display_row.prefix };
+                let ticket_num = format!("{}-{:03}", prefix, next_seq);
+                let new_tid = Uuid::new_v4();
+
+                sqlx::query!(
+                    r#"
+                    INSERT INTO queue_tickets (id, queue_display_id, counter_id, ticket_number, prefix, sequence_number, status, called_at)
+                    VALUES ($1, $2, $3, $4, $5, $6, 'called', NOW())
+                    "#,
+                    new_tid,
+                    display_id,
+                    counter_id,
+                    ticket_num,
+                    prefix,
+                    next_seq,
+                )
+                .execute(&self.pool)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+                (new_tid, ticket_num, prefix, next_seq)
             }
         };
 
@@ -974,9 +1066,32 @@ impl QueueServiceTrait for QueueServiceImpl {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
+        sqlx::query!(
+            r#"
+            UPDATE queue_counters
+            SET current_ticket_number = $2, last_called_at = $3, updated_at = NOW()
+            WHERE id = $1
+            "#,
+            counter_id,
+            tnum,
+            now,
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        sqlx::query!(
+            "UPDATE queue_displays SET current_sequence = GREATEST(current_sequence, $2), updated_at = NOW() WHERE id = $1",
+            display_id,
+            tseq
+        )
+        .execute(&self.pool)
+        .await
+        .ok();
+
         let counter_row = sqlx::query!(
             r#"
-            SELECT id, queue_display_id, counter_number, counter_name, operator_name, is_active, created_at, updated_at
+            SELECT id, queue_display_id, counter_number, counter_name, operator_name, is_active, status, status_note, created_at, updated_at
             FROM queue_counters
             WHERE id = $1
             "#,
@@ -1010,7 +1125,315 @@ impl QueueServiceTrait for QueueServiceImpl {
                 last_called_at: now.to_rfc3339(),
                 created_at: counter_row.created_at.to_rfc3339(),
                 updated_at: counter_row.updated_at.to_rfc3339(),
+                status: counter_row.status,
+                status_note: counter_row.status_note.unwrap_or_default(),
             }),
+        }))
+    }
+
+    async fn call_previous_ticket(
+        &self,
+        request: Request<CallPreviousTicketRequest>,
+    ) -> Result<Response<CallPreviousTicketResponse>, Status> {
+        let req = request.into_inner();
+        let display_id = Uuid::from_str(&req.queue_display_id)
+            .map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
+        let counter_id = Uuid::from_str(&req.counter_id)
+            .map_err(|_| Status::invalid_argument("Invalid counter_id"))?;
+
+        let counter_row = sqlx::query!(
+            "SELECT id, queue_display_id, counter_number, counter_name, operator_name, is_active, status, status_note, current_ticket_number FROM queue_counters WHERE id = $1",
+            counter_id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?
+        .ok_or_else(|| Status::not_found("Counter not found"))?;
+
+        if counter_row.status == "BREAK" {
+            return Err(Status::failed_precondition("Loket sedang dalam masa istirahat (BREAK)"));
+        } else if counter_row.status == "LOCKED" {
+            return Err(Status::failed_precondition("Loket sedang terkunci / tutup (LOCKED)"));
+        }
+
+        let curr_num = counter_row.current_ticket_number.unwrap_or_default();
+        let curr_seq: i32 = curr_num.chars().filter(|c| c.is_ascii_digit()).collect::<String>().parse().unwrap_or(1);
+        let prev_seq = std::cmp::max(1, curr_seq - 1);
+
+        let prefix_row = sqlx::query!("SELECT prefix FROM queue_displays WHERE id = $1", display_id)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        let prefix = if prefix_row.prefix.is_empty() { "A".to_string() } else { prefix_row.prefix };
+        let prev_ticket_num = format!("{}-{:03}", prefix, prev_seq);
+
+        let now = chrono::Utc::now();
+        let existing_ticket = sqlx::query!(
+            "SELECT id, prefix, sequence_number FROM queue_tickets WHERE queue_display_id = $1 AND sequence_number = $2",
+            display_id,
+            prev_seq
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let tid = match existing_ticket {
+            Some(t) => {
+                sqlx::query!(
+                    "UPDATE queue_tickets SET status = 'called', counter_id = $2, called_at = $3 WHERE id = $1",
+                    t.id,
+                    counter_id,
+                    now
+                )
+                .execute(&self.pool)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+                t.id
+            }
+            None => {
+                let new_id = Uuid::new_v4();
+                sqlx::query!(
+                    "INSERT INTO queue_tickets (id, queue_display_id, counter_id, ticket_number, prefix, sequence_number, status, called_at) VALUES ($1, $2, $3, $4, $5, $6, 'called', $7)",
+                    new_id, display_id, counter_id, prev_ticket_num, prefix, prev_seq, now
+                )
+                .execute(&self.pool)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+                new_id
+            }
+        };
+
+        sqlx::query!(
+            "UPDATE queue_counters SET current_ticket_number = $2, last_called_at = $3, updated_at = NOW() WHERE id = $1",
+            counter_id,
+            prev_ticket_num,
+            now
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        sqlx::query!(
+            "UPDATE queue_displays SET current_sequence = $2, updated_at = NOW() WHERE id = $1",
+            display_id,
+            prev_seq
+        )
+        .execute(&self.pool)
+        .await
+        .ok();
+
+        Ok(Response::new(CallPreviousTicketResponse {
+            ticket: Some(QueueTicket {
+                id: tid.to_string(),
+                queue_display_id: display_id.to_string(),
+                counter_id: counter_id.to_string(),
+                ticket_number: prev_ticket_num.clone(),
+                prefix,
+                sequence_number: prev_seq,
+                status: "called".to_string(),
+                called_at: now.to_rfc3339(),
+                completed_at: "".to_string(),
+                created_at: now.to_rfc3339(),
+            }),
+            counter: Some(QueueCounter {
+                id: counter_row.id.to_string(),
+                queue_display_id: counter_row.queue_display_id.to_string(),
+                counter_number: counter_row.counter_number,
+                counter_name: counter_row.counter_name,
+                operator_name: counter_row.operator_name.unwrap_or_default(),
+                is_active: counter_row.is_active,
+                current_ticket_number: prev_ticket_num,
+                last_called_at: now.to_rfc3339(),
+                created_at: chrono::Utc::now().to_rfc3339(),
+                updated_at: now.to_rfc3339(),
+                status: counter_row.status,
+                status_note: counter_row.status_note.unwrap_or_default(),
+            }),
+        }))
+    }
+
+    async fn reset_queue(
+        &self,
+        request: Request<ResetQueueRequest>,
+    ) -> Result<Response<ResetQueueResponse>, Status> {
+        let req = request.into_inner();
+        let display_id = Uuid::from_str(&req.queue_display_id)
+            .map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
+        let start_seq = if req.start_sequence >= 0 { req.start_sequence } else { 0 };
+
+        // Reset sequence in display
+        sqlx::query!(
+            "UPDATE queue_displays SET current_sequence = $2, updated_at = NOW() WHERE id = $1",
+            display_id,
+            start_seq
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        // Archive active tickets
+        sqlx::query!(
+            "UPDATE queue_tickets SET status = 'archived' WHERE queue_display_id = $1 AND status IN ('waiting', 'called', 'serving')",
+            display_id
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        // Clear current ticket number on counters
+        sqlx::query!(
+            "UPDATE queue_counters SET current_ticket_number = NULL, last_called_at = NULL, updated_at = NOW() WHERE queue_display_id = $1",
+            display_id
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(ResetQueueResponse {
+            success: true,
+            new_sequence: start_seq,
+            message: format!("Antrian berhasil direset ke nomor awal {}", start_seq),
+        }))
+    }
+
+    async fn set_counter_status(
+        &self,
+        request: Request<SetCounterStatusRequest>,
+    ) -> Result<Response<QueueCounter>, Status> {
+        let req = request.into_inner();
+        let cid = Uuid::from_str(&req.counter_id)
+            .map_err(|_| Status::invalid_argument("Invalid counter_id"))?;
+        let status = match req.status.to_uppercase().as_str() {
+            "BREAK" | "ISTIRAHAT" => "BREAK",
+            "LOCKED" | "KUNCI" | "CLOSED" => "LOCKED",
+            _ => "ACTIVE",
+        };
+        let note = req.status_note.unwrap_or_default();
+
+        let row = sqlx::query!(
+            r#"
+            UPDATE queue_counters
+            SET status = $2, status_note = $3, updated_at = NOW()
+            WHERE id = $1
+            RETURNING id, queue_display_id, counter_number, counter_name, operator_name, is_active, status, status_note, current_ticket_number, last_called_at, created_at, updated_at
+            "#,
+            cid,
+            status,
+            note
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(QueueCounter {
+            id: row.id.to_string(),
+            queue_display_id: row.queue_display_id.to_string(),
+            counter_number: row.counter_number,
+            counter_name: row.counter_name,
+            operator_name: row.operator_name.unwrap_or_default(),
+            is_active: row.is_active,
+            current_ticket_number: row.current_ticket_number.unwrap_or_default(),
+            last_called_at: row.last_called_at.map(|t| t.to_rfc3339()).unwrap_or_default(),
+            created_at: row.created_at.to_rfc3339(),
+            updated_at: row.updated_at.to_rfc3339(),
+            status: row.status,
+            status_note: row.status_note.unwrap_or_default(),
+        }))
+    }
+
+    async fn get_queue_sync_state(
+        &self,
+        request: Request<GetQueueSyncStateRequest>,
+    ) -> Result<Response<GetQueueSyncStateResponse>, Status> {
+        let display_id = Uuid::from_str(&request.into_inner().queue_display_id)
+            .map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
+
+        let display = sqlx::query!(
+            r#"
+            SELECT prefix, current_sequence, sector_type, ticket_label, counter_label,
+                   tts_template_call, tts_template_recall, tts_template_break
+            FROM queue_displays
+            WHERE id = $1
+            "#,
+            display_id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?
+        .ok_or_else(|| Status::not_found("Queue display not found"))?;
+
+        let counters = sqlx::query!(
+            r#"
+            SELECT id, queue_display_id, counter_number, counter_name, operator_name,
+                   is_active, status, status_note, current_ticket_number, last_called_at,
+                   created_at, updated_at
+            FROM queue_counters
+            WHERE queue_display_id = $1
+            ORDER BY counter_number ASC
+            "#,
+            display_id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?
+        .into_iter()
+        .map(|c| QueueCounter {
+            id: c.id.to_string(),
+            queue_display_id: c.queue_display_id.to_string(),
+            counter_number: c.counter_number,
+            counter_name: c.counter_name,
+            operator_name: c.operator_name.unwrap_or_default(),
+            is_active: c.is_active,
+            current_ticket_number: c.current_ticket_number.unwrap_or_default(),
+            last_called_at: c.last_called_at.map(|t| t.to_rfc3339()).unwrap_or_default(),
+            created_at: c.created_at.to_rfc3339(),
+            updated_at: c.updated_at.to_rfc3339(),
+            status: c.status,
+            status_note: c.status_note.unwrap_or_default(),
+        })
+        .collect();
+
+        let waiting_count = sqlx::query!(
+            r#"SELECT COUNT(*) as "count!" FROM queue_tickets WHERE queue_display_id = $1 AND status = 'waiting'"#,
+            display_id
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?
+        .count;
+
+        let latest_ticket = sqlx::query!(
+            r#"
+            SELECT ticket_number
+            FROM queue_tickets
+            WHERE queue_display_id = $1 AND status IN ('called', 'serving')
+            ORDER BY called_at DESC NULLS LAST
+            LIMIT 1
+            "#,
+            display_id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?
+        .map(|t| t.ticket_number)
+        .unwrap_or_else(|| {
+            let p = if display.prefix.is_empty() { "A" } else { &display.prefix };
+            format!("{}-{:03}", p, display.current_sequence)
+        });
+
+        Ok(Response::new(GetQueueSyncStateResponse {
+            queue_display_id: display_id.to_string(),
+            prefix: display.prefix,
+            current_sequence: display.current_sequence,
+            current_ticket_number: latest_ticket,
+            sector_type: display.sector_type,
+            ticket_label: display.ticket_label,
+            counter_label: display.counter_label,
+            tts_template_call: display.tts_template_call,
+            tts_template_recall: display.tts_template_recall,
+            tts_template_break: display.tts_template_break,
+            counters,
+            waiting_tickets_count: waiting_count as i32,
         }))
     }
 

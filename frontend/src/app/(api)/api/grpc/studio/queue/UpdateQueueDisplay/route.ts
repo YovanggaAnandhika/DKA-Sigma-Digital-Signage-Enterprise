@@ -22,6 +22,12 @@ export async function POST(req: NextRequest) {
     if (body.opacity !== undefined) request.setOpacity(body.opacity);
     if (body.overlayColor || body.overlay_color) request.setOverlayColor(body.overlayColor || body.overlay_color);
     if (body.overlayOpacity !== undefined || body.overlay_opacity !== undefined) request.setOverlayOpacity(body.overlayOpacity ?? body.overlay_opacity);
+    if (body.sectorType || body.sector_type) request.setSectorType(body.sectorType || body.sector_type);
+    if (body.ticketLabel || body.ticket_label) request.setTicketLabel(body.ticketLabel || body.ticket_label);
+    if (body.counterLabel || body.counter_label) request.setCounterLabel(body.counterLabel || body.counter_label);
+    if (body.ttsTemplateCall || body.tts_template_call) request.setTtsTemplateCall(body.ttsTemplateCall || body.tts_template_call);
+    if (body.ttsTemplateRecall || body.tts_template_recall) request.setTtsTemplateRecall(body.ttsTemplateRecall || body.tts_template_recall);
+    if (body.ttsTemplateBreak || body.tts_template_break) request.setTtsTemplateBreak(body.ttsTemplateBreak || body.tts_template_break);
 
     if (Array.isArray(body.items)) {
       const itemsList = body.items.map((it: any) => {
@@ -60,6 +66,8 @@ export async function POST(req: NextRequest) {
         if (c.counterName || c.counter_name) counter.setCounterName(c.counterName || c.counter_name);
         if (c.operatorName || c.operator_name) counter.setOperatorName(c.operatorName || c.operator_name);
         if (c.isActive !== undefined || c.is_active !== undefined) counter.setIsActive(c.isActive ?? c.is_active);
+        if (c.status) counter.setStatus(c.status);
+        if (c.statusNote || c.status_note) counter.setStatusNote(c.statusNote || c.status_note);
         return counter;
       });
       request.setCountersList(countersList);

@@ -39,6 +39,8 @@ export interface QueueCounter {
   counterName: string;
   operatorName?: string;
   isActive: boolean;
+  status?: 'ACTIVE' | 'BREAK' | 'LOCKED' | string;
+  statusNote?: string;
   currentTicketNumber?: string;
   lastCalledAt?: string;
 }
@@ -82,11 +84,92 @@ export interface QueueDisplayConfig {
   opacity?: number;
   overlayColor?: string;
   overlayOpacity?: number;
+  sectorType?: 'HOSPITAL' | 'BANK' | 'RETAIL_FB' | 'PUBLIC_SERVICE' | 'LOGISTICS' | 'CUSTOM' | string;
+  ticketLabel?: string;
+  counterLabel?: string;
+  ttsTemplateCall?: string;
+  ttsTemplateRecall?: string;
+  ttsTemplateBreak?: string;
+  currentSequence?: number;
   items: QueueLayoutItem[];
   counters: QueueCounter[];
   audios: QueueAudio[];
   createdAt?: string;
 }
+
+export interface SectorPreset {
+  id: string;
+  name: string;
+  icon: string;
+  ticketLabel: string;
+  counterLabel: string;
+  ttsTemplateCall: string;
+  ttsTemplateRecall: string;
+  ttsTemplateBreak: string;
+}
+
+export const SECTOR_PRESETS: SectorPreset[] = [
+  {
+    id: 'HOSPITAL',
+    name: 'Rumah Sakit & Klinik',
+    icon: 'Hospital',
+    ticketLabel: 'Nomor Antrian',
+    counterLabel: 'Poli',
+    ttsTemplateCall: '{ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}',
+    ttsTemplateRecall: 'Panggilan ulang, {ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}',
+    ttsTemplateBreak: '{counter_label} {counter_name} sedang istirahat',
+  },
+  {
+    id: 'BANK',
+    name: 'Perbankan & Keuangan',
+    icon: 'Landmark',
+    ticketLabel: 'Nomor Antrian',
+    counterLabel: 'Teller',
+    ttsTemplateCall: '{ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}',
+    ttsTemplateRecall: 'Panggilan ulang, {ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}',
+    ttsTemplateBreak: '{counter_label} {counter_name} sedang istirahat',
+  },
+  {
+    id: 'RETAIL_FB',
+    name: 'F&B, Kafe & Retail',
+    icon: 'UtensilsCrossed',
+    ticketLabel: 'Nomor Pesanan',
+    counterLabel: 'Pickup Point',
+    ttsTemplateCall: 'Pesanan {ticket_number}, silakan ambil di {counter_label} {counter_name}',
+    ttsTemplateRecall: 'Panggilan ulang, pesanan {ticket_number}, silakan ambil di {counter_label} {counter_name}',
+    ttsTemplateBreak: '{counter_label} {counter_name} sedang istirahat',
+  },
+  {
+    id: 'PUBLIC_SERVICE',
+    name: 'Pelayanan Publik & Samsat',
+    icon: 'Building2',
+    ticketLabel: 'Nomor Registrasi',
+    counterLabel: 'Loket',
+    ttsTemplateCall: '{ticket_label} {ticket_number}, silakan menuju ke {counter_label} {counter_name}',
+    ttsTemplateRecall: 'Panggilan ulang, {ticket_label} {ticket_number}, silakan menuju ke {counter_label} {counter_name}',
+    ttsTemplateBreak: '{counter_label} {counter_name} sedang istirahat',
+  },
+  {
+    id: 'LOGISTICS',
+    name: 'Logistik & Gudang',
+    icon: 'Truck',
+    ticketLabel: 'Nomor Antrian',
+    counterLabel: 'Pintu Muat',
+    ttsTemplateCall: 'Kendaraan {ticket_number}, silakan merapat ke {counter_label} {counter_name}',
+    ttsTemplateRecall: 'Panggilan ulang, kendaraan {ticket_number}, silakan merapat ke {counter_label} {counter_name}',
+    ttsTemplateBreak: '{counter_label} {counter_name} sedang istirahat',
+  },
+  {
+    id: 'CUSTOM',
+    name: 'Kustom Mandiri',
+    icon: 'Sliders',
+    ticketLabel: 'Nomor Antrian',
+    counterLabel: 'Loket',
+    ttsTemplateCall: '{ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}',
+    ttsTemplateRecall: 'Panggilan ulang, {ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}',
+    ttsTemplateBreak: '{counter_label} {counter_name} sedang istirahat',
+  },
+];
 
 export const QUEUE_STORAGE_KEY = 'dka_signage_queue_displays';
 
@@ -213,7 +296,7 @@ export interface QueueCallHistoryItem {
   targetDevice: string;
   calledAt: string;
   timestamp: number;
-  callType: 'next' | 'recall' | 'player_tap';
+  callType: 'next' | 'recall' | 'player_tap' | 'back';
 }
 
 export const QUEUE_HISTORY_STORAGE_KEY = 'dka_signage_queue_call_history';
@@ -265,7 +348,8 @@ export const DEFAULT_QUEUES: QueueDisplayConfig[] = [
 export function buildQueueSpokenText(
   ticketNumber: string,
   counterName: string,
-  isRecall: boolean = false
+  isRecall: boolean = false,
+  queueConfig?: Partial<QueueDisplayConfig>
 ): string {
   const parts = (ticketNumber || '').split('-');
   const prefix = parts[0]?.trim() || '';
@@ -302,8 +386,24 @@ export function buildQueueSpokenText(
     .replace(/LOKET\s*(\d+)/gi, 'Loket $1')
     .replace(/LOKET/gi, 'Loket');
 
-  const prefixIntro = isRecall ? 'Panggilan ulang... Nomor antrian... ' : 'Nomor antrian... ';
-  return `${prefixIntro}${cleanPrefix}... ${spokenDigits}... Silakan menuju... ${counterSpoken}`;
+  const ticketLabel = queueConfig?.ticketLabel || 'Nomor Antrian';
+  const counterLabel = queueConfig?.counterLabel || 'Loket';
+  const rawTemplate = isRecall
+    ? (queueConfig?.ttsTemplateRecall || 'Panggilan ulang, {ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}')
+    : (queueConfig?.ttsTemplateCall || '{ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}');
+
+  const formattedTicket = `${cleanPrefix}... ${spokenDigits}`;
+
+  return rawTemplate
+    .replaceAll('{ticket_label}', ticketLabel)
+    .replaceAll('{counter_label}', counterLabel)
+    .replaceAll('{ticket_number}', formattedTicket)
+    .replaceAll('{ticket_prefix}', cleanPrefix)
+    .replaceAll('{ticket_digits}', spokenDigits)
+    .replaceAll('{counter_name}', counterSpoken)
+    .replaceAll('{counter_number}', counterName.replace(/[^0-9]/g, '') || '1')
+    .replaceAll(/\s+/g, ' ')
+    .trim();
 }
 
 export function getIndonesianVoice(): SpeechSynthesisVoice | null {
@@ -406,11 +506,12 @@ export function speakQueueAnnouncement(
   ticketNumber: string,
   counterName: string,
   isRecall: boolean = false,
-  onEnd?: () => void
+  onEnd?: () => void,
+  queueConfig?: Partial<QueueDisplayConfig>
 ) {
   stopQueueAnnouncement();
 
-  const text = buildQueueSpokenText(ticketNumber, counterName, isRecall);
+  const text = buildQueueSpokenText(ticketNumber, counterName, isRecall, queueConfig);
 
   // Try natural high-fidelity PA announcement with WebAudio Echo & Bass Boost
   playQueueAnnouncementAudio(text, onEnd).then((success) => {
@@ -442,6 +543,46 @@ export function speakQueueAnnouncement(
     utterance.onend = handleFinished;
     utterance.onerror = handleFinished;
 
+    window.speechSynthesis.speak(utterance);
+  });
+}
+
+export function speakCounterStatusAnnouncement(
+  counterName: string,
+  status: 'BREAK' | 'LOCKED' | 'ACTIVE',
+  queueConfig?: Partial<QueueDisplayConfig>,
+  onEnd?: () => void
+) {
+  stopQueueAnnouncement();
+  const counterLabel = queueConfig?.counterLabel || 'Loket';
+  const cleanCounterName = (counterName || 'Loket 1')
+    .replace(/LOKET\s*0+(\d+)/gi, 'Loket $1')
+    .replace(/LOKET\s*(\d+)/gi, 'Loket $1');
+  let text = '';
+  if (status === 'BREAK') {
+    text = (queueConfig?.ttsTemplateBreak || '{counter_label} {counter_name} sedang istirahat')
+      .replaceAll('{counter_label}', counterLabel)
+      .replaceAll('{counter_name}', cleanCounterName);
+  } else if (status === 'LOCKED') {
+    text = `${counterLabel} ${cleanCounterName} telah ditutup`;
+  } else {
+    text = `${counterLabel} ${cleanCounterName} siap melayani`;
+  }
+
+  playQueueAnnouncementAudio(text, onEnd).then((success) => {
+    if (success) return;
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      if (onEnd) onEnd();
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'id-ID';
+    utterance.rate = 0.88;
+    utterance.pitch = 0.85;
+    const voice = getIndonesianVoice();
+    if (voice) utterance.voice = voice;
+    utterance.onend = () => onEnd?.();
+    utterance.onerror = () => onEnd?.();
     window.speechSynthesis.speak(utterance);
   });
 }

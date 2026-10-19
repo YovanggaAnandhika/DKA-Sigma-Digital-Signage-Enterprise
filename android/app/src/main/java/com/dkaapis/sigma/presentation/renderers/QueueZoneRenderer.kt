@@ -480,6 +480,26 @@ class QueueZoneRenderer(
         onCallAudioStarted()
     }
 
+    fun resetQueue(resetToNumber: String? = null) {
+        val target = resetToNumber?.ifBlank { null } ?: "$currentPrefix-000"
+        val numPart = target.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
+        currentSequence = numPart
+        numberTextView?.text = target
+        stopCallEffect()
+    }
+
+    fun setCounterStatus(counterName: String, status: String) {
+        if (counterName.isNotBlank()) {
+            currentCounter = counterName
+        }
+        val displayCounter = when (status.uppercase()) {
+            "BREAK" -> "$counterName [ISTIRAHAT]"
+            "LOCKED" -> "$counterName [TUTUP]"
+            else -> counterName
+        }
+        counterTextView?.text = displayCounter
+    }
+
     private fun getTargetView(): View? = parentZoneView ?: canvasView
 
     private fun applyColorInversion(target: View, t: Float) {

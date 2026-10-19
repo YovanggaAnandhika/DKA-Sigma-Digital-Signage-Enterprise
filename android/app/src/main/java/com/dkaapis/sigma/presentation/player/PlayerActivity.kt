@@ -576,7 +576,15 @@ class PlayerActivity : AppCompatActivity() {
         chimeThread.start()
     }
 
-    fun speakQueueTicket(ticketNumber: String, counterName: String, isRecall: Boolean = false) {
+    fun speakQueueTicket(
+        ticketNumber: String,
+        counterName: String,
+        isRecall: Boolean = false,
+        ticketLabelOverride: String? = null,
+        counterLabelOverride: String? = null,
+        ttsTemplateCallOverride: String? = null,
+        ttsTemplateRecallOverride: String? = null
+    ) {
         runOnUiThread {
             try {
                 // 1. HENTIKAN SUARA SEBELUMNYA SEKETIKA (Ding-dong chime maupun TTS)
@@ -609,11 +617,41 @@ class PlayerActivity : AppCompatActivity() {
                 }.joinToString(" ")
 
                 val counterSpoken = counterName
-                    .replace("LOKET 0", "Loket ")
-                    .replace("LOKET ", "Loket ")
+                    .replace(Regex("(?i)LOKET\\s*0+(\\d+)"), "Loket $1")
+                    .replace(Regex("(?i)LOKET\\s*(\\d+)"), "Loket $1")
+                    .replace(Regex("(?i)LOKET"), "Loket")
 
-                val prefixIntro = if (isRecall) "Panggilan ulang, nomor antrian " else "Nomor antrian "
-                val utteranceText = "$prefixIntro$prefix, $spokenDigits, silakan menuju $counterSpoken"
+                val qObj = try { JSONObject(activeQueueDataJson ?: "{}") } catch (_: Exception) { JSONObject() }
+                val ticketLabel = ticketLabelOverride?.ifBlank { null }
+                    ?: qObj.optString("ticketLabel", qObj.optString("ticket_label", "Nomor Antrian")).ifBlank { "Nomor Antrian" }
+                val counterLabel = counterLabelOverride?.ifBlank { null }
+                    ?: qObj.optString("counterLabel", qObj.optString("counter_label", "Loket")).ifBlank { "Loket" }
+
+                val defaultCallTemplate = "{ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}"
+                val defaultRecallTemplate = "Panggilan ulang, {ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}"
+
+                val rawTemplate = if (isRecall) {
+                    ttsTemplateRecallOverride?.ifBlank { null }
+                        ?: qObj.optString("ttsTemplateRecall", qObj.optString("tts_template_recall", defaultRecallTemplate)).ifBlank { defaultRecallTemplate }
+                } else {
+                    ttsTemplateCallOverride?.ifBlank { null }
+                        ?: qObj.optString("ttsTemplateCall", qObj.optString("tts_template_call", defaultCallTemplate)).ifBlank { defaultCallTemplate }
+                }
+
+                val formattedTicket = if (prefix.isNotBlank()) "$prefix, $spokenDigits" else spokenDigits
+                val counterNumOnly = counterName.filter { it.isDigit() }.ifEmpty { "1" }
+
+                val utteranceText = rawTemplate
+                    .replace("{ticket_label}", ticketLabel)
+                    .replace("{counter_label}", counterLabel)
+                    .replace("{ticket_number}", formattedTicket)
+                    .replace("{ticket_prefix}", prefix)
+                    .replace("{ticket_digits}", spokenDigits)
+                    .replace("{counter_name}", counterSpoken)
+                    .replace("{counter_number}", counterNumOnly)
+                    .replace(Regex("\\s+"), " ")
+                    .trim()
+
                 android.util.Log.i("PlayerActivity", "Chime & TTS [gen=$thisGen]: $utteranceText (isRecall=$isRecall)")
 
                 // Putar Bell Chime Ding-Dong dulu, lalu lanjutkan pengucapan suara TTS
@@ -627,6 +665,45 @@ class PlayerActivity : AppCompatActivity() {
                 videoRenderers.forEach { it.setDuckedVolume(false) }
                 val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? AudioManager
                 audioManager?.abandonAudioFocus(null)
+            }
+        }
+    }
+
+    fun speakCounterStatus(counterName: String, status: String) {
+        runOnUiThread {
+            try {
+                stopCurrentVoice()
+                val thisGen = currentSpeechGeneration
+                val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? AudioManager
+                audioManager?.requestAudioFocus(null, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                videoRenderers.forEach { it.setDuckedVolume(true) }
+
+                val qObj = try { JSONObject(activeQueueDataJson ?: "{}") } catch (_: Exception) { JSONObject() }
+                val counterLabel = qObj.optString("counterLabel", qObj.optString("counter_label", "Loket")).ifBlank { "Loket" }
+                val counterSpoken = counterName
+                    .replace(Regex("(?i)LOKET\\s*0+(\\d+)"), "Loket $1")
+                    .replace(Regex("(?i)LOKET\\s*(\\d+)"), "Loket $1")
+
+                val defaultBreakTemplate = "{counter_label} {counter_name} sedang istirahat"
+                val rawTemplate = when (status.uppercase()) {
+                    "BREAK" -> qObj.optString("ttsTemplateBreak", qObj.optString("tts_template_break", defaultBreakTemplate)).ifBlank { defaultBreakTemplate }
+                    "LOCKED" -> "{counter_label} {counter_name} telah ditutup"
+                    else -> "{counter_label} {counter_name} siap melayani"
+                }
+
+                val utteranceText = rawTemplate
+                    .replace("{counter_label}", counterLabel)
+                    .replace("{counter_name}", counterSpoken)
+                    .replace(Regex("\\s+"), " ")
+                    .trim()
+
+                playChimeTone(thisGen) {
+                    if (currentSpeechGeneration != thisGen) return@playChimeTone
+                    playTtsVoice(utteranceText, thisGen)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("PlayerActivity", "Error speakCounterStatus: ${e.message}")
+                videoRenderers.forEach { it.setDuckedVolume(false) }
             }
         }
     }
@@ -1245,6 +1322,9 @@ class PlayerActivity : AppCompatActivity() {
 
                     val response = streamingHttpClient.newCall(request).execute()
                     if (response.isSuccessful) {
+                        // Sinkronisasi otomatis saat terhubung / reconnecting setelah offline
+                        syncActiveQueueStateOnReconnect(baseUrl)
+
                         val inputStream = response.body?.byteStream()
                         if (inputStream != null) {
                             inputStream.bufferedReader().useLines { lines ->
@@ -1265,6 +1345,57 @@ class PlayerActivity : AppCompatActivity() {
                     android.util.Log.w("PlayerActivity", "SSE Stream disconnected: ${e.message}, reconnecting in 3s...")
                 }
                 delay(3000)
+            }
+        }
+    }
+
+    private fun syncActiveQueueStateOnReconnect(baseUrl: String) {
+        val qId = activeQueueDisplayId
+        if (qId.isBlank()) return
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val syncUrl = "$baseUrl/api/grpc/studio/queue/GetQueueSyncState?queueDisplayId=$qId"
+                val syncReq = Request.Builder()
+                    .url(syncUrl)
+                    .get()
+                    .build()
+
+                val syncResp = streamingHttpClient.newCall(syncReq).execute()
+                if (syncResp.isSuccessful) {
+                    val respBody = syncResp.body?.string()
+                    if (!respBody.isNullOrBlank()) {
+                        val syncObj = JSONObject(respBody)
+                        val latestNum = syncObj.optString("latestCalledNumber", syncObj.optString("latest_called_number", ""))
+                        val counterNm = syncObj.optString("currentCounterName", syncObj.optString("current_counter_name", "LOKET 01"))
+                        val tLabel = syncObj.optString("ticketLabel", syncObj.optString("ticket_label", ""))
+                        val cLabel = syncObj.optString("counterLabel", syncObj.optString("counter_label", ""))
+                        val ttsCall = syncObj.optString("ttsTemplateCall", syncObj.optString("tts_template_call", ""))
+                        val ttsRecall = syncObj.optString("ttsTemplateRecall", syncObj.optString("tts_template_recall", ""))
+                        val ttsBreak = syncObj.optString("ttsTemplateBreak", syncObj.optString("tts_template_break", ""))
+
+                        try {
+                            val curJson = JSONObject(activeQueueDataJson ?: "{}")
+                            if (tLabel.isNotBlank()) curJson.put("ticketLabel", tLabel)
+                            if (cLabel.isNotBlank()) curJson.put("counterLabel", cLabel)
+                            if (ttsCall.isNotBlank()) curJson.put("ttsTemplateCall", ttsCall)
+                            if (ttsRecall.isNotBlank()) curJson.put("ttsTemplateRecall", ttsRecall)
+                            if (ttsBreak.isNotBlank()) curJson.put("ttsTemplateBreak", ttsBreak)
+                            if (latestNum.isNotBlank()) curJson.put("latestCalledNumber", latestNum)
+                            activeQueueDataJson = curJson.toString()
+                        } catch (_: Exception) {}
+
+                        runOnUiThread {
+                            val renderer = activeQueueRenderer
+                            if (renderer != null && latestNum.isNotBlank()) {
+                                renderer.updateCall(latestNum, counterNm)
+                                android.util.Log.i("PlayerActivity", "Rekonsiliasi antrian selesai setelah online: $latestNum di $counterNm")
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("PlayerActivity", "Gagal rekonsiliasi antrian saat rekoneksi: ${e.message}")
             }
         }
     }
@@ -1295,7 +1426,7 @@ class PlayerActivity : AppCompatActivity() {
                     val totalMb = String.format(java.util.Locale.US, "%.1f", totalBytes / (1024.0 * 1024.0))
 
                     loadingText.text = "Menerima Transmisi Chunk (${completedChunks}/${totalChunks}) • ${percent}%"
-                    subDetailText.text = "${fileName}\n[ ${uploadedMb} MB / ${totalMb} MB ]\nLokasi: /storage/emulated/0/Android/data/com.dkaapis.sigma/files/assets/"
+                    subDetailText.text = "${fileName}\n[ ${uploadedMb} MB / ${totalMb} MB ]\nLokasi: /storage/emulated/0/Android/data/com.dkaapis/sigma/files/assets/"
                 }
                 "COMPLETE" -> {
                     val totalChunks = data.optInt("totalChunks", 1)
@@ -1386,8 +1517,32 @@ class PlayerActivity : AppCompatActivity() {
 
                     if (ticketNumber.isNotBlank()) {
                         queueRenderer.updateCall(ticketNumber, counterName)
-                        speakQueueTicket(ticketNumber, counterName, isRecall)
+                        val tLabel = data.optString("ticketLabel", data.optString("ticket_label", ""))
+                        val cLabel = data.optString("counterLabel", data.optString("counter_label", ""))
+                        val ttsCall = data.optString("ttsTemplateCall", data.optString("tts_template_call", ""))
+                        val ttsRecall = data.optString("ttsTemplateRecall", data.optString("tts_template_recall", ""))
+                        speakQueueTicket(ticketNumber, counterName, isRecall, tLabel, cLabel, ttsCall, ttsRecall)
                     }
+                }
+                "RESET_QUEUE" -> {
+                    val targetQueueId = data.optString("queueId", data.optString("queue_id", ""))
+                    val resetToNumber = data.optString("resetToNumber", data.optString("reset_to_number", ""))
+                    val queueRenderer = activeQueueRenderer ?: return@runOnUiThread
+                    if (targetQueueId.isNotBlank() && activeQueueDisplayId.isNotBlank() && targetQueueId != activeQueueDisplayId) {
+                        return@runOnUiThread
+                    }
+                    queueRenderer.resetQueue(resetToNumber)
+                }
+                "COUNTER_STATUS_CHANGED" -> {
+                    val targetQueueId = data.optString("queueId", data.optString("queue_id", ""))
+                    val counterName = data.optString("counterName", data.optString("counter_name", "LOKET 01"))
+                    val status = data.optString("status", "ACTIVE")
+                    val queueRenderer = activeQueueRenderer ?: return@runOnUiThread
+                    if (targetQueueId.isNotBlank() && activeQueueDisplayId.isNotBlank() && targetQueueId != activeQueueDisplayId) {
+                        return@runOnUiThread
+                    }
+                    queueRenderer.setCounterStatus(counterName, status)
+                    speakCounterStatus(counterName, status)
                 }
             }
         }

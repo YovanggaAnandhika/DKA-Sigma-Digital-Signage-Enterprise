@@ -27,6 +27,10 @@ export interface QueueCounterData {
   counterName: string;
   operatorName?: string;
   isActive?: boolean;
+  status?: 'ACTIVE' | 'BREAK' | 'LOCKED' | string;
+  statusNote?: string;
+  currentTicketNumber?: string;
+  lastCalledAt?: string;
 }
 
 export interface QueueAudioData {
@@ -50,6 +54,13 @@ export interface QueueDisplayData {
   backgroundImageUrl?: string;
   themePreset: string;
   autoRecallEnabled: boolean;
+  sectorType?: string;
+  ticketLabel?: string;
+  counterLabel?: string;
+  ttsTemplateCall?: string;
+  ttsTemplateRecall?: string;
+  ttsTemplateBreak?: string;
+  currentSequence?: number;
   items?: QueueLayoutItemData[];
   counters?: QueueCounterData[];
   audios?: QueueAudioData[];
@@ -87,12 +98,28 @@ export async function callNextTicket(queueDisplayId: string, counterId: string):
   return await invokeApi<any>('/api/grpc/studio/queue/CallNextTicket', { queueDisplayId, counterId });
 }
 
+export async function callPreviousTicket(queueDisplayId: string, counterId: string): Promise<any> {
+  return await invokeApi<any>('/api/grpc/studio/queue/CallPreviousTicket', { queueDisplayId, counterId });
+}
+
+export async function resetQueue(queueDisplayId: string, startSequence: number = 0, counterId?: string): Promise<any> {
+  return await invokeApi<any>('/api/grpc/studio/queue/ResetQueue', { queueDisplayId, startSequence, counterId });
+}
+
+export async function setCounterStatus(counterId: string, status: 'ACTIVE' | 'BREAK' | 'LOCKED' | string, statusNote: string = ''): Promise<any> {
+  return await invokeApi<any>('/api/grpc/studio/queue/SetCounterStatus', { counterId, status, statusNote });
+}
+
+export async function getQueueSyncState(queueDisplayId: string): Promise<any> {
+  return await invokeApi<any>('/api/grpc/studio/queue/GetQueueSyncState', { queueDisplayId });
+}
+
 export async function addCounter(queueDisplayId: string, counterNumber: number, counterName: string, operatorName: string = ''): Promise<any> {
   return await invokeApi<any>('/api/grpc/studio/queue/AddCounter', { queueDisplayId, counterNumber, counterName, operatorName });
 }
 
-export async function updateCounter(id: string, counterNumber: number, counterName: string, operatorName: string, isActive: boolean = true): Promise<any> {
-  return await invokeApi<any>('/api/grpc/studio/queue/UpdateCounter', { id, counterNumber, counterName, operatorName, isActive });
+export async function updateCounter(id: string, counterNumber: number, counterName: string, operatorName: string, isActive: boolean = true, status: string = 'ACTIVE', statusNote: string = ''): Promise<any> {
+  return await invokeApi<any>('/api/grpc/studio/queue/UpdateCounter', { id, counterNumber, counterName, operatorName, isActive, status, statusNote });
 }
 
 export async function deleteCounter(id: string): Promise<any> {
