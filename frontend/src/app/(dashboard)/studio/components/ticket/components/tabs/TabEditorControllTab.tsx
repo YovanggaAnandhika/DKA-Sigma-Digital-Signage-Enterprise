@@ -359,27 +359,29 @@ export default function TabEditorControllTab() {
           </span>
         </div>
 
-        {/* Pilih Loket */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-          <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-            Pilih Pos / {counterLabel}:
-          </label>
-          <select
-            value={queue.currentCounter || activeCounter.counterName}
-            onChange={(e) => {
-              const val = e.target.value;
-              setQueue((prev) => ({ ...prev, currentCounter: val }));
-              setSimulator((prev) => ({ ...prev, currentCounter: val }));
-            }}
-            className="form-input"
-            style={{ height: '34px', padding: '0 8px', fontSize: '0.75rem', width: '100%' }}
-          >
-            {queue.counters.map((c) => (
-              <option key={c.id} value={c.counterName}>
-                {c.counterName} {c.operatorName ? `(${c.operatorName})` : ''}
-              </option>
-            ))}
-          </select>
+        {/* Pos / Counter Aktif Info */}
+        <div
+          style={{
+            padding: '8px 10px',
+            borderRadius: '6px',
+            backgroundColor: 'var(--bg-surface-elevated)',
+            border: '1px solid var(--border-subtle)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2px',
+          }}
+        >
+          <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+            {counterLabel} Aktif:
+          </span>
+          <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+            {activeCounter.counterName}
+          </span>
+          {activeCounter.operatorName && (
+            <span style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)' }}>
+              {activeCounter.operatorName}
+            </span>
+          )}
         </div>
 
         {/* Kontrol Status Loket / Pos */}
@@ -519,7 +521,7 @@ export default function TabEditorControllTab() {
           overflow: 'hidden',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexShrink: 0, gap: '12px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: isLocked ? 'var(--accent-rose)' : isBreak ? 'var(--accent-amber)' : 'var(--accent-emerald)', display: 'inline-block' }} />
             <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -527,7 +529,42 @@ export default function TabEditorControllTab() {
             </h4>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* Dropdown Pos / Counter diatas canvas dengan ukuran luas & nyaman */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                Pilih Pos / {counterLabel}:
+              </span>
+              <select
+                value={queue.currentCounter || activeCounter.counterName}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setQueue((prev) => ({ ...prev, currentCounter: val }));
+                  setSimulator((prev) => ({ ...prev, currentCounter: val }));
+                }}
+                className="form-input"
+                style={{
+                  height: '32px',
+                  padding: '0 10px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  minWidth: '200px',
+                  maxWidth: '280px',
+                  backgroundColor: 'var(--bg-surface-elevated)',
+                  borderColor: 'var(--border-subtle)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                {queue.counters.map((c) => (
+                  <option key={c.id} value={c.counterName}>
+                    {c.counterName} {c.operatorName ? `(${c.operatorName})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div
               style={{
                 display: 'inline-flex',
@@ -551,6 +588,7 @@ export default function TabEditorControllTab() {
               )}
               <span>{liveCounterName} • {isLocked ? 'DITUTUP' : isBreak ? 'ISTIRAHAT' : 'BUKA'}</span>
             </div>
+
             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
               {queue.canvasWidth} × {queue.canvasHeight} px
             </span>

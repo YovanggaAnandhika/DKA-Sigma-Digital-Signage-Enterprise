@@ -166,6 +166,7 @@ export function QueueManagementProvider({ children }: { children: React.ReactNod
         } catch {}
         return updated;
       });
+      await refreshQueues();
       await modal.alert({
         title: 'Berhasil Dihapus',
         message: `Layar antrian "${name}" berhasil dihapus dari server.`,
@@ -178,7 +179,7 @@ export function QueueManagementProvider({ children }: { children: React.ReactNod
         variant: 'danger',
       });
     }
-  }, []);
+  }, [refreshQueues]);
 
   const clearHistory = useCallback(async () => {
     const ok = await modal.confirm({

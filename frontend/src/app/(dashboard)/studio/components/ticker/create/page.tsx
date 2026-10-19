@@ -67,7 +67,7 @@ export default function CreateTickerPage() {
   const currentTheme = THEME_STYLES[theme];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         <Link href="/studio/components/ticker" className="btn btn-outline" style={{ padding: '8px' }}>
@@ -83,7 +83,7 @@ export default function CreateTickerPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(340px, 420px) 1fr', gap: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 420px) minmax(0, 1fr)', gap: '24px', width: '100%', minWidth: 0 }}>
         {/* Form Panel */}
         <form onSubmit={handleSubmit} className="card-elevated" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -229,7 +229,7 @@ export default function CreateTickerPage() {
         </form>
 
         {/* Live Preview Panel */}
-        <div className="card-elevated" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div className="card-elevated" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
           <div>
             <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
               Pratinjau Animasi Teks Berjalan
@@ -252,6 +252,7 @@ export default function CreateTickerPage() {
               boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
               position: 'relative',
               height: '56px',
+              minWidth: 0,
             }}
           >
             {badge && (
@@ -269,13 +270,14 @@ export default function CreateTickerPage() {
                   whiteSpace: 'nowrap',
                   zIndex: 2,
                   boxShadow: '4px 0 12px rgba(0,0,0,0.25)',
+                  flexShrink: 0,
                 }}
               >
                 {badge}
               </div>
             )}
 
-            <div style={{ flex: 1, overflow: 'hidden', whiteSpace: 'nowrap', position: 'relative' }}>
+            <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap', position: 'relative' }}>
               <div
                 style={{
                   display: 'inline-block',

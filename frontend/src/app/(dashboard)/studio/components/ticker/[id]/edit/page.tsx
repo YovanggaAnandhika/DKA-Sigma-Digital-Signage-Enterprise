@@ -106,7 +106,7 @@ export default function EditTickerPage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         <Link href="/studio/components/ticker" className="btn btn-outline" style={{ padding: '8px' }}>
@@ -122,7 +122,7 @@ export default function EditTickerPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(340px, 440px) 1fr', gap: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 420px) minmax(0, 1fr)', gap: '24px', width: '100%', minWidth: 0 }}>
         {/* Form Settings */}
         <form onSubmit={handleSubmit} className="card-elevated" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -230,9 +230,9 @@ export default function EditTickerPage() {
         </form>
 
         {/* Right: Message List & Live Preview */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
           {/* Live Preview Box */}
-          <div className="card-elevated" style={{ padding: '20px' }}>
+          <div className="card-elevated" style={{ padding: '20px', minWidth: 0 }}>
             <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <MessageSquareText size={16} color="var(--primary-400)" /> Pratinjau Tampilan Banner
             </h3>
@@ -248,6 +248,7 @@ export default function EditTickerPage() {
                 alignItems: 'center',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
                 height: '52px',
+                minWidth: 0,
               }}
             >
               <div
@@ -263,12 +264,13 @@ export default function EditTickerPage() {
                   letterSpacing: '0.05em',
                   whiteSpace: 'nowrap',
                   zIndex: 2,
+                  flexShrink: 0,
                 }}
               >
                 {badge || 'INFO'}
               </div>
 
-              <div style={{ flex: 1, overflow: 'hidden', padding: '0 12px' }}>
+              <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', padding: '0 12px' }}>
                 <Marquee
                   scrollamount={speed === 'fast' ? 12 : speed === 'slow' ? 4 : 7}
                   style={{ fontSize: `${fontSize}px`, fontWeight: 600, display: 'flex', alignItems: 'center' }}
@@ -311,7 +313,7 @@ export default function EditTickerPage() {
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
               {messages.map((msg, idx) => (
                 <div
                   key={idx}
@@ -324,9 +326,10 @@ export default function EditTickerPage() {
                     backgroundColor: 'var(--bg-secondary)',
                     borderRadius: '8px',
                     border: '1px solid var(--border-subtle)',
+                    minWidth: 0,
                   }}
                 >
-                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-primary)', flex: 1 }}>
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-primary)', flex: 1, minWidth: 0, wordBreak: 'break-word' }}>
                     {msg}
                   </span>
                   <button
