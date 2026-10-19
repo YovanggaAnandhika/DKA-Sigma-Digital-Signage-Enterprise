@@ -14,7 +14,18 @@ export async function GET(req: NextRequest) {
     return new Promise<NextResponse>((resolve) => {
       client.getQueueSyncState(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
-        else resolve(NextResponse.json(response.toObject()));
+        else {
+          const obj = response.toObject();
+          const primaryCounter = obj.countersList?.[0];
+          const enriched = {
+            ...obj,
+            latestCalledNumber: obj.currentTicketNumber,
+            currentCounterName: primaryCounter?.counterName || 'LOKET 01',
+            status: primaryCounter?.status || 'ACTIVE',
+            counterStatus: primaryCounter?.status || 'ACTIVE',
+          };
+          resolve(NextResponse.json(enriched));
+        }
       });
     });
   } catch (error) {
@@ -33,7 +44,18 @@ export async function POST(req: NextRequest) {
     return new Promise<NextResponse>((resolve) => {
       client.getQueueSyncState(request, getGrpcMetadata(token), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
-        else resolve(NextResponse.json(response.toObject()));
+        else {
+          const obj = response.toObject();
+          const primaryCounter = obj.countersList?.[0];
+          const enriched = {
+            ...obj,
+            latestCalledNumber: obj.currentTicketNumber,
+            currentCounterName: primaryCounter?.counterName || 'LOKET 01',
+            status: primaryCounter?.status || 'ACTIVE',
+            counterStatus: primaryCounter?.status || 'ACTIVE',
+          };
+          resolve(NextResponse.json(enriched));
+        }
       });
     });
   } catch (error) {

@@ -136,6 +136,9 @@ class QueueZoneRenderer(
     private var currentCounterLabel: String = "Loket"
     private var currentStatus: String = "ACTIVE"
     private val countersList = mutableListOf<String>()
+    private val counterStatusMap = mutableMapOf<String, String>()
+
+    fun getCurrentCounter(): String = currentCounter
 
     private fun isInactive(): Boolean {
         return currentStatus.equals("LOCKED", ignoreCase = true) || 
@@ -182,22 +185,31 @@ class QueueZoneRenderer(
                 overlayColor = json.optString("overlayColor", "").ifEmpty { json.optString("overlay_color", "") }
                 overlayOpacity = (if (json.has("overlayOpacity")) json.optDouble("overlayOpacity", 0.0) else json.optDouble("overlay_opacity", 0.0)).toFloat()
 
-                val initialStatus = json.optString("status", json.optString("counterStatus", "ACTIVE"))
-                if (initialStatus.equals("BREAK", ignoreCase = true) || initialStatus.equals("LOCKED", ignoreCase = true)) {
-                    currentStatus = initialStatus.uppercase()
-                }
-
                 val countersArr = json.optJSONArray("countersList") ?: json.optJSONArray("counters")
                 countersList.clear()
+                counterStatusMap.clear()
+                var firstCounterStatus = ""
                 if (countersArr != null && countersArr.length() > 0) {
                     for (cIdx in 0 until countersArr.length()) {
                         val cObj = countersArr.getJSONObject(cIdx)
                         val cName = cObj.optString("counterName", "LOKET ${cIdx + 1}")
+                        val cStatus = cObj.optString("status", "ACTIVE").uppercase()
                         countersList.add(cName)
+                        counterStatusMap[cName] = cStatus
+                        if (cIdx == 0) firstCounterStatus = cStatus
                     }
-                    counterName = countersList.first()
+                    counterName = json.optString("currentCounterName", "").ifBlank { countersList.first() }
                 } else {
                     countersList.addAll(listOf("LOKET 01", "LOKET 02", "LOKET 03"))
+                }
+
+                val initialStatus = json.optString("status", 
+                    json.optString("counterStatus", 
+                    if (firstCounterStatus.isNotBlank()) firstCounterStatus else "ACTIVE"))
+                if (initialStatus.equals("BREAK", ignoreCase = true) || initialStatus.equals("LOCKED", ignoreCase = true)) {
+                    currentStatus = initialStatus.uppercase()
+                } else if (counterStatusMap.containsKey(counterName)) {
+                    currentStatus = counterStatusMap[counterName] ?: "ACTIVE"
                 }
 
                 itemsJsonArray = json.optJSONArray("itemsList") ?: json.optJSONArray("items")
