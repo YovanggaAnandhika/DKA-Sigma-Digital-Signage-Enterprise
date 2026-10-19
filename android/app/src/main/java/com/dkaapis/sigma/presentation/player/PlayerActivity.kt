@@ -63,6 +63,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -107,6 +108,7 @@ class PlayerActivity : AppCompatActivity() {
     private var activeChimeThread: Thread? = null
     private var activeAudioTrack: AudioTrack? = null
     private var activeChimePlayer: MediaPlayer? = null
+    private var activeTtsPlayer: MediaPlayer? = null
     private var currentSpeechGeneration: Long = 0L
     private var currentUtteranceId: String? = null
     private var speechTimeoutRunnable: Runnable? = null
@@ -275,12 +277,20 @@ class PlayerActivity : AppCompatActivity() {
                         val available = textToSpeech?.isLanguageAvailable(idLocale)
                         if (available != TextToSpeech.LANG_MISSING_DATA && available != TextToSpeech.LANG_NOT_SUPPORTED) {
                             textToSpeech?.language = idLocale
+                            isTtsReady = true
                         } else {
-                            textToSpeech?.language = Locale.getDefault()
+                            val defaultLoc = Locale.getDefault()
+                            val defAvailable = textToSpeech?.isLanguageAvailable(defaultLoc)
+                            if (defAvailable != TextToSpeech.LANG_MISSING_DATA && defAvailable != TextToSpeech.LANG_NOT_SUPPORTED) {
+                                textToSpeech?.language = defaultLoc
+                                isTtsReady = true
+                            } else {
+                                isTtsReady = false
+                                android.util.Log.w("PlayerActivity", "Engine TTS lokal tidak mendukung Bahasa Indonesia atau Locale default")
+                            }
                         }
                         textToSpeech?.setSpeechRate(0.92f)
                         textToSpeech?.setPitch(1.0f)
-                        isTtsReady = true
 
                         textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                             override fun onStart(utteranceId: String?) {
@@ -296,10 +306,7 @@ class PlayerActivity : AppCompatActivity() {
                             override fun onDone(utteranceId: String?) {
                                 runOnUiThread {
                                     if (utteranceId != null && utteranceId == currentUtteranceId) {
-                                        videoRenderers.forEach { it.setDuckedVolume(false) }
-                                        val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
-                                        audioManager?.abandonAudioFocus(null)
-                                        activeQueueRenderer?.stopCallEffect()
+                                        finishSpeech(currentSpeechGeneration)
                                     }
                                 }
                             }
@@ -307,23 +314,23 @@ class PlayerActivity : AppCompatActivity() {
                             override fun onError(utteranceId: String?) {
                                 runOnUiThread {
                                     if (utteranceId != null && utteranceId == currentUtteranceId) {
-                                        videoRenderers.forEach { it.setDuckedVolume(false) }
-                                        val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
-                                        audioManager?.abandonAudioFocus(null)
-                                        activeQueueRenderer?.stopCallEffect()
+                                        finishSpeech(currentSpeechGeneration)
                                     }
                                 }
                             }
                         })
-                        android.util.Log.i("PlayerActivity", "Android TextToSpeech engine siap (Bahasa Indonesia)")
+                        android.util.Log.i("PlayerActivity", "Android TextToSpeech engine siap: isTtsReady=$isTtsReady")
                     } else {
+                        isTtsReady = false
                         android.util.Log.w("PlayerActivity", "Inisialisasi TextToSpeech gagal, status: $status")
                     }
                 } catch (t: Throwable) {
+                    isTtsReady = false
                     android.util.Log.w("PlayerActivity", "Gagal inisialisasi TextToSpeech callback: ${t.message}")
                 }
             }
         } catch (e: Throwable) {
+            isTtsReady = false
             android.util.Log.e("PlayerActivity", "Gagal inisialisasi TTS: ${e.message}")
         }
     }
@@ -346,6 +353,12 @@ class PlayerActivity : AppCompatActivity() {
         activeChimePlayer = null
 
         try {
+            activeTtsPlayer?.stop()
+            activeTtsPlayer?.release()
+        } catch (_: Exception) {}
+        activeTtsPlayer = null
+
+        try {
             activeChimeThread?.interrupt()
         } catch (_: Exception) {}
         activeChimeThread = null
@@ -361,6 +374,17 @@ class PlayerActivity : AppCompatActivity() {
         try {
             textToSpeech?.stop()
         } catch (_: Exception) {}
+    }
+
+    private fun finishSpeech(expectedGen: Long) {
+        if (currentSpeechGeneration == expectedGen) {
+            speechTimeoutRunnable?.let { watchdogHandler.removeCallbacks(it) }
+            speechTimeoutRunnable = null
+            videoRenderers.forEach { it.setDuckedVolume(false) }
+            val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as? AudioManager
+            audioManager?.abandonAudioFocus(null)
+            activeQueueRenderer?.stopCallEffect()
+        }
     }
 
     private fun playChimeTone(expectedGen: Long, onChimeDone: () -> Unit) {
@@ -596,24 +620,7 @@ class PlayerActivity : AppCompatActivity() {
                 playChimeTone(thisGen) {
                     if (currentSpeechGeneration != thisGen) return@playChimeTone
 
-                    if (textToSpeech != null && isTtsReady) {
-                        val utteranceId = "queue_${thisGen}_${System.currentTimeMillis()}"
-                        currentUtteranceId = utteranceId
-                        val params = Bundle().apply {
-                            putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
-                        }
-                        textToSpeech?.speak(utteranceText, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
-                    } else {
-                        val fallbackTimeout = Runnable {
-                            if (currentSpeechGeneration == thisGen) {
-                                videoRenderers.forEach { it.setDuckedVolume(false) }
-                                audioManager?.abandonAudioFocus(null)
-                                activeQueueRenderer?.stopCallEffect()
-                            }
-                        }
-                        speechTimeoutRunnable = fallbackTimeout
-                        watchdogHandler.postDelayed(fallbackTimeout, 3500)
-                    }
+                    playTtsVoice(utteranceText, thisGen)
                 }
             } catch (e: Exception) {
                 android.util.Log.e("PlayerActivity", "Error speakQueueTicket: ${e.message}")
@@ -622,6 +629,137 @@ class PlayerActivity : AppCompatActivity() {
                 audioManager?.abandonAudioFocus(null)
             }
         }
+    }
+
+    private fun playTtsVoice(utteranceText: String, expectedGen: Long) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            if (currentSpeechGeneration != expectedGen) return@launch
+
+            var playedViaServerTts = false
+            try {
+                val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(this@PlayerActivity)
+                val encodedText = java.net.URLEncoder.encode(utteranceText, "UTF-8")
+                val ttsUrl = "$baseUrl/api/tts?text=$encodedText"
+
+                val ttsCacheDir = java.io.File(cacheDir, "tts_cache").apply { if (!exists()) mkdirs() }
+                val cacheFileName = "tts_" + utteranceText.hashCode().toUInt().toString(16) + ".mp3"
+                val cachedFile = java.io.File(ttsCacheDir, cacheFileName)
+
+                if (!cachedFile.exists() || cachedFile.length() == 0L) {
+                    val request = Request.Builder()
+                        .url(ttsUrl)
+                        .header("User-Agent", "DKASigma-Signage-Android")
+                        .build()
+                    val response = streamingHttpClient.newCall(request).execute()
+                    if (response.isSuccessful && response.body != null) {
+                        val tempFile = java.io.File(ttsCacheDir, "$cacheFileName.tmp")
+                        response.body!!.byteStream().use { input ->
+                            java.io.FileOutputStream(tempFile).use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        if (tempFile.length() > 0L) {
+                            tempFile.renameTo(cachedFile)
+                        } else {
+                            tempFile.delete()
+                        }
+                    }
+                }
+
+                if (cachedFile.exists() && cachedFile.length() > 0L) {
+                    withContext(Dispatchers.Main) {
+                        if (currentSpeechGeneration == expectedGen) {
+                            playTtsAudioFile(cachedFile, expectedGen)
+                            playedViaServerTts = true
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("PlayerActivity", "Server TTS gagal: ${e.message}, fallback ke engine lokal...")
+            }
+
+            if (!playedViaServerTts) {
+                withContext(Dispatchers.Main) {
+                    if (currentSpeechGeneration == expectedGen) {
+                        playLocalTtsOrFallback(utteranceText, expectedGen)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun playTtsAudioFile(file: java.io.File, expectedGen: Long) {
+        if (currentSpeechGeneration != expectedGen) return
+        try {
+            val mp = MediaPlayer().apply {
+                setDataSource(file.absolutePath)
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build()
+                )
+                setVolume(1.0f, 1.0f)
+                setOnCompletionListener { player ->
+                    player.release()
+                    if (activeTtsPlayer === player) {
+                        activeTtsPlayer = null
+                    }
+                    if (currentSpeechGeneration == expectedGen) {
+                        finishSpeech(expectedGen)
+                    }
+                }
+                setOnErrorListener { player, what, extra ->
+                    android.util.Log.w("PlayerActivity", "TTS MediaPlayer error ($what, $extra), fallback ke local TTS")
+                    player.release()
+                    if (activeTtsPlayer === player) {
+                        activeTtsPlayer = null
+                    }
+                    if (currentSpeechGeneration == expectedGen) {
+                        finishSpeech(expectedGen)
+                    }
+                    true
+                }
+                prepare()
+                start()
+            }
+            activeTtsPlayer = mp
+        } catch (e: Exception) {
+            android.util.Log.e("PlayerActivity", "Failed to start TTS MediaPlayer: ${e.message}")
+            finishSpeech(expectedGen)
+        }
+    }
+
+    private fun playLocalTtsOrFallback(utteranceText: String, expectedGen: Long) {
+        if (currentSpeechGeneration != expectedGen) return
+
+        if (textToSpeech != null && isTtsReady) {
+            val utteranceId = "queue_${expectedGen}_${System.currentTimeMillis()}"
+            currentUtteranceId = utteranceId
+            val params = Bundle().apply {
+                putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
+            }
+            val result = textToSpeech?.speak(utteranceText, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+            if (result == TextToSpeech.SUCCESS) {
+                val timeoutRunnable = Runnable {
+                    if (currentSpeechGeneration == expectedGen) {
+                        finishSpeech(expectedGen)
+                    }
+                }
+                speechTimeoutRunnable = timeoutRunnable
+                watchdogHandler.postDelayed(timeoutRunnable, 8000)
+                return
+            }
+        }
+
+        // Jika local TTS tidak ada/gagal, tunggu efek kedip antrian selesai lalu bersihkan audio focus
+        val fallbackTimeout = Runnable {
+            if (currentSpeechGeneration == expectedGen) {
+                finishSpeech(expectedGen)
+            }
+        }
+        speechTimeoutRunnable = fallbackTimeout
+        watchdogHandler.postDelayed(fallbackTimeout, 3500)
     }
 
     private fun setupViews() {
