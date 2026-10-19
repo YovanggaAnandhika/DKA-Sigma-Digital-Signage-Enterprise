@@ -86,14 +86,20 @@ export default function QueueEditorShell({ activeTab, children }: { activeTab: s
   return (
     <div
       style={{
-        width: '100%',
-        height: '100%',
         display: 'flex',
         flexDirection: 'column',
         flex: 1,
         minHeight: 0,
         overflow: 'hidden',
         backgroundColor: 'var(--bg-primary)',
+        position: isFullscreen ? 'fixed' : 'relative',
+        top: isFullscreen ? 0 : undefined,
+        left: isFullscreen ? 0 : undefined,
+        right: isFullscreen ? 0 : undefined,
+        bottom: isFullscreen ? 0 : undefined,
+        width: isFullscreen ? '100vw' : '100%',
+        height: isFullscreen ? '100vh' : '100%',
+        zIndex: isFullscreen ? 99999 : undefined,
       }}
     >
       {/* Top Header & Tabs Bar */}
@@ -147,15 +153,15 @@ export default function QueueEditorShell({ activeTab, children }: { activeTab: s
           </div>
         </div>
 
-        {/* Center: Sleek Segmented Route Tabs */}
+        {/* Center: Sleek Segmented Route Tabs (Rounded Capsule Style) */}
         <div
           style={{
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
-            gap: '2px',
+            gap: '4px',
             backgroundColor: 'var(--bg-surface-elevated)',
-            padding: '2px',
-            borderRadius: '8px',
+            padding: '4px',
+            borderRadius: '10px',
             border: '1px solid var(--border-subtle)',
           }}
         >
@@ -169,20 +175,21 @@ export default function QueueEditorShell({ activeTab, children }: { activeTab: s
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  padding: '5px 12px',
-                  borderRadius: '6px',
-                  fontSize: '0.75rem',
-                  fontWeight: isActive ? 600 : 500,
-                  color: isActive ? 'var(--primary-400)' : 'var(--text-secondary)',
-                  backgroundColor: isActive ? 'rgba(37, 99, 235, 0.12)' : 'transparent',
-                  border: isActive ? '1px solid rgba(59, 130, 246, 0.35)' : '1px solid transparent',
+                  gap: '7px',
+                  padding: '6px 14px',
+                  borderRadius: '7px',
+                  fontSize: '0.78125rem',
+                  fontWeight: isActive ? 700 : 500,
+                  color: isActive ? '#ffffff' : 'var(--text-secondary)',
+                  backgroundColor: isActive ? 'var(--primary-600)' : 'transparent',
+                  border: '1px solid transparent',
+                  boxShadow: isActive ? '0 1px 3px rgba(0, 0, 0, 0.15)' : 'none',
                   textDecoration: 'none',
                   transition: 'all 0.15s ease',
                   whiteSpace: 'nowrap',
                 }}
               >
-                <Icon size={13} />
+                <Icon size={14} />
                 <span>{t.label}</span>
               </Link>
             );
@@ -193,7 +200,15 @@ export default function QueueEditorShell({ activeTab, children }: { activeTab: s
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           <button
             type="button"
-            onClick={() => setFullscreen(!isFullscreen)}
+            onClick={() => {
+              if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+                setFullscreen(true);
+              } else {
+                document.exitFullscreen().catch(() => {});
+                setFullscreen(false);
+              }
+            }}
             className="btn btn-outline"
             style={{
               padding: '5px 10px',

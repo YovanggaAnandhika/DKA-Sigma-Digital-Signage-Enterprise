@@ -343,84 +343,154 @@ export default function TabEditorControllTab() {
         overflow: 'hidden',
       }}
     >
-      {/* Top Floating Control Bar (Pilihan Pos / Counter & Status) */}
+      {/* Top Floating Control Bar (Modern, Larger & Sleek Dropdown Menu) */}
       <div
         style={{
           position: 'absolute',
-          top: '12px',
+          top: '14px',
           left: '50%',
           transform: 'translateX(-50%)',
-          zIndex: 10,
+          zIndex: 30,
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          padding: '5px 12px',
-          borderRadius: '10px',
-          backgroundColor: 'rgba(15, 23, 42, 0.85)',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+          gap: '12px',
+          padding: '6px 16px',
+          borderRadius: '12px',
+          backgroundColor: 'rgba(15, 23, 42, 0.9)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.55)',
         }}
       >
-        <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: isLocked ? 'var(--accent-rose)' : isBreak ? 'var(--accent-amber)' : 'var(--accent-emerald)', display: 'inline-block' }} />
-        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f8fafc', whiteSpace: 'nowrap' }}>
-          Monitor Live
-        </span>
-
-        <div style={{ height: '12px', width: '1px', backgroundColor: 'rgba(255,255,255,0.15)' }} />
-
-        {/* Dropdown Pos / Counter */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', whiteSpace: 'nowrap' }}>
-            {counterLabel}:
-          </span>
-          <select
-            value={queue.currentCounter || activeCounter.counterName}
-            onChange={(e) => {
-              const val = e.target.value;
-              setQueue((prev) => ({ ...prev, currentCounter: val }));
-              setSimulator((prev) => ({ ...prev, currentCounter: val }));
-            }}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span
             style={{
-              height: '24px',
-              padding: '0 6px',
-              fontSize: '0.7rem',
-              fontWeight: 600,
-              minWidth: '130px',
-              maxWidth: '200px',
-              backgroundColor: 'rgba(30, 41, 59, 0.8)',
-              borderColor: 'rgba(255, 255, 255, 0.12)',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              color: '#f8fafc',
-              outline: 'none',
+              width: '9px',
+              height: '9px',
+              borderRadius: '50%',
+              backgroundColor: isLocked ? 'var(--accent-rose)' : isBreak ? 'var(--accent-amber)' : 'var(--accent-emerald)',
+              boxShadow: `0 0 10px ${isLocked ? 'rgba(244, 63, 94, 0.8)' : isBreak ? 'rgba(245, 158, 11, 0.8)' : 'rgba(16, 185, 129, 0.8)'}`,
+              display: 'inline-block',
             }}
-          >
-            {queue.counters.map((c) => (
-              <option key={c.id} value={c.counterName} style={{ backgroundColor: '#0f172a', color: '#f8fafc' }}>
-                {c.counterName} {c.operatorName ? `(${c.operatorName})` : ''}
-              </option>
-            ))}
-          </select>
+          />
+          <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#f8fafc', whiteSpace: 'nowrap', letterSpacing: '0.2px' }}>
+            Monitor Live
+          </span>
         </div>
 
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px',
-            fontSize: '0.625rem',
-            fontWeight: 600,
-            padding: '2px 7px',
-            borderRadius: '5px',
-            backgroundColor: isLocked ? 'rgba(239, 68, 68, 0.2)' : isBreak ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.2)',
-            color: isLocked ? '#f87171' : isBreak ? '#fbbf24' : '#34d399',
-            border: isLocked ? '1px solid rgba(239, 68, 68, 0.35)' : isBreak ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid rgba(16, 185, 129, 0.35)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {isLocked ? <Lock size={10} /> : isBreak ? <Coffee size={10} /> : <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'currentColor' }} />}
-          <span>{liveCounterName}</span>
+        <div style={{ height: '16px', width: '1px', backgroundColor: 'rgba(255,255,255,0.18)' }} />
+
+        {/* Modern Custom Dropdown Menu (Lebih Besar & Interaktif) */}
+        <div style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => setCounterMenuOpen(!counterMenuOpen)}
+            style={{
+              height: '36px',
+              padding: '0 14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              borderRadius: '8px',
+              backgroundColor: counterMenuOpen ? 'rgba(30, 41, 59, 0.95)' : 'rgba(30, 41, 59, 0.75)',
+              border: counterMenuOpen ? '1px solid var(--primary-500)' : '1px solid rgba(255, 255, 255, 0.15)',
+              color: '#ffffff',
+              cursor: 'pointer',
+              boxShadow: counterMenuOpen ? '0 0 14px rgba(59, 130, 246, 0.35)' : 'none',
+              transition: 'all 0.18s ease',
+            }}
+          >
+            <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600 }}>
+              {counterLabel}:
+            </span>
+            <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#f8fafc' }}>
+              {activeCounter.counterName}
+            </span>
+            {activeCounter.operatorName && (
+              <span style={{ fontSize: '0.72rem', color: '#cbd5e1', opacity: 0.8 }}>
+                ({activeCounter.operatorName})
+              </span>
+            )}
+            <ChevronDown
+              size={15}
+              style={{
+                color: '#94a3b8',
+                transform: counterMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease',
+                marginLeft: '4px',
+              }}
+            />
+          </button>
+
+          {/* Floating Dropdown Options Panel */}
+          {counterMenuOpen && (
+            <>
+              {/* Invisible backdrop to dismiss */}
+              <div
+                style={{ position: 'fixed', inset: 0, zIndex: 40 }}
+                onClick={() => setCounterMenuOpen(false)}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  left: 0,
+                  minWidth: '240px',
+                  maxHeight: '260px',
+                  overflowY: 'auto',
+                  borderRadius: '10px',
+                  backgroundColor: '#0f172a',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  boxShadow: '0 16px 40px rgba(0, 0, 0, 0.7)',
+                  padding: '6px',
+                  zIndex: 50,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                }}
+              >
+                {queue.counters.map((c) => {
+                  const isSelected = (queue.currentCounter || activeCounter.counterName) === c.counterName;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setQueue((prev) => ({ ...prev, currentCounter: c.counterName }));
+                        setSimulator((prev) => ({ ...prev, currentCounter: c.counterName }));
+                        setCounterMenuOpen(false);
+                      }}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                        border: isSelected ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid transparent',
+                        color: isSelected ? '#ffffff' : '#cbd5e1',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontSize: '0.8125rem', fontWeight: isSelected ? 700 : 600 }}>
+                          {c.counterName}
+                        </span>
+                        {c.operatorName && (
+                          <span style={{ fontSize: '0.6875rem', color: isSelected ? '#93c5fd' : '#94a3b8' }}>
+                            {c.operatorName}
+                          </span>
+                        )}
+                      </div>
+                      {isSelected && <CheckCircle2 size={15} color="#38bdf8" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -622,7 +692,7 @@ export default function TabEditorControllTab() {
         </button>
       </div>
 
-      {/* Monitor Canvas Frame yang Memenuhi Seluruh Ruang Layar (100% Full) */}
+      {/* Monitor Canvas Frame yang Memenuhi Seluruh Ruang Layar (100% Full Tanpa Gap) */}
       <div
         style={{
           width: '100%',
@@ -630,30 +700,22 @@ export default function TabEditorControllTab() {
           flex: 1,
           minHeight: 0,
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
           position: 'relative',
           overflow: 'hidden',
-          backgroundColor: '#05070b',
+          backgroundColor: isLocked ? '#080a10' : isBreak ? '#0a0d14' : queue.backgroundColor,
+          backgroundImage: (isLocked || isBreak) ? undefined : (queue.backgroundImageUrl ? `url(${queue.backgroundImageUrl})` : undefined),
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
         }}
       >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '100%',
-              maxHeight: '100%',
-              aspectRatio: '16 / 9',
-              position: 'relative',
-              backgroundColor: isLocked ? '#080a10' : isBreak ? '#0a0d14' : queue.backgroundColor,
-              backgroundImage: (isLocked || isBreak) ? undefined : (queue.backgroundImageUrl ? `url(${queue.backgroundImageUrl})` : undefined),
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              border: isLocked ? '1px solid rgba(239, 68, 68, 0.4)' : isBreak ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid var(--border-subtle)',
-              boxShadow: '0 16px 32px -12px rgba(0,0,0,0.5)',
-            }}
-          >
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
             {isBreak ? (
               /* DEDICATED BREAK SCREEN LAYOUT (100% Identik dengan Android UI) */
               <div
