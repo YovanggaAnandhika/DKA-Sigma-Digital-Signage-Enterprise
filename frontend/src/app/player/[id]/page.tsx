@@ -2,47 +2,16 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { invokeApi } from '@/lib/core/invokeApi';
-import { getMediaStreamUrl } from '@/lib/services/studio/media.service';
 import { api } from '@/lib/services';
-import { AlertTriangle, Sun, Volume2 } from 'lucide-react';
 import { speakQueueAnnouncement, stopQueueAnnouncement } from '@/app/(dashboard)/studio/components/ticket/types';
+import PlayerLayerRenderer, { ManifestAsset, Layer } from './components/PlayerLayerRenderer';
+import { PlayerLoadingScreen, PlayerErrorScreen } from './components/PlayerStateScreens';
 
-interface ManifestAsset {
-  mediaId: string;
-  url: string;
-  sha256Hash: string;
-  fileSizeBytes: number;
-  localFilename: string;
-  mediaType: number;
-}
-
-interface LayerBlock {
-  id: string;
-  playlistId?: string;
-  mediaItemId?: string;
-  startTimeSeconds?: number;
-  durationSeconds?: number;
-  tickerId?: string;
-  clockId?: string;
-  webviewId?: string;
-  queueId?: string;
-  albumId?: string;
-  widgetData?: any;
-  widgetDataJson?: string;
-}
-
-interface Layer {
-  id: string;
-  name: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  zIndex: number;
-  backgroundColor?: string;
-  blocksList?: LayerBlock[];
-}
+const PlayerControlOverlay = dynamic(() => import('./components/PlayerControlOverlay'), {
+  ssr: false,
+});
 
 interface CompiledManifest {
   manifestId: string;
@@ -281,7 +250,7 @@ export default function WebKioskPlayerPage() {
     return () => clearInterval(timer);
   }, []);
 
-  // Live Weather Widget (Default: Kota Makassar)
+  // Live Weather Widget
   useEffect(() => {
     async function fetchWeather() {
       try {
@@ -294,7 +263,7 @@ export default function WebKioskPlayerPage() {
           });
         }
       } catch {
-        setWeatherData({ temp: 31, code: 1 }); // Default fallback for Makassar
+        setWeatherData({ temp: 31, code: 1 });
       }
     }
     fetchWeather();
@@ -338,7 +307,7 @@ export default function WebKioskPlayerPage() {
       });
 
       if (res.isUpToDate) {
-        return; // No layout changes
+        return;
       }
 
       if (res.manifest) {
@@ -366,14 +335,13 @@ export default function WebKioskPlayerPage() {
 
   useEffect(() => {
     fetchManifest();
-    // Poll for manifest updates every 20 seconds
     const interval = setInterval(() => {
       fetchManifest(currentHash);
     }, 20000);
     return () => clearInterval(interval);
   }, [fetchManifest, currentHash]);
 
-  // Periodic Proof-of-Play reporting (audit logs)
+  // Periodic Proof-of-Play reporting
   useEffect(() => {
     if (!manifest || !manifest.requiredAssetsList?.length) return;
     const interval = setInterval(async () => {
@@ -388,66 +356,17 @@ export default function WebKioskPlayerPage() {
             isCompleted: true,
           }]);
         }
-      } catch {
-        // Player continues uninterrupted on log failure
-      }
+      } catch {}
     }, 30000);
     return () => clearInterval(interval);
   }, [manifest, params.id]);
 
   if (loading && !manifest) {
-    return (
-      <div style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: '#0a0d14',
-        color: '#f8fafc',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '16px',
-        fontFamily: 'sans-serif'
-      }}>
-        <div style={{
-          width: '48px',
-          height: '48px',
-          border: '3px solid rgba(59, 130, 246, 0.2)',
-          borderTopColor: '#3b82f6',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }} />
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Menghubungkan Player Display...</h2>
-        <p style={{ fontSize: '0.875rem', color: '#94a3b8' }}>ID: {params.id}</p>
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
+    return <PlayerLoadingScreen deviceId={params.id} />;
   }
 
   if (error && !manifest) {
-    return (
-      <div style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: '#0a0d14',
-        color: '#f8fafc',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '12px',
-        padding: '24px',
-        textAlign: 'center',
-        fontFamily: 'sans-serif'
-      }}>
-        <AlertTriangle size={36} color="#f43f5e" />
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f43f5e' }}>Koneksi Display Player Gagal</h2>
-        <p style={{ maxWidth: '500px', color: '#94a3b8', fontSize: '0.875rem' }}>{error}</p>
-        <p style={{ fontSize: '0.75rem', color: '#64748b' }}>
-          Pastikan perangkat sudah dipairing dan memiliki Layout atau Jadwal aktif di CMS.
-        </p>
-      </div>
-    );
+    return <PlayerErrorScreen error={error} />;
   }
 
   const layout = manifest?.layout;
@@ -469,367 +388,37 @@ export default function WebKioskPlayerPage() {
       overflow: 'hidden',
       userSelect: 'none',
     }}>
-      {/* Container Scaled to Aspect Ratio */}
       <div style={{
         position: 'relative',
         width: '100%',
         height: '100%',
       }}>
-        {layers.map((layer) => {
-          const leftPercent = (layer.x / canvasW) * 100;
-          const topPercent = (layer.y / canvasH) * 100;
-          const widthPercent = (layer.width / canvasW) * 100;
-          const heightPercent = (layer.height / canvasH) * 100;
-
-          // Find first matching asset for layer if any
-          const firstBlock = layer.blocksList?.[0];
-          const matchedAsset = assets[0]; // fallback to first required asset if single zone
-
-          return (
-            <div
-              key={layer.id}
-              style={{
-                position: 'absolute',
-                left: `${leftPercent}%`,
-                top: `${topPercent}%`,
-                width: `${widthPercent}%`,
-                height: `${heightPercent}%`,
-                zIndex: layer.zIndex || 1,
-                backgroundColor: layer.backgroundColor || 'transparent',
-                overflow: 'hidden',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              {/* Check if widget block */}
-              {firstBlock?.clockId || layer.name.toLowerCase().includes('clock') || layer.name.toLowerCase().includes('jam') ? (
-                <div style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#ffffff',
-                  fontSize: 'clamp(1.5rem, 4vw, 4rem)',
-                  fontWeight: 800,
-                  fontFamily: 'monospace',
-                  background: 'rgba(0, 0, 0, 0.4)',
-                  backdropFilter: 'blur(8px)',
-                  letterSpacing: '0.05em',
-                }}>
-                  {currentTime}
-                </div>
-              ) : layer.name.toLowerCase().includes('cuaca') || layer.name.toLowerCase().includes('weather') ? (
-                <div style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  background: 'linear-gradient(135deg, rgba(30, 58, 138, 0.8), rgba(15, 23, 42, 0.9))',
-                  backdropFilter: 'blur(10px)',
-                  color: '#ffffff',
-                  padding: '16px',
-                  textAlign: 'center',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'center' }}><Sun size={32} color="#fbbf24" /></div>
-                  <div style={{ fontSize: 'clamp(1.5rem, 3vw, 2.5rem)', fontWeight: 800 }}>
-                    {weatherData ? `${weatherData.temp}°C` : '31°C'}
-                  </div>
-                  <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#93c5fd' }}>
-                    Makassar, Sulawesi Selatan
-                  </div>
-                  <div style={{ fontSize: '0.6875rem', color: '#cbd5e1' }}>
-                    Prakiraan: Cerah Berawan
-                  </div>
-                </div>
-              ) : layer.name.toLowerCase().includes('qr') ? (
-                <div style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  background: '#ffffff',
-                  color: '#0f172a',
-                  padding: '12px',
-                }}>
-                  {/* Clean SVG QR Code pattern */}
-                  <svg width="70%" height="70%" viewBox="0 0 100 100" fill="none">
-                    <rect width="100" height="100" fill="white" />
-                    <rect x="10" y="10" width="25" height="25" fill="#0f172a" />
-                    <rect x="15" y="15" width="15" height="15" fill="white" />
-                    <rect x="18" y="18" width="9" height="9" fill="#0f172a" />
-                    <rect x="65" y="10" width="25" height="25" fill="#0f172a" />
-                    <rect x="70" y="15" width="15" height="15" fill="white" />
-                    <rect x="73" y="18" width="9" height="9" fill="#0f172a" />
-                    <rect x="10" y="65" width="25" height="25" fill="#0f172a" />
-                    <rect x="15" y="70" width="15" height="15" fill="white" />
-                    <rect x="18" y="73" width="9" height="9" fill="#0f172a" />
-                    <rect x="42" y="15" width="8" height="25" fill="#0f172a" />
-                    <rect x="42" y="55" width="18" height="8" fill="#0f172a" />
-                    <rect x="65" y="65" width="10" height="20" fill="#0f172a" />
-                    <rect x="80" y="65" width="10" height="10" fill="#0f172a" />
-                  </svg>
-                  <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#334155' }}>
-                    Scan Promo Smartphone
-                  </span>
-                </div>
-              ) : firstBlock?.queueId || layer.name.toLowerCase().includes('antrian') || layer.name.toLowerCase().includes('queue') ? (
-                <div style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 'clamp(12px, 3vh, 24px)',
-                  background: 'linear-gradient(145deg, #0f172a, #1e293b)',
-                  border: queueState.isCalling ? '3px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '16px',
-                  boxShadow: queueState.isCalling ? '0 0 40px rgba(16, 185, 129, 0.4)' : 'none',
-                  padding: '24px',
-                  textAlign: 'center',
-                  transition: 'all 0.3s ease',
-                }}>
-                  <div style={{
-                    fontSize: 'clamp(1rem, 2vw, 1.75rem)',
-                    fontWeight: 700,
-                    color: '#94a3b8',
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
-                  }}>
-                    Layar Antrian Baru
-                  </div>
-
-                  <div style={{
-                    fontSize: 'clamp(3.5rem, 10vw, 7.5rem)',
-                    fontWeight: 900,
-                    fontFamily: 'monospace',
-                    color: queueState.isCalling ? '#10b981' : '#38bdf8',
-                    letterSpacing: '0.04em',
-                    textShadow: queueState.isCalling ? '0 0 35px rgba(16, 185, 129, 0.8)' : '0 4px 15px rgba(0,0,0,0.5)',
-                    transition: 'all 0.3s ease',
-                  }}>
-                    {queueState.ticket}
-                  </div>
-
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: '#059669',
-                    color: '#ffffff',
-                    padding: '12px 36px',
-                    borderRadius: '9999px',
-                    fontSize: 'clamp(1.125rem, 2.5vw, 2rem)',
-                    fontWeight: 800,
-                    letterSpacing: '0.08em',
-                    boxShadow: '0 4px 20px rgba(5, 150, 105, 0.5)',
-                  }}>
-                    {queueState.counter}
-                  </div>
-
-                  {queueState.isCalling && (
-                    <div style={{
-                      fontSize: '0.875rem',
-                      fontWeight: 700,
-                      color: '#10b981',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                      padding: '6px 16px',
-                      borderRadius: '9999px',
-                      border: '1px solid rgba(16, 185, 129, 0.3)',
-                    }}>
-                      <Volume2 size={14} />
-                      <span>SEDANG DIPANGGIL (AUDIO DUCKING 15%)</span>
-                    </div>
-                  )}
-                </div>
-              ) : firstBlock?.tickerId || layer.name.toLowerCase().includes('ticker') || layer.name.toLowerCase().includes('berita') ? (
-                <div style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  background: 'linear-gradient(90deg, #1e3a8a, #3b82f6)',
-                  color: '#ffffff',
-                  padding: '0 16px',
-                  fontWeight: 600,
-                  fontSize: 'clamp(0.875rem, 1.5vw, 1.25rem)',
-                  overflow: 'hidden',
-                  whiteSpace: 'nowrap',
-                }}>
-                  <span style={{
-                    display: 'inline-block',
-                    paddingLeft: '100%',
-                    animation: 'marquee 15s linear infinite',
-                  }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#ef4444', display: 'inline-block', marginRight: 6, verticalAlign: 'middle' }} />
-                    LIVE FEED: Selamat Datang di Layar Informasi Digital Signage Enterprise • Suhu Kota Makassar {weatherData?.temp ?? 31}°C Cerah • Update Berita & Penawaran Spesial Terkini
-                  </span>
-                  <style>{`@keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }`}</style>
-                </div>
-              ) : matchedAsset ? (
-                matchedAsset.url?.endsWith('.mp4') || matchedAsset.url?.endsWith('.webm') ? (
-                  <video
-                    ref={(el) => {
-                      if (el) {
-                        videoRefs.current.set(layer.id, el);
-                        el.volume = isAudioDucked ? 0.15 : 1.0;
-                      } else {
-                        videoRefs.current.delete(layer.id);
-                      }
-                    }}
-                    src={getMediaStreamUrl(matchedAsset.localFilename)}
-                    autoPlay
-                    loop
-                    muted={isMuted}
-                    playsInline
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  <img
-                    src={getMediaStreamUrl(matchedAsset.localFilename)}
-                    alt={layer.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                )
-              ) : (
-                <div style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  color: 'rgba(255, 255, 255, 0.4)',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                }}>
-                  {layer.name}
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {layers.map((layer) => (
+          <PlayerLayerRenderer
+            key={layer.id}
+            layer={layer}
+            canvasW={canvasW}
+            canvasH={canvasH}
+            currentTime={currentTime}
+            weatherData={weatherData}
+            queueState={queueState}
+            matchedAsset={assets[0]}
+            videoRefs={videoRefs}
+            isAudioDucked={isAudioDucked}
+            isMuted={isMuted}
+          />
+        ))}
       </div>
 
-      {/* Standby CEC Sleep Mode Screen Overlay */}
-      {isSleeping && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: '#000000',
-          zIndex: 999998,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#334155',
-          userSelect: 'none',
-        }}>
-          <div style={{
-            padding: '8px 16px',
-            borderRadius: '9999px',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            fontSize: '0.75rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#64748b' }} />
-            <span>Mode Standby Hemat Energi (CEC) • Bangun pukul {manifest?.powerSchedule?.wakeTime || '06:00'}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Interactive Kiosk Simulator Controls Pill */}
-      <div style={{
-        position: 'fixed',
-        bottom: '12px',
-        right: '12px',
-        padding: '6px 14px',
-        borderRadius: '9999px',
-        backgroundColor: 'rgba(10, 13, 20, 0.88)',
-        backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(255, 255, 255, 0.15)',
-        color: '#94a3b8',
-        fontSize: '0.75rem',
-        fontWeight: 600,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        zIndex: 99999,
-        boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-          <span>Kiosk • {canvasW}×{canvasH}</span>
-        </div>
-
-        <div style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
-
-        {/* Simulasi Panggil Antrian Button */}
-        <button
-          onClick={() => triggerQueueCall('A-001', 'LOKET 01')}
-          disabled={queueState.isCalling}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            backgroundColor: queueState.isCalling ? 'rgba(16, 185, 129, 0.2)' : '#10b981',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '9999px',
-            padding: '4px 12px',
-            fontSize: '0.6875rem',
-            fontWeight: 700,
-            cursor: queueState.isCalling ? 'not-allowed' : 'pointer',
-          }}
-          title="Klik untuk mensimulasikan panggilan suara TTS antrian dan audio ducking video"
-        >
-          <Volume2 size={13} />
-          <span>{queueState.isCalling ? 'Memanggil...' : 'Simulasi Panggil A-001'}</span>
-        </button>
-
-        <button
-          onClick={() => triggerQueueCall('A-002', 'LOKET 02')}
-          disabled={queueState.isCalling}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            color: '#ffffff',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            borderRadius: '9999px',
-            padding: '4px 10px',
-            fontSize: '0.6875rem',
-            fontWeight: 700,
-            cursor: queueState.isCalling ? 'not-allowed' : 'pointer',
-          }}
-        >
-          <span>A-002</span>
-        </button>
-
-        {/* Audio Volume Status Indicator */}
-        <div style={{
-          fontSize: '0.6875rem',
-          color: isAudioDucked ? '#10b981' : '#94a3b8',
-          fontWeight: 700,
-        }}>
-          Vol: {isAudioDucked ? '15% (Ducked)' : '100%'}
-        </div>
-      </div>
+      <PlayerControlOverlay
+        isSleeping={isSleeping}
+        wakeTime={manifest?.powerSchedule?.wakeTime}
+        canvasW={canvasW}
+        canvasH={canvasH}
+        queueState={queueState}
+        triggerQueueCall={triggerQueueCall}
+        isAudioDucked={isAudioDucked}
+      />
     </div>
   );
 }
