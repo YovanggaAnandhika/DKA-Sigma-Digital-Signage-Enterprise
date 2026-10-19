@@ -87,6 +87,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private lateinit var hardwareProfiler: DeviceHardwareProfiler
     private lateinit var analyticsSyncManager: AnalyticsSyncManager
+    private lateinit var channelFactory: GrpcChannelFactory
 
     private var realtimeStreamJob: Job? = null
     private val streamingHttpClient = OkHttpClient.Builder()
@@ -249,6 +250,7 @@ class PlayerActivity : AppCompatActivity() {
     private fun initDependencies() {
         val tokenStorage = TokenStorage(this)
         val channelFactory = GrpcChannelFactory(this)
+        this.channelFactory = channelFactory
         val manifestStorage = ManifestStorage(this)
         val diskCache = MediaDiskCache(this)
 
@@ -259,7 +261,7 @@ class PlayerActivity : AppCompatActivity() {
         val hardwareProfiler = DeviceHardwareProfiler(this)
         val analyticsBuffer = AnalyticsLocalBuffer(this)
         this.hardwareProfiler = hardwareProfiler
-        this.analyticsSyncManager = AnalyticsSyncManager(this, tokenStorage, analyticsBuffer)
+        this.analyticsSyncManager = AnalyticsSyncManager(this, tokenStorage, analyticsBuffer, channelFactory)
 
         val registerUseCase = RegisterAndPairUseCase(deviceRepo)
         val syncUseCase = SyncManifestUseCase(deviceRepo, manifestRepo)
@@ -1792,30 +1794,17 @@ class PlayerActivity : AppCompatActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val deviceId = deviceRepo.getSavedDeviceId() ?: return@launch
-                val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(this@PlayerActivity)
-
-                val base64Image = Base64.encodeToString(imageBytes, Base64.NO_WRAP)
-                val jsonBody = JSONObject().apply {
-                    put("deviceId", deviceId)
-                    put("imageData", base64Image)
-                    put("mimeType", "image/jpeg")
-                }.toString()
-
-                val request = Request.Builder()
-                    .url("$baseUrl/api/grpc/distribution/stream/UploadScreenshot")
-                    .post(jsonBody.toRequestBody("application/json".toMediaType()))
+                val stub = signage.distribution.v1.stream.StreamServiceGrpcKt.StreamServiceCoroutineStub(channelFactory.getChannel())
+                val request = signage.distribution.v1.stream.StreamCommon.UploadScreenshotRequest.newBuilder()
+                    .setDeviceId(deviceId)
+                    .setImageData(com.google.protobuf.ByteString.copyFrom(imageBytes))
+                    .setMimeType("image/jpeg")
                     .build()
 
-                val client = OkHttpClient.Builder()
-                    .connectTimeout(15, TimeUnit.SECONDS)
-                    .writeTimeout(30, TimeUnit.SECONDS)
-                    .readTimeout(20, TimeUnit.SECONDS)
-                    .build()
-
-                val response = client.newCall(request).execute()
-                android.util.Log.i("PlayerActivity", "Upload screenshot selesai: HTTP ${response.code}")
+                val response = stub.uploadScreenshot(request)
+                android.util.Log.i("PlayerActivity", "Upload screenshot gRPC selesai: success=${response.success}")
             } catch (e: Exception) {
-                android.util.Log.e("PlayerActivity", "Gagal upload screenshot: ${e.message}")
+                android.util.Log.e("PlayerActivity", "Gagal upload screenshot gRPC: ${e.message}")
             } finally {
                 isCapturingScreenshot = false
             }

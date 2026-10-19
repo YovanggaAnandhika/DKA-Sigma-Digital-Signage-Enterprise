@@ -29,48 +29,32 @@ class ManifestRepositoryImpl(
 
     override suspend fun fetchActiveManifest(deviceId: String, currentHash: String): Result<Manifest?> = withContext(Dispatchers.IO) {
         try {
-            val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(context)
-
-            val jsonBody = JSONObject().apply {
-                put("deviceId", deviceId)
-                put("clientCurrentHash", currentHash)
-            }.toString()
-
-            val request = Request.Builder()
-                .url("$baseUrl/api/grpc/distribution/manifest/GetActiveManifest")
-                .post(jsonBody.toRequestBody("application/json".toMediaType()))
+            val stub = signage.distribution.v1.manifest.ManifestServiceGrpcKt.ManifestServiceCoroutineStub(channelFactory.getChannel())
+            val request = signage.distribution.v1.manifest.ManifestCommon.GetActiveManifestRequest.newBuilder()
+                .setDeviceId(deviceId)
+                .setClientCurrentHash(currentHash)
                 .build()
 
-            val response = httpClient.newCall(request).execute()
-            if (response.isSuccessful) {
-                val bodyStr = response.body?.string() ?: ""
-                val root = JSONObject(bodyStr)
+            val response = stub.getActiveManifest(request)
 
-                val isUpToDate = root.optBoolean("isUpToDate", false)
-                if (isUpToDate) {
-                    val cached = getLocalCachedManifest()
-                    return@withContext Result.success(cached)
-                }
+            if (response.isUpToDate) {
+                val cached = getLocalCachedManifest()
+                return@withContext Result.success(cached)
+            }
 
-                val manifestObj = root.optJSONObject("manifest")
-                if (manifestObj != null) {
-                    val parsed = parseManifestJson(manifestObj, baseUrl)
-                    manifestStorage.saveManifest(manifestObj.toString())
-                    Result.success(parsed)
-                } else {
-                    // Coba fallback ke lokal jika server belum menyediakan manifest baru
-                    val cached = getLocalCachedManifest()
-                    Result.success(cached)
-                }
+            if (response.hasManifest()) {
+                val protoManifest = response.manifest
+                val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(context)
+                val parsed = parseProtoManifest(protoManifest, baseUrl)
+                val json = serializeManifestToJson(parsed)
+                manifestStorage.saveManifest(json)
+                Result.success(parsed)
             } else {
                 val cached = getLocalCachedManifest()
-                if (cached != null) {
-                    Result.success(cached)
-                } else {
-                    Result.failure(Exception("HTTP error ${response.code} saat mengambil manifest"))
-                }
+                Result.success(cached)
             }
         } catch (e: Exception) {
+            android.util.Log.w("ManifestRepository", "gRPC GetActiveManifest error: ${e.message}, falling back to cache")
             val cached = getLocalCachedManifest()
             if (cached != null) {
                 Result.success(cached)
@@ -78,6 +62,117 @@ class ManifestRepositoryImpl(
                 Result.failure(e)
             }
         }
+    }
+
+    private fun parseProtoManifest(proto: signage.distribution.v1.manifest.ManifestCommon.CompiledManifest, baseUrl: String): Manifest {
+        val layout = proto.layout
+        val zonesList = mutableListOf<LayerZone>()
+
+        for ((i, layer) in layout.layersList.withIndex()) {
+            val blocksList = mutableListOf<LayerBlock>()
+            for ((j, block) in layer.blocksList.withIndex()) {
+                val hasQueue = block.hasQueueId() && block.queueId.isNotBlank()
+                val hasClock = block.hasClockId() && block.clockId.isNotBlank()
+                val hasTicker = block.hasTickerId() && block.tickerId.isNotBlank()
+                val hasWebview = block.hasWebviewId() && block.webviewId.isNotBlank()
+
+                val wType = when {
+                    hasQueue -> ZoneWidgetType.QUEUE
+                    hasClock -> ZoneWidgetType.CLOCK
+                    hasTicker -> ZoneWidgetType.TICKER
+                    hasWebview -> ZoneWidgetType.WEBVIEW
+                    else -> ZoneWidgetType.NONE
+                }
+
+                val playlistItems = mutableListOf<LayerPlaylistItem>()
+                if (block.hasPlaylist()) {
+                    val pl = block.playlist
+                    for ((k, item) in pl.itemsList.withIndex()) {
+                        playlistItems.add(
+                            LayerPlaylistItem(
+                                id = item.id.ifEmpty { "pl-item-$k" },
+                                mediaItemId = item.mediaItemId,
+                                position = item.position,
+                                durationSeconds = item.durationSeconds,
+                                isMuted = item.isMuted,
+                                volumeLevel = 100
+                            )
+                        )
+                    }
+                }
+
+                blocksList.add(
+                    LayerBlock(
+                        id = block.id.ifEmpty { "blk-$j" },
+                        mediaItemId = block.mediaItemId.takeIf { it.isNotBlank() },
+                        playlistId = block.playlistId.takeIf { it.isNotBlank() },
+                        widgetType = wType,
+                        widgetDataJson = null,
+                        startTimeSeconds = block.startTimeSeconds,
+                        durationSeconds = block.durationSeconds,
+                        isMuted = block.isMuted,
+                        volumeLevel = block.volumeLevel,
+                        playlistItems = playlistItems
+                    )
+                )
+            }
+
+            zonesList.add(
+                LayerZone(
+                    id = layer.id.ifEmpty { "zone-$i" },
+                    name = layer.name.ifEmpty { "Layer $i" },
+                    x = layer.x,
+                    y = layer.y,
+                    width = layer.width,
+                    height = layer.height,
+                    zIndex = layer.zIndex,
+                    backgroundColor = layer.backgroundColor.takeIf { it.isNotBlank() },
+                    opacity = layer.opacity,
+                    overlayColor = layer.overlayColor.takeIf { it.isNotBlank() },
+                    overlayOpacity = layer.overlayOpacity,
+                    borderRadius = layer.borderRadius,
+                    borderColor = layer.borderColor.takeIf { it.isNotBlank() },
+                    borderWidth = layer.borderWidth,
+                    blocks = blocksList,
+                    isLocked = false
+                )
+            )
+        }
+
+        val assetsList = mutableListOf<MediaAsset>()
+        for ((i, asset) in proto.requiredAssetsList.withIndex()) {
+            var rawUrl = asset.url
+            if (rawUrl.startsWith("/")) {
+                val trimmedBase = baseUrl.trimEnd('/')
+                rawUrl = "$trimmedBase$rawUrl"
+            }
+
+            assetsList.add(
+                MediaAsset(
+                    mediaId = asset.mediaId,
+                    url = rawUrl,
+                    sha256Hash = asset.sha256Hash,
+                    fileSizeBytes = asset.fileSizeBytes,
+                    localFilename = asset.localFilename.ifEmpty { "media_$i" },
+                    mediaType = MediaType.fromInt(asset.mediaTypeValue),
+                    durationSeconds = 10
+                )
+            )
+        }
+
+        return Manifest(
+            manifestId = proto.manifestId,
+            deviceId = proto.deviceId,
+            versionHash = proto.versionHash,
+            layoutId = layout.id,
+            layoutName = layout.name.ifEmpty { "Layout Default" },
+            canvasWidth = layout.canvasWidth,
+            canvasHeight = layout.canvasHeight,
+            zones = zonesList,
+            requiredAssets = assetsList,
+            totalDownloadSizeBytes = proto.totalDownloadSizeBytes,
+            generatedAt = proto.generatedAt
+        )
     }
 
     override suspend fun getLocalCachedManifest(): Manifest? = withContext(Dispatchers.IO) {

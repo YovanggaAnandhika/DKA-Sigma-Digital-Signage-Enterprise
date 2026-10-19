@@ -17,89 +17,73 @@ import java.util.concurrent.TimeUnit
 class AnalyticsSyncManager(
     private val context: Context,
     private val tokenStorage: TokenStorage,
-    private val localBuffer: AnalyticsLocalBuffer
+    private val localBuffer: AnalyticsLocalBuffer,
+    private val channelFactory: com.dkaapis.sigma.data.grpc.GrpcChannelFactory
 ) {
-    private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(5, TimeUnit.SECONDS)
-        .writeTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
-        .build()
-
     suspend fun recordAndSync(snapshot: AnalyticsSnapshotData) = withContext(Dispatchers.IO) {
         val deviceId = tokenStorage.getDeviceId() ?: return@withContext
         val deviceToken = tokenStorage.getDeviceToken() ?: ""
-        val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(context)
 
         val isDirectSuccess = try {
-            val jsonBody = JSONObject().apply {
-                put("deviceId", deviceId)
-                put("deviceToken", deviceToken)
-                put("snapshot", JSONObject().apply {
-                    put("id", snapshot.id)
-                    put("inputOutputJson", snapshot.inputOutputJson)
-                    put("assetsStatsJson", snapshot.assetsStatsJson)
-                    put("recordedAt", snapshot.recordedAt)
-                })
-            }.toString()
-
-            val request = Request.Builder()
-                .url("$baseUrl/api/grpc/hardware/device/IngestDeviceAnalytics")
-                .post(jsonBody.toRequestBody("application/json".toMediaType()))
+            val stub = signage.hardware.v1.device.DeviceServiceGrpcKt.DeviceServiceCoroutineStub(channelFactory.getChannel())
+            val protoSnapshot = signage.hardware.v1.device.DeviceCommon.AnalyticsSnapshot.newBuilder()
+                .setId(snapshot.id)
+                .setInputOutputJson(snapshot.inputOutputJson)
+                .setAssetsStatsJson(snapshot.assetsStatsJson)
+                .setRecordedAt(snapshot.recordedAt)
                 .build()
 
-            val response = httpClient.newCall(request).execute()
-            response.isSuccessful
+            val request = signage.hardware.v1.device.DeviceCommon.IngestDeviceAnalyticsRequest.newBuilder()
+                .setDeviceId(deviceId)
+                .setDeviceToken(deviceToken)
+                .setSnapshot(protoSnapshot)
+                .build()
+
+            val response = stub.ingestDeviceAnalytics(request)
+            response.success
         } catch (_: Exception) {
             false
         }
 
         if (isDirectSuccess) {
-            // Jika ada antrean offline sebelumnya, flush dalam batch
             if (localBuffer.hasPending()) {
-                flushOfflineBuffer(baseUrl, deviceId, deviceToken)
+                flushOfflineBuffer(deviceId, deviceToken)
             }
         } else {
-            // Simpan ke buffer lokal offline
             localBuffer.append(snapshot)
         }
     }
 
-    private fun flushOfflineBuffer(baseUrl: String, deviceId: String, deviceToken: String) {
+    private suspend fun flushOfflineBuffer(deviceId: String, deviceToken: String) = withContext(Dispatchers.IO) {
         try {
             val batch = localBuffer.drainBatch(50)
-            if (batch.isEmpty()) return
+            if (batch.isEmpty()) return@withContext
 
-            val snapshotsArray = JSONArray()
             val ids = mutableSetOf<String>()
+            val reqBuilder = signage.hardware.v1.device.DeviceCommon.IngestDeviceAnalyticsBatchRequest.newBuilder()
+                .setDeviceId(deviceId)
+                .setDeviceToken(deviceToken)
 
             for (item in batch) {
                 ids.add(item.id)
-                snapshotsArray.put(JSONObject().apply {
-                    put("id", item.id)
-                    put("inputOutputJson", item.inputOutputJson)
-                    put("assetsStatsJson", item.assetsStatsJson)
-                    put("recordedAt", item.recordedAt)
-                })
+                reqBuilder.addSnapshots(
+                    signage.hardware.v1.device.DeviceCommon.AnalyticsSnapshot.newBuilder()
+                        .setId(item.id)
+                        .setInputOutputJson(item.inputOutputJson)
+                        .setAssetsStatsJson(item.assetsStatsJson)
+                        .setRecordedAt(item.recordedAt)
+                        .build()
+                )
             }
 
-            val jsonBody = JSONObject().apply {
-                put("deviceId", deviceId)
-                put("deviceToken", deviceToken)
-                put("snapshots", snapshotsArray)
-            }.toString()
-
-            val request = Request.Builder()
-                .url("$baseUrl/api/grpc/hardware/device/IngestDeviceAnalyticsBatch")
-                .post(jsonBody.toRequestBody("application/json".toMediaType()))
-                .build()
-
-            val response = httpClient.newCall(request).execute()
-            if (response.isSuccessful) {
+            val stub = signage.hardware.v1.device.DeviceServiceGrpcKt.DeviceServiceCoroutineStub(channelFactory.getChannel())
+            val response = stub.ingestDeviceAnalyticsBatch(reqBuilder.build())
+            if (response.success) {
                 localBuffer.removeSynced(ids)
-                android.util.Log.i("AnalyticsSync", "Batch flush berhasil: ${ids.size} data analitik offline terkirim.")
+                android.util.Log.i("AnalyticsSync", "Batch flush gRPC berhasil: ${ids.size} data analitik offline terkirim.")
             }
         } catch (e: Exception) {
-            android.util.Log.w("AnalyticsSync", "Gagal flush buffer offline: ${e.message}")
+            android.util.Log.w("AnalyticsSync", "Gagal flush buffer offline gRPC: ${e.message}")
         }
     }
 }
