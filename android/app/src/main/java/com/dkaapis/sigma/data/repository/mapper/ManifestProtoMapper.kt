@@ -10,63 +10,22 @@ import com.dkaapis.sigma.domain.model.ZoneWidgetType
 import signage.distribution.v1.manifest.ManifestCommon
 
 /**
- * Pemeta Protobuf CompiledManifest gRPC ke Entity Domain Manifest
+ * Pemeta Protobuf CompiledManifest gRPC ke Entity Domain Manifest.
+ * Ditulis secara fungsional dan deklaratif tanpa tumpukan variabel lokal.
  */
 class ManifestProtoMapper {
 
-    fun mapToDomain(proto: ManifestCommon.CompiledManifest, baseUrl: String): Manifest {
-        val layout = proto.layout
-        val zonesList = mutableListOf<LayerZone>()
-
-        for ((i, layer) in layout.layersList.withIndex()) {
-            val blocksList = mutableListOf<LayerBlock>()
-            for ((j, block) in layer.blocksList.withIndex()) {
-                val hasQueue = block.hasQueueId() && block.queueId.isNotBlank()
-                val hasClock = block.hasClockId() && block.clockId.isNotBlank()
-                val hasTicker = block.hasTickerId() && block.tickerId.isNotBlank()
-                val hasWebview = block.hasWebviewId() && block.webviewId.isNotBlank()
-
-                val wType = when {
-                    hasQueue -> ZoneWidgetType.QUEUE
-                    hasClock -> ZoneWidgetType.CLOCK
-                    hasTicker -> ZoneWidgetType.TICKER
-                    hasWebview -> ZoneWidgetType.WEBVIEW
-                    else -> ZoneWidgetType.NONE
-                }
-
-                val playlistItems = mutableListOf<LayerPlaylistItem>()
-                if (block.hasPlaylist()) {
-                    for ((k, item) in block.playlist.itemsList.withIndex()) {
-                        playlistItems.add(
-                            LayerPlaylistItem(
-                                id = item.id.ifEmpty { "pl-item-$k" },
-                                mediaItemId = item.mediaItemId,
-                                position = item.position,
-                                durationSeconds = item.durationSeconds,
-                                isMuted = item.isMuted,
-                                volumeLevel = 100
-                            )
-                        )
-                    }
-                }
-
-                blocksList.add(
-                    LayerBlock(
-                        id = block.id.ifEmpty { "blk-$j" },
-                        mediaItemId = block.mediaItemId.takeIf { it.isNotBlank() },
-                        playlistId = block.playlistId.takeIf { it.isNotBlank() },
-                        widgetType = wType,
-                        widgetDataJson = if (block.hasWidgetDataJson()) block.widgetDataJson else null,
-                        startTimeSeconds = block.startTimeSeconds,
-                        durationSeconds = block.durationSeconds,
-                        isMuted = block.isMuted,
-                        volumeLevel = block.volumeLevel,
-                        playlistItems = playlistItems
-                    )
-                )
-            }
-
-            zonesList.add(
+    fun mapToDomain(proto: ManifestCommon.CompiledManifest, baseUrl: String): Manifest = with(proto) {
+        val trimmedBase = baseUrl.trimEnd('/')
+        Manifest(
+            manifestId = manifestId,
+            deviceId = deviceId,
+            versionHash = versionHash,
+            layoutId = layout.id,
+            layoutName = layout.name.ifEmpty { "Layout Default" },
+            canvasWidth = layout.canvasWidth,
+            canvasHeight = layout.canvasHeight,
+            zones = layout.layersList.mapIndexed { i, layer ->
                 LayerZone(
                     id = layer.id.ifEmpty { "zone-$i" },
                     name = layer.name.ifEmpty { "Layer $i" },
@@ -82,45 +41,53 @@ class ManifestProtoMapper {
                     borderRadius = layer.borderRadius,
                     borderColor = layer.borderColor.takeIf { it.isNotBlank() },
                     borderWidth = layer.borderWidth,
-                    blocks = blocksList,
+                    blocks = layer.blocksList.mapIndexed { j, block ->
+                        LayerBlock(
+                            id = block.id.ifEmpty { "blk-$j" },
+                            mediaItemId = block.mediaItemId.takeIf { it.isNotBlank() },
+                            playlistId = block.playlistId.takeIf { it.isNotBlank() },
+                            widgetType = when {
+                                block.hasQueueId() && block.queueId.isNotBlank() -> ZoneWidgetType.QUEUE
+                                block.hasClockId() && block.clockId.isNotBlank() -> ZoneWidgetType.CLOCK
+                                block.hasTickerId() && block.tickerId.isNotBlank() -> ZoneWidgetType.TICKER
+                                block.hasWebviewId() && block.webviewId.isNotBlank() -> ZoneWidgetType.WEBVIEW
+                                else -> ZoneWidgetType.NONE
+                            },
+                            widgetDataJson = if (block.hasWidgetDataJson()) block.widgetDataJson else null,
+                            startTimeSeconds = block.startTimeSeconds,
+                            durationSeconds = block.durationSeconds,
+                            isMuted = block.isMuted,
+                            volumeLevel = block.volumeLevel,
+                            playlistItems = if (block.hasPlaylist()) {
+                                block.playlist.itemsList.mapIndexed { k, item ->
+                                    LayerPlaylistItem(
+                                        id = item.id.ifEmpty { "pl-item-$k" },
+                                        mediaItemId = item.mediaItemId,
+                                        position = item.position,
+                                        durationSeconds = item.durationSeconds,
+                                        isMuted = item.isMuted,
+                                        volumeLevel = 100
+                                    )
+                                }
+                            } else emptyList()
+                        )
+                    },
                     isLocked = false
                 )
-            )
-        }
-
-        val assetsList = mutableListOf<MediaAsset>()
-        for ((i, asset) in proto.requiredAssetsList.withIndex()) {
-            var rawUrl = asset.url
-            if (rawUrl.startsWith("/")) {
-                val trimmedBase = baseUrl.trimEnd('/')
-                rawUrl = "$trimmedBase$rawUrl"
-            }
-
-            assetsList.add(
+            },
+            requiredAssets = requiredAssetsList.mapIndexed { i, asset ->
                 MediaAsset(
                     mediaId = asset.mediaId,
-                    url = rawUrl,
+                    url = if (asset.url.startsWith("/")) "$trimmedBase${asset.url}" else asset.url,
                     sha256Hash = asset.sha256Hash,
                     fileSizeBytes = asset.fileSizeBytes,
                     localFilename = asset.localFilename.ifEmpty { "media_$i" },
                     mediaType = MediaType.fromInt(asset.mediaTypeValue),
                     durationSeconds = 10
                 )
-            )
-        }
-
-        return Manifest(
-            manifestId = proto.manifestId,
-            deviceId = proto.deviceId,
-            versionHash = proto.versionHash,
-            layoutId = layout.id,
-            layoutName = layout.name.ifEmpty { "Layout Default" },
-            canvasWidth = layout.canvasWidth,
-            canvasHeight = layout.canvasHeight,
-            zones = zonesList,
-            requiredAssets = assetsList,
-            totalDownloadSizeBytes = proto.totalDownloadSizeBytes,
-            generatedAt = proto.generatedAt
+            },
+            totalDownloadSizeBytes = totalDownloadSizeBytes,
+            generatedAt = generatedAt
         )
     }
 }

@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dkaapis.sigma.domain.model.Manifest
 import com.dkaapis.sigma.domain.usecase.DownloadAndVerifyMediaUseCase
-import com.dkaapis.sigma.domain.usecase.DownloadState
+import com.dkaapis.sigma.domain.model.DownloadState
 import com.dkaapis.sigma.domain.usecase.RegisterAndPairUseCase
 import com.dkaapis.sigma.domain.usecase.SyncManifestUseCase
 import kotlinx.coroutines.CancellationException

@@ -129,21 +129,18 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private fun initDependencies() {
         val tokenStorage = TokenStorage(this)
         val channelFactory = GrpcChannelFactory(this)
-        val manifestStorage = ManifestStorage(this)
-        val diskCache = MediaDiskCache(this)
-
         deviceRepo = DeviceRepositoryImpl(this, tokenStorage, channelFactory)
-        val manifestRepo = ManifestRepositoryImpl(this, manifestStorage, channelFactory)
-        storageRepo = MediaStorageRepositoryImpl(diskCache)
+        storageRepo = MediaStorageRepositoryImpl(MediaDiskCache(this))
 
+        val manifestRepo = ManifestRepositoryImpl(this, ManifestStorage(this), channelFactory)
+        val analyticsSyncManager = AnalyticsSyncManager(this, tokenStorage, AnalyticsLocalBuffer(this), channelFactory)
         val hardwareProfiler = DeviceHardwareProfiler(this)
-        val analyticsBuffer = AnalyticsLocalBuffer(this)
-        val analyticsSyncManager = AnalyticsSyncManager(this, tokenStorage, analyticsBuffer, channelFactory)
 
-        val registerUseCase = RegisterAndPairUseCase(deviceRepo)
-        val syncUseCase = SyncManifestUseCase(deviceRepo, manifestRepo)
-        val downloadUseCase = DownloadAndVerifyMediaUseCase(storageRepo)
-        viewModel = PlayerViewModel(registerUseCase, syncUseCase, downloadUseCase)
+        viewModel = PlayerViewModel(
+            registerAndPairUseCase = RegisterAndPairUseCase(deviceRepo),
+            syncManifestUseCase = SyncManifestUseCase(deviceRepo, manifestRepo),
+            downloadUseCase = DownloadAndVerifyMediaUseCase(storageRepo)
+        )
 
         zoneManager = PlayerZoneManager()
 
@@ -191,26 +188,9 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     }
 
     private fun setupViews() {
-        val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         canvasLayout = SignageCanvasLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         }
-        root.addView(canvasLayout)
-
-        loadingOverlay = FrameLayout(this).apply {
-            setBackgroundColor(Color.parseColor("#E60B0F19"))
-            layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        }
-
-        val overlayContent = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
-                gravity = Gravity.CENTER
-                setMargins(64, 0, 64, 0)
-            }
-        }
-
         badgeText = TextView(this).apply {
             text = "● SINKRONISASI KONTEN REALTIME"
             setTextColor(Color.parseColor("#10B981"))
@@ -219,8 +199,6 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             gravity = Gravity.CENTER
             setPadding(0, 0, 0, 16)
         }
-        overlayContent.addView(badgeText)
-
         loadingText = TextView(this).apply {
             text = "Memulai DKASigma Player..."
             setTextColor(Color.WHITE)
@@ -229,8 +207,6 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             gravity = Gravity.CENTER
             setPadding(0, 0, 0, 24)
         }
-        overlayContent.addView(loadingText)
-
         progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             isIndeterminate = false
             max = 100
@@ -240,8 +216,6 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                 gravity = Gravity.CENTER_HORIZONTAL
             }
         }
-        overlayContent.addView(progressBar)
-
         subDetailText = TextView(this).apply {
             text = ""
             setTextColor(Color.parseColor("#94A3B8"))
@@ -249,11 +223,27 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             gravity = Gravity.CENTER
             setLineSpacing(8f, 1f)
         }
-        overlayContent.addView(subDetailText)
-
-        loadingOverlay.addView(overlayContent)
-        root.addView(loadingOverlay)
-        setContentView(root)
+        loadingOverlay = FrameLayout(this).apply {
+            setBackgroundColor(Color.parseColor("#E60B0F19"))
+            layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            addView(LinearLayout(this@PlayerActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+                layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
+                    gravity = Gravity.CENTER
+                    setMargins(64, 0, 64, 0)
+                }
+                addView(badgeText)
+                addView(loadingText)
+                addView(progressBar)
+                addView(subDetailText)
+            })
+        }
+        setContentView(FrameLayout(this).apply {
+            setBackgroundColor(Color.BLACK)
+            addView(canvasLayout)
+            addView(loadingOverlay)
+        })
     }
 
     private fun observeState() {

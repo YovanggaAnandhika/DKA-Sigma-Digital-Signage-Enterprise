@@ -1,26 +1,11 @@
 package com.dkaapis.sigma.domain.usecase
 
+import com.dkaapis.sigma.domain.model.DownloadState
 import com.dkaapis.sigma.domain.model.Manifest
-import com.dkaapis.sigma.domain.model.MediaAsset
 import com.dkaapis.sigma.domain.repository.MediaStorageRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
-
-sealed class DownloadState {
-    data class Verifying(val assetIndex: Int, val totalAssets: Int, val filename: String) : DownloadState()
-    data class Progress(
-        val assetIndex: Int,
-        val totalAssets: Int,
-        val percent: Int,
-        val downloadedBytes: Long = 0L,
-        val totalBytes: Long = 0L,
-        val currentFileName: String = ""
-    ) : DownloadState()
-    data class AssetComplete(val asset: MediaAsset) : DownloadState()
-    data class AllComplete(val manifest: Manifest) : DownloadState()
-    data class Error(val asset: MediaAsset, val message: String) : DownloadState()
-}
 
 class DownloadAndVerifyMediaUseCase(
     private val storageRepository: MediaStorageRepository
@@ -34,15 +19,10 @@ class DownloadAndVerifyMediaUseCase(
             return@channelFlow
         }
 
-        val uncachedAssets = mutableListOf<MediaAsset>()
-
         // 1. Verifikasi integritas hash setiap chunk aset
-        allAssets.forEachIndexed { index, asset ->
+        val uncachedAssets = allAssets.filterIndexed { index, asset ->
             trySend(DownloadState.Verifying(index + 1, total, asset.localFilename))
-            val isCachedAndValid = storageRepository.isAssetCachedAndValid(asset)
-            if (!isCachedAndValid) {
-                uncachedAssets.add(asset)
-            }
+            !storageRepository.isAssetCachedAndValid(asset)
         }
 
         // 2. Jika seluruh aset sudah valid dan tersimpan di lokal
@@ -70,11 +50,9 @@ class DownloadAndVerifyMediaUseCase(
 
         uncachedAssets.forEachIndexed { index, asset ->
             val assetExpectedSize = if (asset.fileSizeBytes > 0) asset.fileSizeBytes else 1L
-            var currentFileDownloaded = 0L
 
             val downloadResult = storageRepository.downloadAssetResumable(asset) { downloaded, _ ->
-                currentFileDownloaded = downloaded
-                val overallDownloaded = (accumulatedDownloadedBytes + currentFileDownloaded).coerceAtMost(totalDownloadBytes)
+                val overallDownloaded = (accumulatedDownloadedBytes + downloaded).coerceAtMost(totalDownloadBytes)
                 val rawPercent = ((overallDownloaded * 100) / totalDownloadBytes).toInt()
                 val monotonicPercent = maxOf(lastEmittedPercent, minOf(rawPercent, 99))
 
@@ -95,8 +73,7 @@ class DownloadAndVerifyMediaUseCase(
 
             if (downloadResult.isSuccess) {
                 val file = downloadResult.getOrThrow()
-                val isHashValid = storageRepository.verifyFileSha256(file, asset.sha256Hash)
-                if (isHashValid) {
+                if (storageRepository.verifyFileSha256(file, asset.sha256Hash)) {
                     accumulatedDownloadedBytes += file.length().coerceAtLeast(assetExpectedSize)
                     val overallDownloaded = accumulatedDownloadedBytes.coerceAtMost(totalDownloadBytes)
                     val stepPercent = ((overallDownloaded * 100) / totalDownloadBytes).toInt()

@@ -11,6 +11,10 @@ import com.dkaapis.sigma.presentation.renderers.TickerZoneRenderer
 import com.dkaapis.sigma.presentation.renderers.WebviewZoneRenderer
 import org.json.JSONObject
 
+import com.dkaapis.sigma.presentation.renderers.model.ClockConfigPayload
+import com.dkaapis.sigma.presentation.renderers.model.TickerConfigPayload
+import com.dkaapis.sigma.presentation.renderers.model.WebviewConfigPayload
+
 /**
  * Pabrik instansiasi renderer widget dinamis (Jam, Ticker, Queue, Webview)
  */
@@ -31,45 +35,11 @@ class ZoneWidgetRendererFactory {
                 val renderer = ClockZoneRenderer(activity)
                 onClockCreated(renderer)
                 val json = runCatching { JSONObject(jsonStr) }.getOrDefault(JSONObject())
-                renderer.createView(
-                    parent = parent,
-                    city = json.optString("city", "Makassar"),
-                    showSeconds = json.optBoolean("showSeconds", true),
-                    backgroundColorHex = json.optString("backgroundColor", "transparent").ifBlank { "transparent" },
-                    textColorHex = json.optString("textColor", "#ffffff").ifBlank { "#ffffff" },
-                    subtitleColorHex = json.optString("subtitleColor", "#94a3b8").ifBlank { "#94a3b8" },
-                    borderColorHex = json.optString("borderColor", "transparent").ifBlank { "transparent" },
-                    borderRadiusDp = json.optInt("borderRadius", 0),
-                    timeFontSizeSp = json.optDouble("timeFontSize", 52.0).toFloat(),
-                    dateFontSizeSp = json.optDouble("dateFontSize", 14.0).toFloat()
-                )
+                renderer.createView(parent, ClockConfigPayload.fromJson(json))
             }
             ZoneWidgetType.TICKER -> {
-                val renderer = TickerZoneRenderer(activity)
                 val json = runCatching { JSONObject(jsonStr) }.getOrDefault(JSONObject())
-                val msgArr = json.optJSONArray("messagesList") ?: json.optJSONArray("messages")
-                val msgs = mutableListOf<String>()
-                if (msgArr != null) {
-                    for (m in 0 until msgArr.length()) {
-                        val s = msgArr.optString(m)
-                        if (s.isNotBlank()) msgs.add(s)
-                    }
-                }
-                val textMessage = if (msgs.isNotEmpty()) msgs.joinToString("  ✦  ") else json.optString("name", "DKASigma Teks Berjalan")
-
-                renderer.createView(
-                    parent = parent,
-                    textMessage = textMessage,
-                    badgeText = json.optString("badge", ""),
-                    fontSize = json.optDouble("fontSize", 16.0).toFloat(),
-                    backgroundColorHex = json.optString("backgroundColor", "transparent").ifBlank { "transparent" },
-                    textColorHex = json.optString("textColor", "#ffffff").ifBlank { "#ffffff" },
-                    badgeBackgroundColorHex = json.optString("badgeBackgroundColor", "transparent").ifBlank { "transparent" },
-                    badgeTextColorHex = json.optString("badgeTextColor", "#ffffff").ifBlank { "#ffffff" },
-                    borderColorHex = json.optString("borderColor", "transparent").ifBlank { "transparent" },
-                    borderRadiusDp = json.optInt("borderRadius", 0),
-                    speed = json.optString("speed", "normal")
-                )
+                TickerZoneRenderer(activity).createView(parent, TickerConfigPayload.fromJson(json))
             }
             ZoneWidgetType.QUEUE -> {
                 val renderer = QueueZoneRenderer(
@@ -86,13 +56,8 @@ class ZoneWidgetRendererFactory {
                 renderer.createView(parent, block.widgetDataJson)
             }
             ZoneWidgetType.WEBVIEW -> {
-                val renderer = WebviewZoneRenderer(activity)
                 val json = runCatching { JSONObject(jsonStr) }.getOrDefault(JSONObject())
-                renderer.createView(
-                    parent = parent,
-                    url = json.optString("url", "https://google.com"),
-                    zoomPercent = json.optInt("zoomPercent", 100)
-                )
+                WebviewZoneRenderer(activity).createView(parent, WebviewConfigPayload.fromJson(json))
             }
             else -> null
         }

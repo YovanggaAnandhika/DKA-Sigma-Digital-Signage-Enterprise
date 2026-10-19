@@ -4,7 +4,7 @@ import com.dkaapis.sigma.data.repository.MediaStorageRepositoryImpl
 import com.dkaapis.sigma.domain.model.LayerZone
 import com.dkaapis.sigma.domain.model.Manifest
 import com.dkaapis.sigma.domain.model.MediaType
-import com.dkaapis.sigma.presentation.renderers.VideoPlaylistItem
+import com.dkaapis.sigma.presentation.renderers.model.VideoPlaylistItem
 import java.io.File
 import java.io.FileInputStream
 import java.nio.charset.StandardCharsets

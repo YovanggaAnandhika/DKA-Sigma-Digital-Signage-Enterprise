@@ -7,6 +7,7 @@ import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.widget.FrameLayout
 import com.dkaapis.sigma.domain.model.LayerZone
+import com.dkaapis.sigma.presentation.util.ColorParser
 
 class ZoneContainerView @JvmOverloads constructor(
     context: Context,
@@ -45,27 +46,19 @@ class ZoneContainerView @JvmOverloads constructor(
         // Background & Border styling
         val bgDrawable = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            val bgCol = if (!zone.backgroundColor.isNullOrBlank() && !zone.backgroundColor.equals("transparent", ignoreCase = true)) {
-                parseColor(zone.backgroundColor, Color.TRANSPARENT)
-            } else {
-                Color.TRANSPARENT
-            }
-            setColor(bgCol)
+            setColor(ColorParser.parseColor(zone.backgroundColor))
 
-            if (zone.borderRadius > 0) {
-                cornerRadius = zone.borderRadius * scaleFactorX
-            }
+            if (zone.borderRadius > 0) cornerRadius = zone.borderRadius * scaleFactorX
 
             if (zone.borderWidth > 0 && !zone.borderColor.isNullOrBlank() && !zone.borderColor.equals("transparent", ignoreCase = true)) {
-                val bw = (zone.borderWidth * scaleFactorX).toInt().coerceAtLeast(1)
-                setStroke(bw, parseColor(zone.borderColor, Color.TRANSPARENT))
+                setStroke((zone.borderWidth * scaleFactorX).toInt().coerceAtLeast(1), ColorParser.parseColor(zone.borderColor))
             }
         }
         background = bgDrawable
 
         // Overlay Scrim
         if (zone.overlayOpacity > 0.0f && !zone.overlayColor.isNullOrBlank() && !zone.overlayColor.equals("transparent", ignoreCase = true)) {
-            overlayView.setBackgroundColor(parseColor(zone.overlayColor, Color.TRANSPARENT))
+            overlayView.setBackgroundColor(ColorParser.parseColor(zone.overlayColor))
             overlayView.alpha = zone.overlayOpacity.coerceIn(0.0f, 1.0f)
             overlayView.visibility = VISIBLE
             ensureOverlayOnTop()
@@ -86,26 +79,5 @@ class ZoneContainerView @JvmOverloads constructor(
             addView(overlayView)
         }
         overlayView.bringToFront()
-    }
-
-    private fun parseColor(colorStr: String, fallback: Int): Int {
-        if (colorStr.isBlank() || colorStr.equals("transparent", ignoreCase = true)) return Color.TRANSPARENT
-        val trimmed = colorStr.trim()
-        if (trimmed.startsWith("#")) {
-            return try { Color.parseColor(trimmed) } catch (_: Exception) { fallback }
-        }
-        if (trimmed.startsWith("rgba", ignoreCase = true)) {
-            try {
-                val parts = trimmed.substringAfter("(").substringBefore(")").split(",")
-                if (parts.size >= 4) {
-                    val r = parts[0].trim().toInt()
-                    val g = parts[1].trim().toInt()
-                    val b = parts[2].trim().toInt()
-                    val a = (parts[3].trim().toFloat() * 255).toInt().coerceIn(0, 255)
-                    return Color.argb(a, r, g, b)
-                }
-            } catch (_: Exception) {}
-        }
-        return try { Color.parseColor(trimmed) } catch (_: Exception) { fallback }
     }
 }

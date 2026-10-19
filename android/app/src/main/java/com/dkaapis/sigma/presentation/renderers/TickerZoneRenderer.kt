@@ -4,144 +4,84 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.text.TextUtils
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-
-import android.util.TypedValue
+import com.dkaapis.sigma.presentation.player.canvas.ZoneContainerView
+import com.dkaapis.sigma.presentation.renderers.model.TickerConfigPayload
+import com.dkaapis.sigma.presentation.util.ColorParser
 
 class TickerZoneRenderer(
     private val context: Context
 ) {
-    fun createView(
-        parent: ViewGroup,
-        textMessage: String = "",
-        badgeText: String = "",
-        fontSize: Float = 16f,
-        backgroundColorHex: String = "transparent",
-        textColorHex: String = "#ffffff",
-        badgeBackgroundColorHex: String = "transparent",
-        badgeTextColorHex: String = "#ffffff",
-        borderColorHex: String = "transparent",
-        borderRadiusDp: Int = 0,
-        speed: String = "normal"
-    ): View {
-        val zoneContainer = parent as? com.dkaapis.sigma.presentation.player.canvas.ZoneContainerView
-        val scaleFactor = zoneContainer?.scaleFactorX ?: 1.0f
-
-        val effectiveFontSizePx = (if (fontSize > 0f) fontSize else 16f) * scaleFactor
-        val effectiveBadgeFontSizePx = 12f * scaleFactor
-
-        val containerPad = (12f * scaleFactor).toInt().coerceAtLeast(1)
-        val badgePadH = (8f * scaleFactor).toInt().coerceAtLeast(1)
-        val badgePadV = (2f * scaleFactor).toInt().coerceAtLeast(1)
-        val badgeMarginR = (12f * scaleFactor).toInt().coerceAtLeast(1)
-        val badgeCornerR = 4f * scaleFactor
-        val containerCornerR = borderRadiusDp.toFloat() * scaleFactor
-        val borderW = (1f * scaleFactor).toInt().coerceAtLeast(1)
-
-        val bgColor = parseColor(backgroundColorHex, Color.TRANSPARENT)
-        val textColor = parseColor(textColorHex, Color.WHITE)
-        val badgeBg = parseColor(badgeBackgroundColorHex, Color.TRANSPARENT)
-        val badgeTextCol = parseColor(badgeTextColorHex, Color.WHITE)
-        val hasBorder = borderColorHex.isNotBlank() && !borderColorHex.equals("transparent", ignoreCase = true)
+    fun createView(parent: ViewGroup, payload: TickerConfigPayload = TickerConfigPayload()): View {
+        val scale = (parent as? ZoneContainerView)?.scaleFactorX ?: 1.0f
+        val pad = (12f * scale).toInt().coerceAtLeast(1)
+        val hasBorder = payload.borderColorHex.isNotBlank() && !payload.borderColorHex.equals("transparent", ignoreCase = true)
 
         val container = LinearLayout(context).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
+            layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(containerPad, 0, containerPad, 0)
+            setPadding(pad, 0, pad, 0)
 
-            if (borderRadiusDp > 0 || hasBorder) {
-                val bgDrawable = GradientDrawable().apply {
+            if (payload.borderRadiusDp > 0 || hasBorder) {
+                background = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
-                    setColor(bgColor)
-                    if (borderRadiusDp > 0) {
-                        cornerRadius = containerCornerR
-                    }
-                    if (hasBorder) {
-                        setStroke(borderW, parseColor(borderColorHex, Color.TRANSPARENT))
-                    }
+                    setColor(ColorParser.parseColor(payload.backgroundColorHex))
+                    if (payload.borderRadiusDp > 0) cornerRadius = payload.borderRadiusDp * scale
+                    if (hasBorder) setStroke((1f * scale).toInt().coerceAtLeast(1), ColorParser.parseColor(payload.borderColorHex))
                 }
-                background = bgDrawable
             } else {
-                setBackgroundColor(bgColor)
+                setBackgroundColor(ColorParser.parseColor(payload.backgroundColorHex))
             }
         }
 
-        if (badgeText.isNotBlank()) {
-            val badge = TextView(context).apply {
-                text = badgeText
-                setTextColor(badgeTextCol)
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, effectiveBadgeFontSizePx)
-                includeFontPadding = false
-                setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD))
-                setPadding(badgePadH, badgePadV, badgePadH, badgePadV)
+        if (payload.badgeText.isNotBlank()) {
+            val badgePadH = (8f * scale).toInt().coerceAtLeast(1)
+            val badgePadV = (2f * scale).toInt().coerceAtLeast(1)
 
-                val badgeDrawable = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadius = badgeCornerR
-                    setColor(badgeBg)
+            container.addView(
+                TextView(context).apply {
+                    text = payload.badgeText
+                    setTextColor(ColorParser.parseColor(payload.badgeTextColorHex, Color.WHITE))
+                    setTextSize(TypedValue.COMPLEX_UNIT_PX, 12f * scale)
+                    includeFontPadding = false
+                    typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+                    setPadding(badgePadH, badgePadV, badgePadH, badgePadV)
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = 4f * scale
+                        setColor(ColorParser.parseColor(payload.badgeBackgroundColorHex))
+                    }
+                    gravity = Gravity.CENTER
+                    layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        rightMargin = pad
+                    }
                 }
-                background = badgeDrawable
-                gravity = Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    rightMargin = badgeMarginR
-                }
-            }
-            container.addView(badge)
-        }
-
-        val marqueeText = MarqueeTextView(context).apply {
-            text = textMessage.ifBlank { "DKASigma Teks Berjalan" }
-            setTextColor(textColor)
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, effectiveFontSizePx)
-            includeFontPadding = false
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-            speedPixelsPerSec = when (speed.lowercase()) {
-                "fast" -> 160f * scaleFactor
-                "slow" -> 50f * scaleFactor
-                else -> 95f * scaleFactor
-            }
-            layoutParams = LinearLayout.LayoutParams(
-                0,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                1f
             )
         }
-        container.addView(marqueeText)
+
+        container.addView(
+            MarqueeTextView(context).apply {
+                text = payload.textMessage.ifBlank { "DKASigma Teks Berjalan" }
+                setTextColor(ColorParser.parseColor(payload.textColorHex, Color.WHITE))
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, (if (payload.fontSize > 0f) payload.fontSize else 16f) * scale)
+                includeFontPadding = false
+                typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+                speedPixelsPerSec = when (payload.speed.lowercase()) {
+                    "fast" -> 160f * scale
+                    "slow" -> 50f * scale
+                    else -> 95f * scale
+                }
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            }
+        )
 
         return container
-    }
-
-    private fun parseColor(colorStr: String, fallback: Int): Int {
-        if (colorStr.isBlank() || colorStr.equals("transparent", ignoreCase = true)) return Color.TRANSPARENT
-        val trimmed = colorStr.trim()
-        if (trimmed.startsWith("#")) {
-            return try { Color.parseColor(trimmed) } catch (_: Exception) { fallback }
-        }
-        if (trimmed.startsWith("rgba", ignoreCase = true)) {
-            try {
-                val parts = trimmed.substringAfter("(").substringBefore(")").split(",")
-                if (parts.size >= 4) {
-                    val r = parts[0].trim().toInt()
-                    val g = parts[1].trim().toInt()
-                    val b = parts[2].trim().toInt()
-                    val a = (parts[3].trim().toFloat() * 255).toInt().coerceIn(0, 255)
-                    return Color.argb(a, r, g, b)
-                }
-            } catch (_: Exception) {}
-        }
-        return try { Color.parseColor(trimmed) } catch (_: Exception) { fallback }
     }
 }

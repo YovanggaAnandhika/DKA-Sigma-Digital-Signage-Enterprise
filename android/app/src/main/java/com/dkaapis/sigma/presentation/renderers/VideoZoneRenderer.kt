@@ -10,16 +10,8 @@ import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.dkaapis.sigma.data.analytics.AssetStatsData
+import com.dkaapis.sigma.presentation.renderers.model.VideoPlaylistItem
 import java.io.File
-
-data class VideoPlaylistItem(
-    val file: File,
-    val durationSeconds: Int = 0,
-    val isMuted: Boolean = false,
-    val mediaId: String = "",
-    val mediaName: String = "",
-    val volumeLevel: Int = 100
-)
 
 class VideoZoneRenderer(
     private val context: Context,
