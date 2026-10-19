@@ -162,15 +162,15 @@ class QueueZoneRenderer(
                 alpha = meta.opacity.coerceIn(0.0f, 1.0f)
                 text = interpolate(meta.templateContent, queueNumber, queueCounter)
 
-                when (meta.itemType) {
-                    "number" -> {
+                when (meta.itemType.lowercase()) {
+                    "number", "ticket_number" -> {
                         numberTextView = this
                         val canClick = !isInactive()
                         isClickable = canClick
                         isFocusable = canClick
                         setOnClickListener { if (!isInactive()) callNext() }
                     }
-                    "counter" -> {
+                    "counter", "counter_loket" -> {
                         counterTextView = this
                         originalCounterBgColor = ColorParser.parseColor(meta.backgroundColor)
                         val canClick = !isInactive()
@@ -183,16 +183,43 @@ class QueueZoneRenderer(
         }
     }
 
-    private fun interpolate(template: String, queueNumber: String, queueCounter: String): String =
-        template
+    private fun extractCleanCounterName(counterName: String, counterLabel: String): String {
+        val labelRegex = Regex("^(?:${Regex.escape(counterLabel)}|loket|poli|teller|kasir|meja|counter|pickup point)\\s*", RegexOption.IGNORE_CASE)
+        val stripped = counterName.replace(labelRegex, "").trim().let { raw ->
+            if (raw.matches(Regex("^0+\\d+$"))) raw.replace(Regex("^0+"), "") else raw
+        }
+        return stripped.ifBlank { counterName.filter { it.isDigit() }.ifEmpty { "1" } }
+    }
+
+    private fun interpolate(template: String, queueNumber: String, queueCounter: String): String {
+        val cleanCounter = extractCleanCounterName(queueCounter, currentCounterLabel)
+        val formattedCounter = "${currentCounterLabel.uppercase()} $cleanCounter".trim()
+
+        return template
+            // Dollar placeholder syntax (Web Studio CMS format)
+            .replace("\$queue_number\$", queueNumber)
+            .replace("\$queue_counter\$", formattedCounter)
+            .replace("\$queue_name\$", currentName)
+            .replace("\$queue_prefix\$", currentPrefix)
+            .replace("\$operator_name\$", "Petugas")
+            .replace("\$waiting_count\$", "0")
+            // Bracket placeholder syntax (TTS / alternative formats)
             .replace("{ticket_number}", queueNumber)
+            .replace("{queue_number}", queueNumber)
             .replace("{number}", queueNumber)
             .replace("{nomor_antrian}", queueNumber)
-            .replace("{counter_name}", queueCounter)
-            .replace("{counter}", queueCounter)
-            .replace("{loket}", queueCounter)
+            .replace("{counter_name}", formattedCounter)
+            .replace("{queue_counter}", formattedCounter)
+            .replace("{counter}", formattedCounter)
+            .replace("{loket}", formattedCounter)
+            .replace("{queue_name}", currentName)
             .replace("{name}", currentName)
+            .replace("{nama_antrian}", currentName)
+            .replace("{queue_prefix}", currentPrefix)
             .replace("{prefix}", currentPrefix)
+            .replace("{operator_name}", "Petugas")
+            .replace("{petugas}", "Petugas")
+    }
 
     fun callNext(): String {
         currentSequence++

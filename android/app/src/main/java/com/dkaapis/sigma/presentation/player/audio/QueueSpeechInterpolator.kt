@@ -57,7 +57,13 @@ class QueueSpeechInterpolator {
                 "{salam}" to getTimeGreeting(hour),
                 "{waktu}" to getTimePeriod(hour),
                 "{waiting_count}" to waitCount,
-                "{sisa_antrian}" to waitCount
+                "{sisa_antrian}" to waitCount,
+                "\$queue_number\$" to if (pfx.isNotBlank()) "$pfx, $spokenDigits" else spokenDigits,
+                "\$queue_counter\$" to cleanCounter,
+                "\$queue_name\$" to qName,
+                "\$queue_prefix\$" to pfx,
+                "\$operator_name\$" to op,
+                "\$waiting_count\$" to waitCount
             )
         )
     }
@@ -87,7 +93,10 @@ class QueueSpeechInterpolator {
                 "{queue_name}" to qName,
                 "{nama_antrian}" to qName,
                 "{salam}" to getTimeGreeting(hour),
-                "{waktu}" to getTimePeriod(hour)
+                "{waktu}" to getTimePeriod(hour),
+                "\$queue_counter\$" to cleanCounter,
+                "\$queue_name\$" to qName,
+                "\$operator_name\$" to op
             )
         )
     }
