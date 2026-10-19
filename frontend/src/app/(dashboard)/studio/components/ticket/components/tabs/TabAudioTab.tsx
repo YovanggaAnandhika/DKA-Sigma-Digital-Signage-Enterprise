@@ -7,7 +7,8 @@ import QueueAudioPickerModal from '../QueueAudioPickerModal';
 import { SECTOR_PRESETS, speakQueueAnnouncement } from '../../types';
 
 export default function TabAudioTab() {
-  const { queue, updateField, updateAudio, triggerChime, simulator } = useQueueEditor();
+  const { queue, updateField, updateAudio, triggerChime, simulator, sectors } = useQueueEditor();
+  const availableSectors = sectors && sectors.length > 0 ? sectors : SECTOR_PRESETS;
   const [isAudioPickerOpen, setIsAudioPickerOpen] = useState(false);
   const [isTestingTts, setIsTestingTts] = useState(false);
 
@@ -40,7 +41,7 @@ export default function TabAudioTab() {
   };
 
   const handleSelectSectorPreset = (presetId: string) => {
-    const preset = SECTOR_PRESETS.find((p) => p.id === presetId);
+    const preset = availableSectors.find((p) => p.id === presetId);
     if (!preset) return;
     updateField('sectorType', preset.id);
     updateField('ticketLabel', preset.ticketLabel);
@@ -244,12 +245,8 @@ export default function TabAudioTab() {
             Pilih Sektor Industri:
           </label>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
-            {SECTOR_PRESETS.map((preset) => {
-              const activeSector = queue.sectorType || (
-                (queue.name?.toLowerCase().includes('kafe') || queue.name?.toLowerCase().includes('cafe') || queue.name?.toLowerCase().includes('resto') || queue.name?.toLowerCase().includes('pesanan'))
-                  ? 'RETAIL_FB'
-                  : 'HOSPITAL'
-              );
+            {availableSectors.map((preset) => {
+              const activeSector = queue.sectorType || 'RETAIL_FB';
               const isSelected = activeSector === preset.id;
               return (
                 <div

@@ -97,6 +97,20 @@ export function QueueEditorProvider({
   const router = useRouter();
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
+  const [sectors, setSectors] = useState<QueueSector[]>([]);
+
+  // Load available sector types dynamically from backend database table queue_sectors
+  useEffect(() => {
+    listQueueSectors()
+      .then((res) => {
+        if (res && res.sectorsList && Array.isArray(res.sectorsList)) {
+          setSectors(res.sectorsList);
+        } else if (res && res.sectors && Array.isArray(res.sectors)) {
+          setSectors(res.sectors);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const [queue, setQueue] = useState<QueueDisplayConfig>(() => {
     const defaultItems = createDefaultQueueLayoutItems('clean-light');
@@ -121,6 +135,9 @@ export function QueueEditorProvider({
       backgroundColor: '#f8fafc',
       themePreset: 'clean-light',
       autoRecallEnabled: false,
+      sectorType: 'RETAIL_FB',
+      ticketLabel: 'Nomor Pesanan',
+      counterLabel: 'Pickup Point',
       items: defaultItems,
       counters: defaultCounters,
       audios: defaultAudios,
@@ -134,66 +151,30 @@ export function QueueEditorProvider({
     isChiming: false,
   });
 
+  const selectSector = useCallback((sectorId: string) => {
+    const sec = sectors.find((s) => s.id === sectorId);
+    if (!sec) return;
+    setQueue((prev) => ({
+      ...prev,
+      sectorType: sec.id,
+      ticketLabel: sec.ticketLabel,
+      counterLabel: sec.counterLabel,
+      ttsTemplateCall: sec.ttsTemplateCall,
+      ttsTemplateRecall: sec.ttsTemplateRecall,
+      ttsTemplateBreak: sec.ttsTemplateBreak,
+    }));
+  }, [sectors]);
+
   // Load existing queue if editing
   useEffect(() => {
     if (isNew || !initialId) return;
 
-    try {
-      const stored = localStorage.getItem(QUEUE_STORAGE_KEY);
-      const items: QueueDisplayConfig[] = stored ? JSON.parse(stored) : DEFAULT_QUEUES;
-      const found = items.find((q) => q.id === initialId);
+    let isMounted = true;
 
-      if (found) {
-        const rawItems = found.items && found.items.length > 0
-          ? found.items
-          : createDefaultQueueLayoutItems(found.themePreset || 'clean-light');
-
-        const sanitizedItems = rawItems.map((it) => {
-          if ((it.itemType === 'ticket_number' || it.itemType === 'text_label') && (it.backgroundColor === '#ffffff' || it.backgroundColor === '#0f172a' || !it.backgroundColor)) {
-            return { ...it, backgroundColor: 'transparent' };
-          }
-          return it;
-        });
-
-        setQueue({
-          ...found,
-          canvasWidth: found.canvasWidth || 1920,
-          canvasHeight: found.canvasHeight || 1080,
-          backgroundColor: found.backgroundColor || '#f8fafc',
-          themePreset: found.themePreset || 'clean-light',
-          items: sanitizedItems,
-          counters: found.counters && found.counters.length > 0 ? found.counters : [
-            { id: 'cnt-1', counterNumber: 1, counterName: found.currentCounter || 'LOKET 01', operatorName: 'Petugas 1', isActive: true },
-          ],
-          audios: found.audios && found.audios.length > 0 ? found.audios : [
-            { id: 'aud-1', name: 'Chime Klasik (Ding-Dong)', audioType: 'preset', volumePercent: 80, isActive: true },
-          ],
-        });
-
-        const numPart = parseInt((found.currentNumber || 'A-001').replace(/[^0-9]/g, ''), 10) || 1;
-        setSimulator({
-          currentSeq: numPart,
-          currentNumber: found.currentNumber || 'A-001',
-          currentCounter: found.currentCounter || 'LOKET 01',
-          isChiming: false,
-        });
-      } else {
-        modal.alert({
-          title: 'Tidak Ditemukan',
-          message: 'Layar antrian tidak ditemukan di penyimpanan.',
-          variant: 'warning',
-        });
-        router.push('/studio/components/ticket');
-      }
-    } catch {
-      router.push('/studio/components/ticket');
-    } finally {
-      setLoading(false);
-    }
-
-    // Also sync latest data from backend
+    // Load from backend first, with localStorage as fallback
     getQueueDisplay(initialId)
       .then((res) => {
+        if (!isMounted) return;
         if (res && res.id) {
           const mappedAudios: QueueAudio[] = (res.audiosList || res.audios || []).map((a: any) => ({
             id: a.id,
@@ -211,30 +192,105 @@ export function QueueEditorProvider({
             counterName: c.counterName,
             operatorName: c.operatorName,
             isActive: c.isActive !== false,
+            status: c.status || 'ACTIVE',
+            statusNote: c.statusNote || '',
           }));
 
-          setQueue((prev) => ({
-            ...prev,
-            name: res.name || prev.name,
-            prefix: res.prefix || prev.prefix,
-            backgroundColor: res.backgroundColor || prev.backgroundColor,
-            backgroundImageUrl: res.backgroundImageUrl || prev.backgroundImageUrl,
-            themePreset: res.themePreset || prev.themePreset,
-            autoRecallEnabled: res.autoRecallEnabled ?? prev.autoRecallEnabled,
-            sectorType: res.sectorType || prev.sectorType || 'HOSPITAL',
-            ticketLabel: res.ticketLabel || prev.ticketLabel || 'Nomor Antrian',
-            counterLabel: res.counterLabel || prev.counterLabel || 'Loket',
-            ttsTemplateCall: res.ttsTemplateCall || prev.ttsTemplateCall,
-            ttsTemplateRecall: res.ttsTemplateRecall || prev.ttsTemplateRecall,
-            ttsTemplateBreak: res.ttsTemplateBreak || prev.ttsTemplateBreak,
-            currentSequence: res.currentSequence ?? prev.currentSequence ?? 0,
-            items: res.itemsList && res.itemsList.length > 0 ? res.itemsList : prev.items,
-            counters: mappedCounters.length > 0 ? mappedCounters : prev.counters,
-            audios: mappedAudios.length > 0 ? mappedAudios : prev.audios,
-          }));
+          const rawItems = res.itemsList && res.itemsList.length > 0
+            ? res.itemsList
+            : createDefaultQueueLayoutItems(res.themePreset || 'clean-light');
+
+          const sanitizedItems = rawItems.map((it: any) => {
+            if ((it.itemType === 'ticket_number' || it.itemType === 'text_label') && (it.backgroundColor === '#ffffff' || it.backgroundColor === '#0f172a' || !it.backgroundColor)) {
+              return { ...it, backgroundColor: 'transparent' };
+            }
+            return it;
+          });
+
+          const activeCounter = mappedCounters[0]?.counterName || 'LOKET 01';
+          const activeNumber = res.latestCalledNumber || `${res.prefix || 'A'}-001`;
+          const numPart = parseInt(activeNumber.replace(/[^0-9]/g, ''), 10) || 1;
+
+          setQueue({
+            id: res.id,
+            name: res.name || 'Layar Antrian',
+            prefix: res.prefix || 'A',
+            canvasWidth: res.canvasWidth || 1920,
+            canvasHeight: res.canvasHeight || 1080,
+            backgroundColor: res.backgroundColor || '#f8fafc',
+            backgroundImageUrl: res.backgroundImageUrl || '',
+            themePreset: res.themePreset || 'clean-light',
+            autoRecallEnabled: !!res.autoRecallEnabled,
+            sectorType: res.sectorType || 'RETAIL_FB',
+            ticketLabel: res.ticketLabel || 'Nomor Pesanan',
+            counterLabel: res.counterLabel || 'Pickup Point',
+            ttsTemplateCall: res.ttsTemplateCall,
+            ttsTemplateRecall: res.ttsTemplateRecall,
+            ttsTemplateBreak: res.ttsTemplateBreak,
+            currentSequence: res.currentSequence || 0,
+            items: sanitizedItems,
+            counters: mappedCounters.length > 0 ? mappedCounters : [
+              { id: 'cnt-1', counterNumber: 1, counterName: `${res.counterLabel || 'LOKET'} 01`.toUpperCase(), operatorName: 'Petugas 1', isActive: true }
+            ],
+            audios: mappedAudios.length > 0 ? mappedAudios : [
+              { id: 'aud-1', name: 'Chime Klasik (Ding-Dong)', audioType: 'preset', volumePercent: 80, isActive: true },
+            ],
+            audioChimeEnabled: true,
+            marqueeText: res.marqueeText || 'PENGUMUMAN: Silakan menuju $queue_counter$ saat nomor $queue_number$ dipanggil.',
+            currentNumber: activeNumber,
+            currentCounter: activeCounter,
+          });
+
+          setSimulator({
+            currentSeq: numPart,
+            currentNumber: activeNumber,
+            currentCounter: activeCounter,
+            isChiming: false,
+          });
+          setLoading(false);
+          return;
         }
+
+        // Fallback to local storage if backend returned empty
+        fallbackToLocalStorage();
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!isMounted) return;
+        fallbackToLocalStorage();
+      });
+
+    function fallbackToLocalStorage() {
+      try {
+        const stored = localStorage.getItem(QUEUE_STORAGE_KEY);
+        const items: QueueDisplayConfig[] = stored ? JSON.parse(stored) : DEFAULT_QUEUES;
+        const found = items.find((q) => q.id === initialId);
+
+        if (found) {
+          setQueue(found);
+          const numPart = parseInt((found.currentNumber || 'A-001').replace(/[^0-9]/g, ''), 10) || 1;
+          setSimulator({
+            currentSeq: numPart,
+            currentNumber: found.currentNumber || 'A-001',
+            currentCounter: found.currentCounter || 'LOKET 01',
+            isChiming: false,
+          });
+          setLoading(false);
+        } else {
+          modal.alert({
+            title: 'Tidak Ditemukan',
+            message: 'Layar antrian tidak ditemukan di server maupun penyimpanan lokal.',
+            variant: 'warning',
+          });
+          router.push('/studio/components/ticket');
+        }
+      } catch {
+        router.push('/studio/components/ticket');
+      }
+    }
+
+    return () => {
+      isMounted = false;
+    };
   }, [initialId, isNew, router]);
 
   const updateField = useCallback(<K extends keyof QueueDisplayConfig>(field: K, value: QueueDisplayConfig[K]) => {
@@ -431,7 +487,7 @@ export function QueueEditorProvider({
 
       if (isNew) {
         items.unshift(payload);
-        createQueueDisplay({
+        const res = await createQueueDisplay({
           name: payload.name,
           prefix: payload.prefix,
           canvasWidth: payload.canvasWidth,
@@ -440,19 +496,22 @@ export function QueueEditorProvider({
           backgroundImageUrl: payload.backgroundImageUrl,
           themePreset: payload.themePreset,
           autoRecallEnabled: !!payload.autoRecallEnabled,
-          sectorType: payload.sectorType || 'HOSPITAL',
-          ticketLabel: payload.ticketLabel || 'Nomor Antrian',
-          counterLabel: payload.counterLabel || 'Loket',
+          sectorType: payload.sectorType || 'RETAIL_FB',
+          ticketLabel: payload.ticketLabel || 'Nomor Pesanan',
+          counterLabel: payload.counterLabel || 'Pickup Point',
           ttsTemplateCall: payload.ttsTemplateCall,
           ttsTemplateRecall: payload.ttsTemplateRecall,
           ttsTemplateBreak: payload.ttsTemplateBreak,
           items: payload.items,
           counters: payload.counters,
           audios: formattedAudios,
-        }).catch((err) => console.warn('Sync backend queue create failed:', err));
+        });
+        if (res && res.id) {
+          payload.id = res.id;
+        }
       } else {
         items = items.map((q) => (q.id === payload.id ? payload : q));
-        updateQueueDisplay(payload.id, {
+        await updateQueueDisplay(payload.id, {
           name: payload.name,
           prefix: payload.prefix,
           canvasWidth: payload.canvasWidth,
@@ -461,23 +520,23 @@ export function QueueEditorProvider({
           backgroundImageUrl: payload.backgroundImageUrl,
           themePreset: payload.themePreset,
           autoRecallEnabled: !!payload.autoRecallEnabled,
-          sectorType: payload.sectorType || 'HOSPITAL',
-          ticketLabel: payload.ticketLabel || 'Nomor Antrian',
-          counterLabel: payload.counterLabel || 'Loket',
+          sectorType: payload.sectorType || 'RETAIL_FB',
+          ticketLabel: payload.ticketLabel || 'Nomor Pesanan',
+          counterLabel: payload.counterLabel || 'Pickup Point',
           ttsTemplateCall: payload.ttsTemplateCall,
           ttsTemplateRecall: payload.ttsTemplateRecall,
           ttsTemplateBreak: payload.ttsTemplateBreak,
           items: payload.items,
           counters: payload.counters,
           audios: formattedAudios,
-        }).catch((err) => console.warn('Sync backend queue update failed:', err));
+        });
       }
 
       localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(items));
 
       await modal.alert({
         title: 'Tersimpan',
-        message: `Konfigurasi layar antrian "${payload.name}" berhasil disimpan.`,
+        message: `Konfigurasi layar antrian "${payload.name}" berhasil disimpan ke server.`,
         variant: 'success',
       });
 
@@ -485,7 +544,7 @@ export function QueueEditorProvider({
     } catch (e: any) {
       await modal.alert({
         title: 'Gagal Menyimpan',
-        message: e?.message || 'Terjadi kesalahan saat menyimpan data.',
+        message: e?.message || 'Terjadi kesalahan saat menyimpan data ke server.',
         variant: 'danger',
       });
     } finally {
@@ -498,6 +557,8 @@ export function QueueEditorProvider({
       value={{
         queue,
         setQueue,
+        sectors,
+        selectSector,
         isNew,
         loading,
         saving,

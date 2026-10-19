@@ -48,7 +48,7 @@ const TabAudioTab = dynamic(() => import('./tabs/TabAudioTab'), {
 });
 
 export default function QueueEditorShell({ activeTab, children }: { activeTab: string; children?: React.ReactNode }) {
-  const { queue, updateField, saveQueue, saving, isNew, loading } = useQueueEditor();
+  const { queue, updateField, saveQueue, saving, isNew, loading, sectors, selectSector } = useQueueEditor();
   const { isFullscreen, setFullscreen } = useAppContext();
 
   useEffect(() => {
@@ -138,6 +138,47 @@ export default function QueueEditorShell({ activeTab, children }: { activeTab: s
             <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
               {queue.canvasWidth} × {queue.canvasHeight} px
             </span>
+
+            {sectors.length > 0 ? (
+              <select
+                value={queue.sectorType || 'RETAIL_FB'}
+                onChange={(e) => selectSector(e.target.value)}
+                className="form-input"
+                style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  padding: '2px 8px',
+                  height: '26px',
+                  borderRadius: '6px',
+                  backgroundColor: 'var(--bg-surface-elevated)',
+                  borderColor: 'var(--border-subtle)',
+                  color: 'var(--primary-400)',
+                  cursor: 'pointer',
+                  maxWidth: '190px',
+                }}
+                title="Pilih Sektor Industri (Resto, Retail, RS, Bank, dll)"
+              >
+                {sectors.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span
+                style={{
+                  fontSize: '0.6875rem',
+                  fontWeight: 600,
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  color: 'var(--primary-400)',
+                  border: '1px solid rgba(59, 130, 246, 0.25)',
+                }}
+              >
+                {queue.sectorType || 'RETAIL_FB'}
+              </span>
+            )}
           </div>
         </div>
 

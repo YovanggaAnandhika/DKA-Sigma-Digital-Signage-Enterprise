@@ -37,6 +37,7 @@ import {
   QueueDisplayConfig,
   QueueAudio,
   QueueCounter,
+  QueueSector,
   QUEUE_STORAGE_KEY,
   DEFAULT_QUEUES,
   QueueCallHistoryItem,
@@ -46,11 +47,13 @@ import {
   speakCounterStatusAnnouncement,
   SECTOR_PRESETS,
   SectorPreset,
+  injectQueueVariables,
 } from './types';
 import { getDevices } from '@/lib/services/hardware/device.service';
 import { Device } from '@/lib/services/hardware/types';
 import {
   listQueueDisplays,
+  listQueueSectors,
   callNextTicket,
   callPreviousTicket,
   resetQueue,
@@ -178,6 +181,9 @@ export default function TicketPage() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [targetDeviceId, setTargetDeviceId] = useState<string>('all');
   const [callHistory, setCallHistory] = useState<QueueCallHistoryItem[]>([]);
+  const [sectors, setSectors] = useState<QueueSector[]>([]);
+
+  const availableSectors = sectors.length > 0 ? sectors : SECTOR_PRESETS;
 
   // Draggable Split Divider State (Left Column ~68%, Right Column ~32%)
   const [leftWidthPercent, setLeftWidthPercent] = useState<number>(68);
@@ -219,6 +225,17 @@ export default function TicketPage() {
         setSelectedQueueId(DEFAULT_QUEUES[0]?.id || '');
       }
     } catch {}
+
+    // Load available sector types dynamically from database table queue_sectors
+    listQueueSectors()
+      .then((res) => {
+        if (res && res.sectorsList && Array.isArray(res.sectorsList)) {
+          setSectors(res.sectorsList);
+        } else if (res && res.sectors && Array.isArray(res.sectors)) {
+          setSectors(res.sectors);
+        }
+      })
+      .catch(() => {});
 
     // Sync latest queue definitions, custom audios, and counters from backend
     listQueueDisplays()
@@ -586,33 +603,22 @@ export default function TicketPage() {
 
   const handleOpenSectorModal = () => {
     if (!selectedQueue) return;
-    const inferredSector = (() => {
-      if (selectedQueue.sectorType && selectedQueue.sectorType !== 'HOSPITAL') return selectedQueue.sectorType;
-      const lower = (selectedQueue.name || '').toLowerCase();
-      if (lower.includes('kafe') || lower.includes('cafe') || lower.includes('resto') || lower.includes('kopi') || lower.includes('pesanan') || lower.includes('f&b')) {
-        return 'RETAIL_FB';
-      }
-      if (lower.includes('bank') || lower.includes('teller')) return 'BANK';
-      if (lower.includes('gudang') || lower.includes('logistik') || lower.includes('muat')) return 'LOGISTICS';
-      if (lower.includes('samsat') || lower.includes('pelayanan')) return 'PUBLIC_SERVICE';
-      return selectedQueue.sectorType || 'HOSPITAL';
-    })();
-
-    const matchedPreset = SECTOR_PRESETS.find((p) => p.id === inferredSector);
+    const activeSector = selectedQueue.sectorType || 'RETAIL_FB';
+    const matchedPreset = availableSectors.find((p) => p.id === activeSector);
 
     setSectorForm({
-      sectorType: inferredSector,
-      ticketLabel: selectedQueue.ticketLabel || matchedPreset?.ticketLabel || 'Nomor Antrian',
-      counterLabel: selectedQueue.counterLabel || matchedPreset?.counterLabel || 'Loket',
-      ttsTemplateCall: selectedQueue.ttsTemplateCall || matchedPreset?.ttsTemplateCall || '{ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}',
-      ttsTemplateRecall: selectedQueue.ttsTemplateRecall || matchedPreset?.ttsTemplateRecall || 'Panggilan ulang, {ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}',
+      sectorType: activeSector,
+      ticketLabel: selectedQueue.ticketLabel || matchedPreset?.ticketLabel || 'Nomor Pesanan',
+      counterLabel: selectedQueue.counterLabel || matchedPreset?.counterLabel || 'Pickup Point',
+      ttsTemplateCall: selectedQueue.ttsTemplateCall || matchedPreset?.ttsTemplateCall || 'Pesanan {ticket_number}, silakan ambil di {counter_label} {counter_name}',
+      ttsTemplateRecall: selectedQueue.ttsTemplateRecall || matchedPreset?.ttsTemplateRecall || 'Panggilan ulang, pesanan {ticket_number}, silakan ambil di {counter_label} {counter_name}',
       ttsTemplateBreak: selectedQueue.ttsTemplateBreak || matchedPreset?.ttsTemplateBreak || '{counter_label} {counter_name} sedang istirahat',
     });
     setIsSectorModalOpen(true);
   };
 
   const handleSelectSectorPreset = (presetId: string) => {
-    const preset = SECTOR_PRESETS.find((p) => p.id === presetId);
+    const preset = availableSectors.find((p) => p.id === presetId);
     if (!preset) return;
     setSectorForm({
       sectorType: preset.id,
@@ -648,6 +654,20 @@ export default function TicketPage() {
     if (!selectedQueue) return;
     setIsSavingSector(true);
     try {
+      const oldLabel = selectedQueue.counterLabel || 'Loket';
+      const newLabel = sectorForm.counterLabel || 'Loket';
+      const updatedCounters = (selectedQueue.counters || []).map((c, idx) => {
+        if (c.counterName.toUpperCase().includes('LOKET') || c.counterName.toUpperCase().includes('POLI') || c.counterName.toUpperCase().includes(oldLabel.toUpperCase())) {
+          return {
+            ...c,
+            counterName: `${newLabel.toUpperCase()} ${String(c.counterNumber || idx + 1).padStart(2, '0')}`,
+          };
+        }
+        return c;
+      });
+
+      const primaryCounterName = updatedCounters[0]?.counterName || `${newLabel.toUpperCase()} 01`;
+
       await updateQueueDisplay(selectedQueue.id, {
         name: selectedQueue.name,
         prefix: selectedQueue.prefix,
@@ -657,6 +677,7 @@ export default function TicketPage() {
         ttsTemplateCall: sectorForm.ttsTemplateCall,
         ttsTemplateRecall: sectorForm.ttsTemplateRecall,
         ttsTemplateBreak: sectorForm.ttsTemplateBreak,
+        counters: updatedCounters,
       });
 
       const updatedQueues = queues.map((q) => {
@@ -669,6 +690,8 @@ export default function TicketPage() {
             ttsTemplateCall: sectorForm.ttsTemplateCall,
             ttsTemplateRecall: sectorForm.ttsTemplateRecall,
             ttsTemplateBreak: sectorForm.ttsTemplateBreak,
+            counters: updatedCounters,
+            currentCounter: primaryCounterName,
           };
         }
         return q;
@@ -1506,7 +1529,19 @@ export default function TicketPage() {
                       fontSize: '0.75rem',
                     }}
                   >
-                    <Marquee>{selectedQueue.marqueeText}</Marquee>
+                    <Marquee>
+                      {injectQueueVariables(
+                        selectedQueue.marqueeText?.replace('cue_counter$', '$queue_counter$') || 'PENGUMUMAN: Silakan menuju $queue_counter$ saat nomor $queue_number$ dipanggil.',
+                        {
+                          queueNumber: selectedQueue.currentNumber,
+                          queueCounter: selectedQueue.currentCounter,
+                          queuePrefix: selectedQueue.prefix,
+                          queueName: selectedQueue.name,
+                          operatorName: selectedQueue.counters?.find((c) => c.counterName === selectedQueue.currentCounter)?.operatorName || 'Petugas',
+                          waitingCount: selectedQueue.waitingTicketsCount ?? 0,
+                        }
+                      )}
+                    </Marquee>
                   </div>
                 </div>
 
@@ -1740,7 +1775,7 @@ export default function TicketPage() {
                       <span>Reset Urutan (0)</span>
                     </button>
                     <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                      Sektor: {SECTOR_PRESETS.find((p) => p.id === (selectedQueue.sectorType || 'HOSPITAL'))?.name || 'Rumah Sakit'}
+                      Sektor: {availableSectors.find((p) => p.id === (selectedQueue.sectorType || 'RETAIL_FB'))?.name || selectedQueue.sectorType}
                     </span>
                   </div>
                 </div>
@@ -1933,7 +1968,7 @@ export default function TicketPage() {
                 Pilih Preset Sektor Industri:
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
-                {SECTOR_PRESETS.map((preset) => {
+                {availableSectors.map((preset) => {
                   const isSelected = sectorForm.sectorType === preset.id;
                   return (
                     <div
