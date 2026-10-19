@@ -24,35 +24,40 @@ export default function TabEditorControllTab() {
   const [calling, setCalling] = useState(false);
   const [counterMenuOpen, setCounterMenuOpen] = useState(false);
 
-  // Efek invert visual pemanggilan (100% konsisten dengan Android player)
+  // Efek invert visual pemanggilan (100% konsisten dengan Android player: aktif selama audio TTS berbicara)
   const [isInverted, setIsInverted] = useState(false);
-  const invertTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const invertSafetyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const startInvertEffect = (durationMs: number = 3200) => {
-    if (invertTimeoutRef.current) clearTimeout(invertTimeoutRef.current);
+  const startInvertEffect = () => {
+    if (invertSafetyTimeoutRef.current) {
+      clearTimeout(invertSafetyTimeoutRef.current);
+      invertSafetyTimeoutRef.current = null;
+    }
+    // Jika sedang dalam status invert (panggilan beruntun cepat), berikan micro-shutter 60ms agar terlihat kedipan panggilan baru
     if (isInverted) {
       setIsInverted(false);
       setTimeout(() => setIsInverted(true), 60);
     } else {
       setIsInverted(true);
     }
-    invertTimeoutRef.current = setTimeout(() => {
+    // Safety watchdog: jika browser memblokir audio/TTS (misal user belum berinteraksi), matikan setelah 20 detik agar tidak stuck selamanya
+    invertSafetyTimeoutRef.current = setTimeout(() => {
       setIsInverted(false);
-      invertTimeoutRef.current = null;
-    }, durationMs);
+      invertSafetyTimeoutRef.current = null;
+    }, 20000);
   };
 
   const stopInvertEffect = () => {
-    if (invertTimeoutRef.current) {
-      clearTimeout(invertTimeoutRef.current);
-      invertTimeoutRef.current = null;
+    if (invertSafetyTimeoutRef.current) {
+      clearTimeout(invertSafetyTimeoutRef.current);
+      invertSafetyTimeoutRef.current = null;
     }
     setIsInverted(false);
   };
 
   useEffect(() => {
     return () => {
-      if (invertTimeoutRef.current) clearTimeout(invertTimeoutRef.current);
+      if (invertSafetyTimeoutRef.current) clearTimeout(invertSafetyTimeoutRef.current);
     };
   }, []);
 
@@ -82,6 +87,9 @@ export default function TabEditorControllTab() {
         try {
           const data = JSON.parse(event.data);
           if (data && (data.type === 'CALL_QUEUE' || data.type === 'QUEUE_CALL')) {
+            // Abaikan jika pesan berasal dari konsol web ini sendiri (menghindari echo ganda)
+            if (data.source === 'web_console') return;
+
             // Abaikan jika ditujukan ke antrian spesifik lain
             if (data.queueId && queue.id && data.queueId !== queue.id) return;
 
@@ -89,11 +97,22 @@ export default function TabEditorControllTab() {
             const counterNm = data.counterName;
             if (ticketNum) {
               // Picu efek invert visual sinkron dari Android player touch
-              startInvertEffect(3200);
+              startInvertEffect();
 
               if (queue.audioChimeEnabled && data.source === 'player_touch') {
                 triggerChime();
               }
+
+              // Suarakan pengumuman dan matikan efek invert tepat saat TTS selesai berbicara
+              speakQueueAnnouncement(
+                ticketNum,
+                counterNm || activeCounter.counterName,
+                data.callType === 'recall',
+                () => {
+                  stopInvertEffect();
+                },
+                queue
+              );
 
               setQueue((prev) => ({
                 ...prev,
@@ -135,6 +154,7 @@ export default function TabEditorControllTab() {
               currentNumber: resetNum,
               currentSeq: 0,
             }));
+            stopInvertEffect();
           }
         } catch (_) {}
       };
@@ -153,6 +173,8 @@ export default function TabEditorControllTab() {
         body: JSON.stringify({
           deviceId: 'all',
           queueId: queue.id,
+          source: 'web_console',
+          timestamp: Date.now(),
           ...payload,
         }),
       }).catch(() => { });
@@ -185,7 +207,7 @@ export default function TabEditorControllTab() {
   const handleCallNext = async () => {
     if (isCallingDisabled) return;
     setCalling(true);
-    startInvertEffect(6000);
+    startInvertEffect();
     try {
       let nextNumber = queue.currentNumber || simulator.currentNumber || `${queue.prefix || 'A'}-000`;
       if (queue.id) {
@@ -230,20 +252,34 @@ export default function TabEditorControllTab() {
         ttsTemplateRecall: queue.ttsTemplateRecall,
       });
 
+      // Sinkronisasi dengan Android: putar Chime ding-dong dulu (~1.2s), lalu lanjutkan TTS.
+      // Invert effect akan terus aktif dan baru berhenti tepat saat TTS selesai berbicara.
       if (queue.audioChimeEnabled) {
         triggerChime();
+        setTimeout(() => {
+          speakQueueAnnouncement(
+            nextNumber,
+            activeCounter.counterName,
+            false,
+            () => {
+              setCalling(false);
+              stopInvertEffect();
+            },
+            queue
+          );
+        }, 1200);
+      } else {
+        speakQueueAnnouncement(
+          nextNumber,
+          activeCounter.counterName,
+          false,
+          () => {
+            setCalling(false);
+            stopInvertEffect();
+          },
+          queue
+        );
       }
-
-      speakQueueAnnouncement(
-        nextNumber,
-        activeCounter.counterName,
-        false,
-        () => {
-          setCalling(false);
-          stopInvertEffect();
-        },
-        queue
-      );
     } catch {
       setCalling(false);
       stopInvertEffect();
@@ -254,7 +290,7 @@ export default function TabEditorControllTab() {
   const handleRecall = () => {
     if (isCallingDisabled) return;
     setCalling(true);
-    startInvertEffect(6000);
+    startInvertEffect();
     const curNumber = queue.currentNumber || simulator.currentNumber || `${queue.prefix || 'A'}-001`;
     recordCallHistory(curNumber, activeCounter.counterName, 'recall');
 
@@ -272,25 +308,37 @@ export default function TabEditorControllTab() {
 
     if (queue.audioChimeEnabled) {
       triggerChime();
+      setTimeout(() => {
+        speakQueueAnnouncement(
+          curNumber,
+          activeCounter.counterName,
+          true,
+          () => {
+            setCalling(false);
+            stopInvertEffect();
+          },
+          queue
+        );
+      }, 1200);
+    } else {
+      speakQueueAnnouncement(
+        curNumber,
+        activeCounter.counterName,
+        true,
+        () => {
+          setCalling(false);
+          stopInvertEffect();
+        },
+        queue
+      );
     }
-
-    speakQueueAnnouncement(
-      curNumber,
-      activeCounter.counterName,
-      true,
-      () => {
-        setCalling(false);
-        stopInvertEffect();
-      },
-      queue
-    );
   };
 
   // Previous ticket call
   const handleCallPrevious = async () => {
     if (isCallingDisabled) return;
     setCalling(true);
-    startInvertEffect(6000);
+    startInvertEffect();
     try {
       let prevNumber = queue.currentNumber || simulator.currentNumber || `${queue.prefix || 'A'}-001`;
       if (queue.id) {
@@ -337,18 +385,30 @@ export default function TabEditorControllTab() {
 
       if (queue.audioChimeEnabled) {
         triggerChime();
+        setTimeout(() => {
+          speakQueueAnnouncement(
+            prevNumber,
+            activeCounter.counterName,
+            false,
+            () => {
+              setCalling(false);
+              stopInvertEffect();
+            },
+            queue
+          );
+        }, 1200);
+      } else {
+        speakQueueAnnouncement(
+          prevNumber,
+          activeCounter.counterName,
+          false,
+          () => {
+            setCalling(false);
+            stopInvertEffect();
+          },
+          queue
+        );
       }
-
-      speakQueueAnnouncement(
-        prevNumber,
-        activeCounter.counterName,
-        false,
-        () => {
-          setCalling(false);
-          stopInvertEffect();
-        },
-        queue
-      );
     } catch {
       setCalling(false);
       stopInvertEffect();
