@@ -577,19 +577,39 @@ class QueueZoneRenderer(
         }
 
         val density = context.resources.displayMetrics.density
+        overlay.setPadding(
+            (24 * density).toInt(),
+            (28 * density).toInt(),
+            (24 * density).toInt(),
+            (28 * density).toInt()
+        )
+
         val counterBadge = TextView(context).apply {
             text = counterName
             setTextColor(Color.WHITE)
             textSize = 22f
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-            setPadding((24 * density).toInt(), (8 * density).toInt(), (24 * density).toInt(), (8 * density).toInt())
+            setPadding((24 * density).toInt(), (14 * density).toInt(), (24 * density).toInt(), (14 * density).toInt())
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = 12 * density
+                cornerRadius = 14 * density
                 setColor(Color.parseColor(if (isBreak) "#D97706" else "#DC2626"))
             }
             gravity = Gravity.CENTER
+            maxWidth = (480 * density).toInt()
         }
+
+        val badgeParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = Gravity.CENTER_HORIZONTAL
+            leftMargin = (44 * density).toInt()
+            rightMargin = (44 * density).toInt()
+            topMargin = (22 * density).toInt()
+            bottomMargin = (20 * density).toInt()
+        }
+        counterBadge.layoutParams = badgeParams
 
         val descText = TextView(context).apply {
             text = if (isBreak) 
@@ -597,14 +617,13 @@ class QueueZoneRenderer(
             else 
                 "Mohon maaf, layanan antrian pada loket ini sedang ditutup.\nSilakan menuju loket lain yang beroperasi."
             setTextColor(Color.parseColor("#94A3B8"))
-            textSize = 16f
+            textSize = 15f
             gravity = Gravity.CENTER
-            setPadding(0, (14 * density).toInt(), 0, 0)
+            setLineSpacing(4f * density, 1f)
+            setPadding((16 * density).toInt(), 0, (16 * density).toInt(), 0)
         }
 
         overlay.addView(titleText)
-        val spacer1 = View(context).apply { layoutParams = LinearLayout.LayoutParams(1, (16 * density).toInt()) }
-        overlay.addView(spacer1)
         overlay.addView(counterBadge)
         overlay.addView(descText)
     }
