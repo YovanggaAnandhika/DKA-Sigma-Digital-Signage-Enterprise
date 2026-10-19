@@ -132,9 +132,71 @@ export default function ViewSchedulePage() {
     }
   };
 
+  // Real-time device download progress tracking via stream hub / SSE
+  const [deviceDownloadProgress, setDeviceDownloadProgress] = useState<Record<string, {
+    progressPercent: number;
+    assetIndex: number;
+    totalAssets: number;
+    downloadedBytes: number;
+    totalBytes: number;
+    fileName: string;
+    isSync: boolean;
+  }>>({});
+
   useEffect(() => {
     fetchScheduleData();
   }, [params.id]);
+
+  // Connect to realtime device stream for each assigned device
+  useEffect(() => {
+    if (assignedDevices.length === 0) return;
+
+    const eventSources: EventSource[] = [];
+
+    assignedDevices.forEach((dev) => {
+      try {
+        const es = new EventSource(`/api/stream/device?deviceId=${dev.id}`);
+        es.onmessage = (event) => {
+          if (!event.data) return;
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'ASSET_DOWNLOAD_PROGRESS') {
+              setDeviceDownloadProgress((prev) => ({
+                ...prev,
+                [dev.id]: {
+                  progressPercent: data.progressPercent || 0,
+                  assetIndex: data.assetIndex || 0,
+                  totalAssets: data.totalAssets || 0,
+                  downloadedBytes: data.downloadedBytes || 0,
+                  totalBytes: data.totalBytes || 0,
+                  fileName: data.fileName || '',
+                  isSync: false,
+                },
+              }));
+            } else if (data.type === 'ASSET_DOWNLOAD_COMPLETE') {
+              setDeviceDownloadProgress((prev) => ({
+                ...prev,
+                [dev.id]: {
+                  progressPercent: 100,
+                  assetIndex: prev[dev.id]?.totalAssets || layoutMediaItems.length,
+                  totalAssets: prev[dev.id]?.totalAssets || layoutMediaItems.length,
+                  downloadedBytes: prev[dev.id]?.totalBytes || 0,
+                  totalBytes: prev[dev.id]?.totalBytes || 0,
+                  fileName: 'Semua berkas terverifikasi',
+                  isSync: true,
+                },
+              }));
+            }
+          } catch (_) {}
+        };
+        eventSources.push(es);
+      } catch (_) {}
+    });
+
+    return () => {
+      eventSources.forEach((es) => es.close());
+    };
+  }, [assignedDevices, layoutMediaItems.length]);
 
   const handleDelete = async () => {
     if (!schedule) return;
@@ -944,7 +1006,7 @@ export default function ViewSchedulePage() {
                 <Monitor size={20} style={{ color: 'var(--primary-400)' }} />
                 <div>
                   <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-                    Status Distribusi ke Layar Android ({assignedDevices.length} Layar Terikat)
+                    Status Distribusi ke Layar Android
                   </h2>
                   <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
                     Status koneksi real-time, verifikasi hash manifest, dan perintah reload langsung ke player.
@@ -960,7 +1022,6 @@ export default function ViewSchedulePage() {
                   style={{ fontSize: '0.75rem', padding: '5px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
                   <RefreshCw size={13} />
-                  <span>Segarkan Status Layar</span>
                 </button>
               )}
             </div>
@@ -1080,25 +1141,70 @@ export default function ViewSchedulePage() {
                             fontSize: '0.75rem',
                             padding: '4px 10px',
                             borderRadius: '6px',
-                            backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                            color: 'var(--accent-emerald)',
+                            backgroundColor:
+                              deviceDownloadProgress[d.id] && !deviceDownloadProgress[d.id].isSync
+                                ? 'rgba(59, 130, 246, 0.12)'
+                                : 'rgba(16, 185, 129, 0.12)',
+                            color:
+                              deviceDownloadProgress[d.id] && !deviceDownloadProgress[d.id].isSync
+                                ? 'var(--primary-400)'
+                                : 'var(--accent-emerald)',
                             fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
                           }}
                         >
-                          Tersinkronisasi (100%)
+                          {deviceDownloadProgress[d.id] && !deviceDownloadProgress[d.id].isSync ? (
+                            <>
+                              <RefreshCw size={12} className="animate-spin" />
+                              <span>Mengunduh ({deviceDownloadProgress[d.id].progressPercent}%)</span>
+                            </>
+                          ) : (
+                            <span>Tersinkronisasi (100%)</span>
+                          )}
                         </span>
                       </div>
                     </div>
 
-                    {/* Progress Bar for Device Asset Download */}
+                    {/* Progress Bar for Device Asset Download (Real-Time Synchronized) */}
                     <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                        <span>Penyimpanan Lokal Player: {layoutMediaItems.length} / {layoutMediaItems.length} Aset Terverifikasi ({formatBytes(totalAssetBytes)})</span>
-                        <span style={{ fontWeight: 700, color: 'var(--accent-emerald)' }}>100% Siap Offline-First</span>
-                      </div>
-                      <div style={{ width: '100%', height: '6px', borderRadius: '3px', backgroundColor: 'var(--bg-base)', overflow: 'hidden' }}>
-                        <div style={{ width: '100%', height: '100%', backgroundColor: 'var(--accent-emerald)', borderRadius: '3px' }} />
-                      </div>
+                      {deviceDownloadProgress[d.id] && !deviceDownloadProgress[d.id].isSync ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>
+                              Mengunduh: <strong>{deviceDownloadProgress[d.id].fileName || 'Aset Media'}</strong> ({deviceDownloadProgress[d.id].assetIndex}/{deviceDownloadProgress[d.id].totalAssets || layoutMediaItems.length})
+                            </span>
+                            <span style={{ fontWeight: 700, color: 'var(--primary-400)' }}>
+                              {deviceDownloadProgress[d.id].progressPercent}%
+                            </span>
+                          </div>
+                          <div style={{ width: '100%', height: '7px', borderRadius: '4px', backgroundColor: 'var(--bg-base)', overflow: 'hidden' }}>
+                            <div
+                              style={{
+                                width: `${deviceDownloadProgress[d.id].progressPercent}%`,
+                                height: '100%',
+                                backgroundColor: 'var(--primary-500)',
+                                borderRadius: '4px',
+                                transition: 'width 0.2s ease',
+                              }}
+                            />
+                          </div>
+                          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                            Ukuran: {formatBytes(deviceDownloadProgress[d.id].downloadedBytes)} / {formatBytes(deviceDownloadProgress[d.id].totalBytes || totalAssetBytes)}
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            <span>Penyimpanan Lokal Player: {layoutMediaItems.length} / {layoutMediaItems.length} Aset Terverifikasi ({formatBytes(totalAssetBytes)})</span>
+                            <span style={{ fontWeight: 700, color: 'var(--accent-emerald)' }}>100% Siap Offline-First</span>
+                          </div>
+                          <div style={{ width: '100%', height: '6px', borderRadius: '3px', backgroundColor: 'var(--bg-base)', overflow: 'hidden' }}>
+                            <div style={{ width: '100%', height: '100%', backgroundColor: 'var(--accent-emerald)', borderRadius: '3px' }} />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1113,10 +1219,10 @@ export default function ViewSchedulePage() {
                 <UploadCloud size={20} style={{ color: 'var(--primary-400)' }} />
                 <div>
                   <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-                    Uji Coba Pengiriman Chunk ke Player (Testing Sandbox)
+                    Uji Coba Pengiriman Chunk ke Player
                   </h2>
                   <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
-                    Unggah berkas untuk menguji transmisi chunk (512 KB/chunk) dan latensi sinyal gRPC push ke layar player ({assignedDevices.map((d) => d.name).join(', ') || 'Belum ada layar terikat'}). Berkas ini TIDAK akan didaftarkan ke Pustaka Media atau mengubah susunan layout tayang.
+                    Unggah berkas untuk menguji transmisi dan latensi sinyal gRPC push ke layar player ({assignedDevices.map((d) => d.name).join(', ') || 'Belum ada layar terikat'}). Berkas ini TIDAK akan didaftarkan ke Pustaka Media atau mengubah susunan layout tayang.
                   </p>
                 </div>
               </div>
@@ -1390,10 +1496,10 @@ export default function ViewSchedulePage() {
                             log.type === 'error'
                               ? 'var(--accent-rose)'
                               : log.type === 'success'
-                              ? 'var(--accent-emerald)'
-                              : log.type === 'chunk'
-                              ? 'var(--primary-400)'
-                              : 'var(--text-secondary)',
+                                ? 'var(--accent-emerald)'
+                                : log.type === 'chunk'
+                                  ? 'var(--primary-400)'
+                                  : 'var(--text-secondary)',
                           wordBreak: 'break-all',
                         }}
                       >

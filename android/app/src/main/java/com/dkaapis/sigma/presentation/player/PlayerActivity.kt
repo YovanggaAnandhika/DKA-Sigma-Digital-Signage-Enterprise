@@ -1037,11 +1037,71 @@ class PlayerActivity : AppCompatActivity() {
 
                         loadingText.text = "Mengunduh Aset Media (${state.assetIndex}/${state.total}) • ${state.progressPercent}%"
                         subDetailText.text = "${state.currentFileName}\n[ ${downloadedMb} MB / ${totalMb} MB ]\nLokasi: /storage/emulated/0/Android/data/com.dkaapis.sigma/files/assets/"
+
+                        // Broadcast realtime download progress to CMS (Rollout page monitor)
+                        val devId = deviceRepo.getSavedDeviceId()
+                        if (!devId.isNullOrEmpty()) {
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                try {
+                                    val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(this@PlayerActivity)
+                                    val payload = JSONObject().apply {
+                                        put("deviceId", devId)
+                                        put("type", "ASSET_DOWNLOAD_PROGRESS")
+                                        put("assetIndex", state.assetIndex)
+                                        put("totalAssets", state.total)
+                                        put("progressPercent", state.progressPercent)
+                                        put("downloadedBytes", state.downloadedBytes)
+                                        put("totalBytes", state.totalBytes)
+                                        put("fileName", state.currentFileName)
+                                    }
+                                    val mediaType = "application/json; charset=utf-8".toMediaType()
+                                    val body = payload.toString().toRequestBody(mediaType)
+                                    val postReq = Request.Builder()
+                                        .url("$baseUrl/api/stream/device")
+                                        .post(body)
+                                        .build()
+                                    streamingHttpClient.newCall(postReq).enqueue(object : okhttp3.Callback {
+                                        override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {}
+                                        override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                                            response.close()
+                                        }
+                                    })
+                                } catch (_: Exception) {}
+                            }
+                        }
                     }
                     is PlayerUiState.Playing -> {
                         WatchdogService.setPlaybackActive(this@PlayerActivity, true)
                         loadingOverlay.visibility = View.GONE
                         renderManifest(state.manifest)
+
+                        // Broadcast 100% complete playback sync to CMS
+                        val devId = deviceRepo.getSavedDeviceId()
+                        if (!devId.isNullOrEmpty()) {
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                try {
+                                    val baseUrl = com.dkaapis.sigma.data.local.ServerConfig.getHttpBaseUrl(this@PlayerActivity)
+                                    val payload = JSONObject().apply {
+                                        put("deviceId", devId)
+                                        put("type", "ASSET_DOWNLOAD_COMPLETE")
+                                        put("progressPercent", 100)
+                                        put("isSync", true)
+                                    }
+                                    val mediaType = "application/json; charset=utf-8".toMediaType()
+                                    val body = payload.toString().toRequestBody(mediaType)
+                                    val postReq = Request.Builder()
+                                        .url("$baseUrl/api/stream/device")
+                                        .post(body)
+                                        .build()
+                                    streamingHttpClient.newCall(postReq).enqueue(object : okhttp3.Callback {
+                                        override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {}
+                                        override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+                                            response.close()
+                                        }
+                                    })
+                                } catch (_: Exception) {}
+                            }
+                        }
                     }
                     is PlayerUiState.Error -> {
                         loadingOverlay.visibility = View.VISIBLE
