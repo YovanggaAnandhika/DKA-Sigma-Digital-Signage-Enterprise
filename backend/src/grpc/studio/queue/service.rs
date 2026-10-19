@@ -16,6 +16,7 @@ use crate::grpc::proto::studio::v1::queue::{
     SetCounterStatusRequest, GetQueueSyncStateRequest, GetQueueSyncStateResponse,
     ListTicketsRequest, ListTicketsResponse, UpdateTicketStatusRequest, AddAudioRequest,
     DeleteAudioRequest, DeleteAudioResponse, ListAudiosRequest, ListAudiosResponse,
+    ListQueueSectorsRequest, ListQueueSectorsResponse, QueueSector,
     QueueDisplayDetail, QueueLayoutItem, QueueCounter, QueueTicket, QueueAudio,
 };
 use crate::grpc::proto::common::v1::PaginationResponse;
@@ -1604,5 +1605,41 @@ impl QueueServiceTrait for QueueServiceImpl {
         }).collect();
 
         Ok(Response::new(ListAudiosResponse { items }))
+    }
+
+    async fn list_queue_sectors(
+        &self,
+        _request: Request<ListQueueSectorsRequest>,
+    ) -> Result<Response<ListQueueSectorsResponse>, Status> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT id, name, description, default_prefix, ticket_label, counter_label,
+                   tts_template_call, tts_template_recall, tts_template_break, icon, sort_order,
+                   created_at, updated_at
+            FROM queue_sectors
+            ORDER BY sort_order ASC, name ASC
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let sectors = rows.into_iter().map(|s| QueueSector {
+            id: s.id,
+            name: s.name,
+            description: s.description,
+            default_prefix: s.default_prefix,
+            ticket_label: s.ticket_label,
+            counter_label: s.counter_label,
+            tts_template_call: s.tts_template_call,
+            tts_template_recall: s.tts_template_recall,
+            tts_template_break: s.tts_template_break,
+            icon: s.icon,
+            sort_order: s.sort_order,
+            created_at: s.created_at.to_rfc3339(),
+            updated_at: s.updated_at.to_rfc3339(),
+        }).collect();
+
+        Ok(Response::new(ListQueueSectorsResponse { sectors }))
     }
 }

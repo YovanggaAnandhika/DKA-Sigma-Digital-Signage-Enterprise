@@ -38,5 +38,8 @@ service QueueService {
   rpc AddAudio(AddAudioRequest) returns (QueueAudio);
   rpc DeleteAudio(DeleteAudioRequest) returns (DeleteAudioResponse);
   rpc ListAudios(ListAudiosRequest) returns (ListAudiosResponse);
+
+  // Queue Sectors / Types (Resto, Retail, Hospital, Bank, etc.)
+  rpc ListQueueSectors(ListQueueSectorsRequest) returns (ListQueueSectorsResponse);
 }
 

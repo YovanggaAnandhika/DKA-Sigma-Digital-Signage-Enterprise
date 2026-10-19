@@ -7,12 +7,13 @@ import {
   QueueLayoutItem,
   QueueCounter,
   QueueAudio,
+  QueueSector,
   QUEUE_STORAGE_KEY,
   DEFAULT_QUEUES,
   createDefaultQueueLayoutItems,
 } from '../types';
 import { modal } from '@/components/ui/ModalDialog';
-import { createQueueDisplay, updateQueueDisplay, getQueueDisplay } from '@/lib/services/studio/queue.service';
+import { createQueueDisplay, updateQueueDisplay, getQueueDisplay, listQueueSectors } from '@/lib/services/studio/queue.service';
 
 interface SimulatorState {
   currentSeq: number;
@@ -24,6 +25,8 @@ interface SimulatorState {
 interface QueueEditorContextType {
   queue: QueueDisplayConfig;
   setQueue: React.Dispatch<React.SetStateAction<QueueDisplayConfig>>;
+  sectors: QueueSector[];
+  selectSector: (sectorId: string) => void;
   isNew: boolean;
   loading: boolean;
   saving: boolean;

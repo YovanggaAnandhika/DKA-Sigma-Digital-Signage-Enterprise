@@ -129,3 +129,7 @@ export async function deleteCounter(id: string): Promise<any> {
 export async function listCounters(queueDisplayId: string): Promise<any> {
   return await invokeApi<any>('/api/grpc/studio/queue/ListCounters', { queueDisplayId });
 }
+
+export async function listQueueSectors(): Promise<any> {
+  return await invokeApi<any>('/api/grpc/studio/queue/ListQueueSectors', {});
+}

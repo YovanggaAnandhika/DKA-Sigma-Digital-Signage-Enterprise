@@ -98,6 +98,20 @@ export interface QueueDisplayConfig {
   createdAt?: string;
 }
 
+export interface QueueSector {
+  id: string;
+  name: string;
+  description?: string;
+  defaultPrefix?: string;
+  ticketLabel: string;
+  counterLabel: string;
+  ttsTemplateCall: string;
+  ttsTemplateRecall: string;
+  ttsTemplateBreak: string;
+  icon?: string;
+  sortOrder?: number;
+}
+
 export interface SectorPreset {
   id: string;
   name: string;
@@ -110,6 +124,26 @@ export interface SectorPreset {
 }
 
 export const SECTOR_PRESETS: SectorPreset[] = [
+  {
+    id: 'RETAIL_FB',
+    name: 'Restoran, Kafe & F&B',
+    icon: 'UtensilsCrossed',
+    ticketLabel: 'Nomor Pesanan',
+    counterLabel: 'Pickup Point',
+    ttsTemplateCall: 'Pesanan {ticket_number}, silakan ambil di {counter_label} {counter_name}',
+    ttsTemplateRecall: 'Panggilan ulang, pesanan {ticket_number}, silakan ambil di {counter_label} {counter_name}',
+    ttsTemplateBreak: '{counter_label} {counter_name} sedang istirahat',
+  },
+  {
+    id: 'RETAIL',
+    name: 'Retail, Swalayan & Toko',
+    icon: 'ShoppingBag',
+    ticketLabel: 'Nomor Antrian',
+    counterLabel: 'Kasir',
+    ttsTemplateCall: '{ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}',
+    ttsTemplateRecall: 'Panggilan ulang, {ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}',
+    ttsTemplateBreak: '{counter_label} {counter_name} sedang istirahat',
+  },
   {
     id: 'HOSPITAL',
     name: 'Rumah Sakit & Klinik',
@@ -131,18 +165,8 @@ export const SECTOR_PRESETS: SectorPreset[] = [
     ttsTemplateBreak: '{counter_label} {counter_name} sedang istirahat',
   },
   {
-    id: 'RETAIL_FB',
-    name: 'F&B, Kafe & Retail',
-    icon: 'UtensilsCrossed',
-    ticketLabel: 'Nomor Pesanan',
-    counterLabel: 'Pickup Point',
-    ttsTemplateCall: 'Pesanan {ticket_number}, silakan ambil di {counter_label} {counter_name}',
-    ttsTemplateRecall: 'Panggilan ulang, pesanan {ticket_number}, silakan ambil di {counter_label} {counter_name}',
-    ttsTemplateBreak: '{counter_label} {counter_name} sedang istirahat',
-  },
-  {
     id: 'PUBLIC_SERVICE',
-    name: 'Pelayanan Publik & Samsat',
+    name: 'Pelayanan Publik & Instansi',
     icon: 'Building2',
     ticketLabel: 'Nomor Registrasi',
     counterLabel: 'Loket',

@@ -339,3 +339,26 @@ message ListAudiosResponse {
   repeated QueueAudio items = 1;
 }
 
+// Queue Sectors / Business Types
+message QueueSector {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string default_prefix = 4;
+  string ticket_label = 5;
+  string counter_label = 6;
+  string tts_template_call = 7;
+  string tts_template_recall = 8;
+  string tts_template_break = 9;
+  string icon = 10;
+  int32 sort_order = 11;
+  string created_at = 12;
+  string updated_at = 13;
+}
+
+message ListQueueSectorsRequest {}
+
+message ListQueueSectorsResponse {
+  repeated QueueSector sectors = 1;
+}
+
