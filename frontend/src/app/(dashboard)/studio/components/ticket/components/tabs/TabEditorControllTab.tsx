@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   ArrowRight,
   RotateCcw,
@@ -23,6 +23,38 @@ export default function TabEditorControllTab() {
   const { queue, setQueue, simulator, setSimulator, triggerChime } = useQueueEditor();
   const [calling, setCalling] = useState(false);
   const [counterMenuOpen, setCounterMenuOpen] = useState(false);
+
+  // Efek invert visual pemanggilan (100% konsisten dengan Android player)
+  const [isInverted, setIsInverted] = useState(false);
+  const invertTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const startInvertEffect = (durationMs: number = 3200) => {
+    if (invertTimeoutRef.current) clearTimeout(invertTimeoutRef.current);
+    if (isInverted) {
+      setIsInverted(false);
+      setTimeout(() => setIsInverted(true), 60);
+    } else {
+      setIsInverted(true);
+    }
+    invertTimeoutRef.current = setTimeout(() => {
+      setIsInverted(false);
+      invertTimeoutRef.current = null;
+    }, durationMs);
+  };
+
+  const stopInvertEffect = () => {
+    if (invertTimeoutRef.current) {
+      clearTimeout(invertTimeoutRef.current);
+      invertTimeoutRef.current = null;
+    }
+    setIsInverted(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (invertTimeoutRef.current) clearTimeout(invertTimeoutRef.current);
+    };
+  }, []);
 
   const activeCounter = queue.counters.find((c) => c.counterName === queue.currentCounter) || queue.counters[0] || {
     id: 'cnt-1',
@@ -56,6 +88,13 @@ export default function TabEditorControllTab() {
             const ticketNum = data.ticketNumber;
             const counterNm = data.counterName;
             if (ticketNum) {
+              // Picu efek invert visual sinkron dari Android player touch
+              startInvertEffect(3200);
+
+              if (queue.audioChimeEnabled && data.source === 'player_touch') {
+                triggerChime();
+              }
+
               setQueue((prev) => ({
                 ...prev,
                 currentNumber: ticketNum,
@@ -146,6 +185,7 @@ export default function TabEditorControllTab() {
   const handleCallNext = async () => {
     if (isCallingDisabled) return;
     setCalling(true);
+    startInvertEffect(6000);
     try {
       let nextNumber = queue.currentNumber || simulator.currentNumber || `${queue.prefix || 'A'}-000`;
       if (queue.id) {
@@ -198,11 +238,15 @@ export default function TabEditorControllTab() {
         nextNumber,
         activeCounter.counterName,
         false,
-        () => setCalling(false),
+        () => {
+          setCalling(false);
+          stopInvertEffect();
+        },
         queue
       );
     } catch {
       setCalling(false);
+      stopInvertEffect();
     }
   };
 
@@ -210,6 +254,7 @@ export default function TabEditorControllTab() {
   const handleRecall = () => {
     if (isCallingDisabled) return;
     setCalling(true);
+    startInvertEffect(6000);
     const curNumber = queue.currentNumber || simulator.currentNumber || `${queue.prefix || 'A'}-001`;
     recordCallHistory(curNumber, activeCounter.counterName, 'recall');
 
@@ -233,7 +278,10 @@ export default function TabEditorControllTab() {
       curNumber,
       activeCounter.counterName,
       true,
-      () => setCalling(false),
+      () => {
+        setCalling(false);
+        stopInvertEffect();
+      },
       queue
     );
   };
@@ -242,6 +290,7 @@ export default function TabEditorControllTab() {
   const handleCallPrevious = async () => {
     if (isCallingDisabled) return;
     setCalling(true);
+    startInvertEffect(6000);
     try {
       let prevNumber = queue.currentNumber || simulator.currentNumber || `${queue.prefix || 'A'}-001`;
       if (queue.id) {
@@ -294,11 +343,15 @@ export default function TabEditorControllTab() {
         prevNumber,
         activeCounter.counterName,
         false,
-        () => setCalling(false),
+        () => {
+          setCalling(false);
+          stopInvertEffect();
+        },
         queue
       );
     } catch {
       setCalling(false);
+      stopInvertEffect();
     }
   };
 
@@ -387,7 +440,10 @@ export default function TabEditorControllTab() {
         message: `Urutan nomor antrian "${queue.name}" telah dikembalikan ke 0.`,
         variant: 'success',
       });
-    } catch { }
+      stopInvertEffect();
+    } catch {
+      stopInvertEffect();
+    }
   };
 
   const counterLabel = queue.counterLabel || 'Loket';
@@ -772,6 +828,8 @@ export default function TabEditorControllTab() {
           backgroundImage: (isLocked || isBreak) ? undefined : (queue.backgroundImageUrl ? `url(${queue.backgroundImageUrl})` : undefined),
           backgroundSize: 'cover',
           backgroundPosition: 'center',
+          filter: isInverted ? 'invert(1)' : 'none',
+          transition: 'filter 140ms cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         <div
