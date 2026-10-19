@@ -34,7 +34,7 @@
             android:name="com.dkaapis.sigma.presentation.player.PlayerActivity"
             android:exported="true"
             android:launchMode="singleInstance"
-            android:screenOrientation="sensorLandscape"
+            android:screenOrientation="landscape"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
             android:theme="@style/Theme.DKASigmaPlayer.Fullscreen">
             <intent-filter>
@@ -48,9 +48,18 @@
             android:name="com.dkaapis.sigma.presentation.pairing.PairingActivity"
             android:exported="false"
             android:launchMode="singleTop"
-            android:screenOrientation="sensorLandscape"
+            android:screenOrientation="landscape"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
-            android:theme="@style/Theme.DKASigmaPlayer.Fullscreen" />
+            android:theme="@style/Theme.DKASigmaPlayer.Light" />
+
+        <!-- ══ Crash Diagnostic Report Activity (Isolated Process) ══ -->
+        <activity
+            android:name="com.dkaapis.sigma.presentation.crash.CrashReportActivity"
+            android:exported="false"
+            android:process=":crash"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
+            android:theme="@style/Theme.DKASigmaPlayer" />
 
         <!-- Foreground stream connection daemon -->
         <service

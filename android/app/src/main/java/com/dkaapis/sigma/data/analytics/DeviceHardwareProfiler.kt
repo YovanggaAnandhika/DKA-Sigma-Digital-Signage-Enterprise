@@ -45,9 +45,13 @@ class DeviceHardwareProfiler(private val context: Context) {
         val storageTotal = stat.totalBytes
 
         // Battery / Chipset Temperature
-        val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        val rawTemp = batteryIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 320
-        val tempCelsius = (rawTemp / 10f).coerceIn(20f, 85f)
+        val tempCelsius = try {
+            val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            val rawTemp = batteryIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 320
+            (rawTemp / 10f).coerceIn(20f, 85f)
+        } catch (_: Throwable) {
+            35.0f
+        }
 
         // Network Type
         val connManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager

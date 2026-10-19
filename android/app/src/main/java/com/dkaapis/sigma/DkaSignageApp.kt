@@ -4,8 +4,10 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.util.Log
+import com.dkaapis.sigma.presentation.crash.CrashReportActivity
 import java.io.File
 import java.util.Date
 
@@ -20,7 +22,6 @@ class DkaSignageApp : Application() {
     }
 
     private fun setupCrashHandler() {
-        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             Log.e(TAG, "CRITICAL CRASH pada thread [${thread.name}]: ${throwable.message}", throwable)
             try {
@@ -34,7 +35,21 @@ class DkaSignageApp : Application() {
                 )
             } catch (_: Throwable) {}
 
-            defaultHandler?.uncaughtException(thread, throwable)
+            try {
+                val intent = Intent(this, CrashReportActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    putExtra("error_class", throwable.javaClass.name)
+                    putExtra("error_message", throwable.message ?: "Unknown error")
+                    putExtra("error_stacktrace", throwable.stackTraceToString())
+                    putExtra("error_thread", thread.name)
+                }
+                startActivity(intent)
+            } catch (t: Throwable) {
+                Log.e(TAG, "Gagal meluncurkan CrashReportActivity: ${t.message}")
+            }
+
+            android.os.Process.killProcess(android.os.Process.myPid())
+            System.exit(10)
         }
     }
 
