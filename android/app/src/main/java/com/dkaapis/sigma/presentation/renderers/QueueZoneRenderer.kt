@@ -18,6 +18,7 @@ import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import coil.load
 import com.dkaapis.sigma.R
@@ -468,7 +469,10 @@ class QueueZoneRenderer(
         return currentCounter
     }
 
+    private var statusOverlayView: View? = null
+
     fun updateCall(ticketNumber: String, counterName: String) {
+        statusOverlayView?.visibility = View.GONE
         val numPart = ticketNumber.replace(Regex("[^0-9]"), "").toIntOrNull()
         if (numPart != null) {
             currentSequence = numPart
@@ -481,6 +485,7 @@ class QueueZoneRenderer(
     }
 
     fun resetQueue(resetToNumber: String? = null) {
+        statusOverlayView?.visibility = View.GONE
         val target = resetToNumber?.ifBlank { null } ?: "$currentPrefix-000"
         val numPart = target.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
         currentSequence = numPart
@@ -507,6 +512,76 @@ class QueueZoneRenderer(
                 else -> bgDrawable.setColor(Color.parseColor("#10B981"))
             }
         }
+
+        showDedicatedStatusScreen(status, counterName)
+    }
+
+    private fun showDedicatedStatusScreen(status: String, counterName: String) {
+        val cv = canvasView ?: return
+        val isBreak = status.equals("BREAK", ignoreCase = true)
+        val isLocked = status.equals("LOCKED", ignoreCase = true)
+
+        if (!isBreak && !isLocked) {
+            statusOverlayView?.visibility = View.GONE
+            return
+        }
+
+        val overlay = (statusOverlayView as? LinearLayout) ?: LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            tag = QueueItemMeta(
+                id = "status-overlay-dedicated",
+                itemType = "status_overlay",
+                x = 0, y = 0, width = canvasW, height = canvasH, zIndex = 9999
+            )
+            cv.addView(this)
+            statusOverlayView = this
+        }
+
+        overlay.visibility = View.VISIBLE
+        overlay.removeAllViews()
+        overlay.setBackgroundColor(Color.parseColor(if (isBreak) "#0D111A" else "#0B0E17"))
+
+        val titleText = TextView(context).apply {
+            text = if (isBreak) "SEDANG ISTIRAHAT" else "LOKET DITUTUP"
+            setTextColor(Color.parseColor(if (isBreak) "#F59E0B" else "#EF4444"))
+            textSize = 38f
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+        }
+
+        val density = context.resources.displayMetrics.density
+        val counterBadge = TextView(context).apply {
+            text = counterName
+            setTextColor(Color.WHITE)
+            textSize = 22f
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+            setPadding((24 * density).toInt(), (8 * density).toInt(), (24 * density).toInt(), (8 * density).toInt())
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 12 * density
+                setColor(Color.parseColor(if (isBreak) "#D97706" else "#DC2626"))
+            }
+            gravity = Gravity.CENTER
+        }
+
+        val descText = TextView(context).apply {
+            text = if (isBreak) 
+                "Petugas sedang dalam jam istirahat.\nLayanan akan dibuka kembali segera."
+            else 
+                "Mohon maaf, layanan antrian pada loket ini sedang ditutup.\nSilakan menuju loket lain yang beroperasi."
+            setTextColor(Color.parseColor("#94A3B8"))
+            textSize = 16f
+            gravity = Gravity.CENTER
+            setPadding(0, (14 * density).toInt(), 0, 0)
+        }
+
+        overlay.addView(titleText)
+        val spacer1 = View(context).apply { layoutParams = LinearLayout.LayoutParams(1, (16 * density).toInt()) }
+        overlay.addView(spacer1)
+        overlay.addView(counterBadge)
+        overlay.addView(descText)
     }
 
     private fun getTargetView(): View? = parentZoneView ?: canvasView

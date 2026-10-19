@@ -569,8 +569,8 @@ export default function TabEditorControllTab() {
               maxHeight: '100%',
               aspectRatio: '16 / 9',
               position: 'relative',
-              backgroundColor: queue.backgroundColor,
-              backgroundImage: queue.backgroundImageUrl ? `url(${queue.backgroundImageUrl})` : undefined,
+              backgroundColor: isLocked ? '#080a10' : isBreak ? '#0a0d14' : queue.backgroundColor,
+              backgroundImage: (isLocked || isBreak) ? undefined : (queue.backgroundImageUrl ? `url(${queue.backgroundImageUrl})` : undefined),
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               borderRadius: '12px',
@@ -579,130 +579,335 @@ export default function TabEditorControllTab() {
               boxShadow: '0 16px 32px -12px rgba(0,0,0,0.5)',
             }}
           >
-            {/* Overlay Banner jika Istirahat / Tutup */}
-            {isBreak && (
+            {isBreak ? (
+              /* DEDICATED BREAK SCREEN LAYOUT (Layout Khusus Jam Istirahat) */
               <div
                 style={{
-                  position: 'absolute',
-                  top: '12px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  backgroundColor: 'rgba(245, 158, 11, 0.92)',
-                  color: '#ffffff',
-                  padding: '5px 16px',
-                  borderRadius: '9999px',
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
+                  width: '100%',
+                  height: '100%',
                   display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
                   alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)',
-                  backdropFilter: 'blur(6px)',
-                  zIndex: 50,
-                  whiteSpace: 'nowrap',
+                  padding: '36px 32px',
+                  background: 'radial-gradient(ellipse at 50% 38%, rgba(245, 158, 11, 0.22) 0%, rgba(13, 16, 26, 0.98) 65%, #080a10 100%)',
+                  color: '#ffffff',
+                  boxSizing: 'border-box',
+                  textAlign: 'center',
+                  position: 'relative',
                 }}
               >
-                <Coffee size={13} />
-                <span>{liveCounterName} SEDANG ISTIRAHAT</span>
-              </div>
-            )}
+                {/* Ambient Glow */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '30%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '340px',
+                    height: '340px',
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    filter: 'blur(60px)',
+                    pointerEvents: 'none',
+                  }}
+                />
 
-            {isLocked && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '12px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  backgroundColor: 'rgba(239, 68, 68, 0.92)',
-                  color: '#ffffff',
-                  padding: '5px 16px',
-                  borderRadius: '9999px',
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)',
-                  backdropFilter: 'blur(6px)',
-                  zIndex: 50,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <Lock size={13} />
-                <span>{liveCounterName} DITUTUP SEMENTARA</span>
-              </div>
-            )}
+                {/* Top Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', zIndex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 800, letterSpacing: '0.08em', color: '#f59e0b', textTransform: 'uppercase' }}>
+                      {queue.name || 'Layar Antrian'}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'rgba(255, 255, 255, 0.45)', letterSpacing: '0.05em' }}>
+                    INFORMASI LAYANAN
+                  </span>
+                </div>
 
-            {queue.items
-              .filter((it) => it.isVisible)
-              .sort((a, b) => a.zIndex - b.zIndex)
-              .map((item) => {
-                const canvasW = queue.canvasWidth || 1920;
-                const canvasH = queue.canvasHeight || 1080;
-                const leftPercent = (item.x / canvasW) * 100;
-                const topPercent = (item.y / canvasH) * 100;
-                const widthPercent = (item.width / canvasW) * 100;
-                const heightPercent = (item.height / canvasH) * 100;
-
-                // Sinkron dengan Android renderer: status di-inject ke counter text
-                const effectiveCounterText = isBreak
-                  ? `${liveCounterName} [ISTIRAHAT]`
-                  : isLocked
-                  ? `${liveCounterName} [TUTUP]`
-                  : liveCounterName;
-
-                const content = injectQueueVariables(item.templateContent, {
-                  queueNumber: liveTicketNumber,
-                  queueCounter: effectiveCounterText,
-                  queuePrefix: queue.prefix,
-                  queueName: queue.name,
-                  operatorName: activeCounter.operatorName || 'Petugas',
-                });
-
-                // Perubahan warna dinamis sesuai status loket (sama seperti Android QueueZoneRenderer)
-                let itemBg = item.backgroundColor;
-                let itemOpacity = 1;
-
-                if (item.itemType === 'counter_loket') {
-                  if (isBreak) itemBg = '#f59e0b';
-                  else if (isLocked) itemBg = '#ef4444';
-                }
-
-                if (item.itemType === 'ticket_number' && isLocked) {
-                  itemOpacity = 0.35;
-                }
-
-                return (
+                {/* Center Hero Card */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', zIndex: 1, maxWidth: '640px' }}>
                   <div
-                    key={item.id}
                     style={{
-                      position: 'absolute',
-                      left: `${leftPercent}%`,
-                      top: `${topPercent}%`,
-                      width: `${widthPercent}%`,
-                      height: `${heightPercent}%`,
-                      backgroundColor: itemBg,
-                      color: item.textColor,
-                      fontSize: `calc(${item.fontSize}px * 0.35)`,
-                      fontWeight: item.fontWeight as any,
-                      textAlign: item.textAlign as any,
-                      borderRadius: `${(item.borderRadius || 0) * 0.35}px`,
+                      width: '80px',
+                      height: '80px',
+                      borderRadius: '24px',
+                      backgroundColor: 'rgba(245, 158, 11, 0.16)',
+                      border: '2px solid rgba(245, 158, 11, 0.45)',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent:
-                        item.textAlign === 'center' ? 'center' : item.textAlign === 'right' ? 'flex-end' : 'flex-start',
-                      padding: '0 4px',
-                      boxSizing: 'border-box',
-                      overflow: 'hidden',
-                      opacity: itemOpacity,
-                      transition: 'all 0.2s ease',
+                      justifyContent: 'center',
+                      color: '#fbbf24',
+                      boxShadow: '0 0 35px rgba(245, 158, 11, 0.28)',
                     }}
                   >
-                    {item.itemType === 'marquee' ? <Marquee>{content}</Marquee> : content}
+                    <Coffee size={40} />
                   </div>
-                );
-              })}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <h2
+                      style={{
+                        margin: 0,
+                        fontSize: '2.4rem',
+                        fontWeight: 900,
+                        letterSpacing: '0.04em',
+                        color: '#ffffff',
+                        lineHeight: 1.1,
+                        textShadow: '0 2px 12px rgba(0,0,0,0.6)',
+                      }}
+                    >
+                      SEDANG ISTIRAHAT
+                    </h2>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '4px' }}>
+                      <span
+                        style={{
+                          padding: '4px 16px',
+                          borderRadius: '8px',
+                          backgroundColor: 'rgba(245, 158, 11, 0.25)',
+                          border: '1px solid rgba(245, 158, 11, 0.5)',
+                          color: '#fef3c7',
+                          fontSize: '0.95rem',
+                          fontWeight: 800,
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        {liveCounterName}
+                      </span>
+                      {activeCounter.operatorName && (
+                        <span style={{ fontSize: '0.8125rem', color: '#cbd5e1' }}>
+                          Petugas: <strong style={{ color: '#ffffff' }}>{activeCounter.operatorName}</strong>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <p
+                    style={{
+                      margin: '6px 0 0 0',
+                      fontSize: '0.875rem',
+                      color: '#94a3b8',
+                      lineHeight: 1.6,
+                      maxWidth: '500px',
+                    }}
+                  >
+                    Petugas saat ini sedang dalam jam istirahat. Layanan antrian akan dibuka kembali segera. Mohon menunggu dengan tertib, terima kasih.
+                  </p>
+                </div>
+
+                {/* Bottom Footer Bar */}
+                <div
+                  style={{
+                    width: '100%',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    border: '1px solid rgba(245, 158, 11, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontSize: '0.75rem',
+                    color: '#fde68a',
+                    zIndex: 1,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Coffee size={13} />
+                    <span>Status Operasional: <strong>Istirahat Sementara</strong></span>
+                  </div>
+                  <span style={{ color: 'rgba(255, 255, 255, 0.45)' }}>Silakan menunggu panggilan berikutnya</span>
+                </div>
+              </div>
+            ) : isLocked ? (
+              /* DEDICATED CLOSED SCREEN LAYOUT (Layout Khusus Loket Ditutup) */
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '36px 32px',
+                  background: 'radial-gradient(ellipse at 50% 38%, rgba(239, 68, 68, 0.22) 0%, rgba(13, 16, 26, 0.98) 65%, #080a10 100%)',
+                  color: '#ffffff',
+                  boxSizing: 'border-box',
+                  textAlign: 'center',
+                  position: 'relative',
+                }}
+              >
+                {/* Ambient Glow */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '30%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '340px',
+                    height: '340px',
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    filter: 'blur(60px)',
+                    pointerEvents: 'none',
+                  }}
+                />
+
+                {/* Top Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', zIndex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 800, letterSpacing: '0.08em', color: '#f87171', textTransform: 'uppercase' }}>
+                      {queue.name || 'Layar Antrian'}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'rgba(255, 255, 255, 0.45)', letterSpacing: '0.05em' }}>
+                    PEMBERITAHUAN OPERASIONAL
+                  </span>
+                </div>
+
+                {/* Center Hero Card */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', zIndex: 1, maxWidth: '640px' }}>
+                  <div
+                    style={{
+                      width: '80px',
+                      height: '80px',
+                      borderRadius: '24px',
+                      backgroundColor: 'rgba(239, 68, 68, 0.16)',
+                      border: '2px solid rgba(239, 68, 68, 0.45)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#f87171',
+                      boxShadow: '0 0 35px rgba(239, 68, 68, 0.28)',
+                    }}
+                  >
+                    <Lock size={38} />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <h2
+                      style={{
+                        margin: 0,
+                        fontSize: '2.4rem',
+                        fontWeight: 900,
+                        letterSpacing: '0.04em',
+                        color: '#ffffff',
+                        lineHeight: 1.1,
+                        textShadow: '0 2px 12px rgba(0,0,0,0.6)',
+                      }}
+                    >
+                      LOKET DITUTUP
+                    </h2>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '4px' }}>
+                      <span
+                        style={{
+                          padding: '4px 16px',
+                          borderRadius: '8px',
+                          backgroundColor: 'rgba(239, 68, 68, 0.25)',
+                          border: '1px solid rgba(239, 68, 68, 0.5)',
+                          color: '#fecaca',
+                          fontSize: '0.95rem',
+                          fontWeight: 800,
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        {liveCounterName}
+                      </span>
+                      {activeCounter.operatorName && (
+                        <span style={{ fontSize: '0.8125rem', color: '#cbd5e1' }}>
+                          Petugas: <strong style={{ color: '#ffffff' }}>{activeCounter.operatorName}</strong>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <p
+                    style={{
+                      margin: '6px 0 0 0',
+                      fontSize: '0.875rem',
+                      color: '#94a3b8',
+                      lineHeight: 1.6,
+                      maxWidth: '500px',
+                    }}
+                  >
+                    Mohon maaf, layanan antrian pada loket ini saat ini sedang ditutup. Silakan menuju loket lain yang sedang buka atau hubungi meja informasi.
+                  </p>
+                </div>
+
+                {/* Bottom Footer Bar */}
+                <div
+                  style={{
+                    width: '100%',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontSize: '0.75rem',
+                    color: '#fca5a5',
+                    zIndex: 1,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Lock size={13} />
+                    <span>Status Operasional: <strong>Loket Tidak Beroperasi</strong></span>
+                  </div>
+                  <span style={{ color: 'rgba(255, 255, 255, 0.45)' }}>Silakan menuju loket yang beroperasi</span>
+                </div>
+              </div>
+            ) : (
+              /* NORMAL ACTIVE TICKET CANVAS ITEMS */
+              queue.items
+                .filter((it) => it.isVisible)
+                .sort((a, b) => a.zIndex - b.zIndex)
+                .map((item) => {
+                  const canvasW = queue.canvasWidth || 1920;
+                  const canvasH = queue.canvasHeight || 1080;
+                  const leftPercent = (item.x / canvasW) * 100;
+                  const topPercent = (item.y / canvasH) * 100;
+                  const widthPercent = (item.width / canvasW) * 100;
+                  const heightPercent = (item.height / canvasH) * 100;
+
+                  const content = injectQueueVariables(item.templateContent, {
+                    queueNumber: liveTicketNumber,
+                    queueCounter: liveCounterName,
+                    queuePrefix: queue.prefix,
+                    queueName: queue.name,
+                    operatorName: activeCounter.operatorName || 'Petugas',
+                  });
+
+                  return (
+                    <div
+                      key={item.id}
+                      style={{
+                        position: 'absolute',
+                        left: `${leftPercent}%`,
+                        top: `${topPercent}%`,
+                        width: `${widthPercent}%`,
+                        height: `${heightPercent}%`,
+                        backgroundColor: item.backgroundColor,
+                        color: item.textColor,
+                        fontSize: `calc(${item.fontSize}px * 0.35)`,
+                        fontWeight: item.fontWeight as any,
+                        textAlign: item.textAlign as any,
+                        borderRadius: `${(item.borderRadius || 0) * 0.35}px`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent:
+                          item.textAlign === 'center' ? 'center' : item.textAlign === 'right' ? 'flex-end' : 'flex-start',
+                        padding: '0 4px',
+                        boxSizing: 'border-box',
+                        overflow: 'hidden',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {item.itemType === 'marquee' ? <Marquee>{content}</Marquee> : content}
+                    </div>
+                  );
+                })
+            )}
           </div>
         </div>
       </div>
