@@ -9,6 +9,7 @@ use crate::grpc::proto::studio::v1::layout::{
     Layout as ProtoLayout, ListLayoutsRequest, ListLayoutsResponse, UpdateLayoutRequest,
     LayoutHistoryItem, ListLayoutHistoryRequest, ListLayoutHistoryResponse,
     RollbackLayoutRequest, RollbackLayoutResponse,
+    DeleteLayoutHistoryRequest, DeleteLayoutHistoryResponse,
 };
 use crate::grpc::proto::common::v1::orientation::Orientation as ProtoOrientation;
 use crate::grpc::proto::studio::v1::layer::Layer as ProtoLayer;
@@ -342,6 +343,41 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             success: true,
             message: "Berhasil melakukan rollback layout".to_string(),
             layout_id: layout_id.to_string(),
+        }))
+    }
+
+    async fn delete_layout_history(
+        &self,
+        request: Request<DeleteLayoutHistoryRequest>,
+    ) -> Result<Response<DeleteLayoutHistoryResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
+        let req = request.into_inner();
+
+        let count = if req.delete_all {
+            let layout_id = req.layout_id.and_then(|id_str| Uuid::from_str(&id_str).ok());
+            crate::modules::studio::layout::LayoutHistoryRepository::delete_all(&self.pool, layout_id)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?
+        } else {
+            let uuids: Vec<Uuid> = req.ids.into_iter()
+                .filter_map(|s| Uuid::from_str(&s).ok())
+                .collect();
+            if uuids.is_empty() {
+                return Ok(Response::new(DeleteLayoutHistoryResponse {
+                    success: true,
+                    deleted_count: 0,
+                    message: "Tidak ada riwayat yang dipilih untuk dihapus".to_string(),
+                }));
+            }
+            crate::modules::studio::layout::LayoutHistoryRepository::delete_by_ids(&self.pool, &uuids)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?
+        };
+
+        Ok(Response::new(DeleteLayoutHistoryResponse {
+            success: true,
+            deleted_count: count as i32,
+            message: format!("Berhasil menghapus {} riwayat perubahan", count),
         }))
     }
 }

@@ -100,3 +100,16 @@ message RollbackLayoutResponse {
   string message = 2;
   string layout_id = 3;
 }
+
+message DeleteLayoutHistoryRequest {
+  repeated string ids = 1;
+  bool delete_all = 2;
+  optional string layout_id = 3;
+}
+
+message DeleteLayoutHistoryResponse {
+  bool success = 1;
+  int32 deleted_count = 2;
+  string message = 3;
+}
+

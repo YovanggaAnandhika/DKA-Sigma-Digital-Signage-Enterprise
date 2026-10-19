@@ -311,4 +311,29 @@ impl LayoutHistoryRepository {
 
         Ok(snapshot.layout.id)
     }
+
+    pub async fn delete_by_ids(pool: &DbPool, ids: &[Uuid]) -> Result<u64, sqlx::Error> {
+        let res = sqlx::query("DELETE FROM layout_history WHERE id = ANY($1)")
+            .bind(ids)
+            .execute(pool)
+            .await?;
+        Ok(res.rows_affected())
+    }
+
+    pub async fn delete_all(pool: &DbPool, layout_id: Option<Uuid>) -> Result<u64, sqlx::Error> {
+        let res = match layout_id {
+            Some(lid) => {
+                sqlx::query("DELETE FROM layout_history WHERE layout_id = $1")
+                    .bind(lid)
+                    .execute(pool)
+                    .await?
+            }
+            None => {
+                sqlx::query("DELETE FROM layout_history")
+                    .execute(pool)
+                    .await?
+            }
+        };
+        Ok(res.rows_affected())
+    }
 }

@@ -13,4 +13,5 @@ service LayoutService {
   
   rpc ListLayoutHistory(ListLayoutHistoryRequest) returns (ListLayoutHistoryResponse);
   rpc RollbackLayout(RollbackLayoutRequest) returns (RollbackLayoutResponse);
+  rpc DeleteLayoutHistory(DeleteLayoutHistoryRequest) returns (DeleteLayoutHistoryResponse);
 }
