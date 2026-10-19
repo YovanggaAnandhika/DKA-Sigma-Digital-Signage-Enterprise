@@ -1,7 +1,11 @@
 package com.dkaapis.sigma.presentation.renderers
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
@@ -152,6 +156,16 @@ class QueueZoneRenderer(
     private var currentInvertProgress = 0f
     private val invertPaint = Paint()
 
+    private var originalCounterBgColor: Int = Color.TRANSPARENT
+    private var statusOverlayView: View? = null
+    private var callEffectWatchdog: Runnable? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private fun stopWatchdog() {
+        callEffectWatchdog?.let { mainHandler.removeCallbacks(it) }
+        callEffectWatchdog = null
+    }
+
     private var canvasW: Int = 1920
     private var canvasH: Int = 1080
 
@@ -220,6 +234,9 @@ class QueueZoneRenderer(
 
         currentCounter = counterName
         currentSequence = latestNumber.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 1
+        isCallingActive = false
+        currentInvertProgress = 0f
+        invertAnimator?.cancel()
 
         val canvasView = QueueCanvasView(context, canvasW, canvasH).apply {
             layoutParams = FrameLayout.LayoutParams(
@@ -437,6 +454,8 @@ class QueueZoneRenderer(
                 }
             } else if (meta.itemType == "counter_loket") {
                 counterTextView = textView
+                val hasCounterBg = meta.backgroundColor.isNotBlank() && !meta.backgroundColor.equals("transparent", ignoreCase = true)
+                originalCounterBgColor = if (hasCounterBg) parseColor(meta.backgroundColor, Color.TRANSPARENT) else Color.TRANSPARENT
                 val canClick = !isInactive()
                 textView.isClickable = canClick
                 textView.setOnClickListener {
@@ -539,8 +558,6 @@ class QueueZoneRenderer(
         return currentCounter
     }
 
-    private var statusOverlayView: View? = null
-
     fun syncTicketDisplay(ticketNumber: String, counterName: String? = null) {
         val numPart = ticketNumber.replace(Regex("[^0-9]"), "").toIntOrNull()
         if (numPart != null) {
@@ -549,7 +566,17 @@ class QueueZoneRenderer(
         if (!counterName.isNullOrBlank()) {
             currentCounter = counterName
         }
-        updateDisplay(ticketNumber, currentCounter)
+        applyDisplayText(ticketNumber, currentCounter)
+    }
+
+    fun applyDisplayText(ticketNumber: String, counterName: String) {
+        numberTextView?.text = ticketNumber
+        val displayCounter = when (currentStatus) {
+            "BREAK" -> "$counterName [ISTIRAHAT]"
+            "LOCKED" -> "$counterName [TUTUP]"
+            else -> counterName
+        }
+        counterTextView?.text = displayCounter
     }
 
     fun updateCall(ticketNumber: String, counterName: String) {
@@ -586,7 +613,7 @@ class QueueZoneRenderer(
         val target = resetToNumber?.ifBlank { null } ?: "$currentPrefix-000"
         val numPart = target.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
         currentSequence = numPart
-        numberTextView?.text = target
+        applyDisplayText(target, currentCounter)
         stopCallEffect()
     }
 
@@ -609,7 +636,13 @@ class QueueZoneRenderer(
             when (currentStatus) {
                 "BREAK" -> bgDrawable.setColor(Color.parseColor("#F59E0B"))
                 "LOCKED" -> bgDrawable.setColor(Color.parseColor("#EF4444"))
-                else -> bgDrawable.setColor(Color.parseColor("#10B981"))
+                else -> {
+                    if (originalCounterBgColor != Color.TRANSPARENT) {
+                        bgDrawable.setColor(originalCounterBgColor)
+                    } else {
+                        bgDrawable.setColor(Color.TRANSPARENT)
+                    }
+                }
             }
         }
 
@@ -752,8 +785,15 @@ class QueueZoneRenderer(
 
     fun startCallEffect(ticketNumber: String, counterName: String) {
         isCallingActive = true
-        numberTextView?.text = ticketNumber
-        counterTextView?.text = counterName
+        applyDisplayText(ticketNumber, counterName)
+
+        // Safety watchdog: jika setelah 15 detik panggilan selesai/tidak dihentikan, otomatis kembalikan ke warna awal
+        stopWatchdog()
+        val watchdog = Runnable {
+            stopCallEffect()
+        }
+        callEffectWatchdog = watchdog
+        mainHandler.postDelayed(watchdog, 15000L)
 
         val target = getTargetView() ?: return
         invertAnimator?.cancel()
@@ -783,8 +823,17 @@ class QueueZoneRenderer(
     }
 
     fun stopCallEffect() {
+        stopWatchdog()
         if (!isCallingActive && currentInvertProgress <= 0.001f) return
         isCallingActive = false
+
+        // Pastikan warna badge counter kembali ke warna kartu/tombol aslinya jika status aktif
+        if (currentStatus == "ACTIVE") {
+            val bgDrawable = counterTextView?.background
+            if (bgDrawable is android.graphics.drawable.GradientDrawable && originalCounterBgColor != Color.TRANSPARENT) {
+                bgDrawable.setColor(originalCounterBgColor)
+            }
+        }
 
         val target = getTargetView() ?: return
         invertAnimator?.cancel()
@@ -796,11 +845,20 @@ class QueueZoneRenderer(
             addUpdateListener { va ->
                 applyColorInversion(target, va.animatedValue as Float)
             }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    applyColorInversion(target, 0.0f)
+                }
+                override fun onAnimationCancel(animation: Animator) {
+                    applyColorInversion(target, 0.0f)
+                }
+            })
             start()
         }
     }
 
     private fun updateDisplay(ticketNumber: String, counterName: String) {
+        applyDisplayText(ticketNumber, counterName)
         startCallEffect(ticketNumber, counterName)
     }
 
