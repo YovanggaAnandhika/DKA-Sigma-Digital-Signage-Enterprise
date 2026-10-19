@@ -41,6 +41,8 @@ message QueueCounter {
   string last_called_at = 8;
   string created_at = 9;
   string updated_at = 10;
+  string status = 11; // "ACTIVE", "BREAK", "LOCKED"
+  string status_note = 12;
 }
 
 message QueueTicket {
@@ -89,6 +91,13 @@ message QueueDisplayDetail {
   float opacity = 17;
   string overlay_color = 18;
   float overlay_opacity = 19;
+  string sector_type = 20;
+  string ticket_label = 21;
+  string counter_label = 22;
+  string tts_template_call = 23;
+  string tts_template_recall = 24;
+  string tts_template_break = 25;
+  int32 current_sequence = 26;
 }
 
 message CreateQueueDisplayRequest {
@@ -106,6 +115,12 @@ message CreateQueueDisplayRequest {
   float opacity = 12;
   string overlay_color = 13;
   float overlay_opacity = 14;
+  optional string sector_type = 15;
+  optional string ticket_label = 16;
+  optional string counter_label = 17;
+  optional string tts_template_call = 18;
+  optional string tts_template_recall = 19;
+  optional string tts_template_break = 20;
 }
 
 message GetQueueDisplayRequest {
@@ -138,6 +153,12 @@ message UpdateQueueDisplayRequest {
   float opacity = 13;
   string overlay_color = 14;
   float overlay_opacity = 15;
+  optional string sector_type = 16;
+  optional string ticket_label = 17;
+  optional string counter_label = 18;
+  optional string tts_template_call = 19;
+  optional string tts_template_recall = 20;
+  optional string tts_template_break = 21;
 }
 
 message DeleteQueueDisplayRequest {
@@ -210,6 +231,55 @@ message UpdateCounterRequest {
   string counter_name = 3;
   string operator_name = 4;
   bool is_active = 5;
+  optional string status = 6;
+  optional string status_note = 7;
+}
+
+message SetCounterStatusRequest {
+  string counter_id = 1;
+  string status = 2; // "ACTIVE", "BREAK", "LOCKED"
+  optional string status_note = 3;
+}
+
+message CallPreviousTicketRequest {
+  string queue_display_id = 1;
+  string counter_id = 2;
+}
+
+message CallPreviousTicketResponse {
+  QueueTicket ticket = 1;
+  QueueCounter counter = 2;
+}
+
+message ResetQueueRequest {
+  string queue_display_id = 1;
+  int32 start_sequence = 2;
+  optional string counter_id = 3;
+}
+
+message ResetQueueResponse {
+  bool success = 1;
+  int32 new_sequence = 2;
+  string message = 3;
+}
+
+message GetQueueSyncStateRequest {
+  string queue_display_id = 1;
+}
+
+message GetQueueSyncStateResponse {
+  string queue_display_id = 1;
+  string prefix = 2;
+  int32 current_sequence = 3;
+  string current_ticket_number = 4;
+  string sector_type = 5;
+  string ticket_label = 6;
+  string counter_label = 7;
+  string tts_template_call = 8;
+  string tts_template_recall = 9;
+  string tts_template_break = 10;
+  repeated QueueCounter counters = 11;
+  int32 waiting_tickets_count = 12;
 }
 
 message ListCountersRequest {

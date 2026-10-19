@@ -27,6 +27,10 @@ service QueueService {
   // Queue Tickets
   rpc IssueTicket(IssueTicketRequest) returns (QueueTicket);
   rpc CallNextTicket(CallNextTicketRequest) returns (CallNextTicketResponse);
+  rpc CallPreviousTicket(CallPreviousTicketRequest) returns (CallPreviousTicketResponse);
+  rpc ResetQueue(ResetQueueRequest) returns (ResetQueueResponse);
+  rpc SetCounterStatus(SetCounterStatusRequest) returns (QueueCounter);
+  rpc GetQueueSyncState(GetQueueSyncStateRequest) returns (GetQueueSyncStateResponse);
   rpc ListTickets(ListTicketsRequest) returns (ListTicketsResponse);
   rpc UpdateTicketStatus(UpdateTicketStatusRequest) returns (QueueTicket);
 
