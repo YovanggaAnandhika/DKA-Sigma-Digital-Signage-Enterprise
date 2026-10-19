@@ -134,7 +134,13 @@ class QueueZoneRenderer(
     private var currentSequence: Int = 1
     private var currentCounter: String = "LOKET 01"
     private var currentCounterLabel: String = "Loket"
+    private var currentStatus: String = "ACTIVE"
     private val countersList = mutableListOf<String>()
+
+    private fun isInactive(): Boolean {
+        return currentStatus.equals("LOCKED", ignoreCase = true) || 
+               currentStatus.equals("BREAK", ignoreCase = true)
+    }
 
     private var parentZoneView: ViewGroup? = null
     private var canvasView: QueueCanvasView? = null
@@ -176,6 +182,11 @@ class QueueZoneRenderer(
                 overlayColor = json.optString("overlayColor", "").ifEmpty { json.optString("overlay_color", "") }
                 overlayOpacity = (if (json.has("overlayOpacity")) json.optDouble("overlayOpacity", 0.0) else json.optDouble("overlay_opacity", 0.0)).toFloat()
 
+                val initialStatus = json.optString("status", json.optString("counterStatus", "ACTIVE"))
+                if (initialStatus.equals("BREAK", ignoreCase = true) || initialStatus.equals("LOCKED", ignoreCase = true)) {
+                    currentStatus = initialStatus.uppercase()
+                }
+
                 val countersArr = json.optJSONArray("countersList") ?: json.optJSONArray("counters")
                 countersList.clear()
                 if (countersArr != null && countersArr.length() > 0) {
@@ -205,10 +216,13 @@ class QueueZoneRenderer(
             )
             setBackgroundColor(parseColor(bgColor, Color.TRANSPARENT))
             alpha = canvasOpacity.coerceIn(0.0f, 1.0f)
-            isClickable = true
-            isFocusable = true
+            val canClick = !isInactive()
+            isClickable = canClick
+            isFocusable = canClick
             setOnClickListener {
-                callNext()
+                if (!isInactive()) {
+                    callNext()
+                }
             }
         }
 
@@ -402,19 +416,29 @@ class QueueZoneRenderer(
 
             if (meta.itemType == "ticket_number") {
                 numberTextView = textView
-                textView.isClickable = true
+                val canClick = !isInactive()
+                textView.isClickable = canClick
                 textView.setOnClickListener {
-                    callNext()
+                    if (!isInactive()) {
+                        callNext()
+                    }
                 }
             } else if (meta.itemType == "counter_loket") {
                 counterTextView = textView
-                textView.isClickable = true
+                val canClick = !isInactive()
+                textView.isClickable = canClick
                 textView.setOnClickListener {
-                    cycleNextCounter()
+                    if (!isInactive()) {
+                        cycleNextCounter()
+                    }
                 }
             }
 
             canvasView.addView(textView)
+        }
+
+        if (isInactive()) {
+            showDedicatedStatusScreen(currentStatus, currentCounter)
         }
 
         if (bgImageUrl.isBlank()) return canvasView
@@ -462,6 +486,9 @@ class QueueZoneRenderer(
     }
 
     fun callNext(): String {
+        if (isInactive()) {
+            return getCurrentTicketNumber()
+        }
         currentSequence++
         val newTicket = "$currentPrefix-${String.format(java.util.Locale.US, "%03d", currentSequence)}"
         updateDisplay(newTicket, currentCounter)
@@ -471,6 +498,9 @@ class QueueZoneRenderer(
     }
 
     fun cycleNextCounter(): String {
+        if (isInactive()) {
+            return currentCounter
+        }
         if (countersList.isNotEmpty()) {
             val currIdx = countersList.indexOf(currentCounter)
             val nextIdx = if (currIdx >= 0) (currIdx + 1) % countersList.size else 0
@@ -487,6 +517,13 @@ class QueueZoneRenderer(
     private var statusOverlayView: View? = null
 
     fun updateCall(ticketNumber: String, counterName: String) {
+        currentStatus = "ACTIVE"
+        canvasView?.isClickable = true
+        canvasView?.isFocusable = true
+        numberTextView?.isClickable = true
+        counterTextView?.isClickable = true
+        statusOverlayView?.isClickable = false
+        statusOverlayView?.isFocusable = false
         statusOverlayView?.visibility = View.GONE
         val numPart = ticketNumber.replace(Regex("[^0-9]"), "").toIntOrNull()
         if (numPart != null) {
@@ -500,6 +537,13 @@ class QueueZoneRenderer(
     }
 
     fun resetQueue(resetToNumber: String? = null) {
+        currentStatus = "ACTIVE"
+        canvasView?.isClickable = true
+        canvasView?.isFocusable = true
+        numberTextView?.isClickable = true
+        counterTextView?.isClickable = true
+        statusOverlayView?.isClickable = false
+        statusOverlayView?.isFocusable = false
         statusOverlayView?.visibility = View.GONE
         val target = resetToNumber?.ifBlank { null } ?: "$currentPrefix-000"
         val numPart = target.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
@@ -509,10 +553,11 @@ class QueueZoneRenderer(
     }
 
     fun setCounterStatus(counterName: String, status: String) {
+        currentStatus = status.uppercase()
         if (counterName.isNotBlank()) {
             currentCounter = counterName
         }
-        val displayCounter = when (status.uppercase()) {
+        val displayCounter = when (currentStatus) {
             "BREAK" -> "$counterName [ISTIRAHAT]"
             "LOCKED" -> "$counterName [TUTUP]"
             else -> counterName
@@ -521,7 +566,7 @@ class QueueZoneRenderer(
 
         val bgDrawable = counterTextView?.background
         if (bgDrawable is android.graphics.drawable.GradientDrawable) {
-            when (status.uppercase()) {
+            when (currentStatus) {
                 "BREAK" -> bgDrawable.setColor(Color.parseColor("#F59E0B"))
                 "LOCKED" -> bgDrawable.setColor(Color.parseColor("#EF4444"))
                 else -> bgDrawable.setColor(Color.parseColor("#10B981"))
@@ -535,9 +580,18 @@ class QueueZoneRenderer(
         val cv = canvasView ?: return
         val isBreak = status.equals("BREAK", ignoreCase = true)
         val isLocked = status.equals("LOCKED", ignoreCase = true)
+        val inactive = isBreak || isLocked
 
-        if (!isBreak && !isLocked) {
+        // Nonaktifkan klik pada canvas dan widget antrian jika status ditutup atau istirahat
+        cv.isClickable = !inactive
+        cv.isFocusable = !inactive
+        numberTextView?.isClickable = !inactive
+        counterTextView?.isClickable = !inactive
+
+        if (!inactive) {
             statusOverlayView?.visibility = View.GONE
+            statusOverlayView?.isClickable = false
+            statusOverlayView?.isFocusable = false
             return
         }
 
@@ -564,6 +618,11 @@ class QueueZoneRenderer(
         }
 
         overlay.visibility = View.VISIBLE
+        overlay.isClickable = true
+        overlay.isFocusable = true
+        overlay.setOnClickListener {
+            // Serap event klik agar tidak tembus ke canvasView atau komponen di bawahnya
+        }
         overlay.removeAllViews()
         overlay.setBackgroundColor(Color.parseColor(if (isBreak) "#0D111A" else "#0B0E17"))
 
