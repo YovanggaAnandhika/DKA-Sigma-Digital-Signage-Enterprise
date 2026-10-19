@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { api } from '@/lib/services';
 import type { Schedule } from '@/lib/services/studio/schedule.types';
 import { Pagination } from '@/components/ui/Pagination';
-import { CalendarDays, Search, RefreshCw, Trash2, Eye, Clock, Layers, ArrowRight, ShieldAlert } from 'lucide-react';
+import { CalendarDays, Search, RefreshCw, Trash2, Trash, Eye, Clock, Layers, ArrowRight, ShieldAlert } from 'lucide-react';
 import EmergencyBroadcastModal from '@/components/ui/EmergencyBroadcastModal';
 
 export default function SchedulesPage() {
@@ -16,6 +16,8 @@ export default function SchedulesPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [emergencyOpen, setEmergencyOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleting, setDeleting] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -34,10 +36,60 @@ export default function SchedulesPage() {
     loadData();
   }, [loadData]);
 
+  const handleToggleSelectAll = () => {
+    if (schedules.length === 0) return;
+    if (selectedIds.length === schedules.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(schedules.map((s) => s.id));
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Hapus ${selectedIds.length} jadwal terpilih?`)) return;
+
+    try {
+      setDeleting(true);
+      await Promise.all(selectedIds.map((id) => api.deleteSchedule(id)));
+      setSelectedIds([]);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Gagal menghapus beberapa jadwal');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (total === 0 && schedules.length === 0) return;
+    if (!confirm(`Apakah Anda yakin ingin menghapus SEMUA (${total || schedules.length}) jadwal tayang?\nTindakan ini tidak dapat dibatalkan!`)) return;
+
+    try {
+      setDeleting(true);
+      const allRes = await api.getSchedules({ limit: 1000 });
+      const idsToDelete = allRes.data.map((s) => s.id);
+      await Promise.all(idsToDelete.map((id) => api.deleteSchedule(id)));
+      setSelectedIds([]);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Gagal menghapus semua jadwal');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Hapus jadwal "${name}"?`)) return;
     try {
       await api.deleteSchedule(id);
+      setSelectedIds((prev) => prev.filter((i) => i !== id));
       loadData();
     } catch (err: any) {
       alert(err.message || 'Gagal menghapus jadwal');
@@ -127,8 +179,8 @@ export default function SchedulesPage() {
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="card-elevated" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{ position: 'relative', flex: 1 }}>
+      <div className="card-elevated" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
           <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input
             type="text"
@@ -142,6 +194,70 @@ export default function SchedulesPage() {
             style={{ paddingLeft: '36px' }}
           />
         </div>
+
+        {/* Action Buttons: Icon Only for Select Delete & Hapus Semua */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            onClick={handleDeleteSelected}
+            disabled={selectedIds.length === 0 || deleting}
+            className="btn btn-outline"
+            style={{
+              padding: '9px 12px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              color: selectedIds.length > 0 ? 'var(--accent-rose)' : 'var(--text-muted)',
+              borderColor: selectedIds.length > 0 ? 'rgba(239, 68, 68, 0.4)' : undefined,
+              backgroundColor: selectedIds.length > 0 ? 'rgba(239, 68, 68, 0.12)' : undefined,
+              cursor: selectedIds.length === 0 || deleting ? 'not-allowed' : 'pointer',
+              opacity: selectedIds.length === 0 ? 0.45 : 1,
+              transition: 'all 0.2s ease',
+            }}
+            title={selectedIds.length > 0 ? `Hapus ${selectedIds.length} jadwal terpilih (Select Delete)` : 'Pilih jadwal untuk dihapus (Select Delete)'}
+          >
+            <Trash2 size={16} />
+            {selectedIds.length > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '-6px',
+                  right: '-6px',
+                  backgroundColor: 'var(--accent-rose)',
+                  color: '#fff',
+                  fontSize: '0.6875rem',
+                  fontWeight: 700,
+                  borderRadius: '10px',
+                  padding: '1px 5px',
+                  lineHeight: 1.2,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                }}
+              >
+                {selectedIds.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={handleDeleteAll}
+            disabled={schedules.length === 0 || deleting}
+            className="btn btn-outline"
+            style={{
+              padding: '9px 12px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: schedules.length > 0 ? 'var(--accent-rose)' : 'var(--text-muted)',
+              borderColor: schedules.length > 0 ? 'rgba(239, 68, 68, 0.4)' : undefined,
+              cursor: schedules.length === 0 || deleting ? 'not-allowed' : 'pointer',
+              opacity: schedules.length === 0 ? 0.45 : 1,
+              transition: 'all 0.2s ease',
+            }}
+            title="Hapus Semua Jadwal"
+          >
+            <Trash size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Main Table */}
@@ -150,6 +266,15 @@ export default function SchedulesPage() {
           <table className="data-table">
             <thead>
               <tr>
+                <th style={{ width: '42px', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={schedules.length > 0 && selectedIds.length === schedules.length}
+                    onChange={handleToggleSelectAll}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-500)' }}
+                    title="Pilih Semua di Halaman Ini"
+                  />
+                </th>
                 <th>NAMA JADWAL</th>
                 <th>LAYOUT TAYANG</th>
                 <th>JAM TAYANG AKTIF</th>
@@ -162,7 +287,7 @@ export default function SchedulesPage() {
             <tbody>
               {schedules.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                     {loading ? 'Memuat data...' : 'Tidak ada jadwal ditemukan. Push layout baru dari menu Layouts untuk mulai menayangkan konten.'}
                   </td>
                 </tr>
@@ -171,9 +296,18 @@ export default function SchedulesPage() {
                   const firstEvent = s.eventsList && s.eventsList.length > 0 ? s.eventsList[0] : null;
                   const totalEvents = s.eventsList ? s.eventsList.length : 0;
                   const createdDate = s.createdAt || (s as any).created_at;
+                  const isSelected = selectedIds.includes(s.id);
 
                   return (
-                    <tr key={s.id}>
+                    <tr key={s.id} style={{ backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.08)' : undefined }}>
+                      <td style={{ textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelect(s.id)}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-500)' }}
+                        />
+                      </td>
                       <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                         <Link href={`/studio/schedules/${s.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                           <div>{s.name}</div>

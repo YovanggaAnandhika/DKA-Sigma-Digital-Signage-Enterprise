@@ -148,3 +148,7 @@ export async function getLayoutHistory(params?: { layoutId?: string; search?: st
 export async function rollbackLayout(historyId: string): Promise<{ success: boolean; message: string; layoutId: string }> {
   return await invokeApi<any>('/api/grpc/studio/layout/RollbackLayout', { historyId });
 }
+
+export async function deleteLayoutHistory(params: { ids?: string[]; deleteAll?: boolean; layoutId?: string }): Promise<{ success: boolean; deletedCount: number; message: string }> {
+  return await invokeApi<any>('/api/grpc/studio/layout/DeleteLayoutHistory', params);
+}

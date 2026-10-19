@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { api } from '@/lib/services';
 import type { LayoutHistoryItem } from '@/lib/services';
 import { Pagination } from '@/components/ui/Pagination';
-import { Search, RefreshCw, RotateCcw, FileCode, Check, Copy, X, Layers, Clock } from 'lucide-react';
+import { Search, RefreshCw, RotateCcw, FileCode, Check, Copy, X, Layers, Clock, Trash2, Trash } from 'lucide-react';
 
 export default function LayoutHistoryPage() {
   const [historyItems, setHistoryItems] = useState<LayoutHistoryItem[]>([]);
@@ -14,6 +14,10 @@ export default function LayoutHistoryPage() {
   const [limit, setLimit] = useState(15);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Selection & Bulk delete state
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleting, setDeleting] = useState(false);
 
   // Modal JSON Viewer
   const [selectedSnapshot, setSelectedSnapshot] = useState<{ name: string; hash: string; json: string } | null>(null);
@@ -38,6 +42,69 @@ export default function LayoutHistoryPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const handleToggleSelectAll = () => {
+    if (historyItems.length === 0) return;
+    if (selectedIds.length === historyItems.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(historyItems.map((item) => item.id));
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Hapus ${selectedIds.length} riwayat perubahan terpilih?`)) return;
+
+    try {
+      setDeleting(true);
+      const res = await api.deleteLayoutHistory({ ids: selectedIds });
+      setSelectedIds([]);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Gagal menghapus riwayat');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (total === 0 && historyItems.length === 0) return;
+    if (!confirm(`Apakah Anda yakin ingin menghapus SEMUA (${total || historyItems.length}) riwayat perubahan layout?\nTindakan ini tidak dapat dibatalkan!`)) return;
+
+    try {
+      setDeleting(true);
+      await api.deleteLayoutHistory({ deleteAll: true });
+      setSelectedIds([]);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Gagal menghapus semua riwayat');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteSingle = async (item: LayoutHistoryItem) => {
+    const shortHash = item.versionHash ? item.versionHash.substring(0, 8) : 'versi ini';
+    if (!confirm(`Hapus riwayat perubahan versi ${shortHash}?`)) return;
+
+    try {
+      setDeleting(true);
+      await api.deleteLayoutHistory({ ids: [item.id] });
+      setSelectedIds((prev) => prev.filter((i) => i !== item.id));
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Gagal menghapus riwayat');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleRollback = async (item: LayoutHistoryItem) => {
     const shortHash = item.versionHash.substring(0, 8);
@@ -95,10 +162,75 @@ export default function LayoutHistoryPage() {
           />
         </div>
 
-        <button onClick={loadData} className="btn btn-outline" style={{ padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '8px' }} title="Muat Ulang">
-          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-          <span style={{ fontSize: '0.875rem' }}>Segarkan Riwayat</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Select Delete Button (Icon Only) */}
+          <button
+            onClick={handleDeleteSelected}
+            disabled={selectedIds.length === 0 || deleting}
+            className="btn btn-outline"
+            style={{
+              padding: '9px 12px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              color: selectedIds.length > 0 ? 'var(--accent-rose)' : 'var(--text-muted)',
+              borderColor: selectedIds.length > 0 ? 'rgba(239, 68, 68, 0.4)' : undefined,
+              backgroundColor: selectedIds.length > 0 ? 'rgba(239, 68, 68, 0.12)' : undefined,
+              cursor: selectedIds.length === 0 || deleting ? 'not-allowed' : 'pointer',
+              opacity: selectedIds.length === 0 ? 0.45 : 1,
+              transition: 'all 0.2s ease',
+            }}
+            title={selectedIds.length > 0 ? `Hapus ${selectedIds.length} riwayat terpilih (Select Delete)` : 'Pilih riwayat untuk dihapus (Select Delete)'}
+          >
+            <Trash2 size={16} />
+            {selectedIds.length > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '-6px',
+                  right: '-6px',
+                  backgroundColor: 'var(--accent-rose)',
+                  color: '#fff',
+                  fontSize: '0.6875rem',
+                  fontWeight: 700,
+                  borderRadius: '10px',
+                  padding: '1px 5px',
+                  lineHeight: 1.2,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                }}
+              >
+                {selectedIds.length}
+              </span>
+            )}
+          </button>
+
+          {/* Delete All Button (Icon Only) */}
+          <button
+            onClick={handleDeleteAll}
+            disabled={historyItems.length === 0 || deleting}
+            className="btn btn-outline"
+            style={{
+              padding: '9px 12px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: historyItems.length > 0 ? 'var(--accent-rose)' : 'var(--text-muted)',
+              borderColor: historyItems.length > 0 ? 'rgba(239, 68, 68, 0.4)' : undefined,
+              cursor: historyItems.length === 0 || deleting ? 'not-allowed' : 'pointer',
+              opacity: historyItems.length === 0 ? 0.45 : 1,
+              transition: 'all 0.2s ease',
+            }}
+            title="Hapus Semua Riwayat Ubah"
+          >
+            <Trash size={16} />
+          </button>
+
+          <button onClick={loadData} className="btn btn-outline" style={{ padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '8px' }} title="Muat Ulang">
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+            <span style={{ fontSize: '0.875rem' }}>Segarkan Riwayat</span>
+          </button>
+        </div>
       </div>
 
       {/* History Table */}
@@ -107,6 +239,15 @@ export default function LayoutHistoryPage() {
           <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface-elevated)' }}>
+                <th style={{ width: '42px', padding: '12px 16px', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={historyItems.length > 0 && selectedIds.length === historyItems.length}
+                    onChange={handleToggleSelectAll}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-500)' }}
+                    title="Pilih Semua di Halaman Ini"
+                  />
+                </th>
                 <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-secondary)' }}>NAMA LAYOUT</th>
                 <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-secondary)' }}>VERSION HASH</th>
                 <th style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-secondary)' }}>SNAPSHOT STRUKTUR</th>
@@ -118,14 +259,14 @@ export default function LayoutHistoryPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: '36px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan={7} style={{ padding: '36px', textAlign: 'center', color: 'var(--text-muted)' }}>
                     <RefreshCw size={20} className="animate-spin" style={{ margin: '0 auto 8px auto' }} />
                     <span>Memuat riwayat perubahan layout...</span>
                   </td>
                 </tr>
               ) : historyItems.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
                     <Clock size={24} style={{ margin: '0 auto 8px auto', opacity: 0.5 }} />
                     <p style={{ margin: 0, fontWeight: 500 }}>Belum ada riwayat perubahan yang tersimpan.</p>
                     <span style={{ fontSize: '0.8125rem' }}>Riwayat versi tercatat otomatis setiap kali Anda menekan tombol "Simpan Layout" di editor.</span>
@@ -135,9 +276,25 @@ export default function LayoutHistoryPage() {
                 historyItems.map((item) => {
                   const shortHash = item.versionHash ? item.versionHash.substring(0, 8) : '--------';
                   const isRollingBack = rollingBackId === item.id;
+                  const isSelected = selectedIds.includes(item.id);
 
                   return (
-                    <tr key={item.id} style={{ borderBottom: '1px solid var(--border-subtle)', transition: 'background-color 0.15s ease' }}>
+                    <tr
+                      key={item.id}
+                      style={{
+                        borderBottom: '1px solid var(--border-subtle)',
+                        transition: 'background-color 0.15s ease',
+                        backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.08)' : undefined,
+                      }}
+                    >
+                      <td style={{ textAlign: 'center', padding: '12px 16px' }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelect(item.id)}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-500)' }}
+                        />
+                      </td>
                       <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-primary)' }}>
                         <Link href={`/studio/layouts/data/${item.layoutId}/edit`} style={{ textDecoration: 'none', color: 'inherit' }}>
                           {item.layoutName || 'Layout'}
@@ -181,13 +338,22 @@ export default function LayoutHistoryPage() {
                           </button>
                           <button
                             onClick={() => handleRollback(item)}
-                            disabled={isRollingBack}
+                            disabled={isRollingBack || deleting}
                             className="btn btn-secondary"
                             style={{ padding: '6px 12px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                             title="Rollback ke Versi Ini"
                           >
                             <RotateCcw size={13} className={isRollingBack ? 'animate-spin' : ''} />
                             <span>{isRollingBack ? 'Memulihkan...' : 'Rollback'}</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSingle(item)}
+                            disabled={deleting}
+                            className="btn btn-danger"
+                            style={{ padding: '6px 8px', display: 'inline-flex', alignItems: 'center' }}
+                            title="Hapus Riwayat Versi Ini"
+                          >
+                            <Trash2 size={13} />
                           </button>
                         </div>
                       </td>

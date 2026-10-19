@@ -78,6 +78,7 @@ export const api = {
   deleteLayout: studioModule.deleteLayout,
   getLayoutHistory: studioModule.getLayoutHistory,
   rollbackLayout: studioModule.rollbackLayout,
+  deleteLayoutHistory: studioModule.deleteLayoutHistory,
 
   // Studio — Layers
   createLayer: studioModule.createLayer,
