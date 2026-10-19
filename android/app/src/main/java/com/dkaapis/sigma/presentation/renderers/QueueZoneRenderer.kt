@@ -627,7 +627,7 @@ class QueueZoneRenderer(
         overlay.setBackgroundColor(Color.parseColor(if (isBreak) "#0D111A" else "#0B0E17"))
 
         val titleText = TextView(context).apply {
-            text = if (isBreak) "SEDANG ISTIRAHAT" else "LOKET DITUTUP"
+            text = if (isBreak) "SEDANG ISTIRAHAT" else "${currentCounterLabel.uppercase()} DITUTUP"
             setTextColor(Color.parseColor(if (isBreak) "#F59E0B" else "#EF4444"))
             textSize = 38f
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
@@ -674,7 +674,7 @@ class QueueZoneRenderer(
             text = if (isBreak) 
                 "Petugas sedang dalam jam istirahat.\nLayanan akan dibuka kembali segera."
             else 
-                "Mohon maaf, layanan antrian pada loket ini sedang ditutup.\nSilakan menuju loket lain yang beroperasi."
+                "Mohon maaf, layanan antrian pada ${currentCounterLabel.lowercase()} ini sedang ditutup.\nSilakan menuju ${currentCounterLabel.lowercase()} lain yang beroperasi."
             setTextColor(Color.parseColor("#94A3B8"))
             textSize = 15f
             gravity = Gravity.CENTER

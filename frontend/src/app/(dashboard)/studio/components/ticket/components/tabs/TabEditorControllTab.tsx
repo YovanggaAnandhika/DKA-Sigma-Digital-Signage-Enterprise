@@ -7,6 +7,7 @@ import {
   Volume2,
   Coffee,
   Lock,
+  LockOpen,
   CheckCircle2,
   Users,
 } from 'lucide-react';
@@ -381,50 +382,48 @@ export default function TabEditorControllTab() {
           </select>
         </div>
 
-        {/* 1 Tombol Toggle Buka & Tutup */}
+        {/* Kontrol Status Loket / Pos */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
           <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-            Kontrol Akses Loket:
+            Kontrol Akses {counterLabel}:
           </span>
 
+          {/* Toggle Buka & Tutup */}
           <button
             type="button"
             onClick={handleToggleLock}
             className="btn"
             style={{
               width: '100%',
-              height: '46px',
+              height: '42px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '0 12px',
               borderRadius: '8px',
-              backgroundColor: isLocked ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-              border: isLocked ? '1px solid var(--accent-rose)' : '1px solid var(--accent-emerald)',
+              backgroundColor: isLocked ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+              border: isLocked ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid rgba(16, 185, 129, 0.35)',
               color: isLocked ? 'var(--accent-rose)' : 'var(--accent-emerald)',
-              fontWeight: 700,
+              fontWeight: 600,
               fontSize: '0.8125rem',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
-            title={isLocked ? 'Klik untuk Buka Loket ini' : 'Klik untuk Tutup Loket ini'}
+            title={isLocked ? `Buka kembali ${counterLabel} ini` : `Tutup ${counterLabel} ini`}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {isLocked ? <Lock size={16} /> : <CheckCircle2 size={16} />}
-              <span>{isLocked ? 'Loket Tutup' : 'Loket Buka'}</span>
+              {isLocked ? <Lock size={15} /> : <LockOpen size={15} />}
+              <span>{isLocked ? `${counterLabel} Ditutup` : `${counterLabel} Dibuka`}</span>
             </div>
             <span
               style={{
                 fontSize: '0.6875rem',
-                padding: '2px 8px',
-                borderRadius: '9999px',
-                backgroundColor: isLocked ? 'var(--accent-rose)' : 'var(--accent-emerald)',
-                color: '#ffffff',
-                fontWeight: 800,
-                textTransform: 'uppercase',
+                fontWeight: 600,
+                color: isLocked ? 'var(--accent-rose)' : 'var(--accent-emerald)',
+                opacity: 0.85,
               }}
             >
-              {isLocked ? 'Tutup' : 'Buka'}
+              {isLocked ? 'Klik untuk Buka' : 'Klik untuk Tutup'}
             </span>
           </button>
 
@@ -436,39 +435,36 @@ export default function TabEditorControllTab() {
             className="btn"
             style={{
               width: '100%',
-              height: '44px',
+              height: '40px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '0 12px',
               borderRadius: '8px',
-              backgroundColor: isBreak ? 'rgba(245, 158, 11, 0.2)' : 'var(--bg-surface-elevated)',
-              border: isBreak ? '1px solid var(--accent-amber)' : '1px solid var(--border-subtle)',
+              backgroundColor: isBreak ? 'rgba(245, 158, 11, 0.15)' : 'var(--bg-surface-elevated)',
+              border: isBreak ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid var(--border-subtle)',
               color: isBreak ? 'var(--accent-amber)' : 'var(--text-secondary)',
-              fontWeight: isBreak ? 700 : 500,
+              fontWeight: isBreak ? 600 : 500,
               fontSize: '0.8125rem',
               cursor: isLocked ? 'not-allowed' : 'pointer',
               opacity: isLocked ? 0.4 : 1,
               transition: 'all 0.15s ease',
             }}
-            title={isLocked ? 'Buka loket terlebih dahulu sebelum istirahat' : isBreak ? 'Kembali Buka Melayani' : 'Mulai Jam Istirahat'}
+            title={isLocked ? `Buka ${counterLabel} terlebih dahulu sebelum istirahat` : isBreak ? 'Selesaikan jam istirahat' : 'Mulai jam istirahat'}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Coffee size={16} />
-              <span>{isBreak ? 'Sedang Istirahat' : 'Istirahat'}</span>
+              <Coffee size={15} />
+              <span>{isBreak ? 'Sedang Istirahat' : 'Jam Istirahat'}</span>
             </div>
             {isBreak && (
               <span
                 style={{
                   fontSize: '0.6875rem',
-                  padding: '2px 8px',
-                  borderRadius: '9999px',
-                  backgroundColor: 'var(--accent-amber)',
-                  color: '#ffffff',
-                  fontWeight: 800,
+                  color: 'var(--accent-amber)',
+                  fontWeight: 600,
                 }}
               >
-                Aktif
+                Selesai
               </span>
             )}
           </button>
@@ -532,19 +528,29 @@ export default function TabEditorControllTab() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span
+            <div
               style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
                 fontSize: '0.6875rem',
-                fontWeight: 700,
-                padding: '2px 8px',
+                fontWeight: 600,
+                padding: '3px 8px',
                 borderRadius: '6px',
-                backgroundColor: isLocked ? 'rgba(239, 68, 68, 0.15)' : isBreak ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                backgroundColor: isLocked ? 'rgba(239, 68, 68, 0.12)' : isBreak ? 'rgba(245, 158, 11, 0.12)' : 'rgba(16, 185, 129, 0.12)',
                 color: isLocked ? 'var(--accent-rose)' : isBreak ? 'var(--accent-amber)' : 'var(--accent-emerald)',
-                border: isLocked ? '1px solid rgba(239, 68, 68, 0.3)' : isBreak ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)',
+                border: isLocked ? '1px solid rgba(239, 68, 68, 0.25)' : isBreak ? '1px solid rgba(245, 158, 11, 0.25)' : '1px solid rgba(16, 185, 129, 0.25)',
               }}
             >
-              {isLocked ? `🔒 ${liveCounterName} DITUTUP` : isBreak ? `☕ ${liveCounterName} ISTIRAHAT` : `● ${liveCounterName} BUKA`}
-            </span>
+              {isLocked ? (
+                <Lock size={12} />
+              ) : isBreak ? (
+                <Coffee size={12} />
+              ) : (
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'currentColor' }} />
+              )}
+              <span>{liveCounterName} • {isLocked ? 'DITUTUP' : isBreak ? 'ISTIRAHAT' : 'BUKA'}</span>
+            </div>
             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
               {queue.canvasWidth} × {queue.canvasHeight} px
             </span>
@@ -681,7 +687,7 @@ export default function TabEditorControllTab() {
                     textTransform: 'uppercase',
                   }}
                 >
-                  LOKET DITUTUP
+                  {counterLabel.toUpperCase()} DITUTUP
                 </h1>
 
                 <div
@@ -720,8 +726,8 @@ export default function TabEditorControllTab() {
                     lineHeight: 1.5,
                   }}
                 >
-                  <span>Mohon maaf, layanan antrian pada loket ini sedang ditutup.</span>
-                  <span>Silakan menuju loket lain yang beroperasi.</span>
+                  <span>Mohon maaf, layanan antrian pada {counterLabel.toLowerCase()} ini sedang ditutup.</span>
+                  <span>Silakan menuju {counterLabel.toLowerCase()} lain yang beroperasi.</span>
                 </div>
               </div>
             ) : (
