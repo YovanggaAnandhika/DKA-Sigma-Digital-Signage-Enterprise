@@ -578,13 +578,13 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                       ? '#92400e'
                       : '#111827'),
                   color: activeBlock.widgetData?.textColor || '#ffffff',
-                  borderRadius: activeBlock.widgetData?.borderRadius ? `${activeBlock.widgetData.borderRadius}px` : undefined,
-                  border: activeBlock.widgetData?.borderColor ? `1px solid ${activeBlock.widgetData.borderColor}` : undefined,
+                  borderRadius: activeBlock.widgetData?.borderRadius ? `${Math.round(activeBlock.widgetData.borderRadius * scale)}px` : undefined,
+                  border: activeBlock.widgetData?.borderColor ? `${Math.max(1, Math.round(scale))}px solid ${activeBlock.widgetData.borderColor}` : undefined,
                   display: 'flex',
                   alignItems: 'center',
                   overflow: 'hidden',
-                  padding: '0 12px',
-                  gap: '12px',
+                  padding: `0 ${Math.max(3, Math.round(12 * scale))}px`,
+                  gap: `${Math.max(3, Math.round(12 * scale))}px`,
                 }}
               >
                 {activeBlock.widgetData?.badge && (
@@ -592,10 +592,10 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                     style={{
                       backgroundColor: activeBlock.widgetData?.badgeBackgroundColor || 'rgba(255,255,255,0.2)',
                       color: activeBlock.widgetData?.badgeTextColor || '#ffffff',
-                      padding: '2px 8px',
-                      borderRadius: '4px',
+                      padding: `${Math.max(1, Math.round(2 * scale))}px ${Math.max(3, Math.round(8 * scale))}px`,
+                      borderRadius: `${Math.max(2, Math.round(4 * scale))}px`,
                       fontWeight: 800,
-                      fontSize: '0.75rem',
+                      fontSize: `${Math.max(7, Math.round(12 * scale))}px`,
                       whiteSpace: 'nowrap',
                       flexShrink: 0,
                     }}
@@ -607,13 +607,13 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                   <Marquee
                     scrollamount={
                       activeBlock.widgetData?.speed === 'fast'
-                        ? 12
+                        ? Math.max(3, Math.round(12 * scale))
                         : activeBlock.widgetData?.speed === 'slow'
-                        ? 4
-                        : 7
+                        ? Math.max(1, Math.round(4 * scale))
+                        : Math.max(2, Math.round(7 * scale))
                     }
                     style={{
-                      fontSize: `${activeBlock.widgetData?.fontSize || 16}px`,
+                      fontSize: `${Math.max(8, Math.round((activeBlock.widgetData?.fontSize || 16) * scale))}px`,
                       fontWeight: 600,
                       whiteSpace: 'nowrap',
                       display: 'flex',
@@ -631,17 +631,17 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                   inset: 0,
                   backgroundColor: activeBlock.widgetData?.backgroundColor || 'var(--bg-surface-elevated)',
                   color: activeBlock.widgetData?.textColor || 'var(--text-primary)',
-                  borderRadius: activeBlock.widgetData?.borderRadius ? `${activeBlock.widgetData.borderRadius}px` : undefined,
-                  border: activeBlock.widgetData?.borderColor ? `1px solid ${activeBlock.widgetData.borderColor}` : undefined,
+                  borderRadius: activeBlock.widgetData?.borderRadius ? `${Math.round(activeBlock.widgetData.borderRadius * scale)}px` : undefined,
+                  border: activeBlock.widgetData?.borderColor ? `${Math.max(1, Math.round(scale))}px solid ${activeBlock.widgetData.borderColor}` : undefined,
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  padding: '12px',
+                  padding: `${Math.max(3, Math.round(12 * scale))}px`,
                 }}
               >
                 <div style={{
-                  fontSize: activeBlock.widgetData?.timeFontSize ? `calc(${activeBlock.widgetData.timeFontSize}px * 0.7)` : '1.75rem',
+                  fontSize: `${Math.max(10, Math.round((activeBlock.widgetData?.timeFontSize ? activeBlock.widgetData.timeFontSize * 0.7 : 36.4) * scale))}px`,
                   fontWeight: 800,
                   letterSpacing: '0.02em',
                   fontFamily: 'inherit',
@@ -651,9 +651,9 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
                   {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: activeBlock.widgetData?.showSeconds ? '2-digit' : undefined })}
                 </div>
                 <div style={{
-                  fontSize: activeBlock.widgetData?.dateFontSize ? `${activeBlock.widgetData.dateFontSize}px` : '0.75rem',
+                  fontSize: `${Math.max(7, Math.round((activeBlock.widgetData?.dateFontSize || 14) * scale))}px`,
                   color: activeBlock.widgetData?.subtitleColor || 'var(--text-muted)',
-                  marginTop: '4px'
+                  marginTop: `${Math.max(1, Math.round(4 * scale))}px`
                 }}>
                   {activeBlock.widgetData?.city || 'Makassar'} &bull; Cerah 31°C
                 </div>
