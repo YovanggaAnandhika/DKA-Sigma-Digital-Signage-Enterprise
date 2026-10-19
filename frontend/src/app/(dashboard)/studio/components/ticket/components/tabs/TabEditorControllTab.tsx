@@ -330,283 +330,384 @@ export default function TabEditorControllTab() {
   return (
     <div
       style={{
-        display: 'flex',
-        gap: '16px',
+        position: 'relative',
         width: '100%',
         height: '100%',
         flex: 1,
         minHeight: 0,
-        alignItems: 'stretch',
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: '#05070b',
+        overflow: 'hidden',
       }}
     >
-      {/* 1. SISI KIRI: Vertical Menu Status (Buka, Istirahat, Tutup via 1 Toggle) */}
+      {/* Top Floating Control Bar (Pilihan Pos / Counter, Status, & Resolusi) */}
       <div
-        className="card-elevated"
         style={{
-          width: '230px',
-          flexShrink: 0,
-          padding: '16px',
+          position: 'absolute',
+          top: '12px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 10,
           display: 'flex',
-          flexDirection: 'column',
-          gap: '14px',
-          backgroundColor: 'var(--bg-surface)',
+          alignItems: 'center',
+          gap: '10px',
+          padding: '6px 14px',
+          borderRadius: '10px',
+          backgroundColor: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '10px', borderBottom: '1px solid var(--border-subtle)' }}>
-          <Users size={16} color="var(--primary-400)" />
-          <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-            Status {counterLabel}
+        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: isLocked ? 'var(--accent-rose)' : isBreak ? 'var(--accent-amber)' : 'var(--accent-emerald)', display: 'inline-block' }} />
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f8fafc', whiteSpace: 'nowrap' }}>
+          Monitor Live
+        </span>
+
+        <div style={{ height: '14px', width: '1px', backgroundColor: 'rgba(255,255,255,0.15)' }} />
+
+        {/* Dropdown Pos / Counter */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8', whiteSpace: 'nowrap' }}>
+            {counterLabel}:
+          </span>
+          <select
+            value={queue.currentCounter || activeCounter.counterName}
+            onChange={(e) => {
+              const val = e.target.value;
+              setQueue((prev) => ({ ...prev, currentCounter: val }));
+              setSimulator((prev) => ({ ...prev, currentCounter: val }));
+            }}
+            style={{
+              height: '26px',
+              padding: '0 8px',
+              fontSize: '0.72rem',
+              fontWeight: 600,
+              minWidth: '150px',
+              maxWidth: '220px',
+              backgroundColor: 'rgba(30, 41, 59, 0.8)',
+              borderColor: 'rgba(255, 255, 255, 0.12)',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              color: '#f8fafc',
+              outline: 'none',
+            }}
+          >
+            {queue.counters.map((c) => (
+              <option key={c.id} value={c.counterName} style={{ backgroundColor: '#0f172a', color: '#f8fafc' }}>
+                {c.counterName} {c.operatorName ? `(${c.operatorName})` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px',
+            fontSize: '0.65rem',
+            fontWeight: 600,
+            padding: '2px 8px',
+            borderRadius: '5px',
+            backgroundColor: isLocked ? 'rgba(239, 68, 68, 0.2)' : isBreak ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+            color: isLocked ? '#f87171' : isBreak ? '#fbbf24' : '#34d399',
+            border: isLocked ? '1px solid rgba(239, 68, 68, 0.35)' : isBreak ? '1px solid rgba(245, 158, 11, 0.35)' : '1px solid rgba(16, 185, 129, 0.35)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {isLocked ? <Lock size={11} /> : isBreak ? <Coffee size={11} /> : <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'currentColor' }} />}
+          <span>{liveCounterName} • {isLocked ? 'DITUTUP' : isBreak ? 'ISTIRAHAT' : 'BUKA'}</span>
+        </div>
+
+        <span style={{ fontSize: '0.6875rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+          {queue.canvasWidth} × {queue.canvasHeight}
+        </span>
+      </div>
+
+      {/* Floating Square Docking Kiri (Kontrol Akses Pos/Loket) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '20px',
+          left: '20px',
+          zIndex: 10,
+          width: '170px',
+          padding: '12px 10px',
+          borderRadius: '12px',
+          backgroundColor: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingBottom: '6px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+          <Users size={14} color="#38bdf8" />
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f8fafc' }}>
+            {counterLabel}
           </span>
         </div>
 
-        {/* Pos / Counter Aktif Info */}
+        {/* Info Pos Aktif */}
         <div
           style={{
-            padding: '8px 10px',
+            padding: '6px 8px',
             borderRadius: '6px',
-            backgroundColor: 'var(--bg-surface-elevated)',
-            border: '1px solid var(--border-subtle)',
+            backgroundColor: 'rgba(30, 41, 59, 0.6)',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
             display: 'flex',
             flexDirection: 'column',
             gap: '2px',
           }}
         >
-          <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.625rem', color: '#94a3b8', fontWeight: 600 }}>
             {counterLabel} Aktif:
           </span>
-          <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {activeCounter.counterName}
           </span>
           {activeCounter.operatorName && (
-            <span style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)' }}>
+            <span style={{ fontSize: '0.625rem', color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {activeCounter.operatorName}
             </span>
           )}
         </div>
 
-        {/* Kontrol Status Loket / Pos */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-            Kontrol Akses {counterLabel}:
-          </span>
-
-          {/* Toggle Buka & Tutup */}
-          <button
-            type="button"
-            onClick={handleToggleLock}
-            className="btn"
-            style={{
-              width: '100%',
-              height: '42px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0 12px',
-              borderRadius: '8px',
-              backgroundColor: isLocked ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
-              border: isLocked ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid rgba(16, 185, 129, 0.35)',
-              color: isLocked ? 'var(--accent-rose)' : 'var(--accent-emerald)',
-              fontWeight: 600,
-              fontSize: '0.8125rem',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-            title={isLocked ? `Buka kembali ${counterLabel} ini` : `Tutup ${counterLabel} ini`}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {isLocked ? <Lock size={15} /> : <LockOpen size={15} />}
-              <span>{isLocked ? `${counterLabel} Ditutup` : `${counterLabel} Dibuka`}</span>
-            </div>
-            <span
-              style={{
-                fontSize: '0.6875rem',
-                fontWeight: 600,
-                color: isLocked ? 'var(--accent-rose)' : 'var(--accent-emerald)',
-                opacity: 0.85,
-              }}
-            >
-              {isLocked ? 'Klik untuk Buka' : 'Klik untuk Tutup'}
-            </span>
-          </button>
-
-          {/* Tombol Istirahat */}
-          <button
-            type="button"
-            onClick={handleToggleBreak}
-            disabled={isLocked}
-            className="btn"
-            style={{
-              width: '100%',
-              height: '40px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0 12px',
-              borderRadius: '8px',
-              backgroundColor: isBreak ? 'rgba(245, 158, 11, 0.15)' : 'var(--bg-surface-elevated)',
-              border: isBreak ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid var(--border-subtle)',
-              color: isBreak ? 'var(--accent-amber)' : 'var(--text-secondary)',
-              fontWeight: isBreak ? 600 : 500,
-              fontSize: '0.8125rem',
-              cursor: isLocked ? 'not-allowed' : 'pointer',
-              opacity: isLocked ? 0.4 : 1,
-              transition: 'all 0.15s ease',
-            }}
-            title={isLocked ? `Buka ${counterLabel} terlebih dahulu sebelum istirahat` : isBreak ? 'Selesaikan jam istirahat' : 'Mulai jam istirahat'}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Coffee size={15} />
-              <span>{isBreak ? 'Sedang Istirahat' : 'Jam Istirahat'}</span>
-            </div>
-            {isBreak && (
-              <span
-                style={{
-                  fontSize: '0.6875rem',
-                  color: 'var(--accent-amber)',
-                  fontWeight: 600,
-                }}
-              >
-                Selesai
-              </span>
-            )}
-          </button>
-        </div>
-
-        {/* Status Card Detail */}
-        <div
+        {/* Tombol Buka/Tutup */}
+        <button
+          type="button"
+          onClick={handleToggleLock}
           style={{
-            marginTop: 'auto',
-            padding: '12px',
-            borderRadius: '8px',
-            backgroundColor: 'var(--bg-surface-elevated)',
-            border: '1px solid var(--border-subtle)',
+            width: '100%',
+            padding: '7px 8px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '6px',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '2px',
+            borderRadius: '6px',
+            backgroundColor: isLocked ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+            border: isLocked ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(16, 185, 129, 0.4)',
+            color: isLocked ? '#f87171' : '#34d399',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
           }}
+          title={isLocked ? `Buka kembali ${counterLabel} ini` : `Tutup ${counterLabel} ini`}
         >
-          <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Status Operasional:</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span
-              style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: isLocked ? 'var(--accent-rose)' : isBreak ? 'var(--accent-amber)' : 'var(--accent-emerald)',
-              }}
-            />
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isLocked ? 'var(--accent-rose)' : isBreak ? 'var(--accent-amber)' : 'var(--accent-emerald)' }}>
-              {isLocked ? 'DITUTUP' : isBreak ? 'SEDANG ISTIRAHAT' : 'SIAP MELAYANI'}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            {isLocked ? <Lock size={12} /> : <LockOpen size={12} />}
+            <span style={{ fontSize: '0.72rem' }}>{isLocked ? 'Ditutup' : 'Dibuka'}</span>
           </div>
-          {activeCounter.operatorName && (
-            <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-              Petugas: <strong style={{ color: 'var(--text-secondary)' }}>{activeCounter.operatorName}</strong>
-            </span>
-          )}
-        </div>
-      </div>
+          <span style={{ fontSize: '0.58rem', opacity: 0.85 }}>
+            {isLocked ? 'Klik Buka' : 'Klik Tutup'}
+          </span>
+        </button>
 
-      {/* 2. SISI TENGAH: Preview Full 1 Halaman (Monitor Siaran Langsung) */}
-      <div
-        className="card-elevated"
-        style={{
-          flex: 1,
-          minWidth: 0,
-          height: '100%',
-          padding: '16px',
-          display: 'flex',
-          flexDirection: 'column',
-          backgroundColor: 'var(--bg-surface)',
-          overflow: 'hidden',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexShrink: 0, gap: '12px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: isLocked ? 'var(--accent-rose)' : isBreak ? 'var(--accent-amber)' : 'var(--accent-emerald)', display: 'inline-block' }} />
-            <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Preview Antrian
-            </h4>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            {/* Dropdown Pos / Counter diatas canvas dengan ukuran luas & nyaman */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                Pilih Pos / {counterLabel}:
-              </span>
-              <select
-                value={queue.currentCounter || activeCounter.counterName}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setQueue((prev) => ({ ...prev, currentCounter: val }));
-                  setSimulator((prev) => ({ ...prev, currentCounter: val }));
-                }}
-                className="form-input"
-                style={{
-                  height: '32px',
-                  padding: '0 10px',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  minWidth: '200px',
-                  maxWidth: '280px',
-                  backgroundColor: 'var(--bg-surface-elevated)',
-                  borderColor: 'var(--border-subtle)',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  color: 'var(--text-primary)',
-                }}
-              >
-                {queue.counters.map((c) => (
-                  <option key={c.id} value={c.counterName}>
-                    {c.counterName} {c.operatorName ? `(${c.operatorName})` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '0.6875rem',
-                fontWeight: 600,
-                padding: '3px 8px',
-                borderRadius: '6px',
-                backgroundColor: isLocked ? 'rgba(239, 68, 68, 0.12)' : isBreak ? 'rgba(245, 158, 11, 0.12)' : 'rgba(16, 185, 129, 0.12)',
-                color: isLocked ? 'var(--accent-rose)' : isBreak ? 'var(--accent-amber)' : 'var(--accent-emerald)',
-                border: isLocked ? '1px solid rgba(239, 68, 68, 0.25)' : isBreak ? '1px solid rgba(245, 158, 11, 0.25)' : '1px solid rgba(16, 185, 129, 0.25)',
-              }}
-            >
-              {isLocked ? (
-                <Lock size={12} />
-              ) : isBreak ? (
-                <Coffee size={12} />
-              ) : (
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'currentColor' }} />
-              )}
-              <span>{liveCounterName} • {isLocked ? 'DITUTUP' : isBreak ? 'ISTIRAHAT' : 'BUKA'}</span>
-            </div>
-
-            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              {queue.canvasWidth} × {queue.canvasHeight} px
-            </span>
-          </div>
-        </div>
-
-        {/* 16:9 Scaled Responsive Canvas Frame yang Memenuhi Ruang */}
-        <div
+        {/* Tombol Istirahat */}
+        <button
+          type="button"
+          onClick={handleToggleBreak}
+          disabled={isLocked}
           style={{
-            flex: 1,
-            minHeight: 0,
+            width: '100%',
+            padding: '6px 8px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            position: 'relative',
-            overflow: 'hidden',
+            gap: '6px',
+            borderRadius: '6px',
+            backgroundColor: isBreak ? 'rgba(245, 158, 11, 0.25)' : 'rgba(30, 41, 59, 0.6)',
+            border: isBreak ? '1px solid rgba(245, 158, 11, 0.5)' : '1px solid rgba(255, 255, 255, 0.08)',
+            color: isBreak ? '#fbbf24' : '#cbd5e1',
+            fontWeight: isBreak ? 600 : 500,
+            fontSize: '0.72rem',
+            cursor: isLocked ? 'not-allowed' : 'pointer',
+            opacity: isLocked ? 0.4 : 1,
+            transition: 'all 0.15s ease',
+          }}
+          title={isLocked ? `Buka ${counterLabel} terlebih dahulu sebelum istirahat` : isBreak ? 'Selesaikan jam istirahat' : 'Mulai jam istirahat'}
+        >
+          <Coffee size={12} />
+          <span>{isBreak ? 'Selesai Istirahat' : 'Istirahat'}</span>
+        </button>
+
+        {/* Status Operasional */}
+        <div
+          style={{
+            padding: '6px 8px',
+            borderRadius: '6px',
+            backgroundColor: 'rgba(30, 41, 59, 0.4)',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
           }}
         >
+          <span
+            style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              backgroundColor: isLocked ? '#f87171' : isBreak ? '#fbbf24' : '#34d399',
+              flexShrink: 0,
+            }}
+          />
+          <span style={{ fontSize: '0.625rem', fontWeight: 700, color: isLocked ? '#f87171' : isBreak ? '#fbbf24' : '#34d399', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {isLocked ? 'DITUTUP' : isBreak ? 'ISTIRAHAT' : 'SIAP MELAYANI'}
+          </span>
+        </div>
+      </div>
+
+      {/* Floating Square Docking Kanan (Tombol Aksi Panggil Tiket) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          zIndex: 10,
+          width: '74px',
+          padding: '12px 6px',
+          borderRadius: '12px',
+          backgroundColor: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '8px',
+        }}
+      >
+        <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#94a3b8', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Aksi
+        </span>
+
+        {/* Tombol Next */}
+        <button
+          type="button"
+          onClick={handleCallNext}
+          disabled={isCallingDisabled}
+          style={{
+            width: '100%',
+            height: '54px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '2px',
+            borderRadius: '8px',
+            backgroundColor: isCallingDisabled ? 'rgba(30, 41, 59, 0.5)' : '#2563eb',
+            border: isCallingDisabled ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #3b82f6',
+            color: isCallingDisabled ? '#64748b' : '#ffffff',
+            boxShadow: isCallingDisabled ? 'none' : '0 4px 14px rgba(37, 99, 235, 0.4)',
+            cursor: isCallingDisabled ? 'not-allowed' : 'pointer',
+            opacity: isCallingDisabled ? 0.35 : 1,
+            transition: 'all 0.15s ease',
+          }}
+          title={isLocked ? 'Loket sedang ditutup. Buka loket terlebih dahulu.' : 'Panggil Nomor Selanjutnya (Next)'}
+        >
+          <ArrowRight size={22} />
+          <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Next</span>
+        </button>
+
+        {/* Tombol Ulang */}
+        <button
+          type="button"
+          onClick={handleRecall}
+          disabled={isCallingDisabled}
+          style={{
+            width: '100%',
+            height: '44px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '2px',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(30, 41, 59, 0.6)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            color: isCallingDisabled ? '#64748b' : '#38bdf8',
+            cursor: isCallingDisabled ? 'not-allowed' : 'pointer',
+            opacity: isCallingDisabled ? 0.35 : 1,
+            transition: 'all 0.15s ease',
+          }}
+          title={isLocked ? 'Loket sedang ditutup.' : 'Panggil Ulang Nomor Ini (Recall)'}
+        >
+          <Volume2 size={17} />
+          <span style={{ fontSize: '0.6rem', fontWeight: 600 }}>Ulang</span>
+        </button>
+
+        {/* Tombol Mundur */}
+        <button
+          type="button"
+          onClick={handleCallPrevious}
+          disabled={isCallingDisabled}
+          style={{
+            width: '100%',
+            height: '42px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '2px',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(30, 41, 59, 0.6)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            color: isCallingDisabled ? '#64748b' : '#cbd5e1',
+            cursor: isCallingDisabled ? 'not-allowed' : 'pointer',
+            opacity: isCallingDisabled ? 0.35 : 1,
+            transition: 'all 0.15s ease',
+          }}
+          title={isLocked ? 'Loket sedang ditutup.' : 'Mundur ke Nomor Sebelumnya'}
+        >
+          <RotateCcw size={15} />
+          <span style={{ fontSize: '0.6rem', fontWeight: 600 }}>Mundur</span>
+        </button>
+
+        {/* Reset (0) */}
+        <button
+          type="button"
+          onClick={handleReset}
+          style={{
+            width: '100%',
+            padding: '4px 2px',
+            fontSize: '0.58rem',
+            color: '#64748b',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '2px',
+            backgroundColor: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+          title="Reset urutan nomor antrian kembali ke 0"
+        >
+          <RotateCcw size={11} />
+          <span>Reset (0)</span>
+        </button>
+      </div>
+
+      {/* Monitor Canvas Frame yang Memenuhi Seluruh Ruang Layar (100% Full) */}
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+          backgroundColor: '#05070b',
+        }}
+      >
           <div
             style={{
               width: '100%',
@@ -820,134 +921,7 @@ export default function TabEditorControllTab() {
                   );
                 })
             )}
-          </div>
         </div>
-      </div>
-
-      {/* 3. SISI KANAN: Vertical Menu Calling Action (Next, Recall, Sebelumnya, Reset) */}
-      <div
-        className="card-elevated"
-        style={{
-          width: '94px',
-          flexShrink: 0,
-          padding: '16px 10px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '12px',
-          backgroundColor: 'var(--bg-surface)',
-        }}
-      >
-        <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-muted)', textAlign: 'center', textTransform: 'uppercase' }}>
-          Aksi
-        </span>
-
-        {/* 1. Tombol Next (Selanjutnya) */}
-        <button
-          type="button"
-          onClick={handleCallNext}
-          disabled={isCallingDisabled}
-          className="btn btn-primary"
-          style={{
-            width: '100%',
-            height: '64px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '4px',
-            borderRadius: '12px',
-            backgroundColor: isCallingDisabled ? 'var(--bg-surface-elevated)' : 'var(--primary-600)',
-            borderColor: isCallingDisabled ? 'var(--border-subtle)' : 'var(--primary-600)',
-            color: isCallingDisabled ? 'var(--text-muted)' : '#ffffff',
-            boxShadow: isCallingDisabled ? 'none' : '0 4px 14px rgba(37, 99, 235, 0.35)',
-            cursor: isCallingDisabled ? 'not-allowed' : 'pointer',
-            opacity: isCallingDisabled ? 0.35 : 1,
-            transition: 'all 0.15s ease',
-          }}
-          title={isLocked ? 'Loket sedang ditutup. Buka loket terlebih dahulu.' : 'Panggil Nomor Selanjutnya (Next)'}
-          aria-label="Panggil nomor selanjutnya"
-        >
-          <ArrowRight size={26} />
-          <span style={{ fontSize: '0.6875rem', fontWeight: 700 }}>Next</span>
-        </button>
-
-        {/* 2. Tombol Recall (Panggil Ulang) */}
-        <button
-          type="button"
-          onClick={handleRecall}
-          disabled={isCallingDisabled}
-          className="btn btn-outline"
-          style={{
-            width: '100%',
-            height: '56px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '3px',
-            borderRadius: '10px',
-            color: isCallingDisabled ? 'var(--text-muted)' : 'var(--primary-400)',
-            cursor: isCallingDisabled ? 'not-allowed' : 'pointer',
-            opacity: isCallingDisabled ? 0.35 : 1,
-            transition: 'all 0.15s ease',
-          }}
-          title={isLocked ? 'Loket sedang ditutup.' : 'Panggil Ulang Nomor Ini (Recall)'}
-          aria-label="Panggil ulang nomor ini"
-        >
-          <Volume2 size={22} />
-          <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>Ulang</span>
-        </button>
-
-        {/* 3. Tombol Sebelumnya (Mundur) */}
-        <button
-          type="button"
-          onClick={handleCallPrevious}
-          disabled={isCallingDisabled}
-          className="btn btn-outline"
-          style={{
-            width: '100%',
-            height: '52px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '3px',
-            borderRadius: '10px',
-            color: 'var(--text-muted)',
-            cursor: isCallingDisabled ? 'not-allowed' : 'pointer',
-            opacity: isCallingDisabled ? 0.35 : 1,
-            transition: 'all 0.15s ease',
-          }}
-          title={isLocked ? 'Loket sedang ditutup.' : 'Mundur ke Nomor Sebelumnya'}
-          aria-label="Mundur ke nomor sebelumnya"
-        >
-          <RotateCcw size={19} />
-          <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>Mundur</span>
-        </button>
-
-        <div style={{ flex: 1, minHeight: '10px' }} />
-
-        {/* 4. Reset Urutan (0) */}
-        <button
-          type="button"
-          onClick={handleReset}
-          className="btn btn-ghost"
-          style={{
-            width: '100%',
-            padding: '6px 2px',
-            fontSize: '0.625rem',
-            color: 'var(--text-muted)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '2px',
-          }}
-          title="Reset urutan nomor antrian kembali ke 0"
-        >
-          <RotateCcw size={13} />
-          <span>Reset (0)</span>
-        </button>
       </div>
     </div>
   );

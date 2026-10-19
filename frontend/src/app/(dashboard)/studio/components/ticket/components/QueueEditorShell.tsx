@@ -56,8 +56,8 @@ export default function QueueEditorShell({ activeTab, children }: { activeTab: s
   const { queue, updateField, saveQueue, saving, isNew, loading, sectors, selectSector } = useQueueEditor();
   const { isFullscreen, setFullscreen } = useAppContext();
 
+  // Jangan paksa fullscreen secara default saat mount agar pengguna memegang kendali
   useEffect(() => {
-    setFullscreen(true);
     return () => setFullscreen(false);
   }, [setFullscreen]);
 
@@ -236,12 +236,12 @@ export default function QueueEditorShell({ activeTab, children }: { activeTab: s
           <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}>{children}</div>
         ) : (
           <>
-            {activeTab === 'controll' && <div style={{ flex: 1, padding: '16px 20px', width: '100%', height: '100%', minHeight: 0, display: 'flex' }}><TabEditorControllTab /></div>}
+            {activeTab === 'controll' && <div style={{ flex: 1, width: '100%', height: '100%', minHeight: 0, display: 'flex' }}><TabEditorControllTab /></div>}
             {activeTab === 'layout' && <TabLayoutTab />}
             {activeTab === 'marquee' && <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}><TabMarqueeTab /></div>}
             {activeTab === 'counters' && <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}><TabCountersTab /></div>}
             {activeTab === 'audio' && <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}><TabAudioTab /></div>}
-            {!['controll', 'layout', 'marquee', 'counters', 'audio'].includes(activeTab) && <div style={{ flex: 1, padding: '16px 20px', width: '100%', height: '100%', minHeight: 0, display: 'flex' }}><TabEditorControllTab /></div>}
+            {!['controll', 'layout', 'marquee', 'counters', 'audio'].includes(activeTab) && <div style={{ flex: 1, width: '100%', height: '100%', minHeight: 0, display: 'flex' }}><TabEditorControllTab /></div>}
           </>
         )}
       </div>
