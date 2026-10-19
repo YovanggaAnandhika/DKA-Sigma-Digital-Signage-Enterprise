@@ -48,8 +48,8 @@ export default function TabEditorControllTab() {
           queueId: queue.id,
           ...payload,
         }),
-      }).catch(() => {});
-    } catch {}
+      }).catch(() => { });
+    } catch { }
   };
 
   const recordCallHistory = (num: string, counterName: string, callType: 'next' | 'recall' | 'back') => {
@@ -71,7 +71,7 @@ export default function TabEditorControllTab() {
       const historyList: QueueCallHistoryItem[] = stored ? JSON.parse(stored) : [];
       const updated = [newItem, ...historyList].slice(0, 50);
       localStorage.setItem(QUEUE_HISTORY_STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
+    } catch { }
   };
 
   // Next ticket call
@@ -259,9 +259,9 @@ export default function TabEditorControllTab() {
         activeCounter.counterName,
         newStatus,
         queue,
-        () => {}
+        () => { }
       );
-    } catch {}
+    } catch { }
   };
 
   // Toggle Buka / Tutup 1 tombol pengecekan status
@@ -319,7 +319,7 @@ export default function TabEditorControllTab() {
         message: `Urutan nomor antrian "${queue.name}" telah dikembalikan ke 0.`,
         variant: 'success',
       });
-    } catch {}
+    } catch { }
   };
 
   const counterLabel = queue.counterLabel || 'Loket';
@@ -525,7 +525,7 @@ export default function TabEditorControllTab() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: isLocked ? 'var(--accent-rose)' : isBreak ? 'var(--accent-amber)' : 'var(--accent-emerald)', display: 'inline-block' }} />
             <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Monitor Siaran Langsung (Live Canvas)
+              Preview Antrian
             </h4>
           </div>
 
