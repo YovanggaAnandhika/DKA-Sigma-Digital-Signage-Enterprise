@@ -97,10 +97,10 @@ src/grpc/<domain>/<feature>/
 - Computes SHA-256 hashes for every asset (`ManifestAssetDto`).
 - Android players only transition playback once 100% of required assets are locally cached and validated against their hashes.
 
-### 3. Display Stream (`hardware`)
-- Tonic bidirectional streaming endpoint: `Stream<Item = DisplayStreamMessage>`.
-- Client streams telemetry (heartbeat, memory, storage, current playback).
-- Server streams downstream commands (`RELOAD_MANIFEST`, `SCREENSHOT`, `EMERGENCY_BROADCAST`, `REBOOT`).
+### 3. Display Stream (`distribution`)
+- Tonic bidirectional streaming endpoint: `DisplayStream(stream StreamClientMessage) returns (stream StreamServerMessage)`.
+- Client streams telemetry (`ping`), command acknowledgements, and screenshot uploads.
+- Server streams downstream commands (`RELOAD_MANIFEST`, `CAPTURE_SCREENSHOT`, `EMERGENCY_BROADCAST`, `REBOOT_PLAYER`, `CLEAR_CACHE`).
 
 ---
 
