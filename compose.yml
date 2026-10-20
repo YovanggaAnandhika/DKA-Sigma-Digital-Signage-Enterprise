@@ -75,7 +75,6 @@ services:
     restart: always
     environment:
       TZ: Asia/Makassar
-      DATABASE_URL: postgres://sigma:bZ9qL4vX7kM2pT8w@db:5432/sigma
       DB_HOST: dka-product-sigma-db
       DB_PORT: 5432
       DB_USERNAME: sigma

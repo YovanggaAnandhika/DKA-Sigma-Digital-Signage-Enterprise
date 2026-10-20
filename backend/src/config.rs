@@ -22,7 +22,14 @@ impl Config {
                 .expect("GRPC_PORT must be a number"),
             host: env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
             database_url: env::var("DATABASE_URL").unwrap_or_else(|_| {
-                "postgres://postgres:postgres@localhost:5432/signage_db".to_string()
+                // Fallback sesuai compose.yml: user=sigma, password=bZ9qL4vX7kM2pT8w, db=sigma
+                // Host "db" untuk container, "localhost:54321" untuk development lokal
+                let host = env::var("DB_HOST").unwrap_or_else(|_| "db".to_string());
+                let port = env::var("DB_PORT").unwrap_or_else(|_| "5432".to_string());
+                let user = env::var("DB_USERNAME").unwrap_or_else(|_| "sigma".to_string());
+                let pass = env::var("DB_PASSWORD").unwrap_or_else(|_| "bZ9qL4vX7kM2pT8w".to_string());
+                let dbname = env::var("DB_DATABASE").unwrap_or_else(|_| "sigma".to_string());
+                format!("postgres://{}:{}@{}:{}/{}", user, pass, host, port, dbname)
             }),
             jwt_secret: env::var("JWT_SECRET")
                 .unwrap_or_else(|_| "default_super_secret_signage_key_123".to_string()),
