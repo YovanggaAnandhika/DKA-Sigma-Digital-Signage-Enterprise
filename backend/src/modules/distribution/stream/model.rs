@@ -8,6 +8,7 @@ pub enum LiveCommandType {
     RebootPlayer,
     EmergencyBroadcast,
     ClearCache,
+    Custom,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

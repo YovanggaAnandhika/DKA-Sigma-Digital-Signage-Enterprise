@@ -34,7 +34,11 @@ import com.dkaapis.sigma.data.local.TokenStorage
 import com.dkaapis.sigma.data.repository.DeviceRepositoryImpl
 import com.dkaapis.sigma.data.repository.ManifestRepositoryImpl
 import com.dkaapis.sigma.data.repository.MediaStorageRepositoryImpl
+import com.dkaapis.sigma.data.repository.StreamRepositoryImpl
+import com.dkaapis.sigma.domain.model.HeartbeatMetrics
 import com.dkaapis.sigma.domain.model.Manifest
+import com.dkaapis.sigma.domain.model.ServerCommand
+import com.dkaapis.sigma.domain.model.ServerCommandType
 import com.dkaapis.sigma.domain.usecase.DownloadAndVerifyMediaUseCase
 import com.dkaapis.sigma.domain.usecase.RegisterAndPairUseCase
 import com.dkaapis.sigma.domain.usecase.SyncManifestUseCase
@@ -60,9 +64,12 @@ import com.dkaapis.sigma.presentation.renderers.QueueZoneRenderer
 import com.dkaapis.sigma.service.PlayerForegroundService
 import com.dkaapis.sigma.service.WatchdogService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import org.json.JSONObject
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
@@ -82,6 +89,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private lateinit var audioManager: PlayerAudioManager
     private lateinit var telemetryManager: PlayerTelemetryManager
     private lateinit var streamManager: PlayerStreamManager
+    private lateinit var streamRepo: StreamRepositoryImpl
+    private val grpcEventParser = DeviceSseEventParser()
     private lateinit var zoneManager: PlayerZoneManager
     private lateinit var swipeDetector: TwoFingerSwipeDetector
     private lateinit var settingsDialog: PlayerSettingsDialog
@@ -196,10 +205,10 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             )
         )
 
+        streamRepo = StreamRepositoryImpl(channelFactory)
         streamManager = PlayerStreamManager(
             scope = lifecycleScope,
-            httpClient = streamingHttpClient,
-            listener = this
+            httpClient = streamingHttpClient
         )
     }
 
@@ -395,9 +404,40 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     private fun startRealtimeStreams() {
         val devId = deviceRepo.getSavedDeviceId() ?: return
-        val baseUrl = ServerConfig.getHttpBaseUrl(this)
-        streamManager.startStream(baseUrl, devId) {
-            reconcileQueueState()
+        val token = deviceRepo.getSavedDeviceToken() ?: return
+
+        lifecycleScope.launch {
+            var connected = false
+            streamRepo.openDisplayStream(
+                deviceId = devId,
+                deviceToken = token,
+                heartbeatFlow = flow {
+                    while (true) {
+                        emit(HeartbeatMetrics(memoryUsagePercent = 0, storageFreeBytes = 0, storageTotalBytes = 0))
+                        delay(30_000)
+                    }
+                }
+            ).collect { command ->
+                if (!connected) {
+                    connected = true
+                    reconcileQueueState()
+                }
+                dispatchGrpcCommand(command)
+                streamRepo.sendCommandAck(command.messageId, true)
+            }
+        }
+    }
+
+    private fun dispatchGrpcCommand(command: ServerCommand) {
+        when (command.commandType) {
+            ServerCommandType.RELOAD_MANIFEST -> onReloadManifest()
+            ServerCommandType.CLEAR_CACHE -> onClearCache()
+            ServerCommandType.CAPTURE_SCREENSHOT -> onCaptureScreenshot()
+            ServerCommandType.REBOOT_PLAYER -> onReboot()
+            ServerCommandType.CUSTOM -> runCatching {
+                grpcEventParser.parseAndDispatch(JSONObject(command.payloadJson), this)
+            }
+            else -> Unit
         }
     }
 
@@ -590,7 +630,6 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     override fun onDestroy() {
         super.onDestroy()
         audioManager.release()
-        streamManager.stopStream()
         telemetryManager.stop()
         zoneManager.release()
     }

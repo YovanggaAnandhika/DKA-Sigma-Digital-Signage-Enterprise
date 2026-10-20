@@ -52,6 +52,25 @@ impl StreamServiceTrait for StreamServiceImpl {
                             Ok(Ok(Some(client_msg))) => {
                                 if let Ok(dev_id) = Uuid::parse_str(&client_msg.device_id) {
                                     if registered_device_id.is_none() {
+                                        use sha2::{Digest, Sha256};
+                                        let stored_hash = sqlx::query_scalar::<_, Option<String>>(
+                                            "SELECT device_token_hash FROM devices WHERE id = $1"
+                                        )
+                                        .bind(dev_id)
+                                        .fetch_optional(&pool)
+                                        .await
+                                        .ok()
+                                        .flatten()
+                                        .flatten();
+
+                                        let mut hasher = Sha256::new();
+                                        hasher.update(client_msg.device_token.as_bytes());
+                                        let computed_hash = format!("{:x}", hasher.finalize());
+                                        if stored_hash.as_deref() != Some(computed_hash.as_str()) {
+                                            tracing::warn!("DisplayStream ditolak: token device {} tidak valid", dev_id);
+                                            break;
+                                        }
+
                                         registered_device_id = Some(dev_id);
                                         manager.register_connection(dev_id, tx.clone()).await;
                                         let _ = sqlx::query("UPDATE devices SET is_online = TRUE, last_heartbeat_at = NOW() WHERE id = $1")
@@ -69,19 +88,21 @@ impl StreamServiceTrait for StreamServiceImpl {
                                                     .execute(&pool)
                                                     .await;
 
-                                                let telemetry_json = serde_json::json!({
-                                                    "memory_percent": ping.memory_percent,
-                                                    "storage_free_bytes": ping.storage_free_bytes,
-                                                    "current_playing_media_id": ping.current_playing_media_id,
-                                                });
+                                                if ping.memory_percent > 0 || ping.storage_free_bytes > 0 {
+                                                    let telemetry_json = serde_json::json!({
+                                                        "memory_percent": ping.memory_percent,
+                                                        "storage_free_bytes": ping.storage_free_bytes,
+                                                        "current_playing_media_id": ping.current_playing_media_id,
+                                                    });
 
-                                                let _ = sqlx::query(
-                                                    "INSERT INTO device_telemetry (device_id, payload_json) VALUES ($1, $2)"
-                                                )
-                                                .bind(dev_id)
-                                                .bind(telemetry_json)
-                                                .execute(&pool)
-                                                .await;
+                                                    let _ = sqlx::query(
+                                                        "INSERT INTO device_telemetry (device_id, payload_json) VALUES ($1, $2)"
+                                                    )
+                                                    .bind(dev_id)
+                                                    .bind(telemetry_json)
+                                                    .execute(&pool)
+                                                    .await;
+                                                }
                                             }
                                             crate::grpc::proto::distribution::v1::stream::stream_client_message::Payload::Screenshot(screenshot) => {
                                                 if !screenshot.image_data.is_empty() {
@@ -149,6 +170,7 @@ impl StreamServiceTrait for StreamServiceImpl {
                             LiveCommandType::RebootPlayer => ServerCommandType::CommandRebootPlayer as i32,
                             LiveCommandType::EmergencyBroadcast => ServerCommandType::CommandEmergencyBroadcast as i32,
                             LiveCommandType::ClearCache => ServerCommandType::CommandClearCache as i32,
+                            LiveCommandType::Custom => ServerCommandType::CommandCustom as i32,
                         };
 
                         yield StreamServerMessage {
@@ -181,8 +203,6 @@ impl StreamServiceTrait for StreamServiceImpl {
     ) -> Result<Response<PushCommandResponse>, Status> {
         let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_distribution")?;
         let req = request.into_inner();
-        let device_id = Uuid::parse_str(&req.device_id)
-            .map_err(|_| Status::invalid_argument("ID Device tidak valid"))?;
 
         let cmd_type = match req.command_type() {
             ServerCommandType::CommandReloadManifest => LiveCommandType::ReloadManifest,
@@ -190,13 +210,29 @@ impl StreamServiceTrait for StreamServiceImpl {
             ServerCommandType::CommandRebootPlayer => LiveCommandType::RebootPlayer,
             ServerCommandType::CommandEmergencyBroadcast => LiveCommandType::EmergencyBroadcast,
             ServerCommandType::CommandClearCache => LiveCommandType::ClearCache,
+            ServerCommandType::CommandCustom => LiveCommandType::Custom,
             _ => LiveCommandType::ReloadManifest,
         };
+
+        let payload_json = if req.payload_json.is_empty() { None } else { Some(req.payload_json) };
+
+        if req.device_id == "all" {
+            let delivered = self.manager.broadcast_command(&self.pool, cmd_type, payload_json)
+                .await
+                .map_err(Status::from)?;
+            return Ok(Response::new(PushCommandResponse {
+                queued: delivered > 0,
+                command_id: Uuid::new_v4().to_string(),
+            }));
+        }
+
+        let device_id = Uuid::parse_str(&req.device_id)
+            .map_err(|_| Status::invalid_argument("ID Device tidak valid"))?;
 
         let dto = PushCommandDto {
             device_id,
             command_type: cmd_type,
-            payload_json: if req.payload_json.is_empty() { None } else { Some(req.payload_json) },
+            payload_json,
         };
 
         let res = self.manager.send_command(&self.pool, dto)
@@ -204,7 +240,7 @@ impl StreamServiceTrait for StreamServiceImpl {
             .map_err(Status::from)?;
 
         Ok(Response::new(PushCommandResponse {
-            queued: true,
+            queued: res.success,
             command_id: res.command_id.to_string(),
         }))
     }

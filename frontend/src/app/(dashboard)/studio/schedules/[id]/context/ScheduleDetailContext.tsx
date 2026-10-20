@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, Schedule, Device, DisplayGroup, MediaItem } from '@/lib/services';
+import { invokeApi } from '@/lib/core/invokeApi';
 
 export interface ChunkErrorItem {
   chunkIndex: number;
@@ -398,21 +399,17 @@ export function ScheduleDetailProvider({
           if (now - lastStreamPushTime > 150 || completedChunks === totalChunks || completedChunks === 1) {
             lastStreamPushTime = now;
             for (const dev of assignedDevices) {
-              fetch('/api/stream/device', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  deviceId: dev.id,
-                  type: 'CHUNK_PROGRESS',
-                  fileName: file.name,
-                  chunkIndex,
-                  completedChunks,
-                  totalChunks,
-                  percent: progress,
-                  uploadedBytes: totalUploadedBytes,
-                  totalBytes,
-                  speedBps,
-                }),
+              invokeApi('/api/stream/device', {
+                deviceId: dev.id,
+                type: 'CHUNK_PROGRESS',
+                fileName: file.name,
+                chunkIndex,
+                completedChunks,
+                totalChunks,
+                percent: progress,
+                uploadedBytes: totalUploadedBytes,
+                totalBytes,
+                speedBps,
               }).catch(() => null);
             }
           }
@@ -496,17 +493,13 @@ export function ScheduleDetailProvider({
 
         if (assignedDevices.length > 0) {
           for (const dev of assignedDevices) {
-            fetch('/api/stream/device', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                deviceId: dev.id,
-                type: 'COMPLETE',
-                fileName: file.name,
-                totalChunks,
-                totalBytes,
-                sha256Hash: finalResult.sha256Hash,
-              }),
+            invokeApi('/api/stream/device', {
+              deviceId: dev.id,
+              type: 'COMPLETE',
+              fileName: file.name,
+              totalChunks,
+              totalBytes,
+              sha256Hash: finalResult.sha256Hash,
             }).catch(() => null);
           }
 
@@ -548,14 +541,10 @@ export function ScheduleDetailProvider({
         ]);
         if (assignedDevices.length > 0) {
           for (const dev of assignedDevices) {
-            fetch('/api/stream/device', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                deviceId: dev.id,
-                type: 'CANCELLED',
-                fileName: file.name,
-              }),
+            invokeApi('/api/stream/device', {
+              deviceId: dev.id,
+              type: 'CANCELLED',
+              fileName: file.name,
             }).catch(() => null);
           }
         }
@@ -575,14 +564,10 @@ export function ScheduleDetailProvider({
     setUploading(false);
     if (assignedDevices.length > 0) {
       for (const dev of assignedDevices) {
-        fetch('/api/stream/device', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            deviceId: dev.id,
-            type: 'CANCELLED',
-            fileName: selectedUploadFile?.name || '',
-          }),
+        invokeApi('/api/stream/device', {
+          deviceId: dev.id,
+          type: 'CANCELLED',
+          fileName: selectedUploadFile?.name || '',
         }).catch(() => null);
       }
     }

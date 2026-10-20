@@ -6,7 +6,8 @@ enum class ServerCommandType {
     CAPTURE_SCREENSHOT,
     REBOOT_PLAYER,
     EMERGENCY_BROADCAST,
-    CLEAR_CACHE
+    CLEAR_CACHE,
+    CUSTOM
 }
 
 data class ServerCommand(

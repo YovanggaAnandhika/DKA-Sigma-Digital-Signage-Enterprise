@@ -67,4 +67,32 @@ impl StreamConnectionManager {
             })
         }
     }
+
+    pub async fn broadcast_command(
+        &self,
+        pool: &DbPool,
+        command_type: LiveCommandType,
+        payload_json: Option<String>,
+    ) -> Result<usize, AppError> {
+        let senders: Vec<(Uuid, CommandSender)> = {
+            let map = self.active_displays.lock().await;
+            map.iter().map(|(id, tx)| (*id, tx.clone())).collect()
+        };
+
+        let mut delivered = 0;
+        for (device_id, tx) in senders {
+            let command = ServerCommandMessage {
+                command_id: Uuid::new_v4(),
+                device_id,
+                command_type: command_type.clone(),
+                payload_json: payload_json.clone(),
+                created_at: Utc::now().to_rfc3339(),
+            };
+            let _ = StreamRepository::log_command(pool, &command).await;
+            if tx.send(command).await.is_ok() {
+                delivered += 1;
+            }
+        }
+        Ok(delivered)
+    }
 }

@@ -9,6 +9,7 @@ import { playCanvasQueueAudio } from './canvasAudio';
 import ZoneWidgetRenderer from './renderers/ZoneWidgetRenderer';
 import ZoneMediaRenderer from './renderers/ZoneMediaRenderer';
 import ZoneLayerMetadata from './ZoneLayerMetadata';
+import { invokeApi } from '@/lib/core/invokeApi';
 
 interface CanvasLayerBoxProps {
   layer: Layer;
@@ -117,19 +118,15 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
 
     // 4. Broadcast via SSE to Android Player & all connected screens
     try {
-      fetch('/api/stream/device', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          deviceId: 'all',
-          type: 'CALL_QUEUE',
-          queueId: qId,
-          queueName: qData.name || 'Layar Antrian',
-          ticketNumber: newFormatted,
-          counterName,
-          source: 'layout_canvas_editor',
-          callType: 'next',
-        }),
+      invokeApi('/api/stream/device', {
+        deviceId: 'all',
+        type: 'CALL_QUEUE',
+        queueId: qId,
+        queueName: qData.name || 'Layar Antrian',
+        ticketNumber: newFormatted,
+        counterName,
+        source: 'layout_canvas_editor',
+        callType: 'next',
       }).catch(() => {});
     } catch (_) {}
   };
@@ -148,19 +145,15 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
 
     // 2. Broadcast via SSE to Android Player & all connected screens
     try {
-      fetch('/api/stream/device', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          deviceId: 'all',
-          type: 'CALL_QUEUE',
-          queueId: qId,
-          queueName: qData.name || 'Layar Antrian',
-          ticketNumber: currentTicket,
-          counterName,
-          source: 'layout_canvas_editor',
-          callType: 'recall',
-        }),
+      invokeApi('/api/stream/device', {
+        deviceId: 'all',
+        type: 'CALL_QUEUE',
+        queueId: qId,
+        queueName: qData.name || 'Layar Antrian',
+        ticketNumber: currentTicket,
+        counterName,
+        source: 'layout_canvas_editor',
+        callType: 'recall',
       }).catch(() => {});
     } catch (_) {}
   };

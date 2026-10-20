@@ -16,6 +16,7 @@ import {
   setCounterStatus as apiSetCounterStatus,
 } from '@/lib/services/studio/queue.service';
 import { modal } from '@/components/ui/ModalDialog';
+import { invokeApi } from '@/lib/core/invokeApi';
 
 const QueueControlDocks = dynamic(() => import('../control/QueueControlDocks'), {
   ssr: false,
@@ -170,16 +171,12 @@ export default function TabEditorControllTab() {
 
   const broadcastToAndroid = (payload: Record<string, any>) => {
     try {
-      fetch('/api/stream/device', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          deviceId: 'all',
-          queueId: queue.id,
-          source: 'web_console',
-          timestamp: Date.now(),
-          ...payload,
-        }),
+      invokeApi('/api/stream/device', {
+        deviceId: 'all',
+        queueId: queue.id,
+        source: 'web_console',
+        timestamp: Date.now(),
+        ...payload,
       }).catch(() => {});
     } catch {}
   };

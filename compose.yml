@@ -96,7 +96,7 @@ services:
       DKA_MAINTENANCE_LOG: /var/log/postgresql/maintenance.log
     ports:
       - target: 5432
-        published: "54321"
+        published: "54322"
         protocol: tcp
     volumes:
       - type: volume

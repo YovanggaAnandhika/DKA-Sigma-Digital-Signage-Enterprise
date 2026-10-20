@@ -9,6 +9,7 @@ enum ServerCommandType {
   COMMAND_REBOOT_PLAYER = 3;
   COMMAND_EMERGENCY_BROADCAST = 4;
   COMMAND_CLEAR_CACHE = 5;
+  COMMAND_CUSTOM = 6;
 }
 
 message StreamServerMessage {
