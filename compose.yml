@@ -1,46 +1,48 @@
 services:
   nginx:
-      image: jc21/nginx-proxy-manager
-      pull_policy: always
-      container_name: dka-development-nginx
-      hostname: dka-development-nginx
-      logging:
-        driver: local
-        options:
-          max-size: 10m
-          max-file: 10
-      ports:
-        - target: 80
-          published: 80
-          protocol: tcp
-          host_ip: 0.0.0.0
-        - target: 443
-          published: 443
-          protocol: tcp
-          host_ip: 0.0.0.0
-        - target: 81
-          published: 81
-          protocol: tcp
-          host_ip: 0.0.0.0
-      deploy:
-        resources:
-          limits:
-            cpus: '0.4'
-            memory: 200M
-          reservations:
-            cpus: '0.10'
-            memory: 50M
-      restart: always
-      volumes:
-        - type: volume
-          source: dka-development-nginx-data
-          target: /data
-        - type: volume
-          source: dka-development-nginx-ssl
-          target: /etc/letsencrypt
-      networks:
-        - dka-local-development
-        - dka-product-sigma-network
+    image: jc21/nginx-proxy-manager
+    pull_policy: always
+    container_name: dka-development-nginx
+    hostname: dka-development-nginx
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: 10
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        host_ip: 0.0.0.0
+      - target: 443
+        published: 443
+        protocol: tcp
+        host_ip: 0.0.0.0
+      - target: 81
+        published: 81
+        protocol: tcp
+        host_ip: 0.0.0.0
+      - 51430-51600:51430-51600
+    deploy:
+      resources:
+        limits:
+          cpus: '0.4'
+          memory: 200M
+        reservations:
+          cpus: '0.10'
+          memory: 50M
+    restart: always
+    volumes:
+      - type: volume
+        source: dka-development-nginx-data
+        target: /data
+      - type: volume
+        source: dka-development-nginx-ssl
+        target: /etc/letsencrypt
+    networks:
+      - dka-local-development
+      - dka-product-sigma-network
+
   # Next.js Standalone Frontend UI (Bun)
   frontend:
     image: yovanggaanandhika/node:latest
@@ -71,15 +73,14 @@ services:
     container_name: dka-product-sigma-backend
     hostname: dka-product-sigma-backend
     restart: always
-    command: cargo watch -w src -w proto -w migrations -w Cargo.toml -w build.rs -i uploads -x run
     environment:
       TZ: Asia/Makassar
-      DATABASE_URL: postgres://dka-product-sigma:bZ9qL4vX7kM2pT8w@db:5432/dka-product-sigma
+      DATABASE_URL: postgres://sigma:bZ9qL4vX7kM2pT8w@db:5432/sigma
       DB_HOST: dka-product-sigma-db
-      #DB_PORT: 5432
-      DB_USERNAME: dka-product-sigma
+      DB_PORT: 5432
+      DB_USERNAME: sigma
       DB_PASSWORD: bZ9qL4vX7kM2pT8w
-      DB_DATABASE: dka-product-sigma
+      DB_DATABASE: sigma
       #GRPC_PORT: 50051
       HOST: 0.0.0.0
       JWT_SECRET: super_secret_jwt_key_signage_123456789
@@ -106,8 +107,8 @@ services:
     environment:
       TZ: Asia/Makassar
       DKA_ROOT_PASSWORD: bZ9qL4vX7kM2pT8w
-      DKA_DB_NAME: dka-product-sigma
-      DKA_DB_USERNAME: dka-product-sigma
+      DKA_DB_NAME: sigma
+      DKA_DB_USERNAME: sigma
       DKA_DB_PASSWORD: bZ9qL4vX7kM2pT8w
       #DKA_DB_MAX_CONNECTION: 200
       # ============================================================
@@ -132,7 +133,7 @@ services:
     volumes:
       - type: volume
         source: dka-product-sigma-db
-        target: /var/lib/postgresql/data
+        target: /var/lib/postgresql
       - type: volume
         source: dka-product-sigma-backup
         target: /backup
