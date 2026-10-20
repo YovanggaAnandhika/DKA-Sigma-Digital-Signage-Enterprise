@@ -106,8 +106,8 @@ services:
     environment:
       TZ: Asia/Makassar
       DKA_ROOT_PASSWORD: bZ9qL4vX7kM2pT8w
-      DKA_DB_NAME: dka_signage
-      DKA_DB_USERNAME: dka_signage
+      DKA_DB_NAME: dka-product-sigma
+      DKA_DB_USERNAME: dka-product-sigma
       DKA_DB_PASSWORD: bZ9qL4vX7kM2pT8w
       DKA_DB_MAX_CONNECTION: 200
       # ============================================================
