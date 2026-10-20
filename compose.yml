@@ -19,7 +19,7 @@ services:
           protocol: tcp
           host_ip: 0.0.0.0
         - target: 81
-          published: 8181
+          published: 81
           protocol: tcp
           host_ip: 0.0.0.0
       deploy:
@@ -40,16 +40,18 @@ services:
           target: /etc/letsencrypt
       networks:
         - dka-local-development
+        - dka-product-sigma-network
   # Next.js Standalone Frontend UI (Bun)
   frontend:
     image: yovanggaanandhika/node:latest
-    container_name: dka_signage_frontend
+    container_name: dka-product-sigma-frontend
+    hostname: dka-product-sigma-frontend
     restart: always
     environment:
       TZ: Asia/Makassar
       NODE_ENV: development
-      PORT: 80
-      DKA_GRPC_SERVER_HOST: "backend:50051"
+      #PORT: 80
+      DKA_GRPC_SERVER_HOST: "dka-product-sigma-backend:50051"
       DKA_GRPC_SERVER_SECURE: "false"
     volumes:
       - type: bind
@@ -61,26 +63,23 @@ services:
       - backend
     networks:
       - dka-local-development
-      - dka_signage_network
-
-
+      - dka-product-sigma-network
 
   # Rust Backend Server (Tonic gRPC)
   backend:
     image: yovanggaanandhika/rust:latest
-    container_name: dka_signage_backend
+    container_name: dka-product-sigma-backend
+    hostname: dka-product-sigma-backend
     restart: always
     command: cargo watch -w src -w proto -w migrations -w Cargo.toml -w build.rs -i uploads -x run
-    networks:
-      - dka_signage_network
     environment:
       TZ: Asia/Makassar
-      DATABASE_URL: postgres://dka_signage:bZ9qL4vX7kM2pT8w@db:5432/dka_signage
-      DB_HOST: db
+      DATABASE_URL: postgres://dka-product-sigma:bZ9qL4vX7kM2pT8w@db:5432/dka-product-sigma
+      DB_HOST: dka-product-sigma-db
       #DB_PORT: 5432
-      DB_USERNAME: dka_signage
+      DB_USERNAME: dka-product-sigma
       DB_PASSWORD: bZ9qL4vX7kM2pT8w
-      DB_DATABASE: dka_signage
+      DB_DATABASE: dka-product-sigma
       #GRPC_PORT: 50051
       HOST: 0.0.0.0
       JWT_SECRET: super_secret_jwt_key_signage_123456789
@@ -94,11 +93,15 @@ services:
         target: /home/app
     depends_on:
       - db
+    networks:
+      - dka-local-development
+      - dka-product-sigma-network
 
   # PostgreSQL Database (Signage DB)
   db:
-    image: yovanggaanandhika/postgresql:17.1
-    container_name: dka_signage_db
+    image: yovanggaanandhika/postgresql:17.2
+    container_name: dka-product-sigma-db
+    hostname: dka-product-sigma-db
     restart: always
     environment:
       TZ: Asia/Makassar
@@ -128,13 +131,14 @@ services:
       DKA_MAINTENANCE_LOG: /var/log/postgresql/maintenance.log
     volumes:
       - type: volume
-        source: postgres_data
+        source: dka-product-sigma-db
         target: /var/lib/postgresql/data
       - type: volume
-        source: postgres_backup
+        source: dka-product-sigma-backup
         target: /backup
     networks:
-      - dka_signage_network
+      - dka-product-sigma-network
+      - dka-local-development
 
 volumes:
   dka-development-nginx-data:
@@ -143,17 +147,14 @@ volumes:
   dka-development-nginx-ssl:
     name: dka-development-nginx-ssl
     external: true
-  postgres_data:
-  postgres_backup:
+  dka-product-sigma-db:
+    name: dka-product-sigma-db
+  dka-product-sigma-backup:
+    name: dka-product-sigma-backup
 
 networks:
   dka-local-development:
     name: dka-local-development
     external: true
-  dka_signage_network:
-    name: dka_signage_network
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.31.0.0/16
-          gateway: 172.31.0.1
+  dka-product-sigma-network:
+    name: dka-product-sigma-network
