@@ -16,7 +16,7 @@ DKASigma Digital Signage Enterprise is a broadcast and display management system
 ┌─────────────────────────────────────────────────────────┐
 │            Backend Server (Rust + Tonic gRPC)           │
 │  - Port 50051 (HTTP/2 Cleartext / TLS)                  │
-│  - Modules: IAM, Studio, Hardware, Distribution         │
+│  - Modules: IAM, Studio, Hardware, Distribution, Common │
 │  - Manifest Compiler Engine & Dynamic Telemetry Stream  │
 └──────────────┬───────────────────────────┬──────────────┘
                │ SQLx Pools                │ Bidirectional DisplayStream
@@ -38,10 +38,10 @@ Extracted from Graphify knowledge graph analysis (`graphify-out/GRAPH_REPORT.md`
    - Location: `frontend/src/lib/core/grpcClient.ts`
    - Purpose: Universal communication nexus bridging Next.js server-side route handlers to backend gRPC services. Every API route handler relies on these 4 primitives.
 2. **`AppError` & `tonic::Status`**:
-   - Location: `backend/src/common/error.rs`
+   - Location: `backend/src/common/mod.rs`
    - Purpose: Unified backend error boundary. Translates domain database, authentication, and validation failures into standard gRPC error status codes.
 3. **`CompiledManifestDto` & `ManifestAssetDto`**:
-   - Location: `backend/src/modules/distribution/` / `backend/proto/distribution/`
+   - Location: `backend/src/modules/distribution/manifest/model.rs` / `backend/proto/distribution/v1/manifest/`
    - Purpose: The synchronized manifest format consumed by Android display clients to schedule zones, playlists, layouts, and assets offline.
 
 ---

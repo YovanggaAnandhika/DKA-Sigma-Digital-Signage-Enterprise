@@ -6,12 +6,14 @@ Dokumen ini adalah panduan teknis bagi developer aplikasi Android Display untuk 
 
 ## 1. Proto Contract Imports
 
-Aplikasi Android mengimpor Protobuf dari folder `backend/proto/`:
+Aplikasi Android memakai salinan Protobuf di `android/app/src/main/proto/` yang mencerminkan `backend/proto/` (package `com.dkaapis.sigma`, di-generate saat build via plugin Protobuf). Kontrak yang relevan untuk player:
 - `common/v1/types.proto`
 - `hardware/v1/device/device.proto` & `device.common.proto`
 - `distribution/v1/manifest/manifest.proto` & `manifest.common.proto`
 - `distribution/v1/stream/stream.proto` & `stream.common.proto`
 - `distribution/v1/canary/canary.proto` & `canary.common.proto`
+
+Setiap perubahan kontrak harus dilakukan di `backend/proto/` lalu disalin/di-mirror ke folder Android tersebut.
 
 ---
 

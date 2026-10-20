@@ -28,33 +28,39 @@ frontend/
 │   └── generate_grpc.ts          # Protobuf compilation script (invokes protoc)
 ├── public/                       # Static public assets
 └── src/
-    ├── middleware.ts             # Route protection and auth cookie verification
-    ├── components/               # Shared UI components (AppShell, Modals, Forms, Canvas)
+    ├── middleware.ts             # API request logging only (not auth enforcement)
+    ├── components/               # Shared UI (MainLayout, Sidebar, Navbar, Modals, Forms)
     ├── lib/
-    │   ├── auth.ts               # Cookie & session helpers
+    │   ├── auth.ts               # localStorage session helpers (dkasigma_session)
     │   ├── core/
-    │   │   └── grpcClient.ts     # Core gRPC bridge (getGrpcHost, credentials, metadata)
+    │   │   ├── grpcClient.ts     # Core gRPC bridge (host, credentials, metadata, token)
+    │   │   ├── invokeApi.ts      # Browser fetch wrapper with bearer token
+    │   │   └── deviceStreamHub.ts# Server-side device event/SSE hub
     │   ├── api/                  # Generated Protobuf & gRPC stubs (DO NOT EDIT)
     │   │   ├── common/
     │   │   ├── distribution/
     │   │   ├── hardware/
     │   │   ├── iam/
     │   │   └── studio/
-    │   └── services/             # Client-side API fetchers
+    │   └── services/             # Domain API fetchers (common, hardware, iam, studio)
     └── app/
-        ├── layout.tsx            # Global HTML & theme wrapper
+        ├── layout.tsx            # Global HTML & theme wrapper (boots light)
         ├── globals.css           # HDR+ design system tokens & base styles
-        ├── (auth)/               # Unauthenticated routes (e.g. /login)
-        ├── (dashboard)/          # Authenticated CMS pages wrapped with AppShell
-        │   ├── hardware/         # Display player registration, status, pairing
-        │   ├── iam/              # Users, roles, permissions, role-groups
-        │   └── studio/           # Layouts, zones, media library, schedules, queue displays
-        └── (api)/api/grpc/       # Next.js Server Route Handlers proxying gRPC
+        ├── (auth)/login/         # Unauthenticated login page
+        ├── (dashboard)/          # AuthGuard + MainLayout CMS shell
+        │   ├── hardware/         # displays (CRUD, pairing, detail) & groups
+        │   ├── iam/roles/        # Roles CRUD & permission assignment
+        │   └── studio/           # layouts, media, playlists, schedules, components
+        │                         # (album, clock, ticker, webview, queue/ticket editor)
+        ├── (api)/api/            # auth/login, grpc/*, stream/*, tts, assets, up
+        └── player/[id]/          # Public device-style player preview
 ```
 
 ---
 
 ## gRPC Route Handler Pattern
+
+`getGrpcHost()` reads `DKA_GRPC_SERVER_HOST` (default `localhost:50051`); `getGrpcCredentials()` uses TLS only when `DKA_GRPC_SERVER_SECURE=true`. Auth is enforced client-side by `AuthGuard` reading `localStorage.dkasigma_session`, not by `middleware.ts` (which only logs API traffic).
 
 Every API route handler under `src/app/(api)/api/grpc/` follows this standard pattern:
 

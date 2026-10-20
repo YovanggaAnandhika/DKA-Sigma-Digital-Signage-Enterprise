@@ -23,8 +23,9 @@ This project is an enterprise-grade digital signage management and streaming pla
 | Directory | Tech Stack | Responsibility |
 |---|---|---|
 | `backend/` | Rust (Tonic gRPC, Tokio, SQLx, PostgreSQL) | Core business logic, gRPC services, database migrations, media storage, player telemetry streaming. |
-| `frontend/` | Next.js 14 (App Router, Bun, React 18, TypeScript) | Studio CMS, layout editor canvas (`react-rnd`), IAM console, hardware management, gRPC-Web/Node route bridge. |
-| `backend/proto/` | Protocol Buffers v3 | Single source of truth for all API contracts between backend, frontend, and players. |
+| `frontend/` | Next.js 14 (App Router, Bun, React 18, TypeScript) | Studio CMS, layout/queue editor canvas (`react-rnd`), IAM console, hardware management, Node gRPC route-handler bridge. |
+| `android/` | Kotlin (gRPC Java/Kotlin, Media3 ExoPlayer, DataStore/SharedPreferences) | Android TV/tablet player: pairing, offline SHA-256 asset cache, multi-zone rendering, telemetry stream. |
+| `backend/proto/` | Protocol Buffers v3 | Single source of truth for all API contracts between backend, frontend, and players. Android mirrors this tree under `android/app/src/main/proto/`. |
 | `docs/` | Markdown | DDL database schemas, Android player hardware & streaming protocol guides. |
 | `graphify-out/` | GraphRAG / Knowledge Graph | Architectural dependency graph, god nodes, and community analysis report (`GRAPH_REPORT.md`). |
 | `compose.yml` | Docker Compose | Local & production orchestration (`frontend` on port 80, `backend` on 50051, `db` on 54321/5432). |
@@ -58,7 +59,7 @@ This project is an enterprise-grade digital signage management and streaming pla
   - Borders: `var(--border-subtle)`, `var(--border-strong)`, `var(--border-focus)`
   - Typography: `var(--text-primary)`, `var(--text-secondary)`, `var(--text-muted)`
   - Shadows & Accents: `var(--card-shadow)`, `var(--card-shadow-hover)`, `var(--primary-500)`, `var(--accent-emerald)`, etc.
-- Support both dark mode (default) and `[data-theme="light"]`.
+- Support both themes: CSS base tokens are dark (`:root`), `[data-theme="light"]` overrides them. The app currently boots in light mode (`RootLayout` + `ThemeProvider`) and persists the choice in `localStorage` (`dkasigma_theme`).
 
 ### 4. Database & Migration Rule
 - All schema alterations require an explicit SQLx migration pair in `backend/migrations/` (`XXXX_name.up.sql` and `XXXX_name.down.sql`).

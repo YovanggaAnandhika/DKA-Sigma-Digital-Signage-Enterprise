@@ -23,7 +23,7 @@ You are a lazy senior developer. The best code is the code never written. Solve 
   - **Shadows**: `var(--card-shadow)`, `var(--card-shadow-hover)`, `var(--focus-ring-glow)`
   - **Accents**: `var(--primary-500)`, `var(--accent-emerald)`, `var(--accent-amber)`, `var(--accent-rose)`, `var(--accent-cyan)`
   - **Radii**: `var(--radius-sm)`, `var(--radius-md)`, `var(--radius-lg)`, `var(--radius-xl)`, `var(--radius-full)`
-- Support both Dark Mode (default `:root`) and Light Mode (`[data-theme="light"]`).
+- Support both themes: base tokens are dark (`:root`), `[data-theme="light"]` overrides them. The app boots in light mode (`RootLayout` + `ThemeProvider`) and persists the choice in `localStorage` (`dkasigma_theme`).
 
 ### 2. gRPC Route Handlers & Client Communication
 - Web UI interacts with backend services via Next.js Route Handlers in `src/app/(api)/api/grpc/.../route.ts`.
@@ -36,6 +36,7 @@ You are a lazy senior developer. The best code is the code never written. Solve 
   client.someMethod(request, getGrpcMetadata(token), (err, res) => { ... });
   ```
 - Always forward user authentication token via `getGrpcMetadata(token)`.
+- Other core helpers: `invokeApi()` (browser-side fetch wrapper reading `dkasigma_session`) and `deviceStreamHub.ts` (server-side SSE bridge).
 - Always return standard JSON responses with appropriate HTTP status codes:
   - Error: `NextResponse.json({ error: error.message }, { status: 500 })`
   - Success: `NextResponse.json(response.toObject())`
@@ -49,9 +50,11 @@ You are a lazy senior developer. The best code is the code never written. Solve 
 
 ### 4. Next.js 14 App Router Structure
 - Route Groups:
-  - `(auth)`: Isolated auth views (Login) without AppShell navigation.
-  - `(dashboard)`: Core CMS with full `AppShell` (Sidebar, Navbar, Theme toggles).
+  - `(auth)`: Isolated auth views (Login) without the dashboard shell.
+  - `(dashboard)`: Core CMS wrapped by `AuthGuard` + `MainLayout` (Sidebar, Navbar, Footer, theme toggles).
   - `(api)`: Server-side API and gRPC forwarding routes.
+- Public `/player/[id]` renders a device-style player preview outside `(dashboard)`.
+- Fullscreen editor mode is controlled via `AppContext` (`isFullscreen` / `setFullscreen`) consumed by `MainLayout`; there is no `AppShell` component.
 - Component boundary hygiene: Mark components with `'use client'` ONLY if they need client interactivity, hooks (`useState`, `useEffect`), or browser APIs (e.g. `react-rnd` canvas editor).
 
 ### 5. Canvas & Studio Editor

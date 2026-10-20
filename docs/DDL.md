@@ -15,7 +15,7 @@ flowchart TD
     B -->|--migrate| D[Run sqlx::migrate! ./migrations]
     B -->|--seed| E[Run Seeders / Initial Superadmin]
     C --> D
-    D --> F[Execute Up Migrations in Order 0001 -> 0021]
+    D --> F[Execute Up Migrations in Order 0001 -> 0048]
     F --> G[Record executed migrations in _sqlx_migrations]
     G --> H[Backend Server Ready]
 ```
@@ -23,7 +23,7 @@ flowchart TD
 ### CLI Command Flags
 Backend Rust (`backend/src/main.rs`) mendukung beberapa argumen baris perintah untuk mengelola migrasi & seeder:
 - `cargo run -- --migrate`: Menjalankan semua migrasi yang belum dieksekusi di folder `backend/migrations/`.
-- `cargo run -- --fresh`: (Opsional) Mengosongkan skema lalu menjalankan ulang seluruh migrasi dari awal (`0001` - `0021`).
+- `cargo run -- --fresh`: (Opsional) Mengosongkan skema lalu menjalankan ulang seluruh migrasi dari awal (`0001` - `0048`).
 - `cargo run -- --seed`: Memasukkan data awal (permissions default, superadmin user dengan hash Argon2 `superadmin`).
 
 ### Lokasi Migration Files
@@ -180,31 +180,58 @@ CREATE TABLE IF NOT EXISTS role_permissions (
 
 ## 3. Daftar Lengkap Urutan DDL Migrasi Database
 
-Berikut adalah daftar urutan lengkap 21 migrasi database di folder `backend/migrations/`:
+Berikut adalah daftar urutan lengkap **48 migrasi** database di folder `backend/migrations/` (semua memiliki pasangan `.down.sql`):
 
-| No | File Migrasi | Tabel Yang Dibuat / Diubah | Deskripsi Singkat |
+| No | File Migrasi (`.up.sql`) | Tabel Yang Dibuat / Diubah | Deskripsi Singkat |
 |---|---|---|---|
-| **0001** | `0001_create_permissions.up.sql` | `permissions` | Katalog daftar izin sistem |
-| **0002** | `0002_create_roles.up.sql` | `roles` | Daftar peran hak akses |
-| **0003** | `0003_create_roles_groups.up.sql` | `roles_groups` | Grup perkelompokkan peran |
-| **0004** | `0004_create_role_permissions.up.sql` | `role_permissions` | Pivot relasi role -> permission |
-| **0005** | `0005_create_roles_groups_roles.up.sql` | `roles_groups_roles` | Pivot relasi role_group -> role |
-| **0006** | `0006_create_users.up.sql` | `users` | Akun pengguna backend / dashboard |
-| **0007** | `0007_create_user_roles.up.sql` | `user_roles` | Pivot relasi user -> role |
-| **0008** | `0008_create_user_role_groups.up.sql` | `user_role_groups` | Pivot relasi user -> role_group |
-| **0009** | `0009_create_canary_groups.up.sql` | `canary_groups` | Grup testing & deployment versi staging |
-| **0010** | `0010_create_layouts.up.sql` | `layouts` | Desain kanvas & resolusi tayangan |
-| **0011** | `0011_create_display_groups.up.sql` | `display_groups` | Pengelompokan perangkat player |
-| **0012** | `0012_create_devices.up.sql` | `devices` | Perangkat player signage (Android/Linux) |
-| **0013** | `0013_create_media_items.up.sql` | `media_items` | File gambar, video, & web URL |
-| **0014** | `0014_create_zones.up.sql` | `zones` | Zona area per-layout |
-| **0015** | `0015_create_playlists.up.sql` | `playlists` | Daftar putar item media |
-| **0016** | `0016_create_playlist_items.up.sql` | `playlist_items` | Item media di dalam playlist |
-| **0017** | `0017_create_zone_blocks.up.sql` | `zone_blocks` | Blok playlist/media yang ditempel di zona |
-| **0018** | `0018_create_zone_playlist_item_overrides.up.sql` | `zone_playlist_item_overrides` | Override properti item di dalam blok zona |
-| **0019** | `0019_create_device_layouts.up.sql` | `device_layouts` | Penjadwalan layout ke perangkat |
-| **0020** | `0020_create_device_telemetry.up.sql` | `device_telemetry` | Log telemetri RAM, Storage, & Status player |
-| **0021** | `0021_create_schedules.up.sql` | `schedules`, `schedule_events` | Penjadwalan event tayangan signage |
+| **0001** | `0001_create_permissions` | `permissions` | Katalog daftar izin sistem |
+| **0002** | `0002_create_roles` | `roles` | Daftar peran hak akses |
+| **0003** | `0003_create_roles_groups` | `roles_groups` | Grup perkelompokkan peran |
+| **0004** | `0004_create_role_permissions` | `role_permissions` | Pivot relasi role -> permission |
+| **0005** | `0005_create_roles_groups_roles` | `roles_groups_roles` | Pivot relasi role_group -> role |
+| **0006** | `0006_create_users` | `users` | Akun pengguna backend / dashboard |
+| **0007** | `0007_create_user_roles` | `user_roles` | Pivot relasi user -> role |
+| **0008** | `0008_create_user_role_groups` | `user_role_groups` | Pivot relasi user -> role_group |
+| **0009** | `0009_create_canary_groups` | `canary_groups` | Grup testing & deployment versi staging |
+| **0010** | `0010_create_orientations` | `orientations` | Master orientasi layar (landscape/portrait) |
+| **0011** | `0011_create_resolutions` | `resolutions` | Master resolusi kanvas |
+| **0012** | `0012_create_layouts` | `layouts` | Desain kanvas, resolusi, & orientasi tayangan |
+| **0013** | `0013_create_schedules` | `schedules` | Header jadwal tayangan |
+| **0014** | `0014_create_display_groups` | `display_groups` | Pengelompokan perangkat player |
+| **0015** | `0015_create_devices` | `devices` | Perangkat player signage (Android/Linux) |
+| **0016** | `0016_create_device_pairings` | `device_pairings` | Kode pairing & status klaim perangkat |
+| **0017** | `0017_create_media_items` | `media_items` | File gambar, video, & web URL + `sha256_hash` |
+| **0018** | `0018_create_layers` | `layers` | Layer/zona absolut di dalam layout |
+| **0019** | `0019_create_playlists` | `playlists` | Daftar putar item media |
+| **0020** | `0020_create_playlist_items` | `playlist_items` | Item media di dalam playlist |
+| **0021** | `0021_create_transitions` | `transitions` | Preset transisi antar media |
+| **0022** | `0022_create_visual_filters` | `visual_filters` | Preset filter visual |
+| **0023** | `0023_create_tickers` | `tickers` | Widget teks berjalan |
+| **0024** | `0024_create_clocks` | `clocks` | Widget jam |
+| **0025** | `0025_create_webviews` | `webviews` | Widget web/URL |
+| **0026** | `0026_create_queue_displays` | `queue_displays` | Layar antrian (queue display) |
+| **0027** | `0027_create_albums` | `albums` | Album foto untuk widget |
+| **0028** | `0028_create_album_photos` | `album_photos` | Item foto di dalam album |
+| **0029** | `0029_create_layer_blocks` | `layer_blocks` | Blok playlist/media/ticker/clock di layer |
+| **0030** | `0030_create_layer_playlist_item_overrides` | `layer_playlist_item_overrides` | Override properti item di dalam blok layer |
+| **0031** | `0031_create_device_layouts` | `device_layouts` | Penjadwalan layout ke perangkat |
+| **0032** | `0032_create_device_telemetry` | `device_telemetry` | Log telemetri RAM, storage, & status player |
+| **0033** | `0033_create_schedule_events` | `schedule_events` | Event tayangan di dalam jadwal |
+| **0034** | `0034_create_queue_layout_items` | `queue_layout_items` | Tata letak elemen layar antrian |
+| **0035** | `0035_create_queue_counters` | `queue_counters` | Master loket/kounter antrian |
+| **0036** | `0036_create_queue_tickets` | `queue_tickets` | Tiket antrian & status panggilan |
+| **0037** | `0037_create_queue_audios` | `queue_audios` | Audio panggilan antrian |
+| **0038** | `0038_create_playback_logs_and_screenshots` | `schedule_events` (ALTER), `device_screenshots`, `playback_logs` | Rentang tanggal event, screenshot, proof-of-play |
+| **0039** | `0039_add_device_power_schedule` | `devices` (ALTER) | Jadwal tidur/bangun perangkat |
+| **0040** | `0040_add_device_pairings_device_token` | `device_pairings` (ALTER) | Token perangkat hasil pairing |
+| **0041** | `0041_sync_complete_widget_defaults` | `tickers`, `queue_displays`, `clocks` (DATA) | Sinkronisasi data default widget |
+| **0042** | `0042_add_visual_styling_columns` | `tickers` (ALTER) | Kolom warna & styling ticker |
+| **0043** | `0043_add_opacity_and_overlay_styling` | `queue_displays`, `layers` (ALTER) | Opacity & overlay styling |
+| **0044** | `0044_create_layout_history` | `layout_history` | Riwayat versi layout |
+| **0045** | `0045_add_version_hash_to_schedule_events` | `schedule_events` (ALTER) | Hash versi untuk sinkronisasi jadwal |
+| **0046** | `0046_create_device_analytics` | `device_analytics` | Riwayat analitik perangkat |
+| **0047** | `0047_enhance_queue_sync_tts_and_status` | `queue_displays` (ALTER) | Sektor, label, template TTS, status sinkron |
+| **0048** | `0048_create_queue_sectors` | `queue_sectors` (+ seed 6 sektor) | Master sektor antrian (retail, RS, bank, dll.) |
 
 ---
 

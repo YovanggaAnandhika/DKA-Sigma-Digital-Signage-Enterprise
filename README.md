@@ -10,10 +10,10 @@ The platform follows a microservices-inspired monolithic architecture with speci
     Built with **Next.js**, React, and TypeScript. This acts as the backoffice for administrators to manage devices, roles, permissions, layouts, playlists, and media assets.
 2.  **Backend Core:**
     Built in **Rust** using **gRPC**. It handles domain logic, user management (IAM), device provisioning, manifest compilation, and real-time bidirectional telemetry streaming.
-3.  **Proxy Gateway:**
-    **Envoy Proxy** sits between the Next.js frontend (using gRPC-Web) and the Rust gRPC backend.
+3.  **gRPC Bridge:**
+    Next.js Route Handlers under `frontend/src/app/(api)/api/grpc/` proxy browser requests to the Rust gRPC backend using `@grpc/grpc-js`. There is no Envoy proxy in this repository.
 4.  **Hardware Display Player:**
-    An **Android TV/Tablet** application using Kotlin. It utilizes ExoPlayer for multi-zone native rendering and communicates with the backend via bidirectional gRPC streaming.
+    An **Android TV/Tablet** application in `android/` (Kotlin, package `com.dkaapis.sigma`). It uses Media3 ExoPlayer for multi-zone native rendering and communicates with the backend via gRPC.
 
 ## Core Business Flow
 
@@ -38,8 +38,9 @@ The platform follows a microservices-inspired monolithic architecture with speci
 *   **Offline-First Asset Caching:** When a player detects a new manifest, it checks `required_assets` and downloads missing files via HTTP byte-range requests. Media playback only updates atomically once 100% of the assets are verified by SHA-256 hash, ensuring a seamless visual cross-fade without black screens.
 
 ## Project Structure
-*   `backend/` - Rust gRPC microservices and domain logic.
-*   `frontend/` - Next.js Backoffice CMS.
-*   `docs/` - System documentation (e.g., Android Player integration).
-*   `envoy/` - Envoy proxy configuration.
+*   `backend/` - Rust gRPC services, domain logic, and SQLx migrations.
+*   `frontend/` - Next.js Backoffice CMS and gRPC route-handler bridge.
+*   `android/` - Kotlin Android TV/tablet player application.
+*   `docs/` - System documentation (DDL and Android Player integration).
+*   `compose.yml` - Dev orchestration (frontend :80, backend :50051, PostgreSQL :54321).
 *   `graphify-out/` - AI knowledge graph and structural reports of the repository.

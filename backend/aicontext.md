@@ -24,52 +24,63 @@ The Backend is a high-performance gRPC service built in Rust using Tonic, Tokio,
 backend/
 ├── Cargo.toml
 ├── build.rs                      # Compiles protobufs via tonic_build::configure()
-├── migrations/                   # SQLx sequential migration scripts
-│   ├── 0001_initial.up.sql
+├── migrations/                   # SQLx sequential migration scripts (48 pairs, 0001-0048)
+│   ├── 0001_create_permissions.up.sql
 │   ├── ...
-│   └── 0034_create_queue_layout_items.up.sql
+│   └── 0048_create_queue_sectors.up.sql
 ├── proto/                        # Protobuf definitions (Single Source of Truth)
-│   ├── common/
-│   ├── distribution/
-│   ├── hardware/
-│   ├── iam/
-│   └── studio/
+│   ├── common/v1/
+│   ├── distribution/v1/          # canary, manifest, stream
+│   ├── hardware/v1/              # device, display_group
+│   ├── iam/v1/                   # permission, role, role_group, user
+│   └── studio/v1/                # album, clock, layer, layout, media, playlist,
+│                                 # queue, schedule, ticker, transition,
+│                                 # visual_filter, webview
 ├── uploads/                      # Uploaded media assets storage
 └── src/
     ├── main.rs                   # Entry point: DB pool, router, gRPC server on 0.0.0.0:50051
     ├── config.rs                 # Environment configuration (DATABASE_URL, JWT_SECRET, etc.)
     ├── db.rs                     # PostgreSQL connection pool builder
-    ├── common/
-    │   ├── error.rs              # Central AppError enum & Status mapping
-    │   ├── interceptor.rs        # gRPC metadata JWT authentication interceptor
-    │   └── pagination.rs         # Reusable pagination structs
+    ├── common/mod.rs             # AppError enum, Status mapping, Claims
+    ├── grpc/
+    │   ├── mod.rs                # Generated Protobuf modules (tonic::include_proto!)
+    │   ├── middleware/auth.rs    # JWT auth interceptor & require_permission
+    │   └── common/ iam/ hardware/ studio/ distribution/  # Tonic service impls
     ├── seeders/                  # Default roles, permissions, and admin user seeder
     └── modules/
-        ├── iam/                  # Users, Roles, Permissions, Role Groups, Auth
-        ├── hardware/             # Devices, Pairing Handshake, Display Stream Telemetry
-        ├── studio/               # Layouts, Layers, Playlists, Schedules, Media, Queue
-        └── distribution/         # Manifest Compiler, Canary Distribution
+        ├── iam/                  # permission, role, role_group, user
+        ├── hardware/             # device, display_group
+        ├── studio/               # layer, layout, media, playlist, schedule,
+        │                         # transition, visual_filter
+        ├── distribution/         # canary, manifest, stream
+        └── common/               # orientation (shared lookup data)
 ```
 
 ---
 
 ## Canonical Module Architecture
 
-Each feature module under `src/modules/<name>/` strictly follows this 4-layer structure:
+Domain features under `src/modules/<domain>/<feature>/` use this structure:
 
 ```
-src/modules/<domain>/
-├── mod.rs                        # Re-exports service, repository, and models
+src/modules/<domain>/<feature>/
+├── mod.rs                        # Re-exports services, repositories, and models
 ├── model.rs                      # Database entity structs (FromRow) & domain DTOs
-├── repository.rs                 # SQLx queries using PgPool or &mut PgConnection
-├── service.rs                    # Business logic, permissions checks, transaction orchestration
-└── grpc.rs                       # Tonic gRPC trait implementation (maps Protobuf <-> DTO)
+├── repositories.rs               # SQLx queries using PgPool or &mut PgConnection
+└── services.rs                   # Business logic, permissions checks, transaction orchestration
+```
+
+gRPC transport is separated under `src/grpc/<domain>/<feature>/service.rs`:
+
+```
+src/grpc/<domain>/<feature>/
+└── service.rs                    # Tonic trait impl (Protobuf <-> domain DTO)
 ```
 
 ### Layer Rules:
-1. **`grpc.rs`**: Only handles gRPC input validation, calling the service, and translating `AppError` into `tonic::Status`.
-2. **`service.rs`**: Houses business rules, permission checks, and transaction boundaries. Does not write raw SQL.
-3. **`repository.rs`**: Houses SQLx queries. All queries must be parameterized (`$1`, `$2`). Never format queries with raw strings.
+1. **`service.rs` (gRPC)**: Only handles gRPC input validation, calling the domain service, and translating `AppError` into `tonic::Status`.
+2. **`services.rs`**: Houses business rules, permission checks, and transaction boundaries. Does not write raw SQL.
+3. **`repositories.rs`**: Houses SQLx queries. All queries must be parameterized (`$1`, `$2`). Never format queries with raw strings.
 4. **`model.rs`**: Declares structs deriving `sqlx::FromRow`, `serde::Serialize`, and `serde::Deserialize`.
 
 ---
