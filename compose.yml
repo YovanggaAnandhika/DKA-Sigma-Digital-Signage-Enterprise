@@ -1,4 +1,45 @@
 services:
+  nginx:
+      image: jc21/nginx-proxy-manager
+      pull_policy: always
+      container_name: dka-development-nginx
+      hostname: dka-development-nginx
+      logging:
+        driver: local
+        options:
+          max-size: 10m
+          max-file: 10
+      ports:
+        - target: 80
+          published: 80
+          protocol: tcp
+          host_ip: 0.0.0.0
+        - target: 443
+          published: 443
+          protocol: tcp
+          host_ip: 0.0.0.0
+        - target: 81
+          published: 8181
+          protocol: tcp
+          host_ip: 0.0.0.0
+      deploy:
+        resources:
+          limits:
+            cpus: '0.4'
+            memory: 200M
+          reservations:
+            cpus: '0.10'
+            memory: 50M
+      restart: always
+      volumes:
+        - type: volume
+          source: dka-development-nginx-data
+          target: /data
+        - type: volume
+          source: dka-development-nginx-ssl
+          target: /etc/letsencrypt
+      networks:
+        - dka-local-development
   # Next.js Standalone Frontend UI (Bun)
   frontend:
     image: yovanggaanandhika/node:latest
@@ -10,12 +51,6 @@ services:
       PORT: 80
       DKA_GRPC_SERVER_HOST: "backend:50051"
       DKA_GRPC_SERVER_SECURE: "false"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    ports:
-      - target: 80
-        published: "80"
-        protocol: tcp
     volumes:
       - type: bind
         source: ./frontend
@@ -25,6 +60,7 @@ services:
     depends_on:
       - backend
     networks:
+      - dka-local-development
       - dka_signage_network
 
 
@@ -37,19 +73,15 @@ services:
     command: cargo watch -w src -w proto -w migrations -w Cargo.toml -w build.rs -i uploads -x run
     networks:
       - dka_signage_network
-    ports:
-      - target: 50051
-        published: "50051"
-        protocol: tcp
     environment:
       TZ: Asia/Makassar
       DATABASE_URL: postgres://dka_signage:bZ9qL4vX7kM2pT8w@db:5432/dka_signage
       DB_HOST: db
-      DB_PORT: 5432
+      #DB_PORT: 5432
       DB_USERNAME: dka_signage
       DB_PASSWORD: bZ9qL4vX7kM2pT8w
       DB_DATABASE: dka_signage
-      GRPC_PORT: 50051
+      #GRPC_PORT: 50051
       HOST: 0.0.0.0
       JWT_SECRET: super_secret_jwt_key_signage_123456789
       RUST_LOG: info,signage_backend=debug
@@ -94,10 +126,6 @@ services:
       DKA_MAINTENANCE_REINDEX_INDEX_SCAN_THRESHOLD: "50"
       DKA_MAINTENANCE_REINDEX_INDEX_SIZE_THRESHOLD: "104857600"
       DKA_MAINTENANCE_LOG: /var/log/postgresql/maintenance.log
-    ports:
-      - target: 5432
-        published: "54321"
-        protocol: tcp
     volumes:
       - type: volume
         source: postgres_data
@@ -109,10 +137,19 @@ services:
       - dka_signage_network
 
 volumes:
+  dka-development-nginx-data:
+    name: dka-development-nginx-data
+    external: true
+  dka-development-nginx-ssl:
+    name: dka-development-nginx-ssl
+    external: true
   postgres_data:
   postgres_backup:
 
 networks:
+  dka-local-development:
+    name: dka-local-development
+    external: true
   dka_signage_network:
     name: dka_signage_network
     driver: bridge
