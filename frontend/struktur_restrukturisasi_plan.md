@@ -1,5 +1,10 @@
 # Rencana Restrukturisasi Folder Frontend (Berdasarkan Domain / Modul)
 
+> **Status per 2026-10-20 (hasil kalibrasi):**
+> - **API gRPC: SELESAI.** `frontend/src/app/(api)/api/grpc/` sudah terbagi menjadi `common/`, `hardware/`, `iam/`, `studio/`, dan `distribution/`.
+> - **Halaman: BELUM dipindah ke `(apps)`.** Halaman masih berada di `(dashboard)/hardware`, `(dashboard)/iam`, dan `(dashboard)/studio`; tidak ada folder `distribution/simulator`.
+> - Rencana Route Groups `(apps)` di bawah **belum dieksekusi** dan sifatnya opsional.
+
 Berdasarkan struktur *protobuf* di backend, terdapat 4 domain utama yaitu: **`hardware`**, **`iam`**, **`studio`**, dan **`distribution`**. Kita akan merapikan struktur API dan halaman (apps) di frontend agar selaras dengan domain-domain tersebut.
 
 ## 1. Restrukturisasi `(api)/api/grpc`
@@ -51,10 +56,10 @@ frontend/src/app/(apps)/
 ```
 
 ## 3. Langkah-Langkah Eksekusi
-1. **Memindahkan Folder API:** Memindahkan folder-folder di dalam `(api)/api/grpc` ke sub-folder domain `hardware`, `iam`, dan `studio`.
-2. **Memperbarui Path Pemanggilan API:** Mengubah path URL di komponen/service frontend yang melakukan pemanggilan `fetch` ke endpoint `/api/grpc/...` agar menyesuaikan dengan penambahan domain.
-3. **Memindahkan Folder Apps:** Memindahkan halaman-halaman utama ke dalam Route Groups `(hardware)`, `(iam)`, `(studio)`, dan `(distribution)`.
-4. **Memperbarui Relative Imports:** Memperbarui path impor (seperti komponen, context, service) yang terdampak akibat perpindahan folder halaman.
-5. **Verifikasi:** Melakukan *build* (`bunx tsc --noEmit` & `bun run build`) untuk memastikan tidak ada *import* atau *routing* yang rusak.
+1. **Memindahkan Folder API — SELESAI:** Folder di `(api)/api/grpc` sudah dikelompokkan per domain (`common`, `hardware`, `iam`, `studio`, `distribution`).
+2. **Memperbarui Path Pemanggilan API — SELESAI:** Service di `src/lib/services/` sudah memakai endpoint berdomain.
+3. **Memindahkan Folder Apps — BELUM:** Halaman masih di `(dashboard)/hardware`, `(dashboard)/iam`, `(dashboard)/studio`.
+4. **Memperbarui Relative Imports — hanya relevan bila langkah 3 dikerjakan.**
+5. **Verifikasi:** Gunakan `bunx tsc --noEmit` dan `bun run lint`. **Jangan** menjalankan `bun run build`/`next build` (dilarang oleh AGENTS.md; dev server berjalan via Docker Compose dengan HMR).
 
-Apakah Anda setuju dengan rancangan struktur di atas, khususnya pada penggunaan **Route Groups** `(domain)` untuk halaman agar rute URL tidak berubah? Ataukah Anda ingin URL-nya ikut berawalan domain seperti `/studio/layouts`?
+Keputusan yang masih terbuka: apakah tetap memakai URL datar (`/hardware/...`, `/studio/...`) dengan Route Groups `(apps)`, atau mengubah URL menjadi berawalan domain (`/studio/layouts`). Saat ini URL datar yang berlaku.

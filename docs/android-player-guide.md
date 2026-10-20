@@ -46,23 +46,28 @@ Cek Token Tersimpan di EncryptedSharedPreferences?
       Simpan `device_token` secara permanen
 ```
 
-### Request Contoh Android:
+### Request Contoh Android (sesuai `DeviceRepositoryImpl.kt`):
 ```kotlin
+import signage.hardware.v1.device.DeviceCommon
+import signage.hardware.v1.device.DeviceServiceGrpcKt
+
 val stub = DeviceServiceGrpcKt.DeviceServiceCoroutineStub(channel)
 
-val response = stub.registerDevice(
-    registerDeviceRequest {
-        macAddress = getMacAddress()
-        appVersion = "1.0.0"
-        androidVersion = Build.VERSION.RELEASE
-        screenWidth = 1920
-        screenHeight = 1080
-        orientation = DeviceOrientation.ORIENTATION_LANDSCAPE
-    }
-)
+val request = DeviceCommon.RegisterDeviceRequest.newBuilder()
+    .setDeviceName("Android Display")
+    .setMacAddress(getMacAddress())
+    .setAppVersion("1.0.0")
+    .setAndroidVersion(Build.VERSION.RELEASE.orEmpty())
+    .setScreenWidth(1920)
+    .setScreenHeight(1080)
+    .setOrientation(DeviceCommon.DeviceOrientation.ORIENTATION_LANDSCAPE)
+    .build()
 
-displayOnScreen("PAIRING CODE: ${response.pairingCode}")
+val response = stub.registerDevice(request)
+displayOnScreen("PAIRING CODE: ${response.pairingCode.uppercase()}")
 ```
+
+Token perangkat disimpan di `EncryptedSharedPreferences` (`dkasigma_secure_prefs`, key `device_id` & `device_token`) melalui `TokenStorage`, dengan fallback ke `SharedPreferences` biasa bila Keystore tidak tersedia.
 
 ---
 
@@ -75,8 +80,9 @@ Agar layar promosi toko retail tetap berputar mulus tanpa koneksi internet yang 
 3. Jika terdapat manifest baru:
    - Baca daftar `required_assets`.
    - Untuk setiap file media (video/gambar), cek apakah file sudah ada di penyimpanan lokal:
-     - Lokasi: `/storage/emulated/0/Android/data/com.signage.player/cache/assets/{media_id}`
-     - Validasi `sha256_hash` lokal vs server.
+     - Lokasi: `getExternalFilesDir(null)/assets/{media_id}` — pada perangkat umum menjadi `/storage/emulated/0/Android/data/com.dkaapis.sigma/files/assets/{media_id}`
+     - File parsial memakai akhiran `.part`.
+     - Validasi `sha256_hash` lokal vs server (`MediaDiskCache.verifyFileSha256`).
    - Unduh asset yang belum ada menggunakan HTTP Byte-Range download (didukung oleh backend Rust).
 4. Setelah **100% asset terunduh dan terverifikasi utuh**:
    - Ganti referensi layout visual secara atomic (seamless cross-fade tanpa layar hitam/blank).
@@ -85,7 +91,7 @@ Agar layar promosi toko retail tetap berputar mulus tanpa koneksi internet yang 
 
 ## 4. Real-time Bi-directional Streaming (`DisplayStream`)
 
-Android Display menjaga koneksi stream HTTP/2 gRPC terbuka:
+Protokol: `StreamService.DisplayStream(stream StreamClientMessage) returns (stream StreamServerMessage)`. Setiap pesan klien wajib membawa `device_id` dan `device_token`; payload `oneof` berisi `ping`, `command_ack`, atau `screenshot`.
 
 ```kotlin
 val streamStub = StreamServiceGrpcKt.StreamServiceCoroutineStub(channel)
@@ -95,6 +101,7 @@ val clientRequests = flow {
         emit(
             streamClientMessage {
                 deviceId = savedDeviceId
+                deviceToken = savedDeviceToken
                 timestamp = System.currentTimeMillis()
                 ping = heartbeatPing {
                     memoryPercent = getMemoryUsagePercent()
@@ -103,39 +110,33 @@ val clientRequests = flow {
                 }
             }
         )
-        delay(30_000) // Kirim telemetry setiap 30 detik
+        delay(30_000) // Telemetry setiap 30 detik
     }
 }
 
-streamStub.displayStream(clientRequests).collect { serverCommand ->
-    when (serverCommand.commandType) {
-        ServerCommandType.COMMAND_RELOAD_MANIFEST -> {
-            // Segera sinkronisasi jadwal/layout baru
-            fetchNewManifest()
-        }
-        ServerCommandType.COMMAND_CAPTURE_SCREENSHOT -> {
-            // Ambil screenshot layar & kirim balik ke server
-            val screenshotBytes = captureScreen()
-            sendScreenshotAck(serverCommand.messageId, screenshotBytes)
-        }
-        ServerCommandType.COMMAND_EMERGENCY_BROADCAST -> {
-            // Tampilkan pesan darurat di atas semua zona
-            showEmergencyBanner(serverCommand.payloadJson)
-        }
-        ServerCommandType.COMMAND_REBOOT_PLAYER -> {
-            restartApp()
-        }
+streamStub.displayStream(clientRequests).collect { message ->
+    when (message.commandType) {
+        ServerCommandType.RELOAD_MANIFEST -> fetchNewManifest()
+        ServerCommandType.CAPTURE_SCREENSHOT -> captureAndUploadScreenshot(message.messageId)
+        ServerCommandType.EMERGENCY_BROADCAST -> showEmergencyBanner(message.payloadJson)
+        ServerCommandType.REBOOT_PLAYER -> restartApp()
+        ServerCommandType.CLEAR_CACHE -> clearMediaCache()
         else -> Unit
     }
 }
 ```
+
+> **Status implementasi:** `StreamRepositoryImpl.openDisplayStream()` di aplikasi Android saat ini masih berupa placeholder (loop delay/reconnect tanpa memanggil stub gRPC). Implementasi nyata mengikuti kontrak di atas.
+
+Nilai enum di Protobuf memakai prefiks `COMMAND_*` (contoh `COMMAND_RELOAD_MANIFEST`); model domain Kotlin memetakannya menjadi `RELOAD_MANIFEST`, dst.
 
 ---
 
 ## 5. Multi-Zone Native Rendering
 
 1. Resolusi kanvas disesuaikan dengan `canvas_width` dan `canvas_height` dari manifest.
-2. Setiap `Zone` dirender sebagai `FrameLayout` / `ViewGroup` dengan koordinat absolut `(x, y, width, height)` dan `z_index`.
-3. Di dalam setiap zona:
-   - Jika tipe media adalah Video: Gunakan `ExoPlayer` (Media3) dengan looping dan hardware acceleration.
-   - Jika tipe media adalah Playlist: Gunakan `Timer` untuk memicu pergantian slide (`AlphaAnimation` atau `SlideAnimation`) sesuai `duration_seconds` yang ditentukan di CMS.
+2. Setiap layer/zona dirender sebagai `FrameLayout` / `ViewGroup` dengan koordinat absolut `(x, y, width, height)` dan `z_index`.
+3. Renderer berada di `presentation/renderers/` (mis. `VideoZoneRenderer.kt`, `QueueZoneRenderer.kt`):
+   - Video: `ExoPlayer` (Media3) dengan looping dan hardware acceleration.
+   - Playlist/gambar: pergantian slide sesuai `duration_seconds` dari CMS.
+   - Queue display: komponen khusus di `presentation/renderers/queue/`.

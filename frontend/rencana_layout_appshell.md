@@ -1,5 +1,7 @@
 # Rencana Refactoring Pengecekan URL & Layouting (AppShell)
 
+> **Status per 2026-10-20:** `AppShell` sudah tidak ada di codebase. Shell dashboard sekarang adalah `src/components/MainLayout.tsx`, dan mode fullscreen dikontrol lewat `AppContext` (`isFullscreen` / `setFullscreen`) yang dipakai oleh `QueueEditorShell.tsx`. Pendekatan ini setara **Opsi 2** (state), bukan Route Groups. Dokumen di bawah dipertahankan sebagai catatan historis; sisa pekerjaan opsional adalah migrasi ke Opsi 1 bila ingin menghapus state global.
+
 Pengecekan `pathname.includes('/layouts/')` atau mem-*bypass* komponen menggunakan kondisi *string matching* pada `AppShell.tsx` adalah anti-pattern di Next.js App Router (berisiko *brittle* atau mudah rusak jika URL berubah).
 
 Berikut adalah 3 opsi pendekatan (Plan) untuk memperbaiki hal ini:
@@ -50,5 +52,4 @@ const isFullscreen = FULLSCREEN_ROUTES.some(regex => regex.test(pathname));
 
 ---
 
-**Keputusan:** 
-Apakah Anda ingin mengimplementasikan **Opsi 1** (merombak menggunakan Route Groups, cara paling rapi), atau **Opsi 3** (memperbaiki logika di dalam `AppShell.tsx` dengan Regex)?
+**Keputusan aktual:** Opsi 2 (state via `AppContext`) yang dipakai. Opsi 1 belum dieksekusi. Opsi 3 tidak relevan karena `AppShell.tsx` sudah digantikan `MainLayout.tsx`.
