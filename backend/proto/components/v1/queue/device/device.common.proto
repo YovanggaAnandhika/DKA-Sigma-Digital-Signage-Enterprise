@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package signage.components.v1.queue.device;
+
+message PinMapping {
+  int32 pin = 1;
+  string action = 2;
+  bool enabled = 3;
+  string label = 4;
+}
+
+message QueueIotDevice {
+  string id = 1;
+  string queue_display_id = 2;
+  string device_uid = 3;
+  string name = 4;
+  string device_role = 5;
+  string counter_id = 6;
+  string ticket_prefix = 7;
+  repeated PinMapping pin_mappings = 8;
+  bool is_active = 9;
+  string ip_address = 10;
+  string firmware_version = 11;
+  string last_seen_at = 12;
+  string last_action = 13;
+  string created_at = 14;
+  string updated_at = 15;
+}
+
+message RegisterQueueDeviceRequest {
+  string queue_display_id = 1;
+  string device_uid = 2;
+  string name = 3;
+  string device_role = 4;
+  optional string counter_id = 5;
+  optional string ticket_prefix = 6;
+  repeated PinMapping pin_mappings = 7;
+  bool is_active = 8;
+}
+
+message UpdateQueueDeviceRequest {
+  string id = 1;
+  string name = 2;
+  string device_role = 3;
+  optional string counter_id = 4;
+  optional string ticket_prefix = 5;
+  repeated PinMapping pin_mappings = 6;
+  bool is_active = 7;
+}
+
+message DeleteQueueDeviceRequest {
+  string id = 1;
+}
+
+message DeleteQueueDeviceResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ListQueueDevicesRequest {
+  string queue_display_id = 1;
+}
+
+message ListQueueDevicesResponse {
+  repeated QueueIotDevice items = 1;
+}
+
+message TriggerDeviceActionRequest {
+  string queue_display_id = 1;
+  string device_uid = 2;
+  int32 pin = 3;
+}
+
+message TriggerDeviceActionResponse {
+  bool success = 1;
+  string action = 2;
+  string message = 3;
+}

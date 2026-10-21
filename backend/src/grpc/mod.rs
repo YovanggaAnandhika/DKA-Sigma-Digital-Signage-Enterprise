@@ -109,6 +109,9 @@ pub mod proto {
                 pub mod sector {
                     tonic::include_proto!("signage.components.v1.queue.sector");
                 }
+                pub mod device {
+                    tonic::include_proto!("signage.components.v1.queue.device");
+                }
             }
         }
     }

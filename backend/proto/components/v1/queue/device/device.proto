@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package signage.components.v1.queue.device;
+
+import "components/v1/queue/device/device.common.proto";
+
+service QueueDeviceService {
+  rpc RegisterDevice(RegisterQueueDeviceRequest) returns (QueueIotDevice);
+  rpc UpdateDevice(UpdateQueueDeviceRequest) returns (QueueIotDevice);
+  rpc DeleteDevice(DeleteQueueDeviceRequest) returns (DeleteQueueDeviceResponse);
+  rpc ListDevices(ListQueueDevicesRequest) returns (ListQueueDevicesResponse);
+  rpc TriggerAction(TriggerDeviceActionRequest) returns (TriggerDeviceActionResponse);
+}
