@@ -116,10 +116,28 @@ impl ManifestServiceImpl {
         }
 
         if let Some(tid) = ticker_id {
-            if let Ok(Some(row)) = sqlx::query!(
-                "SELECT id, name, badge, messages, speed, theme, font_size, background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius FROM tickers WHERE id = $1",
-                tid
-            ).fetch_optional(pool).await {
+            #[derive(sqlx::FromRow)]
+            struct TickerManifestRow {
+                id: Uuid,
+                name: String,
+                badge: String,
+                messages: Vec<String>,
+                speed: String,
+                theme: String,
+                font_size: i32,
+                background_color: String,
+                text_color: String,
+                badge_background_color: String,
+                badge_text_color: String,
+                border_color: String,
+                border_radius: i32,
+            }
+
+            if let Ok(Some(row)) = sqlx::query_as::<_, TickerManifestRow>(
+                "SELECT id, name, badge, messages, speed, theme, font_size, background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius FROM tickers WHERE id = $1"
+            )
+            .bind(tid)
+            .fetch_optional(pool).await {
                 let json_val = serde_json::json!({
                     "id": row.id.to_string(),
                     "name": row.name,
@@ -140,10 +158,28 @@ impl ManifestServiceImpl {
         }
 
         if let Some(cid) = clock_id {
-            if let Ok(Some(row)) = sqlx::query!(
-                "SELECT id, name, city, show_seconds, is_24_hour, theme, background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size FROM clocks WHERE id = $1",
-                cid
-            ).fetch_optional(pool).await {
+            #[derive(sqlx::FromRow)]
+            struct ClockManifestRow {
+                id: Uuid,
+                name: String,
+                city: String,
+                show_seconds: bool,
+                is_24_hour: bool,
+                theme: String,
+                background_color: String,
+                text_color: String,
+                subtitle_color: String,
+                border_color: String,
+                border_radius: i32,
+                time_font_size: i32,
+                date_font_size: i32,
+            }
+
+            if let Ok(Some(row)) = sqlx::query_as::<_, ClockManifestRow>(
+                "SELECT id, name, city, show_seconds, is_24_hour, theme, background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size FROM clocks WHERE id = $1"
+            )
+            .bind(cid)
+            .fetch_optional(pool).await {
                 let json_val = serde_json::json!({
                     "id": row.id.to_string(),
                     "name": row.name,
@@ -164,10 +200,22 @@ impl ManifestServiceImpl {
         }
 
         if let Some(wid) = webview_id {
-            if let Ok(Some(row)) = sqlx::query!(
-                "SELECT id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation FROM webviews WHERE id = $1",
-                wid
-            ).fetch_optional(pool).await {
+            #[derive(sqlx::FromRow)]
+            struct WebviewManifestRow {
+                id: Uuid,
+                name: String,
+                url: String,
+                refresh_interval_seconds: i32,
+                zoom_scale: i32,
+                bypass_cache: bool,
+                orientation: String,
+            }
+
+            if let Ok(Some(row)) = sqlx::query_as::<_, WebviewManifestRow>(
+                "SELECT id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation FROM webviews WHERE id = $1"
+            )
+            .bind(wid)
+            .fetch_optional(pool).await {
                 let json_val = serde_json::json!({
                     "id": row.id.to_string(),
                     "name": row.name,

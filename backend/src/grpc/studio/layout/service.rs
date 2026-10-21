@@ -66,11 +66,14 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         let req = request.into_inner();
         let orientation_id = if req.orientation_id.is_empty() {
             let orientation_value = if req.canvas_width >= req.canvas_height { "landscape" } else { "portrait" };
-            let record = sqlx::query!("SELECT id FROM orientations WHERE value = $1", orientation_value)
-                .fetch_one(&self.pool)
-                .await
-                .map_err(|_| Status::internal("Orientation not found in database"))?;
-            record.id
+            let record = sqlx::query_as::<_, (Uuid,)>(
+                "SELECT id FROM orientations WHERE value = $1"
+            )
+            .bind(orientation_value)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|_| Status::internal("Orientation not found in database"))?;
+            record.0
         } else {
             Uuid::from_str(&req.orientation_id)
                 .map_err(|_| Status::invalid_argument("Invalid orientation_id"))?

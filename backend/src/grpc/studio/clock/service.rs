@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
-use sqlx::PgPool;
+use sqlx::{PgPool, FromRow};
 use std::str::FromStr;
 
 use crate::grpc::proto::studio::v1::clock::{
@@ -9,6 +9,47 @@ use crate::grpc::proto::studio::v1::clock::{
     UpdateClockRequest, DeleteClockRequest, DeleteClockResponse, Clock,
 };
 use crate::grpc::proto::common::v1::PaginationResponse;
+
+#[derive(FromRow)]
+struct ClockRow {
+    id: Uuid,
+    name: String,
+    city: String,
+    show_seconds: bool,
+    is_24_hour: bool,
+    theme: String,
+    background_color: String,
+    text_color: String,
+    subtitle_color: String,
+    border_color: String,
+    border_radius: i32,
+    time_font_size: i32,
+    date_font_size: i32,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl From<ClockRow> for Clock {
+    fn from(r: ClockRow) -> Self {
+        Clock {
+            id: r.id.to_string(),
+            name: r.name,
+            city: r.city,
+            show_seconds: r.show_seconds,
+            is_24_hour: r.is_24_hour,
+            theme: r.theme,
+            background_color: r.background_color,
+            text_color: r.text_color,
+            subtitle_color: r.subtitle_color,
+            border_color: r.border_color,
+            border_radius: r.border_radius,
+            time_font_size: r.time_font_size,
+            date_font_size: r.date_font_size,
+            created_at: r.created_at.to_rfc3339(),
+            updated_at: r.updated_at.to_rfc3339(),
+        }
+    }
+}
 
 pub struct ClockServiceImpl {
     pub pool: PgPool,
@@ -28,8 +69,10 @@ impl ClockServiceTrait for ClockServiceImpl {
     ) -> Result<Response<Clock>, Status> {
         let req = request.into_inner();
         let id = Uuid::new_v4();
+        let city = if req.city.is_empty() { "Makassar".to_string() } else { req.city };
+        let theme = if req.theme.is_empty() { "glass".to_string() } else { req.theme };
 
-        let row = sqlx::query!(
+        let row = sqlx::query_as::<_, ClockRow>(
             r#"
             INSERT INTO clocks (
                 id, name, city, show_seconds, is_24_hour, theme,
@@ -48,42 +91,26 @@ impl ClockServiceTrait for ClockServiceImpl {
             RETURNING id, name, city, show_seconds, is_24_hour, theme,
                       background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size,
                       created_at, updated_at
-            "#,
-            id,
-            req.name,
-            if req.city.is_empty() { "Makassar" } else { &req.city },
-            req.show_seconds,
-            req.is_24_hour,
-            if req.theme.is_empty() { "glass" } else { &req.theme },
-            req.background_color,
-            req.text_color,
-            req.subtitle_color,
-            req.border_color,
-            req.border_radius,
-            req.time_font_size,
-            req.date_font_size,
+            "#
         )
+        .bind(id)
+        .bind(&req.name)
+        .bind(&city)
+        .bind(req.show_seconds)
+        .bind(req.is_24_hour)
+        .bind(&theme)
+        .bind(&req.background_color)
+        .bind(&req.text_color)
+        .bind(&req.subtitle_color)
+        .bind(&req.border_color)
+        .bind(req.border_radius)
+        .bind(req.time_font_size)
+        .bind(req.date_font_size)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(Clock {
-            id: row.id.to_string(),
-            name: row.name,
-            city: row.city,
-            show_seconds: row.show_seconds,
-            is_24_hour: row.is_24_hour,
-            theme: row.theme,
-            created_at: row.created_at.to_rfc3339(),
-            updated_at: row.updated_at.to_rfc3339(),
-            background_color: row.background_color,
-            text_color: row.text_color,
-            subtitle_color: row.subtitle_color,
-            border_color: row.border_color,
-            border_radius: row.border_radius,
-            time_font_size: row.time_font_size,
-            date_font_size: row.date_font_size,
-        }))
+        Ok(Response::new(Clock::from(row)))
     }
 
     async fn get_clock(
@@ -91,32 +118,16 @@ impl ClockServiceTrait for ClockServiceImpl {
         request: Request<GetClockRequest>,
     ) -> Result<Response<Clock>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        let row = sqlx::query!(
-            "SELECT id, name, city, show_seconds, is_24_hour, theme, background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size, created_at, updated_at FROM clocks WHERE id = $1",
-            id
+        let row = sqlx::query_as::<_, ClockRow>(
+            "SELECT id, name, city, show_seconds, is_24_hour, theme, background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size, created_at, updated_at FROM clocks WHERE id = $1"
         )
+        .bind(id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?
         .ok_or_else(|| Status::not_found("Clock not found"))?;
 
-        Ok(Response::new(Clock {
-            id: row.id.to_string(),
-            name: row.name,
-            city: row.city,
-            show_seconds: row.show_seconds,
-            is_24_hour: row.is_24_hour,
-            theme: row.theme,
-            created_at: row.created_at.to_rfc3339(),
-            updated_at: row.updated_at.to_rfc3339(),
-            background_color: row.background_color,
-            text_color: row.text_color,
-            subtitle_color: row.subtitle_color,
-            border_color: row.border_color,
-            border_radius: row.border_radius,
-            time_font_size: row.time_font_size,
-            date_font_size: row.date_font_size,
-        }))
+        Ok(Response::new(Clock::from(row)))
     }
 
     async fn list_clocks(
@@ -126,7 +137,7 @@ impl ClockServiceTrait for ClockServiceImpl {
         let req = request.into_inner();
         let search = format!("%{}%", req.search);
 
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as::<_, ClockRow>(
             r#"
             SELECT id, name, city, show_seconds, is_24_hour, theme,
                    background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size,
@@ -135,30 +146,14 @@ impl ClockServiceTrait for ClockServiceImpl {
             WHERE name ILIKE $1 OR city ILIKE $1
             ORDER BY created_at DESC
             LIMIT 50
-            "#,
-            search
+            "#
         )
+        .bind(&search)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        let items = rows.into_iter().map(|r| Clock {
-            id: r.id.to_string(),
-            name: r.name,
-            city: r.city,
-            show_seconds: r.show_seconds,
-            is_24_hour: r.is_24_hour,
-            theme: r.theme,
-            created_at: r.created_at.to_rfc3339(),
-            updated_at: r.updated_at.to_rfc3339(),
-            background_color: r.background_color,
-            text_color: r.text_color,
-            subtitle_color: r.subtitle_color,
-            border_color: r.border_color,
-            border_radius: r.border_radius,
-            time_font_size: r.time_font_size,
-            date_font_size: r.date_font_size,
-        }).collect();
+        let items = rows.into_iter().map(Clock::from).collect();
 
         Ok(Response::new(ListClocksResponse {
             items,
@@ -178,7 +173,7 @@ impl ClockServiceTrait for ClockServiceImpl {
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id).map_err(|_| Status::invalid_argument("Invalid id"))?;
 
-        let row = sqlx::query!(
+        let row = sqlx::query_as::<_, ClockRow>(
             r#"
             UPDATE clocks
             SET name = COALESCE(NULLIF($2, ''), name),
@@ -198,42 +193,26 @@ impl ClockServiceTrait for ClockServiceImpl {
             RETURNING id, name, city, show_seconds, is_24_hour, theme,
                       background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size,
                       created_at, updated_at
-            "#,
-            id,
-            req.name,
-            req.city,
-            req.show_seconds,
-            req.is_24_hour,
-            req.theme,
-            req.background_color,
-            req.text_color,
-            req.subtitle_color,
-            req.border_color,
-            req.border_radius,
-            req.time_font_size,
-            req.date_font_size,
+            "#
         )
+        .bind(id)
+        .bind(&req.name)
+        .bind(&req.city)
+        .bind(req.show_seconds)
+        .bind(req.is_24_hour)
+        .bind(&req.theme)
+        .bind(&req.background_color)
+        .bind(&req.text_color)
+        .bind(&req.subtitle_color)
+        .bind(&req.border_color)
+        .bind(req.border_radius)
+        .bind(req.time_font_size)
+        .bind(req.date_font_size)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(Clock {
-            id: row.id.to_string(),
-            name: row.name,
-            city: row.city,
-            show_seconds: row.show_seconds,
-            is_24_hour: row.is_24_hour,
-            theme: row.theme,
-            created_at: row.created_at.to_rfc3339(),
-            updated_at: row.updated_at.to_rfc3339(),
-            background_color: row.background_color,
-            text_color: row.text_color,
-            subtitle_color: row.subtitle_color,
-            border_color: row.border_color,
-            border_radius: row.border_radius,
-            time_font_size: row.time_font_size,
-            date_font_size: row.date_font_size,
-        }))
+        Ok(Response::new(Clock::from(row)))
     }
 
     async fn delete_clock(
@@ -241,10 +220,12 @@ impl ClockServiceTrait for ClockServiceImpl {
         request: Request<DeleteClockRequest>,
     ) -> Result<Response<DeleteClockResponse>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        sqlx::query!("DELETE FROM clocks WHERE id = $1", id)
+        sqlx::query("DELETE FROM clocks WHERE id = $1")
+            .bind(id)
             .execute(&self.pool)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(DeleteClockResponse { success: true }))
     }
 }
+

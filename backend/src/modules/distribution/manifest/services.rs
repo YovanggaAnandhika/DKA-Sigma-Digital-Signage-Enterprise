@@ -195,19 +195,20 @@ impl ManifestService {
                     }
                 } else if let Some(album_id) = block.block.album_id {
                     // Enrich album photo assets for offline-first player caching
-                    if let Ok(photos) = sqlx::query!(
-                        "SELECT media_item_id FROM album_photos WHERE album_id = $1 ORDER BY position ASC",
-                        album_id
+                    if let Ok(photos) = sqlx::query_as::<_, (Uuid,)>(
+                        "SELECT media_item_id FROM album_photos WHERE album_id = $1 ORDER BY position ASC"
                     )
+                    .bind(album_id)
                     .fetch_all(pool)
                     .await {
                         for p in photos {
-                            if !required_assets_map.contains_key(&p.media_item_id) {
-                                if let Ok(Some(media)) = MediaRepository::find_by_id(pool, p.media_item_id).await {
+                            let media_id = p.0;
+                            if !required_assets_map.contains_key(&media_id) {
+                                if let Ok(Some(media)) = MediaRepository::find_by_id(pool, media_id).await {
                                     required_assets_map.insert(
-                                        p.media_item_id,
+                                        media_id,
                                         ManifestAssetDto {
-                                            media_id: p.media_item_id,
+                                            media_id,
                                             name: media.name.clone(),
                                             url: media.public_url.clone(),
                                             sha256_hash: media.sha256_hash.clone(),
@@ -227,14 +228,14 @@ impl ManifestService {
                     });
                 } else if let Some(queue_id) = block.block.queue_id {
                     // Enrich custom chime audio assets from queue_audios for offline-first player caching
-                    if let Ok(audios) = sqlx::query!(
-                        "SELECT media_item_id FROM queue_audios WHERE queue_display_id = $1 AND audio_type = 'media_item' AND is_active = true AND media_item_id IS NOT NULL",
-                        queue_id
+                    if let Ok(audios) = sqlx::query_as::<_, (Option<Uuid>,)>(
+                        "SELECT media_item_id FROM queue_audios WHERE queue_display_id = $1 AND audio_type = 'media_item' AND is_active = true AND media_item_id IS NOT NULL"
                     )
+                    .bind(queue_id)
                     .fetch_all(pool)
                     .await {
                         for a in audios {
-                            if let Some(m_id) = a.media_item_id {
+                            if let Some(m_id) = a.0 {
                                 if !required_assets_map.contains_key(&m_id) {
                                     if let Ok(Some(media)) = MediaRepository::find_by_id(pool, m_id).await {
                                         required_assets_map.insert(

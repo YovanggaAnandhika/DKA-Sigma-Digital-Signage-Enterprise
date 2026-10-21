@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
-use sqlx::PgPool;
+use sqlx::{PgPool, FromRow};
 use std::str::FromStr;
 
 use crate::grpc::proto::studio::v1::webview::{
@@ -9,6 +9,35 @@ use crate::grpc::proto::studio::v1::webview::{
     UpdateWebviewRequest, DeleteWebviewRequest, DeleteWebviewResponse, Webview,
 };
 use crate::grpc::proto::common::v1::PaginationResponse;
+
+#[derive(FromRow)]
+struct WebviewRow {
+    id: Uuid,
+    name: String,
+    url: String,
+    refresh_interval_seconds: i32,
+    zoom_scale: i32,
+    bypass_cache: bool,
+    orientation: String,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl From<WebviewRow> for Webview {
+    fn from(r: WebviewRow) -> Self {
+        Webview {
+            id: r.id.to_string(),
+            name: r.name,
+            url: r.url,
+            refresh_interval_seconds: r.refresh_interval_seconds,
+            zoom_scale: r.zoom_scale,
+            bypass_cache: r.bypass_cache,
+            orientation: r.orientation,
+            created_at: r.created_at.to_rfc3339(),
+            updated_at: r.updated_at.to_rfc3339(),
+        }
+    }
+}
 
 pub struct WebviewServiceImpl {
     pub pool: PgPool,
@@ -28,36 +57,29 @@ impl WebviewServiceTrait for WebviewServiceImpl {
     ) -> Result<Response<Webview>, Status> {
         let req = request.into_inner();
         let id = Uuid::new_v4();
+        let orientation = if req.orientation.is_empty() { "landscape".to_string() } else { req.orientation };
+        let refresh_interval = if req.refresh_interval_seconds > 0 { req.refresh_interval_seconds } else { 60 };
+        let zoom = if req.zoom_scale > 0 { req.zoom_scale } else { 100 };
 
-        let row = sqlx::query!(
+        let row = sqlx::query_as::<_, WebviewRow>(
             r#"
             INSERT INTO webviews (id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation, created_at, updated_at
-            "#,
-            id,
-            req.name,
-            req.url,
-            if req.refresh_interval_seconds > 0 { req.refresh_interval_seconds } else { 60 },
-            if req.zoom_scale > 0 { req.zoom_scale } else { 100 },
-            req.bypass_cache,
-            if req.orientation.is_empty() { "landscape" } else { &req.orientation },
+            "#
         )
+        .bind(id)
+        .bind(&req.name)
+        .bind(&req.url)
+        .bind(refresh_interval)
+        .bind(zoom)
+        .bind(req.bypass_cache)
+        .bind(&orientation)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(Webview {
-            id: row.id.to_string(),
-            name: row.name,
-            url: row.url,
-            refresh_interval_seconds: row.refresh_interval_seconds,
-            zoom_scale: row.zoom_scale,
-            bypass_cache: row.bypass_cache,
-            orientation: row.orientation,
-            created_at: row.created_at.to_rfc3339(),
-            updated_at: row.updated_at.to_rfc3339(),
-        }))
+        Ok(Response::new(Webview::from(row)))
     }
 
     async fn get_webview(
@@ -65,26 +87,16 @@ impl WebviewServiceTrait for WebviewServiceImpl {
         request: Request<GetWebviewRequest>,
     ) -> Result<Response<Webview>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        let row = sqlx::query!(
-            "SELECT id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation, created_at, updated_at FROM webviews WHERE id = $1",
-            id
+        let row = sqlx::query_as::<_, WebviewRow>(
+            "SELECT id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation, created_at, updated_at FROM webviews WHERE id = $1"
         )
+        .bind(id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?
         .ok_or_else(|| Status::not_found("Webview not found"))?;
 
-        Ok(Response::new(Webview {
-            id: row.id.to_string(),
-            name: row.name,
-            url: row.url,
-            refresh_interval_seconds: row.refresh_interval_seconds,
-            zoom_scale: row.zoom_scale,
-            bypass_cache: row.bypass_cache,
-            orientation: row.orientation,
-            created_at: row.created_at.to_rfc3339(),
-            updated_at: row.updated_at.to_rfc3339(),
-        }))
+        Ok(Response::new(Webview::from(row)))
     }
 
     async fn list_webviews(
@@ -94,31 +106,21 @@ impl WebviewServiceTrait for WebviewServiceImpl {
         let req = request.into_inner();
         let search = format!("%{}%", req.search);
 
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as::<_, WebviewRow>(
             r#"
             SELECT id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation, created_at, updated_at
             FROM webviews
             WHERE name ILIKE $1 OR url ILIKE $1
             ORDER BY created_at DESC
             LIMIT 50
-            "#,
-            search
+            "#
         )
+        .bind(&search)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        let items = rows.into_iter().map(|r| Webview {
-            id: r.id.to_string(),
-            name: r.name,
-            url: r.url,
-            refresh_interval_seconds: r.refresh_interval_seconds,
-            zoom_scale: r.zoom_scale,
-            bypass_cache: r.bypass_cache,
-            orientation: r.orientation,
-            created_at: r.created_at.to_rfc3339(),
-            updated_at: r.updated_at.to_rfc3339(),
-        }).collect();
+        let items = rows.into_iter().map(Webview::from).collect();
 
         Ok(Response::new(ListWebviewsResponse {
             items,
@@ -138,7 +140,7 @@ impl WebviewServiceTrait for WebviewServiceImpl {
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id).map_err(|_| Status::invalid_argument("Invalid id"))?;
 
-        let row = sqlx::query!(
+        let row = sqlx::query_as::<_, WebviewRow>(
             r#"
             UPDATE webviews
             SET name = COALESCE(NULLIF($2, ''), name),
@@ -150,30 +152,20 @@ impl WebviewServiceTrait for WebviewServiceImpl {
                 updated_at = NOW()
             WHERE id = $1
             RETURNING id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation, created_at, updated_at
-            "#,
-            id,
-            req.name,
-            req.url,
-            req.refresh_interval_seconds,
-            req.zoom_scale,
-            req.bypass_cache,
-            req.orientation,
+            "#
         )
+        .bind(id)
+        .bind(&req.name)
+        .bind(&req.url)
+        .bind(req.refresh_interval_seconds)
+        .bind(req.zoom_scale)
+        .bind(req.bypass_cache)
+        .bind(&req.orientation)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(Webview {
-            id: row.id.to_string(),
-            name: row.name,
-            url: row.url,
-            refresh_interval_seconds: row.refresh_interval_seconds,
-            zoom_scale: row.zoom_scale,
-            bypass_cache: row.bypass_cache,
-            orientation: row.orientation,
-            created_at: row.created_at.to_rfc3339(),
-            updated_at: row.updated_at.to_rfc3339(),
-        }))
+        Ok(Response::new(Webview::from(row)))
     }
 
     async fn delete_webview(
@@ -181,10 +173,12 @@ impl WebviewServiceTrait for WebviewServiceImpl {
         request: Request<DeleteWebviewRequest>,
     ) -> Result<Response<DeleteWebviewResponse>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        sqlx::query!("DELETE FROM webviews WHERE id = $1", id)
+        sqlx::query("DELETE FROM webviews WHERE id = $1")
+            .bind(id)
             .execute(&self.pool)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(DeleteWebviewResponse { success: true }))
     }
 }
+

@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
-use sqlx::PgPool;
+use sqlx::{PgPool, FromRow};
 use std::str::FromStr;
 
 use crate::grpc::proto::studio::v1::queue::{
@@ -21,6 +21,131 @@ use crate::grpc::proto::studio::v1::queue::{
 };
 use crate::grpc::proto::common::v1::PaginationResponse;
 
+#[derive(FromRow)]
+struct QueueDisplayRow {
+    id: Uuid,
+    name: String,
+    prefix: String,
+    canvas_width: i32,
+    canvas_height: i32,
+    background_color: String,
+    background_image_url: Option<String>,
+    theme_preset: String,
+    auto_recall_enabled: bool,
+    opacity: f64,
+    overlay_color: String,
+    overlay_opacity: f64,
+    sector_type: String,
+    ticket_label: String,
+    counter_label: String,
+    tts_template_call: String,
+    tts_template_recall: String,
+    tts_template_break: String,
+    current_sequence: i32,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(FromRow)]
+struct QueueDisplaySyncRow {
+    prefix: String,
+    current_sequence: i32,
+    sector_type: String,
+    ticket_label: String,
+    counter_label: String,
+    tts_template_call: String,
+    tts_template_recall: String,
+    tts_template_break: String,
+}
+
+#[derive(FromRow)]
+struct QueueLayoutItemRow {
+    id: Uuid,
+    queue_display_id: Uuid,
+    item_type: String,
+    name: String,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+    z_index: i32,
+    background_color: Option<String>,
+    text_color: Option<String>,
+    font_size: Option<i32>,
+    font_weight: Option<String>,
+    text_align: Option<String>,
+    template_content: String,
+    config: serde_json::Value,
+    is_visible: bool,
+    opacity: f64,
+    border_radius: i32,
+    border_color: String,
+    border_width: i32,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(FromRow)]
+struct QueueCounterRow {
+    id: Uuid,
+    queue_display_id: Uuid,
+    counter_number: i32,
+    counter_name: String,
+    operator_name: Option<String>,
+    is_active: bool,
+    status: String,
+    status_note: Option<String>,
+    current_ticket_number: Option<String>,
+    last_called_at: Option<chrono::DateTime<chrono::Utc>>,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(FromRow)]
+struct QueueAudioRow {
+    id: Uuid,
+    queue_display_id: Uuid,
+    name: String,
+    audio_type: String,
+    media_item_id: Option<Uuid>,
+    file_url: Option<String>,
+    volume_percent: i32,
+    is_active: bool,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(FromRow)]
+struct QueueTicketRow {
+    id: Uuid,
+    queue_display_id: Uuid,
+    counter_id: Option<Uuid>,
+    ticket_number: String,
+    prefix: String,
+    sequence_number: i32,
+    status: String,
+    called_at: Option<chrono::DateTime<chrono::Utc>>,
+    completed_at: Option<chrono::DateTime<chrono::Utc>>,
+    created_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(FromRow)]
+struct QueueSectorRow {
+    id: String,
+    name: String,
+    description: String,
+    default_prefix: String,
+    ticket_label: String,
+    counter_label: String,
+    tts_template_call: String,
+    tts_template_recall: String,
+    tts_template_break: String,
+    icon: String,
+    sort_order: i32,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
+}
+
 pub struct QueueServiceImpl {
     pub pool: PgPool,
 }
@@ -31,7 +156,7 @@ impl QueueServiceImpl {
     }
 
     pub async fn fetch_display_detail(&self, id: Uuid) -> Result<QueueDisplayDetail, Status> {
-        let display = sqlx::query!(
+        let display = sqlx::query_as::<_, QueueDisplayRow>(
             r#"
             SELECT id, name, prefix, canvas_width, canvas_height, background_color,
                    background_image_url, theme_preset, auto_recall_enabled,
@@ -42,14 +167,14 @@ impl QueueServiceImpl {
             FROM queue_displays
             WHERE id = $1
             "#,
-            id
         )
+        .bind(id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?
         .ok_or_else(|| Status::not_found("Queue display not found"))?;
 
-        let items = sqlx::query!(
+        let items = sqlx::query_as::<_, QueueLayoutItemRow>(
             r#"
             SELECT id, queue_display_id, item_type, name, x, y, width, height, z_index,
                    background_color, text_color, font_size, font_weight, text_align,
@@ -60,8 +185,8 @@ impl QueueServiceImpl {
             WHERE queue_display_id = $1
             ORDER BY z_index ASC, created_at ASC
             "#,
-            id
         )
+        .bind(id)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?
@@ -93,7 +218,7 @@ impl QueueServiceImpl {
         })
         .collect();
 
-        let counters = sqlx::query!(
+        let counters = sqlx::query_as::<_, QueueCounterRow>(
             r#"
             SELECT id, queue_display_id, counter_number, counter_name, operator_name,
                    is_active, status, status_note, current_ticket_number, last_called_at,
@@ -102,8 +227,8 @@ impl QueueServiceImpl {
             WHERE queue_display_id = $1
             ORDER BY counter_number ASC
             "#,
-            id
         )
+        .bind(id)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?
@@ -124,7 +249,7 @@ impl QueueServiceImpl {
         })
         .collect();
 
-        let audios = sqlx::query!(
+        let audios = sqlx::query_as::<_, QueueAudioRow>(
             r#"
             SELECT id, queue_display_id, name, audio_type, media_item_id, file_url,
                    volume_percent, is_active, created_at, updated_at
@@ -132,8 +257,8 @@ impl QueueServiceImpl {
             WHERE queue_display_id = $1
             ORDER BY created_at ASC
             "#,
-            id
         )
+        .bind(id)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?
@@ -152,20 +277,19 @@ impl QueueServiceImpl {
         })
         .collect();
 
-        let waiting_count = sqlx::query!(
+        let (waiting_count,): (i64,) = sqlx::query_as(
             r#"
-            SELECT COUNT(*) as "count!"
+            SELECT COUNT(*)
             FROM queue_tickets
             WHERE queue_display_id = $1 AND status = 'waiting'
             "#,
-            id
         )
+        .bind(id)
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| Status::internal(e.to_string()))?
-        .count;
+        .map_err(|e| Status::internal(e.to_string()))?;
 
-        let latest_ticket = sqlx::query!(
+        let latest_ticket_opt: Option<(String,)> = sqlx::query_as(
             r#"
             SELECT ticket_number
             FROM queue_tickets
@@ -173,16 +297,18 @@ impl QueueServiceImpl {
             ORDER BY called_at DESC NULLS LAST
             LIMIT 1
             "#,
-            id
         )
+        .bind(id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| Status::internal(e.to_string()))?
-        .map(|t| t.ticket_number)
-        .unwrap_or_else(|| {
-            let p = if display.prefix.is_empty() { "A" } else { &display.prefix };
-            format!("{}-{:03}", p, display.current_sequence)
-        });
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let latest_ticket = latest_ticket_opt
+            .map(|t| t.0)
+            .unwrap_or_else(|| {
+                let p = if display.prefix.is_empty() { "A" } else { &display.prefix };
+                format!("{}-{:03}", p, display.current_sequence)
+            });
 
         Ok(QueueDisplayDetail {
             id: display.id.to_string(),
@@ -231,7 +357,7 @@ impl QueueServiceTrait for QueueServiceImpl {
         let tts_recall = req.tts_template_recall.filter(|s| !s.is_empty()).unwrap_or_else(|| "Panggilan ulang, {ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}".to_string());
         let tts_break = req.tts_template_break.filter(|s| !s.is_empty()).unwrap_or_else(|| "{counter_label} {counter_name} sedang istirahat".to_string());
 
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO queue_displays (
                 id, name, prefix, canvas_width, canvas_height, background_color,
@@ -241,25 +367,25 @@ impl QueueServiceTrait for QueueServiceImpl {
                 tts_template_call, tts_template_recall, tts_template_break
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
             "#,
-            display_id,
-            req.name,
-            if req.prefix.is_empty() { "A" } else { &req.prefix },
-            if req.canvas_width > 0 { req.canvas_width } else { 1920 },
-            if req.canvas_height > 0 { req.canvas_height } else { 1080 },
-            if req.background_color.is_empty() { "transparent" } else { &req.background_color },
-            if req.background_image_url.is_empty() { None } else { Some(req.background_image_url) },
-            if req.theme_preset.is_empty() { "clean-light" } else { &req.theme_preset },
-            req.auto_recall_enabled,
-            if req.opacity > 0.0 { req.opacity as f64 } else { 1.0 },
-            if req.overlay_color.is_empty() { "transparent" } else { &req.overlay_color },
-            req.overlay_opacity as f64,
-            sector_type,
-            ticket_label,
-            counter_label,
-            tts_call,
-            tts_recall,
-            tts_break,
         )
+        .bind(display_id)
+        .bind(&req.name)
+        .bind(if req.prefix.is_empty() { "A" } else { &req.prefix })
+        .bind(if req.canvas_width > 0 { req.canvas_width } else { 1920 })
+        .bind(if req.canvas_height > 0 { req.canvas_height } else { 1080 })
+        .bind(if req.background_color.is_empty() { "transparent" } else { &req.background_color })
+        .bind(if req.background_image_url.is_empty() { None } else { Some(&req.background_image_url) })
+        .bind(if req.theme_preset.is_empty() { "clean-light" } else { &req.theme_preset })
+        .bind(req.auto_recall_enabled)
+        .bind(if req.opacity > 0.0 { req.opacity as f64 } else { 1.0 })
+        .bind(if req.overlay_color.is_empty() { "transparent" } else { &req.overlay_color })
+        .bind(req.overlay_opacity as f64)
+        .bind(&sector_type)
+        .bind(&ticket_label)
+        .bind(&counter_label)
+        .bind(&tts_call)
+        .bind(&tts_recall)
+        .bind(&tts_break)
         .execute(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -268,7 +394,7 @@ impl QueueServiceTrait for QueueServiceImpl {
         for it in req.items {
             let item_id = Uuid::from_str(&it.id).unwrap_or_else(|_| Uuid::new_v4());
             let config_val: serde_json::Value = serde_json::from_str(&it.config_json).unwrap_or(serde_json::json!({}));
-            sqlx::query!(
+            sqlx::query(
                 r#"
                 INSERT INTO queue_layout_items (
                     id, queue_display_id, item_type, name, x, y, width, height, z_index,
@@ -277,28 +403,28 @@ impl QueueServiceTrait for QueueServiceImpl {
                     opacity, border_radius, border_color, border_width
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
                 "#,
-                item_id,
-                display_id,
-                it.item_type,
-                it.name,
-                it.x,
-                it.y,
-                it.width,
-                it.height,
-                it.z_index,
-                it.background_color,
-                it.text_color,
-                it.font_size,
-                it.font_weight,
-                it.text_align,
-                it.template_content,
-                config_val,
-                it.is_visible,
-                if it.opacity > 0.0 { it.opacity as f64 } else { 1.0 },
-                it.border_radius,
-                if it.border_color.is_empty() { "transparent" } else { &it.border_color },
-                it.border_width,
             )
+            .bind(item_id)
+            .bind(display_id)
+            .bind(&it.item_type)
+            .bind(&it.name)
+            .bind(it.x)
+            .bind(it.y)
+            .bind(it.width)
+            .bind(it.height)
+            .bind(it.z_index)
+            .bind(&it.background_color)
+            .bind(&it.text_color)
+            .bind(it.font_size)
+            .bind(&it.font_weight)
+            .bind(&it.text_align)
+            .bind(&it.template_content)
+            .bind(&config_val)
+            .bind(it.is_visible)
+            .bind(if it.opacity > 0.0 { it.opacity as f64 } else { 1.0 })
+            .bind(it.border_radius)
+            .bind(if it.border_color.is_empty() { "transparent" } else { &it.border_color })
+            .bind(it.border_width)
             .execute(&self.pool)
             .await
             .ok();
@@ -307,18 +433,18 @@ impl QueueServiceTrait for QueueServiceImpl {
         // Insert counters if provided
         for c in req.counters {
             let cid = Uuid::from_str(&c.id).unwrap_or_else(|_| Uuid::new_v4());
-            sqlx::query!(
+            sqlx::query(
                 r#"
                 INSERT INTO queue_counters (id, queue_display_id, counter_number, counter_name, operator_name, is_active)
                 VALUES ($1, $2, $3, $4, $5, $6)
                 "#,
-                cid,
-                display_id,
-                c.counter_number,
-                c.counter_name,
-                c.operator_name,
-                c.is_active,
             )
+            .bind(cid)
+            .bind(display_id)
+            .bind(c.counter_number)
+            .bind(&c.counter_name)
+            .bind(&c.operator_name)
+            .bind(c.is_active)
             .execute(&self.pool)
             .await
             .ok();
@@ -328,20 +454,20 @@ impl QueueServiceTrait for QueueServiceImpl {
         for a in req.audios {
             let aid = Uuid::from_str(&a.id).unwrap_or_else(|_| Uuid::new_v4());
             let mid = Uuid::from_str(&a.media_item_id).ok();
-            sqlx::query!(
+            sqlx::query(
                 r#"
                 INSERT INTO queue_audios (id, queue_display_id, name, audio_type, media_item_id, file_url, volume_percent, is_active)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 "#,
-                aid,
-                display_id,
-                a.name,
-                a.audio_type,
-                mid,
-                if a.file_url.is_empty() { None } else { Some(a.file_url) },
-                a.volume_percent,
-                a.is_active,
             )
+            .bind(aid)
+            .bind(display_id)
+            .bind(&a.name)
+            .bind(&a.audio_type)
+            .bind(mid)
+            .bind(if a.file_url.is_empty() { None } else { Some(&a.file_url) })
+            .bind(a.volume_percent)
+            .bind(a.is_active)
             .execute(&self.pool)
             .await
             .ok();
@@ -366,22 +492,22 @@ impl QueueServiceTrait for QueueServiceImpl {
         let req = request.into_inner();
         let search_pattern = format!("%{}%", req.search);
 
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as::<_, (Uuid,)>(
             r#"
             SELECT id FROM queue_displays
             WHERE name ILIKE $1 OR prefix ILIKE $1
             ORDER BY created_at DESC
             LIMIT 50
             "#,
-            search_pattern
         )
+        .bind(&search_pattern)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
         let mut items = Vec::new();
         for r in rows {
-            if let Ok(d) = self.fetch_display_detail(r.id).await {
+            if let Ok(d) = self.fetch_display_detail(r.0).await {
                 items.push(d);
             }
         }
@@ -405,7 +531,7 @@ impl QueueServiceTrait for QueueServiceImpl {
         let id = Uuid::from_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid queue display id"))?;
 
-        sqlx::query!(
+        sqlx::query(
             r#"
             UPDATE queue_displays
             SET name = COALESCE(NULLIF($2, ''), name),
@@ -428,39 +554,40 @@ impl QueueServiceTrait for QueueServiceImpl {
                 updated_at = NOW()
             WHERE id = $1
             "#,
-            id,
-            req.name,
-            req.prefix,
-            req.canvas_width,
-            req.canvas_height,
-            req.background_color,
-            if req.background_image_url.is_empty() { None } else { Some(req.background_image_url) },
-            req.theme_preset,
-            req.auto_recall_enabled,
-            req.opacity as f64,
-            req.overlay_color,
-            req.overlay_opacity as f64,
-            req.sector_type,
-            req.ticket_label,
-            req.counter_label,
-            req.tts_template_call,
-            req.tts_template_recall,
-            req.tts_template_break,
         )
+        .bind(id)
+        .bind(&req.name)
+        .bind(&req.prefix)
+        .bind(req.canvas_width)
+        .bind(req.canvas_height)
+        .bind(&req.background_color)
+        .bind(if req.background_image_url.is_empty() { None } else { Some(&req.background_image_url) })
+        .bind(&req.theme_preset)
+        .bind(req.auto_recall_enabled)
+        .bind(req.opacity as f64)
+        .bind(&req.overlay_color)
+        .bind(req.overlay_opacity as f64)
+        .bind(req.sector_type.as_ref().filter(|s| !s.is_empty()))
+        .bind(req.ticket_label.as_ref().filter(|s| !s.is_empty()))
+        .bind(req.counter_label.as_ref().filter(|s| !s.is_empty()))
+        .bind(req.tts_template_call.as_ref().filter(|s| !s.is_empty()))
+        .bind(req.tts_template_recall.as_ref().filter(|s| !s.is_empty()))
+        .bind(req.tts_template_break.as_ref().filter(|s| !s.is_empty()))
         .execute(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
         // Sync items if passed
         if !req.items.is_empty() {
-            sqlx::query!("DELETE FROM queue_layout_items WHERE queue_display_id = $1", id)
+            sqlx::query("DELETE FROM queue_layout_items WHERE queue_display_id = $1")
+                .bind(id)
                 .execute(&self.pool)
                 .await
                 .ok();
             for it in req.items {
                 let item_id = Uuid::from_str(&it.id).unwrap_or_else(|_| Uuid::new_v4());
                 let config_val: serde_json::Value = serde_json::from_str(&it.config_json).unwrap_or(serde_json::json!({}));
-                sqlx::query!(
+                sqlx::query(
                     r#"
                     INSERT INTO queue_layout_items (
                         id, queue_display_id, item_type, name, x, y, width, height, z_index,
@@ -469,28 +596,28 @@ impl QueueServiceTrait for QueueServiceImpl {
                         opacity, border_radius, border_color, border_width
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
                     "#,
-                    item_id,
-                    id,
-                    it.item_type,
-                    it.name,
-                    it.x,
-                    it.y,
-                    it.width,
-                    it.height,
-                    it.z_index,
-                    it.background_color,
-                    it.text_color,
-                    it.font_size,
-                    it.font_weight,
-                    it.text_align,
-                    it.template_content,
-                    config_val,
-                    it.is_visible,
-                    if it.opacity > 0.0 { it.opacity as f64 } else { 1.0 },
-                    it.border_radius,
-                    if it.border_color.is_empty() { "transparent" } else { &it.border_color },
-                    it.border_width,
                 )
+                .bind(item_id)
+                .bind(id)
+                .bind(&it.item_type)
+                .bind(&it.name)
+                .bind(it.x)
+                .bind(it.y)
+                .bind(it.width)
+                .bind(it.height)
+                .bind(it.z_index)
+                .bind(&it.background_color)
+                .bind(&it.text_color)
+                .bind(it.font_size)
+                .bind(&it.font_weight)
+                .bind(&it.text_align)
+                .bind(&it.template_content)
+                .bind(&config_val)
+                .bind(it.is_visible)
+                .bind(if it.opacity > 0.0 { it.opacity as f64 } else { 1.0 })
+                .bind(it.border_radius)
+                .bind(if it.border_color.is_empty() { "transparent" } else { &it.border_color })
+                .bind(it.border_width)
                 .execute(&self.pool)
                 .await
                 .ok();
@@ -499,24 +626,25 @@ impl QueueServiceTrait for QueueServiceImpl {
 
         // Sync counters if passed
         if !req.counters.is_empty() {
-            sqlx::query!("DELETE FROM queue_counters WHERE queue_display_id = $1", id)
+            sqlx::query("DELETE FROM queue_counters WHERE queue_display_id = $1")
+                .bind(id)
                 .execute(&self.pool)
                 .await
                 .ok();
             for c in req.counters {
                 let cid = Uuid::from_str(&c.id).unwrap_or_else(|_| Uuid::new_v4());
-                sqlx::query!(
+                sqlx::query(
                     r#"
                     INSERT INTO queue_counters (id, queue_display_id, counter_number, counter_name, operator_name, is_active)
                     VALUES ($1, $2, $3, $4, $5, $6)
                     "#,
-                    cid,
-                    id,
-                    c.counter_number,
-                    c.counter_name,
-                    c.operator_name,
-                    c.is_active,
                 )
+                .bind(cid)
+                .bind(id)
+                .bind(c.counter_number)
+                .bind(&c.counter_name)
+                .bind(&c.operator_name)
+                .bind(c.is_active)
                 .execute(&self.pool)
                 .await
                 .ok();
@@ -525,27 +653,28 @@ impl QueueServiceTrait for QueueServiceImpl {
 
         // Sync audios if passed
         if !req.audios.is_empty() {
-            sqlx::query!("DELETE FROM queue_audios WHERE queue_display_id = $1", id)
+            sqlx::query("DELETE FROM queue_audios WHERE queue_display_id = $1")
+                .bind(id)
                 .execute(&self.pool)
                 .await
                 .ok();
             for a in req.audios {
                 let aid = Uuid::from_str(&a.id).unwrap_or_else(|_| Uuid::new_v4());
                 let mid = Uuid::from_str(&a.media_item_id).ok();
-                sqlx::query!(
+                sqlx::query(
                     r#"
                     INSERT INTO queue_audios (id, queue_display_id, name, audio_type, media_item_id, file_url, volume_percent, is_active)
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                     "#,
-                    aid,
-                    id,
-                    a.name,
-                    a.audio_type,
-                    mid,
-                    if a.file_url.is_empty() { None } else { Some(a.file_url) },
-                    a.volume_percent,
-                    a.is_active,
                 )
+                .bind(aid)
+                .bind(id)
+                .bind(&a.name)
+                .bind(&a.audio_type)
+                .bind(mid)
+                .bind(if a.file_url.is_empty() { None } else { Some(&a.file_url) })
+                .bind(a.volume_percent)
+                .bind(a.is_active)
                 .execute(&self.pool)
                 .await
                 .ok();
@@ -561,7 +690,8 @@ impl QueueServiceTrait for QueueServiceImpl {
     ) -> Result<Response<DeleteQueueDisplayResponse>, Status> {
         let id = Uuid::from_str(&request.into_inner().id)
             .map_err(|_| Status::invalid_argument("Invalid id"))?;
-        sqlx::query!("DELETE FROM queue_displays WHERE id = $1", id)
+        sqlx::query("DELETE FROM queue_displays WHERE id = $1")
+            .bind(id)
             .execute(&self.pool)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -577,7 +707,8 @@ impl QueueServiceTrait for QueueServiceImpl {
         let display_id = Uuid::from_str(&req.queue_display_id)
             .map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
 
-        sqlx::query!("DELETE FROM queue_layout_items WHERE queue_display_id = $1", display_id)
+        sqlx::query("DELETE FROM queue_layout_items WHERE queue_display_id = $1")
+            .bind(display_id)
             .execute(&self.pool)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -586,7 +717,7 @@ impl QueueServiceTrait for QueueServiceImpl {
         for it in req.items {
             let item_id = Uuid::from_str(&it.id).unwrap_or_else(|_| Uuid::new_v4());
             let config_val: serde_json::Value = serde_json::from_str(&it.config_json).unwrap_or(serde_json::json!({}));
-            sqlx::query!(
+            sqlx::query(
                 r#"
                 INSERT INTO queue_layout_items (
                     id, queue_display_id, item_type, name, x, y, width, height, z_index,
@@ -595,28 +726,28 @@ impl QueueServiceTrait for QueueServiceImpl {
                     opacity, border_radius, border_color, border_width
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
                 "#,
-                item_id,
-                display_id,
-                it.item_type,
-                it.name,
-                it.x,
-                it.y,
-                it.width,
-                it.height,
-                it.z_index,
-                it.background_color,
-                it.text_color,
-                it.font_size,
-                it.font_weight,
-                it.text_align,
-                it.template_content,
-                config_val,
-                it.is_visible,
-                if it.opacity > 0.0 { it.opacity as f64 } else { 1.0 },
-                it.border_radius,
-                if it.border_color.is_empty() { "transparent" } else { &it.border_color },
-                it.border_width,
             )
+            .bind(item_id)
+            .bind(display_id)
+            .bind(&it.item_type)
+            .bind(&it.name)
+            .bind(it.x)
+            .bind(it.y)
+            .bind(it.width)
+            .bind(it.height)
+            .bind(it.z_index)
+            .bind(&it.background_color)
+            .bind(&it.text_color)
+            .bind(it.font_size)
+            .bind(&it.font_weight)
+            .bind(&it.text_align)
+            .bind(&it.template_content)
+            .bind(&config_val)
+            .bind(it.is_visible)
+            .bind(if it.opacity > 0.0 { it.opacity as f64 } else { 1.0 })
+            .bind(it.border_radius)
+            .bind(if it.border_color.is_empty() { "transparent" } else { &it.border_color })
+            .bind(it.border_width)
             .execute(&self.pool)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -658,7 +789,7 @@ impl QueueServiceTrait for QueueServiceImpl {
         let display_id = Uuid::from_str(&request.into_inner().queue_display_id)
             .map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
 
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as::<_, QueueLayoutItemRow>(
             r#"
             SELECT id, queue_display_id, item_type, name, x, y, width, height, z_index,
                    background_color, text_color, font_size, font_weight, text_align,
@@ -669,8 +800,8 @@ impl QueueServiceTrait for QueueServiceImpl {
             WHERE queue_display_id = $1
             ORDER BY z_index ASC, created_at ASC
             "#,
-            display_id
         )
+        .bind(display_id)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -712,7 +843,7 @@ impl QueueServiceTrait for QueueServiceImpl {
         let item_id = Uuid::from_str(&it.id).map_err(|_| Status::invalid_argument("Invalid item id"))?;
         let config_val: serde_json::Value = serde_json::from_str(&it.config_json).unwrap_or(serde_json::json!({}));
 
-        sqlx::query!(
+        sqlx::query(
             r#"
             UPDATE queue_layout_items
             SET name = $2, x = $3, y = $4, width = $5, height = $6, z_index = $7,
@@ -723,26 +854,26 @@ impl QueueServiceTrait for QueueServiceImpl {
                 updated_at = NOW()
             WHERE id = $1
             "#,
-            item_id,
-            it.name,
-            it.x,
-            it.y,
-            it.width,
-            it.height,
-            it.z_index,
-            it.background_color,
-            it.text_color,
-            it.font_size,
-            it.font_weight,
-            it.text_align,
-            it.template_content,
-            config_val,
-            it.is_visible,
-            if it.opacity > 0.0 { it.opacity as f64 } else { 1.0 },
-            it.border_radius,
-            if it.border_color.is_empty() { "transparent" } else { &it.border_color },
-            it.border_width,
         )
+        .bind(item_id)
+        .bind(&it.name)
+        .bind(it.x)
+        .bind(it.y)
+        .bind(it.width)
+        .bind(it.height)
+        .bind(it.z_index)
+        .bind(&it.background_color)
+        .bind(&it.text_color)
+        .bind(it.font_size)
+        .bind(&it.font_weight)
+        .bind(&it.text_align)
+        .bind(&it.template_content)
+        .bind(&config_val)
+        .bind(it.is_visible)
+        .bind(if it.opacity > 0.0 { it.opacity as f64 } else { 1.0 })
+        .bind(it.border_radius)
+        .bind(if it.border_color.is_empty() { "transparent" } else { &it.border_color })
+        .bind(it.border_width)
         .execute(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -755,7 +886,8 @@ impl QueueServiceTrait for QueueServiceImpl {
         request: Request<DeleteQueueLayoutItemRequest>,
     ) -> Result<Response<DeleteQueueLayoutItemResponse>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        sqlx::query!("DELETE FROM queue_layout_items WHERE id = $1", id)
+        sqlx::query("DELETE FROM queue_layout_items WHERE id = $1")
+            .bind(id)
             .execute(&self.pool)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -771,17 +903,17 @@ impl QueueServiceTrait for QueueServiceImpl {
         let display_id = Uuid::from_str(&req.queue_display_id).map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
         let cid = Uuid::new_v4();
 
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO queue_counters (id, queue_display_id, counter_number, counter_name, operator_name, is_active)
             VALUES ($1, $2, $3, $4, $5, true)
             "#,
-            cid,
-            display_id,
-            req.counter_number,
-            req.counter_name,
-            req.operator_name,
         )
+        .bind(cid)
+        .bind(display_id)
+        .bind(req.counter_number)
+        .bind(&req.counter_name)
+        .bind(&req.operator_name)
         .execute(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -811,7 +943,7 @@ impl QueueServiceTrait for QueueServiceImpl {
         let status = req.status.unwrap_or_else(|| "ACTIVE".to_string());
         let status_note = req.status_note;
 
-        let row = sqlx::query!(
+        let row = sqlx::query_as::<_, QueueCounterRow>(
             r#"
             UPDATE queue_counters
             SET counter_number = $2, counter_name = $3, operator_name = $4, is_active = $5,
@@ -821,14 +953,14 @@ impl QueueServiceTrait for QueueServiceImpl {
             WHERE id = $1
             RETURNING id, queue_display_id, counter_number, counter_name, operator_name, is_active, status, status_note, current_ticket_number, last_called_at, created_at, updated_at
             "#,
-            cid,
-            req.counter_number,
-            req.counter_name,
-            req.operator_name,
-            req.is_active,
-            status,
-            status_note,
         )
+        .bind(cid)
+        .bind(req.counter_number)
+        .bind(&req.counter_name)
+        .bind(&req.operator_name)
+        .bind(req.is_active)
+        .bind(&status)
+        .bind(&status_note)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -854,7 +986,8 @@ impl QueueServiceTrait for QueueServiceImpl {
         request: Request<DeleteCounterRequest>,
     ) -> Result<Response<DeleteCounterResponse>, Status> {
         let cid = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        sqlx::query!("DELETE FROM queue_counters WHERE id = $1", cid)
+        sqlx::query("DELETE FROM queue_counters WHERE id = $1")
+            .bind(cid)
             .execute(&self.pool)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -868,15 +1001,15 @@ impl QueueServiceTrait for QueueServiceImpl {
         let display_id = Uuid::from_str(&request.into_inner().queue_display_id)
             .map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
 
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as::<_, QueueCounterRow>(
             r#"
             SELECT id, queue_display_id, counter_number, counter_name, operator_name, is_active, status, status_note, current_ticket_number, last_called_at, created_at, updated_at
             FROM queue_counters
             WHERE queue_display_id = $1
             ORDER BY counter_number ASC
             "#,
-            display_id
         )
+        .bind(display_id)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -908,45 +1041,45 @@ impl QueueServiceTrait for QueueServiceImpl {
         let display_id = Uuid::from_str(&req.queue_display_id).map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
 
         let prefix = if req.prefix.is_empty() {
-            sqlx::query!("SELECT prefix FROM queue_displays WHERE id = $1", display_id)
+            sqlx::query_as::<_, (String,)>("SELECT prefix FROM queue_displays WHERE id = $1")
+                .bind(display_id)
                 .fetch_optional(&self.pool)
                 .await
                 .ok()
                 .flatten()
-                .map(|p| p.prefix)
+                .map(|p| p.0)
                 .unwrap_or_else(|| "A".to_string())
         } else {
             req.prefix
         };
 
-        let max_seq = sqlx::query!(
+        let (max_seq,): (i32,) = sqlx::query_as(
             r#"
-            SELECT COALESCE(MAX(sequence_number), 0) as "max_seq!"
+            SELECT COALESCE(MAX(sequence_number), 0)
             FROM queue_tickets
             WHERE queue_display_id = $1 AND created_at >= CURRENT_DATE AND status != 'archived'
             "#,
-            display_id
         )
+        .bind(display_id)
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| Status::internal(e.to_string()))?
-        .max_seq;
+        .map_err(|e| Status::internal(e.to_string()))?;
 
         let next_seq = max_seq + 1;
         let ticket_num = format!("{}-{:03}", prefix, next_seq);
         let tid = Uuid::new_v4();
 
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO queue_tickets (id, queue_display_id, ticket_number, prefix, sequence_number, status)
             VALUES ($1, $2, $3, $4, $5, 'waiting')
             "#,
-            tid,
-            display_id,
-            ticket_num,
-            prefix,
-            next_seq,
         )
+        .bind(tid)
+        .bind(display_id)
+        .bind(&ticket_num)
+        .bind(&prefix)
+        .bind(next_seq)
         .execute(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -973,23 +1106,23 @@ impl QueueServiceTrait for QueueServiceImpl {
         let display_id = Uuid::from_str(&req.queue_display_id).map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
         let counter_id = Uuid::from_str(&req.counter_id).map_err(|_| Status::invalid_argument("Invalid counter_id"))?;
 
-        let counter_check = sqlx::query!(
+        let counter_check: (String,) = sqlx::query_as(
             "SELECT status FROM queue_counters WHERE id = $1",
-            counter_id
         )
+        .bind(counter_id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?
         .ok_or_else(|| Status::not_found("Counter not found"))?;
 
-        if counter_check.status == "BREAK" {
+        if counter_check.0 == "BREAK" {
             return Err(Status::failed_precondition("Loket sedang dalam masa istirahat (BREAK)"));
-        } else if counter_check.status == "LOCKED" {
+        } else if counter_check.0 == "LOCKED" {
             return Err(Status::failed_precondition("Loket sedang terkunci / tutup (LOCKED)"));
         }
 
         // Find next waiting ticket
-        let next_ticket = sqlx::query!(
+        let next_ticket: Option<(Uuid, String, String, i32)> = sqlx::query_as(
             r#"
             SELECT id, ticket_number, prefix, sequence_number
             FROM queue_tickets
@@ -997,53 +1130,53 @@ impl QueueServiceTrait for QueueServiceImpl {
             ORDER BY sequence_number ASC
             LIMIT 1
             "#,
-            display_id
         )
+        .bind(display_id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
         let (tid, tnum, tprefix, tseq) = match next_ticket {
-            Some(t) => (t.id, t.ticket_number, t.prefix, t.sequence_number),
+            Some(t) => t,
             None => {
-                let display_row = sqlx::query!(
+                let display_row: (String, i32) = sqlx::query_as(
                     "SELECT prefix, current_sequence FROM queue_displays WHERE id = $1",
-                    display_id
                 )
+                .bind(display_id)
                 .fetch_optional(&self.pool)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?
                 .ok_or_else(|| Status::not_found("Queue display not found"))?;
 
-                let max_seq_row = sqlx::query!(
+                let (max_seq,): (i32,) = sqlx::query_as(
                     r#"
-                    SELECT COALESCE(MAX(sequence_number), 0) as "max_seq!"
+                    SELECT COALESCE(MAX(sequence_number), 0)
                     FROM queue_tickets
                     WHERE queue_display_id = $1 AND created_at >= CURRENT_DATE AND status != 'archived'
                     "#,
-                    display_id
                 )
+                .bind(display_id)
                 .fetch_one(&self.pool)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
 
-                let next_seq = std::cmp::max(display_row.current_sequence, max_seq_row.max_seq) + 1;
-                let prefix = if display_row.prefix.is_empty() { "A".to_string() } else { display_row.prefix };
+                let next_seq = std::cmp::max(display_row.1, max_seq) + 1;
+                let prefix = if display_row.0.is_empty() { "A".to_string() } else { display_row.0 };
                 let ticket_num = format!("{}-{:03}", prefix, next_seq);
                 let new_tid = Uuid::new_v4();
 
-                sqlx::query!(
+                sqlx::query(
                     r#"
                     INSERT INTO queue_tickets (id, queue_display_id, counter_id, ticket_number, prefix, sequence_number, status, called_at)
                     VALUES ($1, $2, $3, $4, $5, $6, 'called', NOW())
                     "#,
-                    new_tid,
-                    display_id,
-                    counter_id,
-                    ticket_num,
-                    prefix,
-                    next_seq,
                 )
+                .bind(new_tid)
+                .bind(display_id)
+                .bind(counter_id)
+                .bind(&ticket_num)
+                .bind(&prefix)
+                .bind(next_seq)
                 .execute(&self.pool)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
@@ -1053,51 +1186,51 @@ impl QueueServiceTrait for QueueServiceImpl {
         };
 
         let now = chrono::Utc::now();
-        sqlx::query!(
+        sqlx::query(
             r#"
             UPDATE queue_tickets
             SET status = 'called', counter_id = $2, called_at = $3
             WHERE id = $1
             "#,
-            tid,
-            counter_id,
-            now,
         )
+        .bind(tid)
+        .bind(counter_id)
+        .bind(now)
         .execute(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        sqlx::query!(
+        sqlx::query(
             r#"
             UPDATE queue_counters
             SET current_ticket_number = $2, last_called_at = $3, updated_at = NOW()
             WHERE id = $1
             "#,
-            counter_id,
-            tnum,
-            now,
         )
+        .bind(counter_id)
+        .bind(&tnum)
+        .bind(now)
         .execute(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        sqlx::query!(
+        sqlx::query(
             "UPDATE queue_displays SET current_sequence = GREATEST(current_sequence, $2), updated_at = NOW() WHERE id = $1",
-            display_id,
-            tseq
         )
+        .bind(display_id)
+        .bind(tseq)
         .execute(&self.pool)
         .await
         .ok();
 
-        let counter_row = sqlx::query!(
+        let counter_row = sqlx::query_as::<_, QueueCounterRow>(
             r#"
-            SELECT id, queue_display_id, counter_number, counter_name, operator_name, is_active, status, status_note, created_at, updated_at
+            SELECT id, queue_display_id, counter_number, counter_name, operator_name, is_active, status, status_note, current_ticket_number, last_called_at, created_at, updated_at
             FROM queue_counters
             WHERE id = $1
             "#,
-            counter_id
         )
+        .bind(counter_id)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -1142,10 +1275,14 @@ impl QueueServiceTrait for QueueServiceImpl {
         let counter_id = Uuid::from_str(&req.counter_id)
             .map_err(|_| Status::invalid_argument("Invalid counter_id"))?;
 
-        let counter_row = sqlx::query!(
-            "SELECT id, queue_display_id, counter_number, counter_name, operator_name, is_active, status, status_note, current_ticket_number FROM queue_counters WHERE id = $1",
-            counter_id
+        let counter_row = sqlx::query_as::<_, QueueCounterRow>(
+            r#"
+            SELECT id, queue_display_id, counter_number, counter_name, operator_name, is_active, status, status_note, current_ticket_number, last_called_at, created_at, updated_at
+            FROM queue_counters
+            WHERE id = $1
+            "#,
         )
+        .bind(counter_id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?
@@ -1157,46 +1294,53 @@ impl QueueServiceTrait for QueueServiceImpl {
             return Err(Status::failed_precondition("Loket sedang terkunci / tutup (LOCKED)"));
         }
 
-        let curr_num = counter_row.current_ticket_number.unwrap_or_default();
+        let curr_num = counter_row.current_ticket_number.clone().unwrap_or_default();
         let curr_seq: i32 = curr_num.chars().filter(|c| c.is_ascii_digit()).collect::<String>().parse().unwrap_or(1);
         let prev_seq = std::cmp::max(1, curr_seq - 1);
 
-        let prefix_row = sqlx::query!("SELECT prefix FROM queue_displays WHERE id = $1", display_id)
+        let (prefix,): (String,) = sqlx::query_as("SELECT prefix FROM queue_displays WHERE id = $1")
+            .bind(display_id)
             .fetch_one(&self.pool)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
-        let prefix = if prefix_row.prefix.is_empty() { "A".to_string() } else { prefix_row.prefix };
+        let prefix = if prefix.is_empty() { "A".to_string() } else { prefix };
         let prev_ticket_num = format!("{}-{:03}", prefix, prev_seq);
 
         let now = chrono::Utc::now();
-        let existing_ticket = sqlx::query!(
+        let existing_ticket: Option<(Uuid, String, i32)> = sqlx::query_as(
             "SELECT id, prefix, sequence_number FROM queue_tickets WHERE queue_display_id = $1 AND sequence_number = $2",
-            display_id,
-            prev_seq
         )
+        .bind(display_id)
+        .bind(prev_seq)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
         let tid = match existing_ticket {
             Some(t) => {
-                sqlx::query!(
+                sqlx::query(
                     "UPDATE queue_tickets SET status = 'called', counter_id = $2, called_at = $3 WHERE id = $1",
-                    t.id,
-                    counter_id,
-                    now
                 )
+                .bind(t.0)
+                .bind(counter_id)
+                .bind(now)
                 .execute(&self.pool)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
-                t.id
+                t.0
             }
             None => {
                 let new_id = Uuid::new_v4();
-                sqlx::query!(
+                sqlx::query(
                     "INSERT INTO queue_tickets (id, queue_display_id, counter_id, ticket_number, prefix, sequence_number, status, called_at) VALUES ($1, $2, $3, $4, $5, $6, 'called', $7)",
-                    new_id, display_id, counter_id, prev_ticket_num, prefix, prev_seq, now
                 )
+                .bind(new_id)
+                .bind(display_id)
+                .bind(counter_id)
+                .bind(&prev_ticket_num)
+                .bind(&prefix)
+                .bind(prev_seq)
+                .bind(now)
                 .execute(&self.pool)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
@@ -1204,21 +1348,21 @@ impl QueueServiceTrait for QueueServiceImpl {
             }
         };
 
-        sqlx::query!(
+        sqlx::query(
             "UPDATE queue_counters SET current_ticket_number = $2, last_called_at = $3, updated_at = NOW() WHERE id = $1",
-            counter_id,
-            prev_ticket_num,
-            now
         )
+        .bind(counter_id)
+        .bind(&prev_ticket_num)
+        .bind(now)
         .execute(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        sqlx::query!(
+        sqlx::query(
             "UPDATE queue_displays SET current_sequence = $2, updated_at = NOW() WHERE id = $1",
-            display_id,
-            prev_seq
         )
+        .bind(display_id)
+        .bind(prev_seq)
         .execute(&self.pool)
         .await
         .ok();
@@ -1263,29 +1407,29 @@ impl QueueServiceTrait for QueueServiceImpl {
         let start_seq = if req.start_sequence >= 0 { req.start_sequence } else { 0 };
 
         // Reset sequence in display
-        sqlx::query!(
+        sqlx::query(
             "UPDATE queue_displays SET current_sequence = $2, updated_at = NOW() WHERE id = $1",
-            display_id,
-            start_seq
         )
+        .bind(display_id)
+        .bind(start_seq)
         .execute(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
         // Archive active tickets
-        sqlx::query!(
+        sqlx::query(
             "UPDATE queue_tickets SET status = 'archived' WHERE queue_display_id = $1 AND status IN ('waiting', 'called', 'serving')",
-            display_id
         )
+        .bind(display_id)
         .execute(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
         // Clear current ticket number on counters
-        sqlx::query!(
+        sqlx::query(
             "UPDATE queue_counters SET current_ticket_number = NULL, last_called_at = NULL, updated_at = NOW() WHERE queue_display_id = $1",
-            display_id
         )
+        .bind(display_id)
         .execute(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -1311,17 +1455,17 @@ impl QueueServiceTrait for QueueServiceImpl {
         };
         let note = req.status_note.unwrap_or_default();
 
-        let row = sqlx::query!(
+        let row = sqlx::query_as::<_, QueueCounterRow>(
             r#"
             UPDATE queue_counters
             SET status = $2, status_note = $3, updated_at = NOW()
             WHERE id = $1
             RETURNING id, queue_display_id, counter_number, counter_name, operator_name, is_active, status, status_note, current_ticket_number, last_called_at, created_at, updated_at
             "#,
-            cid,
-            status,
-            note
         )
+        .bind(cid)
+        .bind(status)
+        .bind(&note)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -1349,21 +1493,21 @@ impl QueueServiceTrait for QueueServiceImpl {
         let display_id = Uuid::from_str(&request.into_inner().queue_display_id)
             .map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
 
-        let display = sqlx::query!(
+        let display = sqlx::query_as::<_, QueueDisplaySyncRow>(
             r#"
             SELECT prefix, current_sequence, sector_type, ticket_label, counter_label,
                    tts_template_call, tts_template_recall, tts_template_break
             FROM queue_displays
             WHERE id = $1
             "#,
-            display_id
         )
+        .bind(display_id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?
         .ok_or_else(|| Status::not_found("Queue display not found"))?;
 
-        let counters = sqlx::query!(
+        let counters = sqlx::query_as::<_, QueueCounterRow>(
             r#"
             SELECT id, queue_display_id, counter_number, counter_name, operator_name,
                    is_active, status, status_note, current_ticket_number, last_called_at,
@@ -1372,8 +1516,8 @@ impl QueueServiceTrait for QueueServiceImpl {
             WHERE queue_display_id = $1
             ORDER BY counter_number ASC
             "#,
-            display_id
         )
+        .bind(display_id)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?
@@ -1394,16 +1538,15 @@ impl QueueServiceTrait for QueueServiceImpl {
         })
         .collect();
 
-        let waiting_count = sqlx::query!(
-            r#"SELECT COUNT(*) as "count!" FROM queue_tickets WHERE queue_display_id = $1 AND status = 'waiting'"#,
-            display_id
+        let (waiting_count,): (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM queue_tickets WHERE queue_display_id = $1 AND status = 'waiting'",
         )
+        .bind(display_id)
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| Status::internal(e.to_string()))?
-        .count;
+        .map_err(|e| Status::internal(e.to_string()))?;
 
-        let latest_ticket = sqlx::query!(
+        let latest_ticket_opt: Option<(String,)> = sqlx::query_as(
             r#"
             SELECT ticket_number
             FROM queue_tickets
@@ -1411,16 +1554,18 @@ impl QueueServiceTrait for QueueServiceImpl {
             ORDER BY called_at DESC NULLS LAST
             LIMIT 1
             "#,
-            display_id
         )
+        .bind(display_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| Status::internal(e.to_string()))?
-        .map(|t| t.ticket_number)
-        .unwrap_or_else(|| {
-            let p = if display.prefix.is_empty() { "A" } else { &display.prefix };
-            format!("{}-{:03}", p, display.current_sequence)
-        });
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let latest_ticket = latest_ticket_opt
+            .map(|t| t.0)
+            .unwrap_or_else(|| {
+                let p = if display.prefix.is_empty() { "A" } else { &display.prefix };
+                format!("{}-{:03}", p, display.current_sequence)
+            });
 
         Ok(Response::new(GetQueueSyncStateResponse {
             queue_display_id: display_id.to_string(),
@@ -1446,7 +1591,7 @@ impl QueueServiceTrait for QueueServiceImpl {
         let display_id = Uuid::from_str(&req.queue_display_id).map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
         let limit = if req.limit > 0 { req.limit as i64 } else { 50 };
 
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as::<_, QueueTicketRow>(
             r#"
             SELECT id, queue_display_id, counter_id, ticket_number, prefix, sequence_number, status, called_at, completed_at, created_at
             FROM queue_tickets
@@ -1454,10 +1599,10 @@ impl QueueServiceTrait for QueueServiceImpl {
             ORDER BY created_at DESC
             LIMIT $3
             "#,
-            display_id,
-            req.status,
-            limit
         )
+        .bind(display_id)
+        .bind(req.status.as_ref().filter(|s| !s.is_empty()))
+        .bind(limit)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -1486,7 +1631,7 @@ impl QueueServiceTrait for QueueServiceImpl {
         let tid = Uuid::from_str(&req.id).map_err(|_| Status::invalid_argument("Invalid ticket id"))?;
         let counter_id = req.counter_id.and_then(|c| Uuid::from_str(&c).ok());
 
-        let row = sqlx::query!(
+        let row = sqlx::query_as::<_, QueueTicketRow>(
             r#"
             UPDATE queue_tickets
             SET status = $2::text,
@@ -1495,10 +1640,10 @@ impl QueueServiceTrait for QueueServiceImpl {
             WHERE id = $1
             RETURNING id, queue_display_id, counter_id, ticket_number, prefix, sequence_number, status, called_at, completed_at, created_at
             "#,
-            tid,
-            req.status,
-            counter_id
         )
+        .bind(tid)
+        .bind(&req.status)
+        .bind(counter_id)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -1527,20 +1672,20 @@ impl QueueServiceTrait for QueueServiceImpl {
         let media_id = req.media_item_id.and_then(|m| Uuid::from_str(&m).ok());
         let aid = Uuid::new_v4();
 
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO queue_audios (id, queue_display_id, name, audio_type, media_item_id, file_url, volume_percent, is_active)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             "#,
-            aid,
-            display_id,
-            req.name,
-            req.audio_type,
-            media_id,
-            req.file_url,
-            req.volume_percent,
-            req.is_active,
         )
+        .bind(aid)
+        .bind(display_id)
+        .bind(&req.name)
+        .bind(&req.audio_type)
+        .bind(media_id)
+        .bind(req.file_url.as_ref().filter(|s| !s.is_empty()))
+        .bind(req.volume_percent)
+        .bind(req.is_active)
         .execute(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -1564,7 +1709,8 @@ impl QueueServiceTrait for QueueServiceImpl {
         request: Request<DeleteAudioRequest>,
     ) -> Result<Response<DeleteAudioResponse>, Status> {
         let aid = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid audio id"))?;
-        sqlx::query!("DELETE FROM queue_audios WHERE id = $1", aid)
+        sqlx::query("DELETE FROM queue_audios WHERE id = $1")
+            .bind(aid)
             .execute(&self.pool)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -1578,15 +1724,15 @@ impl QueueServiceTrait for QueueServiceImpl {
         let display_id = Uuid::from_str(&request.into_inner().queue_display_id)
             .map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
 
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as::<_, QueueAudioRow>(
             r#"
             SELECT id, queue_display_id, name, audio_type, media_item_id, file_url, volume_percent, is_active, created_at, updated_at
             FROM queue_audios
             WHERE queue_display_id = $1
             ORDER BY created_at ASC
             "#,
-            display_id
         )
+        .bind(display_id)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -1611,14 +1757,14 @@ impl QueueServiceTrait for QueueServiceImpl {
         &self,
         _request: Request<ListQueueSectorsRequest>,
     ) -> Result<Response<ListQueueSectorsResponse>, Status> {
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as::<_, QueueSectorRow>(
             r#"
             SELECT id, name, description, default_prefix, ticket_label, counter_label,
                    tts_template_call, tts_template_recall, tts_template_break, icon, sort_order,
                    created_at, updated_at
             FROM queue_sectors
             ORDER BY sort_order ASC, name ASC
-            "#
+            "#,
         )
         .fetch_all(&self.pool)
         .await

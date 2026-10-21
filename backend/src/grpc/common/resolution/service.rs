@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
-use sqlx::PgPool;
+use sqlx::{PgPool, FromRow};
 use std::str::FromStr;
 
 use crate::grpc::proto::common::v1::resolution::{
@@ -8,6 +8,31 @@ use crate::grpc::proto::common::v1::resolution::{
     ListResolutionsRequest, ListResolutionsResponse, GetResolutionRequest,
     CreateResolutionRequest, UpdateResolutionRequest, DeleteResolutionRequest, DeleteResolutionResponse, Resolution,
 };
+
+#[derive(FromRow)]
+struct ResolutionRow {
+    id: Uuid,
+    name: String,
+    width: i32,
+    height: i32,
+    aspect_ratio: String,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl From<ResolutionRow> for Resolution {
+    fn from(r: ResolutionRow) -> Self {
+        Resolution {
+            id: r.id.to_string(),
+            name: r.name,
+            width: r.width,
+            height: r.height,
+            aspect_ratio: r.aspect_ratio,
+            created_at: r.created_at.to_rfc3339(),
+            updated_at: r.updated_at.to_rfc3339(),
+        }
+    }
+}
 
 pub struct ResolutionServiceImpl {
     pub pool: PgPool,
@@ -25,22 +50,14 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
         &self,
         _request: Request<ListResolutionsRequest>,
     ) -> Result<Response<ListResolutionsResponse>, Status> {
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as::<_, ResolutionRow>(
             "SELECT id, name, width, height, aspect_ratio, created_at, updated_at FROM resolutions ORDER BY width ASC, height ASC"
         )
         .fetch_all(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        let items = rows.into_iter().map(|r| Resolution {
-            id: r.id.to_string(),
-            name: r.name,
-            width: r.width,
-            height: r.height,
-            aspect_ratio: r.aspect_ratio,
-            created_at: r.created_at.to_rfc3339(),
-            updated_at: r.updated_at.to_rfc3339(),
-        }).collect();
+        let items = rows.into_iter().map(Resolution::from).collect();
 
         Ok(Response::new(ListResolutionsResponse { items }))
     }
@@ -50,24 +67,16 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
         request: Request<GetResolutionRequest>,
     ) -> Result<Response<Resolution>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        let row = sqlx::query!(
-            "SELECT id, name, width, height, aspect_ratio, created_at, updated_at FROM resolutions WHERE id = $1",
-            id
+        let row = sqlx::query_as::<_, ResolutionRow>(
+            "SELECT id, name, width, height, aspect_ratio, created_at, updated_at FROM resolutions WHERE id = $1"
         )
+        .bind(id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?
         .ok_or_else(|| Status::not_found("Resolution not found"))?;
 
-        Ok(Response::new(Resolution {
-            id: row.id.to_string(),
-            name: row.name,
-            width: row.width,
-            height: row.height,
-            aspect_ratio: row.aspect_ratio,
-            created_at: row.created_at.to_rfc3339(),
-            updated_at: row.updated_at.to_rfc3339(),
-        }))
+        Ok(Response::new(Resolution::from(row)))
     }
 
     async fn create_resolution(
@@ -76,19 +85,20 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
     ) -> Result<Response<Resolution>, Status> {
         let req = request.into_inner();
         let id = Uuid::new_v4();
+        let aspect_ratio = if req.aspect_ratio.is_empty() { "16:9".to_string() } else { req.aspect_ratio };
 
-        let row = sqlx::query!(
+        let row = sqlx::query_as::<_, ResolutionRow>(
             r#"
             INSERT INTO resolutions (id, name, width, height, aspect_ratio)
             VALUES ($1, $2, $3, $4, $5)
             RETURNING id, name, width, height, aspect_ratio, created_at, updated_at
-            "#,
-            id,
-            req.name,
-            req.width,
-            req.height,
-            if req.aspect_ratio.is_empty() { "16:9" } else { &req.aspect_ratio },
+            "#
         )
+        .bind(id)
+        .bind(&req.name)
+        .bind(req.width)
+        .bind(req.height)
+        .bind(&aspect_ratio)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| {
@@ -100,15 +110,7 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
             Status::internal(e.to_string())
         })?;
 
-        Ok(Response::new(Resolution {
-            id: row.id.to_string(),
-            name: row.name,
-            width: row.width,
-            height: row.height,
-            aspect_ratio: row.aspect_ratio,
-            created_at: row.created_at.to_rfc3339(),
-            updated_at: row.updated_at.to_rfc3339(),
-        }))
+        Ok(Response::new(Resolution::from(row)))
     }
 
     async fn update_resolution(
@@ -117,20 +119,21 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
     ) -> Result<Response<Resolution>, Status> {
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id).map_err(|_| Status::invalid_argument("Invalid id"))?;
+        let aspect_ratio = if req.aspect_ratio.is_empty() { "16:9".to_string() } else { req.aspect_ratio };
 
-        let row = sqlx::query!(
+        let row = sqlx::query_as::<_, ResolutionRow>(
             r#"
             UPDATE resolutions
             SET name = $1, width = $2, height = $3, aspect_ratio = $4, updated_at = NOW()
             WHERE id = $5
             RETURNING id, name, width, height, aspect_ratio, created_at, updated_at
-            "#,
-            req.name,
-            req.width,
-            req.height,
-            if req.aspect_ratio.is_empty() { "16:9" } else { &req.aspect_ratio },
-            id,
+            "#
         )
+        .bind(&req.name)
+        .bind(req.width)
+        .bind(req.height)
+        .bind(&aspect_ratio)
+        .bind(id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| {
@@ -143,15 +146,7 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
         })?
         .ok_or_else(|| Status::not_found("Resolution not found"))?;
 
-        Ok(Response::new(Resolution {
-            id: row.id.to_string(),
-            name: row.name,
-            width: row.width,
-            height: row.height,
-            aspect_ratio: row.aspect_ratio,
-            created_at: row.created_at.to_rfc3339(),
-            updated_at: row.updated_at.to_rfc3339(),
-        }))
+        Ok(Response::new(Resolution::from(row)))
     }
 
     async fn delete_resolution(
@@ -159,7 +154,8 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
         request: Request<DeleteResolutionRequest>,
     ) -> Result<Response<DeleteResolutionResponse>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        sqlx::query!("DELETE FROM resolutions WHERE id = $1", id)
+        sqlx::query("DELETE FROM resolutions WHERE id = $1")
+            .bind(id)
             .execute(&self.pool)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;

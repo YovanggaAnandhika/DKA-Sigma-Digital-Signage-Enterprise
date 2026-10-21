@@ -136,6 +136,8 @@ services:
       - type: volume
         source: dka-product-sigma-backup
         target: /backup
+    ports:
+      - "5432:5432"
     networks:
       - dka-product-sigma-network
       - dka-local-development
