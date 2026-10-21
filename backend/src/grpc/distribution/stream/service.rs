@@ -54,7 +54,7 @@ impl StreamServiceTrait for StreamServiceImpl {
                                     if registered_device_id.is_none() {
                                         registered_device_id = Some(dev_id);
                                         manager.register_connection(dev_id, tx.clone()).await;
-                                        let _ = sqlx::query("UPDATE devices SET is_online = TRUE, last_heartbeat_at = NOW() WHERE id = $1")
+                                        let _ = sqlx::query("UPDATE hardware_devices SET is_online = TRUE, last_heartbeat_at = NOW() WHERE id = $1")
                                             .bind(dev_id)
                                             .execute(&pool)
                                             .await;
@@ -64,7 +64,7 @@ impl StreamServiceTrait for StreamServiceImpl {
                                     if let Some(payload) = client_msg.payload {
                                         match payload {
                                             crate::grpc::proto::distribution::v1::stream::stream_client_message::Payload::Ping(ping) => {
-                                                let _ = sqlx::query("UPDATE devices SET is_online = TRUE, last_heartbeat_at = NOW() WHERE id = $1")
+                                                let _ = sqlx::query("UPDATE hardware_devices SET is_online = TRUE, last_heartbeat_at = NOW() WHERE id = $1")
                                                     .bind(dev_id)
                                                     .execute(&pool)
                                                     .await;
@@ -76,7 +76,7 @@ impl StreamServiceTrait for StreamServiceImpl {
                                                 });
 
                                                 let _ = sqlx::query(
-                                                    "INSERT INTO device_telemetry (device_id, payload_json) VALUES ($1, $2)"
+                                                    "INSERT INTO hardware_device_telemetry (device_id, payload_json) VALUES ($1, $2)"
                                                 )
                                                 .bind(dev_id)
                                                 .bind(telemetry_json)
@@ -94,7 +94,7 @@ impl StreamServiceTrait for StreamServiceImpl {
                                                     if let Ok(_) = tokio::fs::write(&file_path, &screenshot.image_data).await {
                                                         let file_url = format!("/api/assets/screenshots/{}", filename);
                                                         let _ = sqlx::query(
-                                                            "INSERT INTO device_screenshots (device_id, file_url) VALUES ($1, $2)"
+                                                            "INSERT INTO hardware_device_screenshots (device_id, file_url) VALUES ($1, $2)"
                                                         )
                                                         .bind(dev_id)
                                                         .bind(file_url)
@@ -121,7 +121,7 @@ impl StreamServiceTrait for StreamServiceImpl {
                             Ok(Ok(None)) | Ok(Err(_)) => {
                                 if let Some(id) = registered_device_id {
                                     manager.unregister_connection(&id).await;
-                                    let _ = sqlx::query("UPDATE devices SET is_online = FALSE WHERE id = $1")
+                                    let _ = sqlx::query("UPDATE hardware_devices SET is_online = FALSE WHERE id = $1")
                                         .bind(id)
                                         .execute(&pool)
                                         .await;
@@ -133,7 +133,7 @@ impl StreamServiceTrait for StreamServiceImpl {
                                 tracing::warn!("Dead socket detected: device {:?} inactive for 45s, disconnecting", registered_device_id);
                                 if let Some(id) = registered_device_id {
                                     manager.unregister_connection(&id).await;
-                                    let _ = sqlx::query("UPDATE devices SET is_online = FALSE WHERE id = $1")
+                                    let _ = sqlx::query("UPDATE hardware_devices SET is_online = FALSE WHERE id = $1")
                                         .bind(id)
                                         .execute(&pool)
                                         .await;
@@ -161,7 +161,7 @@ impl StreamServiceTrait for StreamServiceImpl {
                     else => {
                         if let Some(id) = registered_device_id {
                             manager.unregister_connection(&id).await;
-                            let _ = sqlx::query("UPDATE devices SET is_online = FALSE WHERE id = $1")
+                            let _ = sqlx::query("UPDATE hardware_devices SET is_online = FALSE WHERE id = $1")
                                 .bind(id)
                                 .execute(&pool)
                                 .await;
@@ -226,7 +226,7 @@ impl StreamServiceTrait for StreamServiceImpl {
 
             let res = sqlx::query(
                 r#"
-                INSERT INTO playback_logs (device_id, media_id, layout_id, started_at, duration_seconds, is_completed)
+                INSERT INTO distribution_playback_logs (device_id, media_id, layout_id, started_at, duration_seconds, is_completed)
                 VALUES ($1, $2, $3, $4, $5, $6)
                 "#,
             )
@@ -292,10 +292,10 @@ impl StreamServiceTrait for StreamServiceImpl {
                 l.duration_seconds,
                 l.is_completed,
                 COUNT(*) OVER() as total_count
-            FROM playback_logs l
-            LEFT JOIN devices d ON d.id = l.device_id
-            LEFT JOIN media_items m ON m.id = l.media_id
-            LEFT JOIN layouts lay ON lay.id = l.layout_id
+            FROM distribution_playback_logs l
+            LEFT JOIN hardware_devices d ON d.id = l.device_id
+            LEFT JOIN studio_media_items m ON m.id = l.media_id
+            LEFT JOIN studio_layouts lay ON lay.id = l.layout_id
             WHERE ($1::uuid IS NULL OR l.device_id = $1)
               AND ($2::uuid IS NULL OR l.media_id = $2)
             ORDER BY l.started_at DESC
@@ -353,7 +353,7 @@ impl StreamServiceTrait for StreamServiceImpl {
         let rows = sqlx::query_as::<_, ScreenshotRow>(
             r#"
             SELECT id, device_id, file_url, captured_at
-            FROM device_screenshots
+            FROM hardware_device_screenshots
             WHERE device_id = $1
             ORDER BY captured_at DESC
             LIMIT $2
@@ -398,7 +398,7 @@ impl StreamServiceTrait for StreamServiceImpl {
         let row = sqlx::query_as::<_, TelemetryRow>(
             r#"
             SELECT memory_percent, storage_free_bytes, storage_total_bytes, ip_address, current_playing_media_id, created_at
-            FROM device_telemetry
+            FROM hardware_device_telemetry
             WHERE device_id = $1
             ORDER BY created_at DESC
             LIMIT 1
@@ -445,7 +445,7 @@ impl StreamServiceTrait for StreamServiceImpl {
 
         let file_url = format!("/api/assets/screenshots/{}", filename);
         sqlx::query(
-            "INSERT INTO device_screenshots (device_id, file_url) VALUES ($1, $2)"
+            "INSERT INTO hardware_device_screenshots (device_id, file_url) VALUES ($1, $2)"
         )
         .bind(device_id)
         .bind(&file_url)

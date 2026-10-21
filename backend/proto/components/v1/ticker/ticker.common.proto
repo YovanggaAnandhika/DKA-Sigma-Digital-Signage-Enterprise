@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package signage.components.v1.ticker;
+
+import "common/v1/types.proto";
+
+message Ticker {
+  string id = 1;
+  string name = 2;
+  string text_content = 3;
+  string speed = 4; // "slow", "normal", "fast"
+  string direction = 5; // "left", "right"
+  string background_color = 6;
+  string text_color = 7;
+  int32 font_size = 8;
+  string font_family = 9;
+  string created_at = 10;
+  string updated_at = 11;
+  float opacity = 12;
+  string badge_text = 13;
+  string badge_bg_color = 14;
+  string badge_text_color = 15;
+  int32 border_radius = 16;
+  bool uppercase = 17;
+  bool is_bold = 18;
+}
+
+message CreateTickerRequest {
+  string name = 1;
+  string text_content = 2;
+  string speed = 3;
+  string direction = 4;
+  string background_color = 5;
+  string text_color = 6;
+  int32 font_size = 7;
+  string font_family = 8;
+  float opacity = 9;
+  string badge_text = 10;
+  string badge_bg_color = 11;
+  string badge_text_color = 12;
+  int32 border_radius = 13;
+  bool uppercase = 14;
+  bool is_bold = 15;
+}
+
+message GetTickerRequest {
+  string id = 1;
+}
+
+message ListTickersRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+}
+
+message ListTickersResponse {
+  repeated Ticker items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateTickerRequest {
+  string id = 1;
+  string name = 2;
+  string text_content = 3;
+  string speed = 4;
+  string direction = 5;
+  string background_color = 6;
+  string text_color = 7;
+  int32 font_size = 8;
+  string font_family = 9;
+  float opacity = 10;
+  string badge_text = 11;
+  string badge_bg_color = 12;
+  string badge_text_color = 13;
+  int32 border_radius = 14;
+  bool uppercase = 15;
+  bool is_bold = 16;
+}
+
+message DeleteTickerRequest {
+  string id = 1;
+}
+
+message DeleteTickerResponse {
+  bool success = 1;
+}

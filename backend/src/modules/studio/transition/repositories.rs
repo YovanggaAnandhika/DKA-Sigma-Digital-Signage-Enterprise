@@ -16,7 +16,7 @@ impl TransitionRepository {
         
         let transitions = sqlx::query_as::<_, Transition>(
             r#"
-            SELECT * FROM transitions
+            SELECT * FROM studio_transitions
             WHERE name ILIKE $1
             ORDER BY name ASC
             LIMIT $2 OFFSET $3
@@ -30,7 +30,7 @@ impl TransitionRepository {
 
         let total_row: (i64,) = sqlx::query_as(
             r#"
-            SELECT count(*) FROM transitions
+            SELECT count(*) FROM studio_transitions
             WHERE name ILIKE $1
             "#,
         )
@@ -44,7 +44,7 @@ impl TransitionRepository {
     pub async fn find_by_id(&self, id: Uuid) -> Result<Option<Transition>, sqlx::Error> {
         sqlx::query_as::<_, Transition>(
             r#"
-            SELECT * FROM transitions WHERE id = $1
+            SELECT * FROM studio_transitions WHERE id = $1
             "#,
         )
         .bind(id)
@@ -55,7 +55,7 @@ impl TransitionRepository {
     pub async fn create(&self, name: &str, css_class: &str, duration_ms: i32) -> Result<Transition, sqlx::Error> {
         sqlx::query_as::<_, Transition>(
             r#"
-            INSERT INTO transitions (name, css_class, duration_ms)
+            INSERT INTO studio_transitions (name, css_class, duration_ms)
             VALUES ($1, $2, $3)
             RETURNING *
             "#,
@@ -70,7 +70,7 @@ impl TransitionRepository {
     pub async fn update(&self, id: Uuid, name: Option<&str>, css_class: Option<&str>, duration_ms: Option<i32>) -> Result<Transition, sqlx::Error> {
         sqlx::query_as::<_, Transition>(
             r#"
-            UPDATE transitions
+            UPDATE studio_transitions
             SET
                 name = COALESCE($2, name),
                 css_class = COALESCE($3, css_class),
@@ -91,7 +91,7 @@ impl TransitionRepository {
     pub async fn delete(&self, id: Uuid) -> Result<bool, sqlx::Error> {
         let result = sqlx::query(
             r#"
-            DELETE FROM transitions WHERE id = $1
+            DELETE FROM studio_transitions WHERE id = $1
             "#,
         )
         .bind(id)

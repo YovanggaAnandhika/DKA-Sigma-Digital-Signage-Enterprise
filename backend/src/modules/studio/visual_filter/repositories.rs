@@ -16,7 +16,7 @@ impl VisualFilterRepository {
         
         let filters = sqlx::query_as::<_, VisualFilter>(
             r#"
-            SELECT * FROM visual_filters
+            SELECT * FROM studio_visual_filters
             WHERE name ILIKE $1
             ORDER BY name ASC
             LIMIT $2 OFFSET $3
@@ -30,7 +30,7 @@ impl VisualFilterRepository {
 
         let total_row: (i64,) = sqlx::query_as(
             r#"
-            SELECT count(*) FROM visual_filters
+            SELECT count(*) FROM studio_visual_filters
             WHERE name ILIKE $1
             "#,
         )
@@ -44,7 +44,7 @@ impl VisualFilterRepository {
     pub async fn find_by_id(&self, id: Uuid) -> Result<Option<VisualFilter>, sqlx::Error> {
         sqlx::query_as::<_, VisualFilter>(
             r#"
-            SELECT * FROM visual_filters WHERE id = $1
+            SELECT * FROM studio_visual_filters WHERE id = $1
             "#,
         )
         .bind(id)
@@ -55,7 +55,7 @@ impl VisualFilterRepository {
     pub async fn create(&self, name: &str, brightness: i32, contrast: i32, saturation: i32, hue_rotate: i32, blur_px: i32) -> Result<VisualFilter, sqlx::Error> {
         sqlx::query_as::<_, VisualFilter>(
             r#"
-            INSERT INTO visual_filters (name, brightness, contrast, saturation, hue_rotate, blur_px)
+            INSERT INTO studio_visual_filters (name, brightness, contrast, saturation, hue_rotate, blur_px)
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
             "#,
@@ -73,7 +73,7 @@ impl VisualFilterRepository {
     pub async fn update(&self, id: Uuid, name: Option<&str>, brightness: Option<i32>, contrast: Option<i32>, saturation: Option<i32>, hue_rotate: Option<i32>, blur_px: Option<i32>) -> Result<VisualFilter, sqlx::Error> {
         sqlx::query_as::<_, VisualFilter>(
             r#"
-            UPDATE visual_filters
+            UPDATE studio_visual_filters
             SET
                 name = COALESCE($2, name),
                 brightness = COALESCE($3, brightness),
@@ -100,7 +100,7 @@ impl VisualFilterRepository {
     pub async fn delete(&self, id: Uuid) -> Result<bool, sqlx::Error> {
         let result = sqlx::query(
             r#"
-            DELETE FROM visual_filters WHERE id = $1
+            DELETE FROM studio_visual_filters WHERE id = $1
             "#,
         )
         .bind(id)

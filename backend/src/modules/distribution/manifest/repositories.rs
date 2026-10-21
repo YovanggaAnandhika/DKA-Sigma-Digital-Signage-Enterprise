@@ -11,8 +11,8 @@ impl ManifestRepository {
     ) -> Result<(), sqlx::Error> {
         let mut tx = pool.begin().await?;
 
-        // Update primary active layout on devices table
-        sqlx::query("UPDATE devices SET current_layout_id = $2, updated_at = NOW() WHERE id = $1")
+        // Update primary active layout on hardware_devices table
+        sqlx::query("UPDATE hardware_devices SET current_layout_id = $2, updated_at = NOW() WHERE id = $1")
             .bind(device_id)
             .bind(layout_id)
             .execute(&mut *tx)
@@ -21,7 +21,7 @@ impl ManifestRepository {
         // Record in device_layouts
         sqlx::query(
             r#"
-            INSERT INTO device_layouts (device_id, layout_id, is_active)
+            INSERT INTO hardware_device_layouts (device_id, layout_id, is_active)
             VALUES ($1, $2, TRUE)
             ON CONFLICT DO NOTHING
             "#,
@@ -40,7 +40,7 @@ impl ManifestRepository {
         device_id: Uuid,
     ) -> Result<Option<Uuid>, sqlx::Error> {
         let row = sqlx::query_scalar::<_, Option<Uuid>>(
-            "SELECT current_layout_id FROM devices WHERE id = $1",
+            "SELECT current_layout_id FROM hardware_devices WHERE id = $1",
         )
         .bind(device_id)
         .fetch_optional(pool)

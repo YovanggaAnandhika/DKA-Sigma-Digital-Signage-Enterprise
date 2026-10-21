@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package signage.components.v1.queue.ticket;
+
+import "components/v1/queue/counter/counter.common.proto";
+
+message QueueTicket {
+  string id = 1;
+  string queue_display_id = 2;
+  string counter_id = 3;
+  string ticket_number = 4;
+  string prefix = 5;
+  int32 sequence_number = 6;
+  string status = 7;
+  string called_at = 8;
+  string completed_at = 9;
+  string created_at = 10;
+}
+
+message IssueTicketRequest {
+  string queue_display_id = 1;
+  string prefix = 2;
+}
+
+message CallNextTicketRequest {
+  string queue_display_id = 1;
+  string counter_id = 2;
+}
+
+message CallNextTicketResponse {
+  QueueTicket ticket = 1;
+  signage.components.v1.queue.counter.QueueCounter counter = 2;
+}
+
+message CallPreviousTicketRequest {
+  string queue_display_id = 1;
+  string counter_id = 2;
+}
+
+message CallPreviousTicketResponse {
+  QueueTicket ticket = 1;
+  signage.components.v1.queue.counter.QueueCounter counter = 2;
+}
+
+message ResetQueueRequest {
+  string queue_display_id = 1;
+  int32 start_sequence = 2;
+  optional string counter_id = 3;
+}
+
+message ResetQueueResponse {
+  bool success = 1;
+  int32 new_sequence = 2;
+  string message = 3;
+}
+
+message GetQueueSyncStateRequest {
+  string queue_display_id = 1;
+}
+
+message GetQueueSyncStateResponse {
+  string queue_display_id = 1;
+  string prefix = 2;
+  int32 current_sequence = 3;
+  string current_ticket_number = 4;
+  string sector_type = 5;
+  string ticket_label = 6;
+  string counter_label = 7;
+  string tts_template_call = 8;
+  string tts_template_recall = 9;
+  string tts_template_break = 10;
+  repeated signage.components.v1.queue.counter.QueueCounter counters = 11;
+  int32 waiting_tickets_count = 12;
+}
+
+message ListTicketsRequest {
+  string queue_display_id = 1;
+  optional string status = 2;
+  int32 limit = 3;
+}
+
+message ListTicketsResponse {
+  repeated QueueTicket items = 1;
+}
+
+message UpdateTicketStatusRequest {
+  string id = 1;
+  string status = 2;
+  optional string counter_id = 3;
+}

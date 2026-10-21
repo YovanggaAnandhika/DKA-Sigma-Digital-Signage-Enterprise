@@ -11,7 +11,7 @@ impl DisplayGroupRepository {
     ) -> Result<DisplayGroupEntity, sqlx::Error> {
         let group = sqlx::query_as::<_, DisplayGroupEntity>(
             r#"
-            INSERT INTO display_groups (name, description, default_layout_id, schedule_id)
+            INSERT INTO hardware_display_groups (name, description, default_layout_id, schedule_id)
             VALUES ($1, $2, $3, $4)
             RETURNING *
             "#,
@@ -30,7 +30,7 @@ impl DisplayGroupRepository {
         pool: &DbPool,
         id: Uuid,
     ) -> Result<Option<DisplayGroupEntity>, sqlx::Error> {
-        let group = sqlx::query_as::<_, DisplayGroupEntity>("SELECT * FROM display_groups WHERE id = $1")
+        let group = sqlx::query_as::<_, DisplayGroupEntity>("SELECT * FROM hardware_display_groups WHERE id = $1")
             .bind(id)
             .fetch_optional(pool)
             .await?;
@@ -40,7 +40,7 @@ impl DisplayGroupRepository {
 
     pub async fn find_all(pool: &DbPool) -> Result<Vec<DisplayGroupEntity>, sqlx::Error> {
         let groups = sqlx::query_as::<_, DisplayGroupEntity>(
-            "SELECT * FROM display_groups ORDER BY created_at DESC",
+            "SELECT * FROM hardware_display_groups ORDER BY created_at DESC",
         )
         .fetch_all(pool)
         .await?;
@@ -55,7 +55,7 @@ impl DisplayGroupRepository {
     ) -> Result<DisplayGroupEntity, sqlx::Error> {
         let group = sqlx::query_as::<_, DisplayGroupEntity>(
             r#"
-            UPDATE display_groups
+            UPDATE hardware_display_groups
             SET 
                 name = COALESCE($2, name),
                 description = COALESCE($3, description),
@@ -78,7 +78,7 @@ impl DisplayGroupRepository {
     }
 
     pub async fn delete(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM display_groups WHERE id = $1")
+        let result = sqlx::query("DELETE FROM hardware_display_groups WHERE id = $1")
             .bind(id)
             .execute(pool)
             .await?;

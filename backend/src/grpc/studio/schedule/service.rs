@@ -45,8 +45,8 @@ impl ScheduleServiceImpl {
                 se.id, se.schedule_id, se.layout_id, l.name AS layout_name,
                 se.start_time, se.end_time, se.days_of_week, se.priority,
                 se.start_date, se.end_date, se.created_at
-            FROM schedule_events se
-            LEFT JOIN layouts l ON l.id = se.layout_id
+            FROM studio_schedule_events se
+            LEFT JOIN studio_layouts l ON l.id = se.layout_id
             WHERE se.schedule_id = $1
             ORDER BY se.priority DESC, se.start_time ASC
             "#,
@@ -268,11 +268,11 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
 
         let schedule_id = if let Some(ref sid_str) = req.schedule_id.as_ref().filter(|s| !s.trim().is_empty()) {
             if let Ok(existing_id) = Uuid::parse_str(sid_str) {
-                let _ = sqlx::query("DELETE FROM schedule_events WHERE schedule_id = $1")
+                let _ = sqlx::query("DELETE FROM studio_schedule_events WHERE schedule_id = $1")
                     .bind(existing_id)
                     .execute(&mut *tx)
                     .await;
-                let _ = sqlx::query("UPDATE schedules SET updated_at = NOW() WHERE id = $1")
+                let _ = sqlx::query("UPDATE studio_schedules SET updated_at = NOW() WHERE id = $1")
                     .bind(existing_id)
                     .execute(&mut *tx)
                     .await;
@@ -280,7 +280,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
             } else {
                 sqlx::query_scalar::<_, Uuid>(
                     r#"
-                    INSERT INTO schedules (name, description, created_at, updated_at)
+                    INSERT INTO studio_schedules (name, description, created_at, updated_at)
                     VALUES ($1, $2, NOW(), NOW())
                     RETURNING id
                     "#,
@@ -294,7 +294,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         } else {
             sqlx::query_scalar::<_, Uuid>(
                 r#"
-                INSERT INTO schedules (name, description, created_at, updated_at)
+                INSERT INTO studio_schedules (name, description, created_at, updated_at)
                 VALUES ($1, $2, NOW(), NOW())
                 RETURNING id
                 "#,
@@ -308,7 +308,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
 
         // 2. Resolve latest version_hash for layout
         let version_hash = match sqlx::query_scalar::<_, String>(
-            "SELECT version_hash FROM layout_history WHERE layout_id = $1 ORDER BY created_at DESC LIMIT 1"
+            "SELECT version_hash FROM studio_layout_history WHERE layout_id = $1 ORDER BY created_at DESC LIMIT 1"
         )
         .bind(layout_id)
         .fetch_optional(&mut *tx)
@@ -323,7 +323,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
                     let vh = format!("{:x}", hasher.finalize());
                     if let Ok(snapshot_val) = serde_json::to_value(&full_dto) {
                         let _ = sqlx::query(
-                            "INSERT INTO layout_history (layout_id, version_hash, snapshot_json, description) VALUES ($1, $2, $3, $4)"
+                            "INSERT INTO studio_layout_history (layout_id, version_hash, snapshot_json, description) VALUES ($1, $2, $3, $4)"
                         )
                         .bind(layout_id)
                         .bind(&vh)
@@ -353,7 +353,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
 
         sqlx::query(
             r#"
-            INSERT INTO schedule_events (
+            INSERT INTO studio_schedule_events (
                 schedule_id, layout_id, start_time, end_time, days_of_week,
                 priority, start_date, end_date, version_hash, created_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
@@ -376,7 +376,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         let mut affected = 0i32;
         for dev_str in &req.device_ids {
             if let Ok(dev_id) = Uuid::parse_str(dev_str) {
-                let res = sqlx::query("UPDATE devices SET schedule_id = $1, updated_at = NOW() WHERE id = $2")
+                let res = sqlx::query("UPDATE hardware_devices SET schedule_id = $1, updated_at = NOW() WHERE id = $2")
                     .bind(schedule_id)
                     .bind(dev_id)
                     .execute(&mut *tx)
@@ -390,7 +390,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         // 4. Assign schedule_id to selected display groups
         for grp_str in &req.display_group_ids {
             if let Ok(grp_id) = Uuid::parse_str(grp_str) {
-                let _ = sqlx::query("UPDATE display_groups SET schedule_id = $1, updated_at = NOW() WHERE id = $2")
+                let _ = sqlx::query("UPDATE hardware_display_groups SET schedule_id = $1, updated_at = NOW() WHERE id = $2")
                     .bind(schedule_id)
                     .bind(grp_id)
                     .execute(&mut *tx)

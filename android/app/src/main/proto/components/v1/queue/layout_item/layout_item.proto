@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package signage.components.v1.queue.layout_item;
+
+import "components/v1/queue/layout_item/layout_item.common.proto";
+
+service QueueLayoutItemService {
+  rpc SaveQueueLayout(SaveQueueLayoutRequest) returns (SaveQueueLayoutResponse);
+  rpc GetQueueLayout(GetQueueLayoutRequest) returns (GetQueueLayoutResponse);
+  rpc UpdateQueueLayoutItem(UpdateQueueLayoutItemRequest) returns (QueueLayoutItem);
+  rpc DeleteQueueLayoutItem(DeleteQueueLayoutItemRequest) returns (DeleteQueueLayoutItemResponse);
+}

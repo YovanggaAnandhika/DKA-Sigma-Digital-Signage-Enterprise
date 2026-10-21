@@ -134,7 +134,7 @@ impl ManifestServiceImpl {
             }
 
             if let Ok(Some(row)) = sqlx::query_as::<_, TickerManifestRow>(
-                "SELECT id, name, badge, messages, speed, theme, font_size, background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius FROM tickers WHERE id = $1"
+                "SELECT id, name, badge, messages, speed, theme, font_size, background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius FROM components_tickers WHERE id = $1"
             )
             .bind(tid)
             .fetch_optional(pool).await {
@@ -176,7 +176,7 @@ impl ManifestServiceImpl {
             }
 
             if let Ok(Some(row)) = sqlx::query_as::<_, ClockManifestRow>(
-                "SELECT id, name, city, show_seconds, is_24_hour, theme, background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size FROM clocks WHERE id = $1"
+                "SELECT id, name, city, show_seconds, is_24_hour, theme, background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size FROM components_clocks WHERE id = $1"
             )
             .bind(cid)
             .fetch_optional(pool).await {
@@ -212,7 +212,7 @@ impl ManifestServiceImpl {
             }
 
             if let Ok(Some(row)) = sqlx::query_as::<_, WebviewManifestRow>(
-                "SELECT id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation FROM webviews WHERE id = $1"
+                "SELECT id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation FROM components_webviews WHERE id = $1"
             )
             .bind(wid)
             .fetch_optional(pool).await {

@@ -14,7 +14,7 @@ impl UserRepository {
 
         let user = sqlx::query_as::<_, UserEntity>(
             r#"
-            INSERT INTO users (email, password_hash, full_name)
+            INSERT INTO iam_users (email, password_hash, full_name)
             VALUES ($1, $2, $3)
             RETURNING id, email, password_hash, full_name, is_active, created_at, updated_at
             "#,
@@ -29,7 +29,7 @@ impl UserRepository {
             for role_id in role_ids {
                 sqlx::query(
                     r#"
-                    INSERT INTO user_roles (user_id, role_id)
+                    INSERT INTO iam_user_roles (user_id, role_id)
                     VALUES ($1, $2)
                     ON CONFLICT DO NOTHING
                     "#,
@@ -45,7 +45,7 @@ impl UserRepository {
             for group_id in group_ids {
                 sqlx::query(
                     r#"
-                    INSERT INTO user_role_groups (user_id, role_group_id)
+                    INSERT INTO iam_user_role_groups (user_id, role_group_id)
                     VALUES ($1, $2)
                     ON CONFLICT DO NOTHING
                     "#,
@@ -65,7 +65,7 @@ impl UserRepository {
         let user = sqlx::query_as::<_, UserEntity>(
             r#"
             SELECT id, email, password_hash, full_name, is_active, created_at, updated_at
-            FROM users
+            FROM iam_users
             WHERE id = $1
             "#,
         )
@@ -80,7 +80,7 @@ impl UserRepository {
         let user = sqlx::query_as::<_, UserEntity>(
             r#"
             SELECT id, email, password_hash, full_name, is_active, created_at, updated_at
-            FROM users
+            FROM iam_users
             WHERE email = $1
             "#,
         )
@@ -95,7 +95,7 @@ impl UserRepository {
         let users = sqlx::query_as::<_, UserEntity>(
             r#"
             SELECT id, email, password_hash, full_name, is_active, created_at, updated_at
-            FROM users
+            FROM iam_users
             ORDER BY created_at DESC
             "#,
         )
@@ -114,7 +114,7 @@ impl UserRepository {
 
         let user = sqlx::query_as::<_, UserEntity>(
             r#"
-            UPDATE users
+            UPDATE iam_users
             SET 
                 full_name = COALESCE($2, full_name),
                 is_active = COALESCE($3, is_active),
@@ -130,7 +130,7 @@ impl UserRepository {
         .await?;
 
         if let Some(role_ids) = dto.role_ids {
-            sqlx::query("DELETE FROM user_roles WHERE user_id = $1")
+            sqlx::query("DELETE FROM iam_user_roles WHERE user_id = $1")
                 .bind(id)
                 .execute(&mut *tx)
                 .await?;
@@ -138,7 +138,7 @@ impl UserRepository {
             for role_id in role_ids {
                 sqlx::query(
                     r#"
-                    INSERT INTO user_roles (user_id, role_id)
+                    INSERT INTO iam_user_roles (user_id, role_id)
                     VALUES ($1, $2)
                     ON CONFLICT DO NOTHING
                     "#,
@@ -151,7 +151,7 @@ impl UserRepository {
         }
 
         if let Some(group_ids) = dto.role_group_ids {
-            sqlx::query("DELETE FROM user_role_groups WHERE user_id = $1")
+            sqlx::query("DELETE FROM iam_user_role_groups WHERE user_id = $1")
                 .bind(id)
                 .execute(&mut *tx)
                 .await?;
@@ -159,7 +159,7 @@ impl UserRepository {
             for group_id in group_ids {
                 sqlx::query(
                     r#"
-                    INSERT INTO user_role_groups (user_id, role_group_id)
+                    INSERT INTO iam_user_role_groups (user_id, role_group_id)
                     VALUES ($1, $2)
                     ON CONFLICT DO NOTHING
                     "#,
@@ -176,7 +176,7 @@ impl UserRepository {
     }
 
     pub async fn delete(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM users WHERE id = $1")
+        let result = sqlx::query("DELETE FROM iam_users WHERE id = $1")
             .bind(id)
             .execute(pool)
             .await?;
@@ -188,8 +188,8 @@ impl UserRepository {
         sqlx::query_as::<_, crate::modules::iam::role::model::RoleEntity>(
             r#"
             SELECT r.id, r.name, r.slug, r.description, r.is_system, r.created_at, r.updated_at
-            FROM roles r
-            JOIN user_roles ur ON ur.role_id = r.id
+            FROM iam_roles r
+            JOIN iam_user_roles ur ON ur.role_id = r.id
             WHERE ur.user_id = $1
             "#,
         )
@@ -202,8 +202,8 @@ impl UserRepository {
         sqlx::query_as::<_, crate::modules::iam::role_group::model::RoleGroupEntity>(
             r#"
             SELECT rg.id, rg.name, rg.slug, rg.description, rg.created_at, rg.updated_at
-            FROM roles_groups rg
-            JOIN user_role_groups urg ON urg.role_group_id = rg.id
+            FROM iam_role_groups rg
+            JOIN iam_user_role_groups urg ON urg.role_group_id = rg.id
             WHERE urg.user_id = $1
             "#,
         )

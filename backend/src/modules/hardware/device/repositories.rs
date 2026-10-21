@@ -14,7 +14,7 @@ impl DeviceRepository {
 
         let device = sqlx::query_as::<_, DeviceEntity>(
             r#"
-            INSERT INTO devices (
+            INSERT INTO hardware_devices (
                 name, is_paired, screen_width, screen_height,
                 orientation, timezone, mac_address, app_version, android_version
             )
@@ -34,7 +34,7 @@ impl DeviceRepository {
 
         sqlx::query(
             r#"
-            INSERT INTO device_pairings (device_id, pairing_code, status, expires_at)
+            INSERT INTO hardware_device_pairings (device_id, pairing_code, status, expires_at)
             VALUES ($1, $2, 'pending', NOW() + INTERVAL '30 minutes')
             "#,
         )
@@ -49,7 +49,7 @@ impl DeviceRepository {
     }
 
     pub async fn find_by_id(pool: &DbPool, id: Uuid) -> Result<Option<DeviceEntity>, sqlx::Error> {
-        let device = sqlx::query_as::<_, DeviceEntity>("SELECT * FROM devices WHERE id = $1")
+        let device = sqlx::query_as::<_, DeviceEntity>("SELECT * FROM hardware_devices WHERE id = $1")
             .bind(id)
             .fetch_optional(pool)
             .await?;
@@ -64,7 +64,7 @@ impl DeviceRepository {
         let record = sqlx::query_as::<_, (Uuid, Uuid)>(
             r#"
             SELECT p.id, p.device_id
-            FROM device_pairings p
+            FROM hardware_device_pairings p
             WHERE p.pairing_code = $1 AND p.status = 'pending' AND p.expires_at > NOW()
             ORDER BY p.created_at DESC
             LIMIT 1
@@ -97,7 +97,7 @@ impl DeviceRepository {
 
         let device = sqlx::query_as::<_, DeviceEntity>(
             r#"
-            UPDATE devices
+            UPDATE hardware_devices
             SET 
                 name = $2,
                 is_paired = TRUE,
@@ -119,7 +119,7 @@ impl DeviceRepository {
 
         sqlx::query(
             r#"
-            UPDATE device_pairings
+            UPDATE hardware_device_pairings
             SET status = 'paired', paired_at = NOW(), device_token = $2
             WHERE id = $1
             "#,
@@ -141,7 +141,7 @@ impl DeviceRepository {
         let record = sqlx::query_as::<_, (Uuid, String, Option<String>)>(
             r#"
             SELECT device_id, status, device_token
-            FROM device_pairings
+            FROM hardware_device_pairings
             WHERE pairing_code = $1
             ORDER BY created_at DESC
             LIMIT 1
@@ -162,7 +162,7 @@ impl DeviceRepository {
 
         sqlx::query(
             r#"
-            UPDATE devices
+            UPDATE hardware_devices
             SET 
                 is_online = TRUE,
                 last_heartbeat_at = NOW(),
@@ -182,7 +182,7 @@ impl DeviceRepository {
 
         sqlx::query(
             r#"
-            INSERT INTO device_telemetry (
+            INSERT INTO hardware_device_telemetry (
                 device_id, memory_percent, storage_free_bytes, storage_total_bytes,
                 current_playing_media_id, active_layout_id
             )
@@ -204,7 +204,7 @@ impl DeviceRepository {
 
     pub async fn find_all(pool: &DbPool) -> Result<Vec<DeviceEntity>, sqlx::Error> {
         let devices = sqlx::query_as::<_, DeviceEntity>(
-            "SELECT * FROM devices ORDER BY is_online DESC, name ASC",
+            "SELECT * FROM hardware_devices ORDER BY is_online DESC, name ASC",
         )
         .fetch_all(pool)
         .await?;
@@ -230,7 +230,7 @@ impl DeviceRepository {
 
         let device = sqlx::query_as::<_, DeviceEntity>(
             r#"
-            UPDATE devices
+            UPDATE hardware_devices
             SET 
                 name = COALESCE($2, name),
                 screen_width = COALESCE($3, screen_width),
@@ -269,7 +269,7 @@ impl DeviceRepository {
     }
 
     pub async fn delete(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM devices WHERE id = $1")
+        let result = sqlx::query("DELETE FROM hardware_devices WHERE id = $1")
             .bind(id)
             .execute(pool)
             .await?;

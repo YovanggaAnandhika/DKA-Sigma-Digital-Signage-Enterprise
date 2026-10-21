@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package signage.components.v1.queue.display;
+
+import "components/v1/queue/display/display.common.proto";
+
+service QueueDisplayService {
+  rpc CreateQueueDisplay(CreateQueueDisplayRequest) returns (QueueDisplayDetail);
+  rpc GetQueueDisplay(GetQueueDisplayRequest) returns (QueueDisplayDetail);
+  rpc ListQueueDisplays(ListQueueDisplaysRequest) returns (ListQueueDisplaysResponse);
+  rpc UpdateQueueDisplay(UpdateQueueDisplayRequest) returns (QueueDisplayDetail);
+  rpc DeleteQueueDisplay(DeleteQueueDisplayRequest) returns (DeleteQueueDisplayResponse);
+}

@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package signage.components.v1.queue.audio;
+
+import "components/v1/queue/audio/audio.common.proto";
+
+service QueueAudioService {
+  rpc AddAudio(AddAudioRequest) returns (QueueAudio);
+  rpc DeleteAudio(DeleteAudioRequest) returns (DeleteAudioResponse);
+  rpc ListAudios(ListAudiosRequest) returns (ListAudiosResponse);
+}

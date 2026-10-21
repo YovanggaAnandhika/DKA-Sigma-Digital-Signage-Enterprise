@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package signage.studio.v1.schedule.event;
+
+import "studio/v1/schedule/event/schedule_event.common.proto";
+
+service ScheduleEventService {
+  rpc AddScheduleEvent(AddScheduleEventRequest) returns (ScheduleEvent);
+  rpc RemoveScheduleEvent(RemoveScheduleEventRequest) returns (RemoveScheduleEventResponse);
+}

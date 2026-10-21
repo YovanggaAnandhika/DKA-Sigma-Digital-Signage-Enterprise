@@ -74,7 +74,7 @@ impl ClockServiceTrait for ClockServiceImpl {
 
         let row = sqlx::query_as::<_, ClockRow>(
             r#"
-            INSERT INTO clocks (
+            INSERT INTO components_clocks (
                 id, name, city, show_seconds, is_24_hour, theme,
                 background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size
             )
@@ -119,7 +119,7 @@ impl ClockServiceTrait for ClockServiceImpl {
     ) -> Result<Response<Clock>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
         let row = sqlx::query_as::<_, ClockRow>(
-            "SELECT id, name, city, show_seconds, is_24_hour, theme, background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size, created_at, updated_at FROM clocks WHERE id = $1"
+            "SELECT id, name, city, show_seconds, is_24_hour, theme, background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size, created_at, updated_at FROM components_clocks WHERE id = $1"
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -142,7 +142,7 @@ impl ClockServiceTrait for ClockServiceImpl {
             SELECT id, name, city, show_seconds, is_24_hour, theme,
                    background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size,
                    created_at, updated_at
-            FROM clocks
+            FROM components_clocks
             WHERE name ILIKE $1 OR city ILIKE $1
             ORDER BY created_at DESC
             LIMIT 50
@@ -175,7 +175,7 @@ impl ClockServiceTrait for ClockServiceImpl {
 
         let row = sqlx::query_as::<_, ClockRow>(
             r#"
-            UPDATE clocks
+            UPDATE components_clocks
             SET name = COALESCE(NULLIF($2, ''), name),
                 city = COALESCE(NULLIF($3, ''), city),
                 show_seconds = $4,
@@ -220,7 +220,7 @@ impl ClockServiceTrait for ClockServiceImpl {
         request: Request<DeleteClockRequest>,
     ) -> Result<Response<DeleteClockResponse>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        sqlx::query("DELETE FROM clocks WHERE id = $1")
+        sqlx::query("DELETE FROM components_clocks WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await

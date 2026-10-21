@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS display_groups CASCADE;

@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package signage.components.v1.queue.audio;
+
+message QueueAudio {
+  string id = 1;
+  string queue_display_id = 2;
+  string name = 3;
+  string audio_type = 4;
+  string media_item_id = 5;
+  string file_url = 6;
+  int32 volume_percent = 7;
+  bool is_active = 8;
+  string created_at = 9;
+  string updated_at = 10;
+}
+
+message AddAudioRequest {
+  string queue_display_id = 1;
+  string name = 2;
+  string audio_type = 3;
+  optional string media_item_id = 4;
+  optional string file_url = 5;
+  int32 volume_percent = 6;
+  bool is_active = 7;
+}
+
+message DeleteAudioRequest {
+  string id = 1;
+}
+
+message DeleteAudioResponse {
+  bool success = 1;
+}
+
+message ListAudiosRequest {
+  string queue_display_id = 1;
+}
+
+message ListAudiosResponse {
+  repeated QueueAudio items = 1;
+}

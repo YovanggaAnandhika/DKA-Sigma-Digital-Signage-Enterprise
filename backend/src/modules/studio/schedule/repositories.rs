@@ -15,7 +15,7 @@ impl ScheduleRepository {
     ) -> Result<ScheduleEntity, sqlx::Error> {
         let schedule = sqlx::query_as::<_, ScheduleEntity>(
             r#"
-            INSERT INTO schedules (name, description)
+            INSERT INTO studio_schedules (name, description)
             VALUES ($1, $2)
             RETURNING *
             "#,
@@ -32,14 +32,14 @@ impl ScheduleRepository {
         pool: &DbPool,
         id: Uuid,
     ) -> Result<Option<ScheduleWithEventsDto>, sqlx::Error> {
-        let schedule = sqlx::query_as::<_, ScheduleEntity>("SELECT * FROM schedules WHERE id = $1")
+        let schedule = sqlx::query_as::<_, ScheduleEntity>("SELECT * FROM studio_schedules WHERE id = $1")
             .bind(id)
             .fetch_optional(pool)
             .await?;
 
         if let Some(schedule) = schedule {
             let events = sqlx::query_as::<_, ScheduleEventEntity>(
-                "SELECT * FROM schedule_events WHERE schedule_id = $1 ORDER BY priority DESC, start_time ASC",
+                "SELECT * FROM studio_schedule_events WHERE schedule_id = $1 ORDER BY priority DESC, start_time ASC",
             )
             .bind(id)
             .fetch_all(pool)
@@ -53,7 +53,7 @@ impl ScheduleRepository {
 
     pub async fn find_all(pool: &DbPool) -> Result<Vec<ScheduleEntity>, sqlx::Error> {
         let schedules = sqlx::query_as::<_, ScheduleEntity>(
-            "SELECT * FROM schedules ORDER BY created_at DESC",
+            "SELECT * FROM studio_schedules ORDER BY created_at DESC",
         )
         .fetch_all(pool)
         .await?;
@@ -68,7 +68,7 @@ impl ScheduleRepository {
     ) -> Result<ScheduleEntity, sqlx::Error> {
         let schedule = sqlx::query_as::<_, ScheduleEntity>(
             r#"
-            UPDATE schedules
+            UPDATE studio_schedules
             SET 
                 name = COALESCE($2, name),
                 description = COALESCE($3, description),
@@ -87,7 +87,7 @@ impl ScheduleRepository {
     }
 
     pub async fn delete(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM schedules WHERE id = $1")
+        let result = sqlx::query("DELETE FROM studio_schedules WHERE id = $1")
             .bind(id)
             .execute(pool)
             .await?;
@@ -108,7 +108,7 @@ impl ScheduleRepository {
 
         let event = sqlx::query_as::<_, ScheduleEventEntity>(
             r#"
-            INSERT INTO schedule_events (schedule_id, layout_id, start_time, end_time, days_of_week, priority, start_date, end_date)
+            INSERT INTO studio_schedule_events (schedule_id, layout_id, start_time, end_time, days_of_week, priority, start_date, end_date)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
             "#,
@@ -128,7 +128,7 @@ impl ScheduleRepository {
     }
 
     pub async fn remove_event(pool: &DbPool, id: Uuid, schedule_id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM schedule_events WHERE id = $1 AND schedule_id = $2")
+        let result = sqlx::query("DELETE FROM studio_schedule_events WHERE id = $1 AND schedule_id = $2")
             .bind(id)
             .bind(schedule_id)
             .execute(pool)

@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package signage.studio.v1.schedule.event;
+
+message ScheduleEvent {
+  string id = 1;
+  string schedule_id = 2;
+  string layout_id = 3;
+  string layout_name = 4;
+  string start_time = 5;
+  string end_time = 6;
+  string days_of_week = 7;
+  string created_at = 8;
+  int32 priority = 9;
+  optional string start_date = 10;
+  optional string end_date = 11;
+}
+
+message AddScheduleEventRequest {
+  string schedule_id = 1;
+  string layout_id = 2;
+  string start_time = 3;
+  string end_time = 4;
+  string days_of_week = 5;
+  optional int32 priority = 6;
+  optional string start_date = 7;
+  optional string end_date = 8;
+}
+
+message RemoveScheduleEventRequest {
+  string id = 1;
+  string schedule_id = 2;
+}
+
+message RemoveScheduleEventResponse {
+  bool success = 1;
+}

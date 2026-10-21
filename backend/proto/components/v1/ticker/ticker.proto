@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package signage.components.v1.ticker;
+
+import "components/v1/ticker/ticker.common.proto";
+
+service TickerService {
+  rpc CreateTicker(CreateTickerRequest) returns (Ticker);
+  rpc GetTicker(GetTickerRequest) returns (Ticker);
+  rpc ListTickers(ListTickersRequest) returns (ListTickersResponse);
+  rpc UpdateTicker(UpdateTickerRequest) returns (Ticker);
+  rpc DeleteTicker(DeleteTickerRequest) returns (DeleteTickerResponse);
+}

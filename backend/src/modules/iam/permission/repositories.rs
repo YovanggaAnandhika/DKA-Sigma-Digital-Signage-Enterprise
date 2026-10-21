@@ -11,7 +11,7 @@ impl PermissionRepository {
     ) -> Result<PermissionEntity, sqlx::Error> {
         let perm = sqlx::query_as::<_, PermissionEntity>(
             r#"
-            INSERT INTO permissions (code, name, description, module)
+            INSERT INTO iam_permissions (code, name, description, module)
             VALUES ($1, $2, $3, $4)
             RETURNING id, code, name, description, module, created_at, updated_at
             "#,
@@ -33,7 +33,7 @@ impl PermissionRepository {
         let perm = sqlx::query_as::<_, PermissionEntity>(
             r#"
             SELECT id, code, name, description, module, created_at, updated_at
-            FROM permissions
+            FROM iam_permissions
             WHERE id = $1
             "#,
         )
@@ -51,7 +51,7 @@ impl PermissionRepository {
         let perm = sqlx::query_as::<_, PermissionEntity>(
             r#"
             SELECT id, code, name, description, module, created_at, updated_at
-            FROM permissions
+            FROM iam_permissions
             WHERE code = $1
             "#,
         )
@@ -66,7 +66,7 @@ impl PermissionRepository {
         let perms = sqlx::query_as::<_, PermissionEntity>(
             r#"
             SELECT id, code, name, description, module, created_at, updated_at
-            FROM permissions
+            FROM iam_permissions
             ORDER BY module ASC, code ASC
             "#,
         )
@@ -83,7 +83,7 @@ impl PermissionRepository {
     ) -> Result<PermissionEntity, sqlx::Error> {
         let perm = sqlx::query_as::<_, PermissionEntity>(
             r#"
-            UPDATE permissions
+            UPDATE iam_permissions
             SET 
                 name = COALESCE($2, name),
                 description = COALESCE($3, description),
@@ -104,7 +104,7 @@ impl PermissionRepository {
     }
 
     pub async fn delete(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM permissions WHERE id = $1")
+        let result = sqlx::query("DELETE FROM iam_permissions WHERE id = $1")
             .bind(id)
             .execute(pool)
             .await?;
@@ -120,16 +120,16 @@ impl PermissionRepository {
         let rows = sqlx::query_scalar::<_, String>(
             r#"
             SELECT DISTINCT p.code
-            FROM permissions p
-            JOIN role_permissions rp ON rp.permission_id = p.id
-            JOIN user_roles ur ON ur.role_id = rp.role_id
+            FROM iam_permissions p
+            JOIN iam_role_permissions rp ON rp.permission_id = p.id
+            JOIN iam_user_roles ur ON ur.role_id = rp.role_id
             WHERE ur.user_id = $1
             UNION
             SELECT DISTINCT p.code
-            FROM permissions p
-            JOIN role_permissions rp ON rp.permission_id = p.id
-            JOIN roles_groups_roles rgr ON rgr.role_id = rp.role_id
-            JOIN user_role_groups urg ON urg.role_group_id = rgr.role_group_id
+            FROM iam_permissions p
+            JOIN iam_role_permissions rp ON rp.permission_id = p.id
+            JOIN iam_role_group_roles rgr ON rgr.role_id = rp.role_id
+            JOIN iam_user_role_groups urg ON urg.role_group_id = rgr.role_group_id
             WHERE urg.user_id = $1
             "#,
         )

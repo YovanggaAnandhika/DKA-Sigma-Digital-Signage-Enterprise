@@ -14,7 +14,7 @@ impl PlaylistRepository {
     ) -> Result<PlaylistEntity, sqlx::Error> {
         let playlist = sqlx::query_as::<_, PlaylistEntity>(
             r#"
-            INSERT INTO playlists (name, description, is_shuffle)
+            INSERT INTO studio_playlists (name, description, is_shuffle)
             VALUES ($1, $2, $3)
             RETURNING *
             "#,
@@ -33,7 +33,7 @@ impl PlaylistRepository {
         id: Uuid,
     ) -> Result<Option<PlaylistEntity>, sqlx::Error> {
         let playlist = sqlx::query_as::<_, PlaylistEntity>(
-            "SELECT * FROM playlists WHERE id = $1",
+            "SELECT * FROM studio_playlists WHERE id = $1",
         )
         .bind(id)
         .fetch_optional(pool)
@@ -44,7 +44,7 @@ impl PlaylistRepository {
 
     pub async fn find_all(pool: &DbPool) -> Result<Vec<PlaylistEntity>, sqlx::Error> {
         let playlists = sqlx::query_as::<_, PlaylistEntity>(
-            "SELECT * FROM playlists ORDER BY name ASC",
+            "SELECT * FROM studio_playlists ORDER BY name ASC",
         )
         .fetch_all(pool)
         .await?;
@@ -59,7 +59,7 @@ impl PlaylistRepository {
     ) -> Result<PlaylistEntity, sqlx::Error> {
         let playlist = sqlx::query_as::<_, PlaylistEntity>(
             r#"
-            UPDATE playlists
+            UPDATE studio_playlists
             SET 
                 name = COALESCE($2, name),
                 description = COALESCE($3, description),
@@ -80,7 +80,7 @@ impl PlaylistRepository {
     }
 
     pub async fn delete(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM playlists WHERE id = $1")
+        let result = sqlx::query("DELETE FROM studio_playlists WHERE id = $1")
             .bind(id)
             .execute(pool)
             .await?;
@@ -105,8 +105,8 @@ impl PlaylistRepository {
                 pi.duration_seconds,
                 pi.transition_type,
                 pi.is_muted
-            FROM playlist_items pi
-            JOIN media_items m ON m.id = pi.media_item_id
+            FROM studio_playlist_items pi
+            JOIN studio_media_items m ON m.id = pi.media_item_id
             WHERE pi.playlist_id = $1
             ORDER BY pi.position ASC
             "#,
@@ -123,7 +123,7 @@ impl PlaylistRepository {
         dto: AddPlaylistItemDto,
     ) -> Result<PlaylistItemEntity, sqlx::Error> {
         let max_pos: Option<i32> = sqlx::query_scalar(
-            "SELECT MAX(position) FROM playlist_items WHERE playlist_id = $1",
+            "SELECT MAX(position) FROM studio_playlist_items WHERE playlist_id = $1",
         )
         .bind(dto.playlist_id)
         .fetch_optional(pool)
@@ -134,12 +134,12 @@ impl PlaylistRepository {
 
         let item = sqlx::query_as::<_, PlaylistItemEntity>(
             r#"
-            INSERT INTO playlist_items (playlist_id, media_item_id, position, duration_seconds, transition_type, is_muted)
+            INSERT INTO studio_playlist_items (playlist_id, media_item_id, position, duration_seconds, transition_type, is_muted)
             VALUES (
                 $1,
                 $2,
                 $3,
-                COALESCE($4, (SELECT duration_seconds FROM media_items WHERE id = $2 AND duration_seconds > 0), 10),
+                COALESCE($4, (SELECT duration_seconds FROM studio_media_items WHERE id = $2 AND duration_seconds > 0), 10),
                 $5,
                 COALESCE($6, false)
             )
@@ -168,7 +168,7 @@ impl PlaylistRepository {
     ) -> Result<PlaylistItemEntity, sqlx::Error> {
         let item = sqlx::query_as::<_, PlaylistItemEntity>(
             r#"
-            UPDATE playlist_items
+            UPDATE studio_playlist_items
             SET 
                 duration_seconds = COALESCE($2, duration_seconds),
                 transition_type = COALESCE($3, transition_type),
@@ -190,7 +190,7 @@ impl PlaylistRepository {
     }
 
     pub async fn remove_item(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM playlist_items WHERE id = $1")
+        let result = sqlx::query("DELETE FROM studio_playlist_items WHERE id = $1")
             .bind(id)
             .execute(pool)
             .await?;
@@ -207,7 +207,7 @@ impl PlaylistRepository {
 
         for (idx, item_id) in item_ids_in_order.iter().enumerate() {
             sqlx::query(
-                "UPDATE playlist_items SET position = $1 WHERE id = $2",
+                "UPDATE studio_playlist_items SET position = $1 WHERE id = $2",
             )
             .bind(idx as i32)
             .bind(item_id)

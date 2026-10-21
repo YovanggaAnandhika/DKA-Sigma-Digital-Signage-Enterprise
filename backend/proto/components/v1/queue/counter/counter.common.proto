@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package signage.components.v1.queue.counter;
+
+message QueueCounter {
+  string id = 1;
+  string queue_display_id = 2;
+  int32 counter_number = 3;
+  string counter_name = 4;
+  string operator_name = 5;
+  bool is_active = 6;
+  string current_ticket_number = 7;
+  string last_called_at = 8;
+  string created_at = 9;
+  string updated_at = 10;
+  string status = 11; // "ACTIVE", "BREAK", "LOCKED"
+  string status_note = 12;
+}
+
+message AddCounterRequest {
+  string queue_display_id = 1;
+  int32 counter_number = 2;
+  string counter_name = 3;
+  string operator_name = 4;
+}
+
+message UpdateCounterRequest {
+  string id = 1;
+  int32 counter_number = 2;
+  string counter_name = 3;
+  string operator_name = 4;
+  bool is_active = 5;
+  optional string status = 6;
+  optional string status_note = 7;
+}
+
+message DeleteCounterRequest {
+  string id = 1;
+}
+
+message DeleteCounterResponse {
+  bool success = 1;
+}
+
+message ListCountersRequest {
+  string queue_display_id = 1;
+}
+
+message ListCountersResponse {
+  repeated QueueCounter items = 1;
+}
+
+message SetCounterStatusRequest {
+  string counter_id = 1;
+  string status = 2;
+  optional string status_note = 3;
+}

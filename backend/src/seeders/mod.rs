@@ -106,7 +106,7 @@ async fn seed_lookups(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
     info!("Seeding system orientations...");
     sqlx::query(
         r#"
-        INSERT INTO orientations (name, value) VALUES
+        INSERT INTO common_orientations (name, value) VALUES
             ('Landscape', 'landscape'),
             ('Portrait', 'portrait')
         ON CONFLICT (value) DO NOTHING;
@@ -118,7 +118,7 @@ async fn seed_lookups(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
     info!("Seeding standard screen resolutions...");
     sqlx::query(
         r#"
-        INSERT INTO resolutions (name, width, height, aspect_ratio) VALUES
+        INSERT INTO common_resolutions (name, width, height, aspect_ratio) VALUES
             ('Full HD (1080p)', 1920, 1080, '16:9'),
             ('4K Ultra HD (2160p)', 3840, 2160, '16:9'),
             ('HD (720p)', 1280, 720, '16:9'),
@@ -133,7 +133,7 @@ async fn seed_lookups(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
     info!("Seeding transition effects...");
     sqlx::query(
         r#"
-        INSERT INTO transitions (name, css_class, duration_ms) VALUES
+        INSERT INTO studio_transitions (name, css_class, duration_ms) VALUES
             ('Crossfade', 'transition-crossfade', 500),
             ('Slide Left', 'transition-slide-left', 800),
             ('Slide Right', 'transition-slide-right', 800),
@@ -150,7 +150,7 @@ async fn seed_lookups(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
     info!("Seeding visual filter presets...");
     sqlx::query(
         r#"
-        INSERT INTO visual_filters (name, brightness, contrast, saturation, hue_rotate, blur_px) VALUES
+        INSERT INTO studio_visual_filters (name, brightness, contrast, saturation, hue_rotate, blur_px) VALUES
             ('Normal', 100, 100, 100, 0, 0),
             ('Cinematic', 95, 120, 85, 0, 0),
             ('Vintage', 110, 90, 70, 30, 0),
@@ -168,7 +168,7 @@ async fn seed_lookups(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
     info!("Seeding queue sectors...");
     sqlx::query(
         r#"
-        INSERT INTO queue_sectors (id, name, description, default_prefix, ticket_label, counter_label, tts_template_call, tts_template_recall, tts_template_break, icon, sort_order)
+        INSERT INTO components_queue_sectors (id, name, description, default_prefix, ticket_label, counter_label, tts_template_call, tts_template_recall, tts_template_break, icon, sort_order)
         VALUES
             ('RETAIL_FB', 'Restoran, Kafe & F&B', 'Kedai kopi, kafe, resto cepat saji, dan pickup counter pesanan', 'B', 'Nomor Pesanan', 'Pickup Point', 'Pesanan {ticket_number}, silakan ambil di {counter_label} {counter_name}', 'Panggilan ulang, pesanan {ticket_number}, silakan ambil di {counter_label} {counter_name}', '{counter_label} {counter_name} sedang istirahat', 'coffee', 1),
             ('RETAIL', 'Retail, Swalayan & Toko', 'Kasir supermarket, toko ritel, dan layanan kasir antrian belanja', 'R', 'Nomor Antrian', 'Kasir', '{ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}', 'Panggilan ulang, {ticket_label} {ticket_number}, silakan menuju {counter_label} {counter_name}', '{counter_label} {counter_name} sedang istirahat', 'shopping-bag', 2),
@@ -196,7 +196,7 @@ async fn seed_lookups(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
     info!("Seeding default queue display and layout items...");
     sqlx::query(
         r#"
-        INSERT INTO queue_displays (id, name, prefix, canvas_width, canvas_height, background_color, theme_preset)
+        INSERT INTO components_queue_displays (id, name, prefix, canvas_width, canvas_height, background_color, theme_preset)
         VALUES ('76a3e570-9807-40a5-ad74-e7bb28e382dc', 'Layar Antrian Baru', 'A', 1920, 1080, '#0f172a', 'medical-green')
         ON CONFLICT (id) DO NOTHING;
         "#,
@@ -206,7 +206,7 @@ async fn seed_lookups(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
 
     sqlx::query(
         r##"
-        INSERT INTO queue_layout_items (
+        INSERT INTO components_queue_layout_items (
             id, queue_display_id, item_type, name, x, y, width, height, z_index,
             background_color, text_color, font_size, font_weight, text_align,
             template_content, config, is_visible

@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package signage.studio.v1.playlist.item;
+
+import "studio/v1/playlist/item/playlist_item.common.proto";
+
+service PlaylistItemService {
+  rpc AddPlaylistItem(AddPlaylistItemRequest) returns (PlaylistItem);
+  rpc UpdatePlaylistItem(UpdatePlaylistItemRequest) returns (PlaylistItem);
+  rpc RemovePlaylistItem(RemovePlaylistItemRequest) returns (RemovePlaylistItemResponse);
+}

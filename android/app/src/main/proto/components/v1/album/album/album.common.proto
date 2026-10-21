@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package signage.components.v1.album.album;
+
+import "common/v1/types.proto";
+import "components/v1/album/photo/photo.common.proto";
+
+message AddAlbumPhotoInput {
+  string media_item_id = 1;
+  int32 order_index = 2;
+  string caption = 3;
+  int32 duration_seconds = 4;
+}
+
+message AlbumDetail {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string transition_effect = 4;
+  int32 slide_duration_seconds = 5;
+  repeated signage.components.v1.album.photo.AlbumPhoto photos = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message CreateAlbumRequest {
+  string name = 1;
+  string description = 2;
+  string transition_effect = 3;
+  int32 slide_duration_seconds = 4;
+  repeated AddAlbumPhotoInput photos = 5;
+}
+
+message GetAlbumRequest {
+  string id = 1;
+}
+
+message ListAlbumsRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+}
+
+message ListAlbumsResponse {
+  repeated AlbumDetail items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateAlbumRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string transition_effect = 4;
+  int32 slide_duration_seconds = 5;
+  repeated AddAlbumPhotoInput photos = 6;
+}
+
+message DeleteAlbumRequest {
+  string id = 1;
+}
+
+message DeleteAlbumResponse {
+  bool success = 1;
+}

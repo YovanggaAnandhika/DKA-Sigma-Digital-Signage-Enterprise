@@ -32,7 +32,7 @@ impl LayoutHistoryRepository {
     ) -> Result<LayoutHistoryEntity, sqlx::Error> {
         let row = sqlx::query_as::<_, LayoutHistoryEntity>(
             r#"
-            INSERT INTO layout_history (layout_id, version_hash, snapshot_json, description)
+            INSERT INTO studio_layout_history (layout_id, version_hash, snapshot_json, description)
             VALUES ($1, $2, $3, $4)
             RETURNING id, layout_id, NULL as layout_name, version_hash, snapshot_json, description, created_at
             "#,
@@ -59,8 +59,8 @@ impl LayoutHistoryRepository {
         let rows = sqlx::query_as::<_, LayoutHistoryEntity>(
             r#"
             SELECT h.id, h.layout_id, l.name as layout_name, h.version_hash, h.snapshot_json, h.description, h.created_at
-            FROM layout_history h
-            JOIN layouts l ON h.layout_id = l.id
+            FROM studio_layout_history h
+            JOIN studio_layouts l ON h.layout_id = l.id
             WHERE ($1::uuid IS NULL OR h.layout_id = $1)
               AND ($2::text IS NULL OR l.name ILIKE $2 OR h.version_hash ILIKE $2 OR h.description ILIKE $2)
             ORDER BY h.created_at DESC
@@ -87,8 +87,8 @@ impl LayoutHistoryRepository {
         let total = sqlx::query_scalar::<_, i64>(
             r#"
             SELECT COUNT(*)
-            FROM layout_history h
-            JOIN layouts l ON h.layout_id = l.id
+            FROM studio_layout_history h
+            JOIN studio_layouts l ON h.layout_id = l.id
             WHERE ($1::uuid IS NULL OR h.layout_id = $1)
               AND ($2::text IS NULL OR l.name ILIKE $2 OR h.version_hash ILIKE $2 OR h.description ILIKE $2)
             "#,
@@ -108,8 +108,8 @@ impl LayoutHistoryRepository {
         let row = sqlx::query_as::<_, LayoutHistoryEntity>(
             r#"
             SELECT h.id, h.layout_id, l.name as layout_name, h.version_hash, h.snapshot_json, h.description, h.created_at
-            FROM layout_history h
-            JOIN layouts l ON h.layout_id = l.id
+            FROM studio_layout_history h
+            JOIN studio_layouts l ON h.layout_id = l.id
             WHERE h.id = $1
             "#,
         )
@@ -127,8 +127,8 @@ impl LayoutHistoryRepository {
         let row = sqlx::query_as::<_, LayoutHistoryEntity>(
             r#"
             SELECT h.id, h.layout_id, l.name as layout_name, h.version_hash, h.snapshot_json, h.description, h.created_at
-            FROM layout_history h
-            JOIN layouts l ON h.layout_id = l.id
+            FROM studio_layout_history h
+            JOIN studio_layouts l ON h.layout_id = l.id
             WHERE h.version_hash = $1
             ORDER BY h.created_at DESC
             LIMIT 1
@@ -158,7 +158,7 @@ impl LayoutHistoryRepository {
         // 1. Restore layout metadata
         sqlx::query(
             r#"
-            UPDATE layouts
+            UPDATE studio_layouts
             SET name = $2,
                 canvas_width = $3,
                 canvas_height = $4,
@@ -181,7 +181,7 @@ impl LayoutHistoryRepository {
         .map_err(AppError::Database)?;
 
         // 2. Clear current layers & layer_blocks for this layout (cascades blocks)
-        sqlx::query("DELETE FROM layers WHERE layout_id = $1")
+        sqlx::query("DELETE FROM studio_layers WHERE layout_id = $1")
             .bind(snapshot.layout.id)
             .execute(&mut *tx)
             .await
@@ -194,7 +194,7 @@ impl LayoutHistoryRepository {
 
             sqlx::query(
                 r#"
-                INSERT INTO layers (
+                INSERT INTO studio_layers (
                     id, layout_id, name, x, y, width, height, z_index,
                     background_color, opacity, overlay_color, overlay_opacity,
                     border_radius, border_color, border_width, created_at, updated_at
@@ -225,7 +225,7 @@ impl LayoutHistoryRepository {
                 let block_id = Uuid::new_v4();
                 sqlx::query(
                     r#"
-                    INSERT INTO layer_blocks (
+                    INSERT INTO studio_layer_blocks (
                         id, layer_id, playlist_id, media_item_id, start_time_seconds,
                         duration_seconds, trim_start_seconds, trim_end_seconds,
                         transition_id, visual_filter_id, order_index, is_muted,
@@ -262,7 +262,7 @@ impl LayoutHistoryRepository {
                 for item_override in &block_dto.item_overrides {
                     sqlx::query(
                         r#"
-                        INSERT INTO layer_playlist_item_overrides (
+                        INSERT INTO studio_layer_playlist_item_overrides (
                             id, layer_block_id, playlist_item_id, is_muted, volume_level,
                             created_at, updated_at
                         ) VALUES (
@@ -295,7 +295,7 @@ impl LayoutHistoryRepository {
 
         sqlx::query(
             r#"
-            INSERT INTO layout_history (layout_id, version_hash, snapshot_json, description)
+            INSERT INTO studio_layout_history (layout_id, version_hash, snapshot_json, description)
             VALUES ($1, $2, $3, $4)
             "#,
         )
@@ -313,7 +313,7 @@ impl LayoutHistoryRepository {
     }
 
     pub async fn delete_by_ids(pool: &DbPool, ids: &[Uuid]) -> Result<u64, sqlx::Error> {
-        let res = sqlx::query("DELETE FROM layout_history WHERE id = ANY($1)")
+        let res = sqlx::query("DELETE FROM studio_layout_history WHERE id = ANY($1)")
             .bind(ids)
             .execute(pool)
             .await?;
@@ -323,13 +323,13 @@ impl LayoutHistoryRepository {
     pub async fn delete_all(pool: &DbPool, layout_id: Option<Uuid>) -> Result<u64, sqlx::Error> {
         let res = match layout_id {
             Some(lid) => {
-                sqlx::query("DELETE FROM layout_history WHERE layout_id = $1")
+                sqlx::query("DELETE FROM studio_layout_history WHERE layout_id = $1")
                     .bind(lid)
                     .execute(pool)
                     .await?
             }
             None => {
-                sqlx::query("DELETE FROM layout_history")
+                sqlx::query("DELETE FROM studio_layout_history")
                     .execute(pool)
                     .await?
             }

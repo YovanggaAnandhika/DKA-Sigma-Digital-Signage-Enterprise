@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package signage.components.v1.queue.sector;
+
+import "components/v1/queue/sector/sector.common.proto";
+
+service QueueSectorService {
+  rpc ListQueueSectors(ListQueueSectorsRequest) returns (ListQueueSectorsResponse);
+}

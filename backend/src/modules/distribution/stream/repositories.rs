@@ -10,7 +10,7 @@ impl StreamRepository {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"
-            INSERT INTO device_telemetry (device_id, payload_json)
+            INSERT INTO hardware_device_telemetry (device_id, payload_json)
             VALUES ($1, $2)
             "#,
         )

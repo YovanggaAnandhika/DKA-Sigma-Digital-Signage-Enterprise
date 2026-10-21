@@ -44,7 +44,7 @@ impl AlbumServiceImpl {
 
     async fn fetch_album_detail(&self, id: Uuid) -> Result<AlbumDetail, Status> {
         let album = sqlx::query_as::<_, AlbumRow>(
-            "SELECT id, name, description, transition_effect, slide_duration_seconds, created_at, updated_at FROM albums WHERE id = $1"
+            "SELECT id, name, description, transition_effect, slide_duration_seconds, created_at, updated_at FROM components_albums WHERE id = $1"
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -55,7 +55,7 @@ impl AlbumServiceImpl {
         let photos = sqlx::query_as::<_, AlbumPhotoRow>(
             r#"
             SELECT id, album_id, media_item_id, position, promo_badge, price_tag, created_at
-            FROM album_photos
+            FROM components_album_photos
             WHERE album_id = $1
             ORDER BY position ASC, created_at ASC
             "#
@@ -103,7 +103,7 @@ impl AlbumServiceTrait for AlbumServiceImpl {
 
         sqlx::query(
             r#"
-            INSERT INTO albums (id, name, description, transition_effect, slide_duration_seconds)
+            INSERT INTO components_albums (id, name, description, transition_effect, slide_duration_seconds)
             VALUES ($1, $2, $3, $4, $5)
             "#
         )
@@ -121,7 +121,7 @@ impl AlbumServiceTrait for AlbumServiceImpl {
                 let pid = Uuid::new_v4();
                 sqlx::query(
                     r#"
-                    INSERT INTO album_photos (id, album_id, media_item_id, position, promo_badge, price_tag)
+                    INSERT INTO components_album_photos (id, album_id, media_item_id, position, promo_badge, price_tag)
                     VALUES ($1, $2, $3, $4, $5, '')
                     "#
                 )
@@ -155,7 +155,7 @@ impl AlbumServiceTrait for AlbumServiceImpl {
         let search = format!("%{}%", req.search);
 
         let rows = sqlx::query_as::<_, (Uuid,)>(
-            "SELECT id FROM albums WHERE name ILIKE $1 ORDER BY created_at DESC LIMIT 50"
+            "SELECT id FROM components_albums WHERE name ILIKE $1 ORDER BY created_at DESC LIMIT 50"
         )
         .bind(&search)
         .fetch_all(&self.pool)
@@ -189,7 +189,7 @@ impl AlbumServiceTrait for AlbumServiceImpl {
 
         sqlx::query(
             r#"
-            UPDATE albums
+            UPDATE components_albums
             SET name = COALESCE(NULLIF($2, ''), name),
                 description = COALESCE(NULLIF($3, ''), description),
                 transition_effect = COALESCE(NULLIF($4, ''), transition_effect),
@@ -208,7 +208,7 @@ impl AlbumServiceTrait for AlbumServiceImpl {
         .map_err(|e| Status::internal(e.to_string()))?;
 
         if !req.photos.is_empty() {
-            sqlx::query("DELETE FROM album_photos WHERE album_id = $1")
+            sqlx::query("DELETE FROM components_album_photos WHERE album_id = $1")
                 .bind(id)
                 .execute(&self.pool)
                 .await
@@ -219,7 +219,7 @@ impl AlbumServiceTrait for AlbumServiceImpl {
                     let pid = Uuid::new_v4();
                     sqlx::query(
                         r#"
-                        INSERT INTO album_photos (id, album_id, media_item_id, position, promo_badge, price_tag)
+                        INSERT INTO components_album_photos (id, album_id, media_item_id, position, promo_badge, price_tag)
                         VALUES ($1, $2, $3, $4, $5, '')
                         "#
                     )
@@ -243,7 +243,7 @@ impl AlbumServiceTrait for AlbumServiceImpl {
         request: Request<DeleteAlbumRequest>,
     ) -> Result<Response<DeleteAlbumResponse>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        sqlx::query("DELETE FROM albums WHERE id = $1")
+        sqlx::query("DELETE FROM components_albums WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await
@@ -262,7 +262,7 @@ impl AlbumServiceTrait for AlbumServiceImpl {
 
         sqlx::query(
             r#"
-            INSERT INTO album_photos (id, album_id, media_item_id, position, promo_badge, price_tag)
+            INSERT INTO components_album_photos (id, album_id, media_item_id, position, promo_badge, price_tag)
             VALUES ($1, $2, $3, $4, $5, '')
             "#
         )
@@ -292,7 +292,7 @@ impl AlbumServiceTrait for AlbumServiceImpl {
         request: Request<DeleteAlbumPhotoRequest>,
     ) -> Result<Response<DeleteAlbumPhotoResponse>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        sqlx::query("DELETE FROM album_photos WHERE id = $1")
+        sqlx::query("DELETE FROM components_album_photos WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await

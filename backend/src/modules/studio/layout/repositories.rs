@@ -11,7 +11,7 @@ impl LayoutRepository {
     pub async fn create(pool: &DbPool, dto: CreateLayoutDto) -> Result<LayoutEntity, sqlx::Error> {
         let layout = sqlx::query_as::<_, LayoutEntity>(
             r#"
-            INSERT INTO layouts (
+            INSERT INTO studio_layouts (
                 name, description, canvas_width, canvas_height, orientation_id,
                 background_color, background_image_url, resolution_id
             )
@@ -34,7 +34,7 @@ impl LayoutRepository {
     }
 
     pub async fn find_by_id(pool: &DbPool, id: Uuid) -> Result<Option<LayoutEntity>, sqlx::Error> {
-        let layout = sqlx::query_as::<_, LayoutEntity>("SELECT * FROM layouts WHERE id = $1")
+        let layout = sqlx::query_as::<_, LayoutEntity>("SELECT * FROM studio_layouts WHERE id = $1")
             .bind(id)
             .fetch_optional(pool)
             .await?;
@@ -44,7 +44,7 @@ impl LayoutRepository {
 
     pub async fn find_all(pool: &DbPool) -> Result<Vec<LayoutEntity>, sqlx::Error> {
         let layouts = sqlx::query_as::<_, LayoutEntity>(
-            "SELECT * FROM layouts ORDER BY name ASC",
+            "SELECT * FROM studio_layouts ORDER BY name ASC",
         )
         .fetch_all(pool)
         .await?;
@@ -59,7 +59,7 @@ impl LayoutRepository {
     ) -> Result<LayoutEntity, sqlx::Error> {
         let layout = sqlx::query_as::<_, LayoutEntity>(
             r#"
-            UPDATE layouts
+            UPDATE studio_layouts
             SET 
                 name = COALESCE($2, name),
                 description = COALESCE($3, description),
@@ -90,7 +90,7 @@ impl LayoutRepository {
     }
 
     pub async fn delete(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM layouts WHERE id = $1")
+        let result = sqlx::query("DELETE FROM studio_layouts WHERE id = $1")
             .bind(id)
             .execute(pool)
             .await?;
@@ -103,7 +103,7 @@ impl LayoutRepository {
         layout_id: Uuid,
     ) -> Result<Vec<LayerWithBlocksDto>, sqlx::Error> {
         let layers = sqlx::query_as::<_, LayerEntity>(
-            "SELECT * FROM layers WHERE layout_id = $1 ORDER BY z_index ASC",
+            "SELECT * FROM studio_layers WHERE layout_id = $1 ORDER BY z_index ASC",
         )
         .bind(layout_id)
         .fetch_all(pool)
@@ -112,7 +112,7 @@ impl LayoutRepository {
         let mut result = Vec::new();
         for layer in layers {
             let blocks = sqlx::query_as::<_, LayerBlockEntity>(
-                "SELECT * FROM layer_blocks WHERE layer_id = $1 ORDER BY order_index ASC",
+                "SELECT * FROM studio_layer_blocks WHERE layer_id = $1 ORDER BY order_index ASC",
             )
             .bind(layer.id)
             .fetch_all(pool)
@@ -121,7 +121,7 @@ impl LayoutRepository {
             let mut block_dtos = Vec::new();
             for block in blocks {
                 let overrides = sqlx::query_as::<_, LayerPlaylistItemOverrideEntity>(
-                    "SELECT * FROM layer_playlist_item_overrides WHERE layer_block_id = $1",
+                    "SELECT * FROM studio_layer_playlist_item_overrides WHERE layer_block_id = $1",
                 )
                 .bind(block.id)
                 .fetch_all(pool)

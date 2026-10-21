@@ -8,7 +8,7 @@ impl LayerBlockRepository {
     pub async fn create(pool: &PgPool, dto: CreateLayerBlockDto) -> Result<LayerBlockEntity, sqlx::Error> {
         if let Some(qid) = dto.queue_id {
             sqlx::query(
-                "INSERT INTO queue_displays (id, name, prefix, theme_preset, background_color)
+                "INSERT INTO components_queue_displays (id, name, prefix, theme_preset, background_color)
                  VALUES ($1, 'Layar Antrian Baru', 'A', 'medical-green', '#0f172a')
                  ON CONFLICT (id) DO NOTHING"
             )
@@ -18,7 +18,7 @@ impl LayerBlockRepository {
         }
         if let Some(tid) = dto.ticker_id {
             sqlx::query(
-                "INSERT INTO tickers (id, name, badge, messages, speed, theme, font_size)
+                "INSERT INTO components_tickers (id, name, badge, messages, speed, theme, font_size)
                  VALUES ($1, 'Pengumuman Promo Kasir & Diskon Member', 'PROMO HARI INI', ARRAY['Dapatkan diskon 20% untuk semua produk segar buah & sayur setiap hari Jumat hingga Minggu!', 'Gunakan kartu member DKASigma Point untuk mendapatkan poin ganda di seluruh kasir.'], 'normal', 'blue', 16)
                  ON CONFLICT (id) DO NOTHING"
             )
@@ -28,7 +28,7 @@ impl LayerBlockRepository {
         }
         if let Some(cid) = dto.clock_id {
             sqlx::query(
-                "INSERT INTO clocks (id, name, city, show_seconds, is_24_hour, theme)
+                "INSERT INTO components_clocks (id, name, city, show_seconds, is_24_hour, theme)
                  VALUES ($1, 'Jam Digital & Cuaca', 'Makassar', true, true, 'glass')
                  ON CONFLICT (id) DO NOTHING"
             )
@@ -38,7 +38,7 @@ impl LayerBlockRepository {
         }
         if let Some(wid) = dto.webview_id {
             sqlx::query(
-                "INSERT INTO webviews (id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation)
+                "INSERT INTO components_webviews (id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation)
                  VALUES ($1, 'Webview Display', 'https://en.wikipedia.org/wiki/Digital_signage', 60, 100, true, 'landscape')
                  ON CONFLICT (id) DO NOTHING"
             )
@@ -48,7 +48,7 @@ impl LayerBlockRepository {
         }
         if let Some(aid) = dto.album_id {
             sqlx::query(
-                "INSERT INTO albums (id, name, description, transition_effect, slide_duration_seconds)
+                "INSERT INTO components_albums (id, name, description, transition_effect, slide_duration_seconds)
                  VALUES ($1, 'Album Foto Digital', 'Slideshow promo', 'ken-burns', 5)
                  ON CONFLICT (id) DO NOTHING"
             )
@@ -58,7 +58,7 @@ impl LayerBlockRepository {
         }
 
         let max_order: (Option<i32>,) = sqlx::query_as(
-            "SELECT MAX(order_index) FROM layer_blocks WHERE layer_id = $1"
+            "SELECT MAX(order_index) FROM studio_layer_blocks WHERE layer_id = $1"
         )
         .bind(dto.layer_id)
         .fetch_one(pool)
@@ -70,7 +70,7 @@ impl LayerBlockRepository {
 
         let block = sqlx::query_as::<_, LayerBlockEntity>(
             r#"
-            INSERT INTO layer_blocks (
+            INSERT INTO studio_layer_blocks (
                 layer_id, playlist_id, media_item_id, ticker_id, clock_id, webview_id, queue_id, album_id,
                 start_time_seconds, duration_seconds, order_index, trim_start_seconds, trim_end_seconds, transition_id, visual_filter_id,
                 is_muted, volume_level
@@ -102,7 +102,7 @@ impl LayerBlockRepository {
     }
 
     pub async fn get_by_id(pool: &PgPool, id: Uuid) -> Result<Option<LayerBlockEntity>, sqlx::Error> {
-        sqlx::query_as::<_, LayerBlockEntity>("SELECT * FROM layer_blocks WHERE id = $1")
+        sqlx::query_as::<_, LayerBlockEntity>("SELECT * FROM studio_layer_blocks WHERE id = $1")
             .bind(id)
             .fetch_optional(pool)
             .await
@@ -110,16 +110,16 @@ impl LayerBlockRepository {
 
     pub async fn list(pool: &PgPool, layer_id: Option<Uuid>, limit: i64, offset: i64) -> Result<(Vec<LayerBlockEntity>, i64), sqlx::Error> {
         let (total,): (i64,) = if let Some(lid) = layer_id {
-            sqlx::query_as("SELECT COUNT(*) FROM layer_blocks WHERE layer_id = $1").bind(lid).fetch_one(pool).await?
+            sqlx::query_as("SELECT COUNT(*) FROM studio_layer_blocks WHERE layer_id = $1").bind(lid).fetch_one(pool).await?
         } else {
-            sqlx::query_as("SELECT COUNT(*) FROM layer_blocks").fetch_one(pool).await?
+            sqlx::query_as("SELECT COUNT(*) FROM studio_layer_blocks").fetch_one(pool).await?
         };
 
         let blocks = if let Some(lid) = layer_id {
-            sqlx::query_as::<_, LayerBlockEntity>("SELECT * FROM layer_blocks WHERE layer_id = $1 ORDER BY order_index ASC LIMIT $2 OFFSET $3")
+            sqlx::query_as::<_, LayerBlockEntity>("SELECT * FROM studio_layer_blocks WHERE layer_id = $1 ORDER BY order_index ASC LIMIT $2 OFFSET $3")
                 .bind(lid).bind(limit).bind(offset).fetch_all(pool).await?
         } else {
-            sqlx::query_as::<_, LayerBlockEntity>("SELECT * FROM layer_blocks ORDER BY created_at DESC LIMIT $1 OFFSET $2")
+            sqlx::query_as::<_, LayerBlockEntity>("SELECT * FROM studio_layer_blocks ORDER BY created_at DESC LIMIT $1 OFFSET $2")
                 .bind(limit).bind(offset).fetch_all(pool).await?
         };
 
@@ -129,7 +129,7 @@ impl LayerBlockRepository {
     pub async fn update(pool: &PgPool, id: Uuid, dto: UpdateLayerBlockDto) -> Result<LayerBlockEntity, sqlx::Error> {
         let block = sqlx::query_as::<_, LayerBlockEntity>(
             r#"
-            UPDATE layer_blocks
+            UPDATE studio_layer_blocks
             SET
                 start_time_seconds = COALESCE($2, start_time_seconds),
                 duration_seconds = COALESCE($3, duration_seconds),
@@ -162,7 +162,7 @@ impl LayerBlockRepository {
     }
 
     pub async fn delete(pool: &PgPool, id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM layer_blocks WHERE id = $1")
+        let result = sqlx::query("DELETE FROM studio_layer_blocks WHERE id = $1")
             .bind(id)
             .execute(pool)
             .await?;

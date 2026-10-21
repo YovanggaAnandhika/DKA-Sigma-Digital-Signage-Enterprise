@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package signage.studio.v1.playlist.item;
+
+import "studio/v1/media/media.common.proto";
+
+message PlaylistItem {
+  string id = 1;
+  string playlist_id = 2;
+  string media_item_id = 3;
+  signage.studio.v1.media.MediaItem media_item = 4;
+  int32 position = 5;
+  int32 duration_seconds = 6;
+  string transition_type = 7;
+  string created_at = 8;
+  bool is_muted = 9;
+}
+
+message AddPlaylistItemRequest {
+  string playlist_id = 1;
+  string media_item_id = 2;
+  int32 duration_seconds = 3;
+  string transition_type = 4;
+  int32 position = 5;
+}
+
+message UpdatePlaylistItemRequest {
+  string id = 1;
+  int32 duration_seconds = 2;
+  string transition_type = 3;
+  int32 position = 4;
+  optional bool is_muted = 5;
+}
+
+message RemovePlaylistItemRequest {
+  string id = 1;
+}
+
+message RemovePlaylistItemResponse {
+  bool success = 1;
+}
+
+message ReorderPlaylistItemsRequest {
+  string playlist_id = 1;
+  repeated string item_ids_in_order = 2;
+}

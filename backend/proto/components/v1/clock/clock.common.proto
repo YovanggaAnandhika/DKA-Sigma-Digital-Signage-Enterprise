@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package signage.components.v1.clock;
+
+import "common/v1/types.proto";
+
+message Clock {
+  string id = 1;
+  string name = 2;
+  string clock_type = 3; // "digital", "analog"
+  string timezone = 4;
+  bool show_seconds = 5;
+  bool show_date = 6;
+  string date_format = 7;
+  bool is_24_hour = 8;
+  string text_color = 9;
+  string background_color = 10;
+  int32 font_size = 11;
+  string font_family = 12;
+  string created_at = 13;
+  string updated_at = 14;
+  float opacity = 15;
+  string border_color = 16;
+  int32 border_width = 17;
+  int32 border_radius = 18;
+}
+
+message CreateClockRequest {
+  string name = 1;
+  string clock_type = 2;
+  string timezone = 3;
+  bool show_seconds = 4;
+  bool show_date = 5;
+  string date_format = 6;
+  bool is_24_hour = 7;
+  string text_color = 8;
+  string background_color = 9;
+  int32 font_size = 10;
+  string font_family = 11;
+  float opacity = 12;
+  string border_color = 13;
+  int32 border_width = 14;
+  int32 border_radius = 15;
+}
+
+message GetClockRequest {
+  string id = 1;
+}
+
+message ListClocksRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+}
+
+message ListClocksResponse {
+  repeated Clock items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateClockRequest {
+  string id = 1;
+  string name = 2;
+  string clock_type = 3;
+  string timezone = 4;
+  bool show_seconds = 5;
+  bool show_date = 6;
+  string date_format = 7;
+  bool is_24_hour = 8;
+  string text_color = 9;
+  string background_color = 10;
+  int32 font_size = 11;
+  string font_family = 12;
+  float opacity = 13;
+  string border_color = 14;
+  int32 border_width = 15;
+  int32 border_radius = 16;
+}
+
+message DeleteClockRequest {
+  string id = 1;
+}
+
+message DeleteClockResponse {
+  bool success = 1;
+}

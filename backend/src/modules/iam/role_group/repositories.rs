@@ -13,7 +13,7 @@ impl RoleGroupRepository {
 
         let group = sqlx::query_as::<_, RoleGroupEntity>(
             r#"
-            INSERT INTO roles_groups (name, slug, description)
+            INSERT INTO iam_role_groups (name, slug, description)
             VALUES ($1, $2, $3)
             RETURNING id, name, slug, description, created_at, updated_at
             "#,
@@ -28,7 +28,7 @@ impl RoleGroupRepository {
             for role_id in role_ids {
                 sqlx::query(
                     r#"
-                    INSERT INTO roles_groups_roles (role_group_id, role_id)
+                    INSERT INTO iam_role_group_roles (role_group_id, role_id)
                     VALUES ($1, $2)
                     ON CONFLICT DO NOTHING
                     "#,
@@ -51,7 +51,7 @@ impl RoleGroupRepository {
         let group = sqlx::query_as::<_, RoleGroupEntity>(
             r#"
             SELECT id, name, slug, description, created_at, updated_at
-            FROM roles_groups
+            FROM iam_role_groups
             WHERE id = $1
             "#,
         )
@@ -66,7 +66,7 @@ impl RoleGroupRepository {
         let groups = sqlx::query_as::<_, RoleGroupEntity>(
             r#"
             SELECT id, name, slug, description, created_at, updated_at
-            FROM roles_groups
+            FROM iam_role_groups
             ORDER BY name ASC
             "#,
         )
@@ -85,7 +85,7 @@ impl RoleGroupRepository {
 
         let group = sqlx::query_as::<_, RoleGroupEntity>(
             r#"
-            UPDATE roles_groups
+            UPDATE iam_role_groups
             SET 
                 name = COALESCE($2, name),
                 description = COALESCE($3, description),
@@ -101,7 +101,7 @@ impl RoleGroupRepository {
         .await?;
 
         if let Some(role_ids) = dto.role_ids {
-            sqlx::query("DELETE FROM roles_groups_roles WHERE role_group_id = $1")
+            sqlx::query("DELETE FROM iam_role_group_roles WHERE role_group_id = $1")
                 .bind(id)
                 .execute(&mut *tx)
                 .await?;
@@ -109,7 +109,7 @@ impl RoleGroupRepository {
             for role_id in role_ids {
                 sqlx::query(
                     r#"
-                    INSERT INTO roles_groups_roles (role_group_id, role_id)
+                    INSERT INTO iam_role_group_roles (role_group_id, role_id)
                     VALUES ($1, $2)
                     ON CONFLICT DO NOTHING
                     "#,
@@ -126,7 +126,7 @@ impl RoleGroupRepository {
     }
 
     pub async fn delete(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM roles_groups WHERE id = $1")
+        let result = sqlx::query("DELETE FROM iam_role_groups WHERE id = $1")
             .bind(id)
             .execute(pool)
             .await?;

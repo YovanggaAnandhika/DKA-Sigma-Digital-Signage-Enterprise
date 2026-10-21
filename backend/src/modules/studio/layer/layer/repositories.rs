@@ -10,7 +10,7 @@ impl LayerRepository {
     pub async fn create_layer(pool: &DbPool, dto: CreateLayerDto) -> Result<LayerEntity, sqlx::Error> {
         let layer = sqlx::query_as::<_, LayerEntity>(
             r#"
-            INSERT INTO layers (
+            INSERT INTO studio_layers (
                 layout_id, name, x, y, width, height, z_index, background_color,
                 opacity, overlay_color, overlay_opacity, border_radius, border_color, border_width
             )
@@ -40,7 +40,7 @@ impl LayerRepository {
 
     pub async fn find_layer_by_id(pool: &DbPool, id: Uuid) -> Result<Option<LayerEntity>, sqlx::Error> {
         let layer = sqlx::query_as::<_, LayerEntity>(
-            "SELECT * FROM layers WHERE id = $1",
+            "SELECT * FROM studio_layers WHERE id = $1",
         )
         .bind(id)
         .fetch_optional(pool)
@@ -56,7 +56,7 @@ impl LayerRepository {
     ) -> Result<LayerEntity, sqlx::Error> {
         let layer = sqlx::query_as::<_, LayerEntity>(
             r#"
-            UPDATE layers
+            UPDATE studio_layers
             SET 
                 name = COALESCE($2, name),
                 x = COALESCE($3, x),
@@ -97,7 +97,7 @@ impl LayerRepository {
     }
 
     pub async fn delete_layer(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM layers WHERE id = $1")
+        let result = sqlx::query("DELETE FROM studio_layers WHERE id = $1")
             .bind(id)
             .execute(pool)
             .await?;

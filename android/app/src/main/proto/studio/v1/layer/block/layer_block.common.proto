@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package signage.studio.v1.layer;
-import "studio/v1/playlist/playlist.common.proto";
+import "studio/v1/playlist/playlist/playlist.common.proto";
 import "studio/v1/media/media.common.proto";
 import "studio/v1/layer/item_override/layer_item_override.common.proto";
 import "studio/v1/transition/transition.common.proto";
@@ -11,7 +11,7 @@ message LayerPlaylist {
   string id = 1;
   string layer_id = 2;
   string playlist_id = 3;
-  signage.studio.v1.playlist.Playlist playlist = 4;
+  signage.studio.v1.playlist.playlist.Playlist playlist = 4;
   int32 start_time_seconds = 5;
   int32 duration_seconds = 6;
   int32 trim_start_seconds = 15;

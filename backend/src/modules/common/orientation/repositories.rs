@@ -8,7 +8,7 @@ pub struct OrientationRepository;
 impl OrientationRepository {
     pub async fn find_all(pool: &PgPool) -> Result<Vec<OrientationEntity>, AppError> {
         let items = sqlx::query_as::<_, OrientationEntity>(
-            "SELECT id, name, value, created_at, updated_at FROM orientations ORDER BY name ASC"
+            "SELECT id, name, value, created_at, updated_at FROM common_orientations ORDER BY name ASC"
         )
         .fetch_all(pool)
         .await
@@ -19,7 +19,7 @@ impl OrientationRepository {
 
     pub async fn find_by_id(pool: &PgPool, id: Uuid) -> Result<OrientationEntity, AppError> {
         let item = sqlx::query_as::<_, OrientationEntity>(
-            "SELECT id, name, value, created_at, updated_at FROM orientations WHERE id = $1"
+            "SELECT id, name, value, created_at, updated_at FROM common_orientations WHERE id = $1"
         )
         .bind(id)
         .fetch_optional(pool)
@@ -33,7 +33,7 @@ impl OrientationRepository {
     pub async fn create(pool: &PgPool, name: &str, value: &str) -> Result<OrientationEntity, AppError> {
         let item = sqlx::query_as::<_, OrientationEntity>(
             r#"
-            INSERT INTO orientations (name, value)
+            INSERT INTO common_orientations (name, value)
             VALUES ($1, $2)
             RETURNING id, name, value, created_at, updated_at
             "#
@@ -50,7 +50,7 @@ impl OrientationRepository {
     pub async fn update(pool: &PgPool, id: Uuid, name: &str, value: &str) -> Result<OrientationEntity, AppError> {
         let item = sqlx::query_as::<_, OrientationEntity>(
             r#"
-            UPDATE orientations
+            UPDATE common_orientations
             SET name = $1, value = $2, updated_at = NOW()
             WHERE id = $3
             RETURNING id, name, value, created_at, updated_at
@@ -68,7 +68,7 @@ impl OrientationRepository {
     }
 
     pub async fn delete(pool: &PgPool, id: Uuid) -> Result<bool, AppError> {
-        sqlx::query("DELETE FROM orientations WHERE id = $1")
+        sqlx::query("DELETE FROM common_orientations WHERE id = $1")
             .bind(id)
             .execute(pool)
             .await

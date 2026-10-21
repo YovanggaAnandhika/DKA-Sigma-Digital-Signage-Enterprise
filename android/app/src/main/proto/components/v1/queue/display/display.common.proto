@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package signage.components.v1.queue.display;
+
+import "common/v1/types.proto";
+import "components/v1/queue/layout_item/layout_item.common.proto";
+import "components/v1/queue/counter/counter.common.proto";
+import "components/v1/queue/audio/audio.common.proto";
+
+message QueueDisplayDetail {
+  string id = 1;
+  string name = 2;
+  string prefix = 3;
+  int32 canvas_width = 4;
+  int32 canvas_height = 5;
+  string background_color = 6;
+  string background_image_url = 7;
+  string theme_preset = 8;
+  bool auto_recall_enabled = 9;
+  repeated signage.components.v1.queue.layout_item.QueueLayoutItem items = 10;
+  repeated signage.components.v1.queue.counter.QueueCounter counters = 11;
+  repeated signage.components.v1.queue.audio.QueueAudio audios = 12;
+  int32 waiting_tickets_count = 13;
+  string latest_called_number = 14;
+  string created_at = 15;
+  string updated_at = 16;
+  float opacity = 17;
+  string overlay_color = 18;
+  float overlay_opacity = 19;
+  string sector_type = 20;
+  string ticket_label = 21;
+  string counter_label = 22;
+  string tts_template_call = 23;
+  string tts_template_recall = 24;
+  string tts_template_break = 25;
+  int32 current_sequence = 26;
+}
+
+message CreateQueueDisplayRequest {
+  string name = 1;
+  string prefix = 2;
+  int32 canvas_width = 3;
+  int32 canvas_height = 4;
+  string background_color = 5;
+  string background_image_url = 6;
+  string theme_preset = 7;
+  bool auto_recall_enabled = 8;
+  repeated signage.components.v1.queue.layout_item.QueueLayoutItem items = 9;
+  repeated signage.components.v1.queue.counter.QueueCounter counters = 10;
+  repeated signage.components.v1.queue.audio.QueueAudio audios = 11;
+  float opacity = 12;
+  string overlay_color = 13;
+  float overlay_opacity = 14;
+  optional string sector_type = 15;
+  optional string ticket_label = 16;
+  optional string counter_label = 17;
+  optional string tts_template_call = 18;
+  optional string tts_template_recall = 19;
+  optional string tts_template_break = 20;
+}
+
+message GetQueueDisplayRequest {
+  string id = 1;
+}
+
+message ListQueueDisplaysRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+}
+
+message ListQueueDisplaysResponse {
+  repeated QueueDisplayDetail items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateQueueDisplayRequest {
+  string id = 1;
+  string name = 2;
+  string prefix = 3;
+  int32 canvas_width = 4;
+  int32 canvas_height = 5;
+  string background_color = 6;
+  string background_image_url = 7;
+  string theme_preset = 8;
+  bool auto_recall_enabled = 9;
+  repeated signage.components.v1.queue.layout_item.QueueLayoutItem items = 10;
+  repeated signage.components.v1.queue.counter.QueueCounter counters = 11;
+  repeated signage.components.v1.queue.audio.QueueAudio audios = 12;
+  float opacity = 13;
+  string overlay_color = 14;
+  float overlay_opacity = 15;
+  optional string sector_type = 16;
+  optional string ticket_label = 17;
+  optional string counter_label = 18;
+  optional string tts_template_call = 19;
+  optional string tts_template_recall = 20;
+  optional string tts_template_break = 21;
+}
+
+message DeleteQueueDisplayRequest {
+  string id = 1;
+}
+
+message DeleteQueueDisplayResponse {
+  bool success = 1;
+}

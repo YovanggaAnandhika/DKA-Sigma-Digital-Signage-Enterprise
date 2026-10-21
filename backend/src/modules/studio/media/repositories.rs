@@ -8,7 +8,7 @@ impl MediaRepository {
     pub async fn create(pool: &DbPool, dto: CreateMediaDto) -> Result<MediaEntity, sqlx::Error> {
         let media = sqlx::query_as::<_, MediaEntity>(
             r#"
-            INSERT INTO media_items (
+            INSERT INTO studio_media_items (
                 name, original_filename, file_path, public_url, file_size_bytes,
                 mime_type, sha256_hash, media_type, width, height, duration_seconds, thumbnail_url
             )
@@ -35,7 +35,7 @@ impl MediaRepository {
     }
 
     pub async fn find_by_id(pool: &DbPool, id: Uuid) -> Result<Option<MediaEntity>, sqlx::Error> {
-        let media = sqlx::query_as::<_, MediaEntity>("SELECT * FROM media_items WHERE id = $1")
+        let media = sqlx::query_as::<_, MediaEntity>("SELECT * FROM studio_media_items WHERE id = $1")
             .bind(id)
             .fetch_optional(pool)
             .await?;
@@ -45,7 +45,7 @@ impl MediaRepository {
 
     pub async fn find_all(pool: &DbPool) -> Result<Vec<MediaEntity>, sqlx::Error> {
         let items = sqlx::query_as::<_, MediaEntity>(
-            "SELECT * FROM media_items ORDER BY created_at DESC",
+            "SELECT * FROM studio_media_items ORDER BY created_at DESC",
         )
         .fetch_all(pool)
         .await?;
@@ -60,7 +60,7 @@ impl MediaRepository {
     ) -> Result<MediaEntity, sqlx::Error> {
         let media = sqlx::query_as::<_, MediaEntity>(
             r#"
-            UPDATE media_items
+            UPDATE studio_media_items
             SET 
                 name = COALESCE($2, name),
                 duration_seconds = COALESCE($3, duration_seconds),
@@ -79,7 +79,7 @@ impl MediaRepository {
     }
 
     pub async fn delete(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM media_items WHERE id = $1")
+        let result = sqlx::query("DELETE FROM studio_media_items WHERE id = $1")
             .bind(id)
             .execute(pool)
             .await?;

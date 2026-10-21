@@ -51,7 +51,7 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
         _request: Request<ListResolutionsRequest>,
     ) -> Result<Response<ListResolutionsResponse>, Status> {
         let rows = sqlx::query_as::<_, ResolutionRow>(
-            "SELECT id, name, width, height, aspect_ratio, created_at, updated_at FROM resolutions ORDER BY width ASC, height ASC"
+            "SELECT id, name, width, height, aspect_ratio, created_at, updated_at FROM common_resolutions ORDER BY width ASC, height ASC"
         )
         .fetch_all(&self.pool)
         .await
@@ -68,7 +68,7 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
     ) -> Result<Response<Resolution>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
         let row = sqlx::query_as::<_, ResolutionRow>(
-            "SELECT id, name, width, height, aspect_ratio, created_at, updated_at FROM resolutions WHERE id = $1"
+            "SELECT id, name, width, height, aspect_ratio, created_at, updated_at FROM common_resolutions WHERE id = $1"
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -89,7 +89,7 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
 
         let row = sqlx::query_as::<_, ResolutionRow>(
             r#"
-            INSERT INTO resolutions (id, name, width, height, aspect_ratio)
+            INSERT INTO common_resolutions (id, name, width, height, aspect_ratio)
             VALUES ($1, $2, $3, $4, $5)
             RETURNING id, name, width, height, aspect_ratio, created_at, updated_at
             "#
@@ -123,7 +123,7 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
 
         let row = sqlx::query_as::<_, ResolutionRow>(
             r#"
-            UPDATE resolutions
+            UPDATE common_resolutions
             SET name = $1, width = $2, height = $3, aspect_ratio = $4, updated_at = NOW()
             WHERE id = $5
             RETURNING id, name, width, height, aspect_ratio, created_at, updated_at
@@ -154,7 +154,7 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
         request: Request<DeleteResolutionRequest>,
     ) -> Result<Response<DeleteResolutionResponse>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        sqlx::query("DELETE FROM resolutions WHERE id = $1")
+        sqlx::query("DELETE FROM common_resolutions WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await

@@ -10,7 +10,7 @@ impl RoleRepository {
 
         let role = sqlx::query_as::<_, RoleEntity>(
             r#"
-            INSERT INTO roles (name, slug, description)
+            INSERT INTO iam_roles (name, slug, description)
             VALUES ($1, $2, $3)
             RETURNING id, name, slug, description, is_system, created_at, updated_at
             "#,
@@ -25,7 +25,7 @@ impl RoleRepository {
             for perm_id in perm_ids {
                 sqlx::query(
                     r#"
-                    INSERT INTO role_permissions (role_id, permission_id)
+                    INSERT INTO iam_role_permissions (role_id, permission_id)
                     VALUES ($1, $2)
                     ON CONFLICT DO NOTHING
                     "#,
@@ -45,7 +45,7 @@ impl RoleRepository {
         let role = sqlx::query_as::<_, RoleEntity>(
             r#"
             SELECT id, name, slug, description, is_system, created_at, updated_at
-            FROM roles
+            FROM iam_roles
             WHERE id = $1
             "#,
         )
@@ -60,7 +60,7 @@ impl RoleRepository {
         let role = sqlx::query_as::<_, RoleEntity>(
             r#"
             SELECT id, name, slug, description, is_system, created_at, updated_at
-            FROM roles
+            FROM iam_roles
             WHERE slug = $1
             "#,
         )
@@ -75,7 +75,7 @@ impl RoleRepository {
         let roles = sqlx::query_as::<_, RoleEntity>(
             r#"
             SELECT id, name, slug, description, is_system, created_at, updated_at
-            FROM roles
+            FROM iam_roles
             ORDER BY name ASC
             "#,
         )
@@ -94,7 +94,7 @@ impl RoleRepository {
 
         let role = sqlx::query_as::<_, RoleEntity>(
             r#"
-            UPDATE roles
+            UPDATE iam_roles
             SET 
                 name = COALESCE($2, name),
                 description = COALESCE($3, description),
@@ -110,7 +110,7 @@ impl RoleRepository {
         .await?;
 
         if let Some(perm_ids) = dto.permission_ids {
-            sqlx::query("DELETE FROM role_permissions WHERE role_id = $1")
+            sqlx::query("DELETE FROM iam_role_permissions WHERE role_id = $1")
                 .bind(id)
                 .execute(&mut *tx)
                 .await?;
@@ -118,7 +118,7 @@ impl RoleRepository {
             for perm_id in perm_ids {
                 sqlx::query(
                     r#"
-                    INSERT INTO role_permissions (role_id, permission_id)
+                    INSERT INTO iam_role_permissions (role_id, permission_id)
                     VALUES ($1, $2)
                     ON CONFLICT DO NOTHING
                     "#,
@@ -135,7 +135,7 @@ impl RoleRepository {
     }
 
     pub async fn delete(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM roles WHERE id = $1 AND is_system = FALSE")
+        let result = sqlx::query("DELETE FROM iam_roles WHERE id = $1 AND is_system = FALSE")
             .bind(id)
             .execute(pool)
             .await?;
@@ -150,7 +150,7 @@ impl RoleRepository {
     ) -> Result<(), sqlx::Error> {
         let mut tx = pool.begin().await?;
 
-        sqlx::query("DELETE FROM role_permissions WHERE role_id = $1")
+        sqlx::query("DELETE FROM iam_role_permissions WHERE role_id = $1")
             .bind(role_id)
             .execute(&mut *tx)
             .await?;
@@ -158,7 +158,7 @@ impl RoleRepository {
         for perm_id in perm_ids {
             sqlx::query(
                 r#"
-                INSERT INTO role_permissions (role_id, permission_id)
+                INSERT INTO iam_role_permissions (role_id, permission_id)
                 VALUES ($1, $2)
                 ON CONFLICT DO NOTHING
                 "#,

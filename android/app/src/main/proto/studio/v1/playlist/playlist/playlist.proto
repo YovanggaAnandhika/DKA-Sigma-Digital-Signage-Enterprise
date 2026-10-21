@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package signage.studio.v1.playlist.playlist;
+
+import "studio/v1/playlist/playlist/playlist.common.proto";
+import "studio/v1/playlist/item/playlist_item.common.proto";
+
+service PlaylistService {
+  rpc CreatePlaylist(CreatePlaylistRequest) returns (Playlist);
+  rpc GetPlaylist(GetPlaylistRequest) returns (Playlist);
+  rpc ListPlaylists(ListPlaylistsRequest) returns (ListPlaylistsResponse);
+  rpc UpdatePlaylist(UpdatePlaylistRequest) returns (Playlist);
+  rpc DeletePlaylist(DeletePlaylistRequest) returns (DeletePlaylistResponse);
+  rpc ReorderPlaylistItems(signage.studio.v1.playlist.item.ReorderPlaylistItemsRequest) returns (ReorderPlaylistItemsResponse);
+}

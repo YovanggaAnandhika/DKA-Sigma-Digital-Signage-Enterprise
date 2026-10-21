@@ -72,7 +72,7 @@ impl TickerServiceTrait for TickerServiceImpl {
 
         let row = sqlx::query_as::<_, TickerRow>(
             r#"
-            INSERT INTO tickers (
+            INSERT INTO components_tickers (
                 id, name, badge, messages, speed, theme, font_size,
                 background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius
             )
@@ -116,7 +116,7 @@ impl TickerServiceTrait for TickerServiceImpl {
     ) -> Result<Response<Ticker>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
         let row = sqlx::query_as::<_, TickerRow>(
-            "SELECT id, name, badge, messages, speed, theme, font_size, background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius, created_at, updated_at FROM tickers WHERE id = $1"
+            "SELECT id, name, badge, messages, speed, theme, font_size, background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius, created_at, updated_at FROM components_tickers WHERE id = $1"
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -139,7 +139,7 @@ impl TickerServiceTrait for TickerServiceImpl {
             SELECT id, name, badge, messages, speed, theme, font_size,
                    background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius,
                    created_at, updated_at
-            FROM tickers
+            FROM components_tickers
             WHERE name ILIKE $1 OR badge ILIKE $1
             ORDER BY created_at DESC
             LIMIT 50
@@ -172,7 +172,7 @@ impl TickerServiceTrait for TickerServiceImpl {
 
         let row = sqlx::query_as::<_, TickerRow>(
             r#"
-            UPDATE tickers
+            UPDATE components_tickers
             SET name = COALESCE(NULLIF($2, ''), name),
                 badge = COALESCE(NULLIF($3, ''), badge),
                 messages = $4,
@@ -217,7 +217,7 @@ impl TickerServiceTrait for TickerServiceImpl {
         request: Request<DeleteTickerRequest>,
     ) -> Result<Response<DeleteTickerResponse>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        sqlx::query("DELETE FROM tickers WHERE id = $1")
+        sqlx::query("DELETE FROM components_tickers WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await

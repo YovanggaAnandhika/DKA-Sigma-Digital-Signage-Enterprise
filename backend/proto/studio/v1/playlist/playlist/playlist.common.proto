@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package signage.studio.v1.playlist.playlist;
+
+import "common/v1/types.proto";
+import "studio/v1/playlist/item/playlist_item.common.proto";
+
+message Playlist {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  bool is_shuffle = 4;
+  repeated signage.studio.v1.playlist.item.PlaylistItem items = 5;
+  int32 total_duration_seconds = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message CreatePlaylistRequest {
+  string name = 1;
+  string description = 2;
+  bool is_shuffle = 3;
+}
+
+message GetPlaylistRequest {
+  string id = 1;
+}
+
+message ListPlaylistsRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+}
+
+message ListPlaylistsResponse {
+  repeated Playlist items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdatePlaylistRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  bool is_shuffle = 4;
+}
+
+message DeletePlaylistRequest {
+  string id = 1;
+}
+
+message DeletePlaylistResponse {
+  bool success = 1;
+}
+
+message ReorderPlaylistItemsResponse {
+  bool success = 1;
+  Playlist playlist = 2;
+}

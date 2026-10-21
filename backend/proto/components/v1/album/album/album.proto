@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package signage.components.v1.album.album;
+
+import "components/v1/album/album/album.common.proto";
+
+service AlbumService {
+  rpc CreateAlbum(CreateAlbumRequest) returns (AlbumDetail);
+  rpc GetAlbum(GetAlbumRequest) returns (AlbumDetail);
+  rpc ListAlbums(ListAlbumsRequest) returns (ListAlbumsResponse);
+  rpc UpdateAlbum(UpdateAlbumRequest) returns (AlbumDetail);
+  rpc DeleteAlbum(DeleteAlbumRequest) returns (DeleteAlbumResponse);
+}

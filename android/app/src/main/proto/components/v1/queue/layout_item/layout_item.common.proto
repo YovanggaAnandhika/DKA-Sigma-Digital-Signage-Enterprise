@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package signage.components.v1.queue.layout_item;
+
+message QueueLayoutItem {
+  string id = 1;
+  string queue_display_id = 2;
+  string item_type = 3;
+  string name = 4;
+  int32 x = 5;
+  int32 y = 6;
+  int32 width = 7;
+  int32 height = 8;
+  int32 z_index = 9;
+  string background_color = 10;
+  string text_color = 11;
+  int32 font_size = 12;
+  string font_weight = 13;
+  string text_align = 14;
+  string template_content = 15;
+  string config_json = 16;
+  bool is_visible = 17;
+  string created_at = 18;
+  string updated_at = 19;
+  float opacity = 20;
+  int32 border_radius = 21;
+  string border_color = 22;
+  int32 border_width = 23;
+}
+
+message SaveQueueLayoutRequest {
+  string queue_display_id = 1;
+  repeated QueueLayoutItem items = 2;
+}
+
+message SaveQueueLayoutResponse {
+  repeated QueueLayoutItem items = 1;
+}
+
+message GetQueueLayoutRequest {
+  string queue_display_id = 1;
+}
+
+message GetQueueLayoutResponse {
+  repeated QueueLayoutItem items = 1;
+}
+
+message UpdateQueueLayoutItemRequest {
+  QueueLayoutItem item = 1;
+}
+
+message DeleteQueueLayoutItemRequest {
+  string id = 1;
+}
+
+message DeleteQueueLayoutItemResponse {
+  bool success = 1;
+}

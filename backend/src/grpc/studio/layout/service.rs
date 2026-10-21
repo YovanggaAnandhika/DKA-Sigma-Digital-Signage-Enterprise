@@ -67,7 +67,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         let orientation_id = if req.orientation_id.is_empty() {
             let orientation_value = if req.canvas_width >= req.canvas_height { "landscape" } else { "portrait" };
             let record = sqlx::query_as::<_, (Uuid,)>(
-                "SELECT id FROM orientations WHERE value = $1"
+                "SELECT id FROM common_orientations WHERE value = $1"
             )
             .bind(orientation_value)
             .fetch_one(&self.pool)
@@ -120,7 +120,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
 
         let mut proto_l = Self::map_layout_with_layers(dto);
         let latest_hash = sqlx::query_scalar::<_, String>(
-            "SELECT version_hash FROM layout_history WHERE layout_id = $1 ORDER BY created_at DESC LIMIT 1"
+            "SELECT version_hash FROM studio_layout_history WHERE layout_id = $1 ORDER BY created_at DESC LIMIT 1"
         )
         .bind(layout_id)
         .fetch_optional(&self.pool)
@@ -128,7 +128,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         .unwrap_or(None);
 
         let scheduled_hash = sqlx::query_scalar::<_, String>(
-            "SELECT version_hash FROM schedule_events WHERE layout_id = $1 AND version_hash IS NOT NULL ORDER BY created_at DESC LIMIT 1"
+            "SELECT version_hash FROM studio_schedule_events WHERE layout_id = $1 AND version_hash IS NOT NULL ORDER BY created_at DESC LIMIT 1"
         )
         .bind(layout_id)
         .fetch_optional(&self.pool)
@@ -164,7 +164,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             let mut proto_l = Self::map_layout_with_layers(dto);
 
             let latest_hash = sqlx::query_scalar::<_, String>(
-                "SELECT version_hash FROM layout_history WHERE layout_id = $1 ORDER BY created_at DESC LIMIT 1"
+                "SELECT version_hash FROM studio_layout_history WHERE layout_id = $1 ORDER BY created_at DESC LIMIT 1"
             )
             .bind(l.id)
             .fetch_optional(&self.pool)
@@ -172,7 +172,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             .unwrap_or(None);
 
             let scheduled_hash = sqlx::query_scalar::<_, String>(
-                "SELECT version_hash FROM schedule_events WHERE layout_id = $1 AND version_hash IS NOT NULL ORDER BY created_at DESC LIMIT 1"
+                "SELECT version_hash FROM studio_schedule_events WHERE layout_id = $1 AND version_hash IS NOT NULL ORDER BY created_at DESC LIMIT 1"
             )
             .bind(l.id)
             .fetch_optional(&self.pool)
@@ -250,7 +250,7 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         }
 
         let scheduled_hash = sqlx::query_scalar::<_, String>(
-            "SELECT version_hash FROM schedule_events WHERE layout_id = $1 AND version_hash IS NOT NULL ORDER BY created_at DESC LIMIT 1"
+            "SELECT version_hash FROM studio_schedule_events WHERE layout_id = $1 AND version_hash IS NOT NULL ORDER BY created_at DESC LIMIT 1"
         )
         .bind(layout_id)
         .fetch_optional(&self.pool)

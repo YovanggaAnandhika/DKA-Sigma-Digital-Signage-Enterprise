@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package signage.components.v1.webview;
+
+import "components/v1/webview/webview.common.proto";
+
+service WebviewService {
+  rpc CreateWebview(CreateWebviewRequest) returns (Webview);
+  rpc GetWebview(GetWebviewRequest) returns (Webview);
+  rpc ListWebviews(ListWebviewsRequest) returns (ListWebviewsResponse);
+  rpc UpdateWebview(UpdateWebviewRequest) returns (Webview);
+  rpc DeleteWebview(DeleteWebviewRequest) returns (DeleteWebviewResponse);
+}

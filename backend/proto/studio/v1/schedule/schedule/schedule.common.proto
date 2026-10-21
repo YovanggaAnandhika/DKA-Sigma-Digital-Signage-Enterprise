@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package signage.studio.v1.schedule.schedule;
+
+import "common/v1/types.proto";
+import "studio/v1/schedule/event/schedule_event.common.proto";
+
+message Schedule {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string created_at = 4;
+  string updated_at = 5;
+  repeated signage.studio.v1.schedule.event.ScheduleEvent events = 6;
+}
+
+message CreateScheduleRequest {
+  string name = 1;
+  string description = 2;
+}
+
+message UpdateScheduleRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+}
+
+message GetScheduleRequest {
+  string id = 1;
+}
+
+message ListSchedulesRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+}
+
+message ListSchedulesResponse {
+  repeated Schedule items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message DeleteScheduleRequest {
+  string id = 1;
+}
+
+message DeleteScheduleResponse {
+  bool success = 1;
+}
+
+message PushLayoutToScheduleRequest {
+  string layout_id = 1;
+  string schedule_name = 2;
+  string start_time = 3;
+  string end_time = 4;
+  string days_of_week = 5;
+  int32 priority = 6;
+  optional string start_date = 7;
+  optional string end_date = 8;
+  repeated string device_ids = 9;
+  repeated string display_group_ids = 10;
+  optional string schedule_id = 11;
+}
+
+message PushLayoutToScheduleResponse {
+  bool success = 1;
+  string schedule_id = 2;
+  string message = 3;
+}

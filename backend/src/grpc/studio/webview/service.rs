@@ -63,7 +63,7 @@ impl WebviewServiceTrait for WebviewServiceImpl {
 
         let row = sqlx::query_as::<_, WebviewRow>(
             r#"
-            INSERT INTO webviews (id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation)
+            INSERT INTO components_webviews (id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation, created_at, updated_at
             "#
@@ -88,7 +88,7 @@ impl WebviewServiceTrait for WebviewServiceImpl {
     ) -> Result<Response<Webview>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
         let row = sqlx::query_as::<_, WebviewRow>(
-            "SELECT id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation, created_at, updated_at FROM webviews WHERE id = $1"
+            "SELECT id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation, created_at, updated_at FROM components_webviews WHERE id = $1"
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -109,7 +109,7 @@ impl WebviewServiceTrait for WebviewServiceImpl {
         let rows = sqlx::query_as::<_, WebviewRow>(
             r#"
             SELECT id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation, created_at, updated_at
-            FROM webviews
+            FROM components_webviews
             WHERE name ILIKE $1 OR url ILIKE $1
             ORDER BY created_at DESC
             LIMIT 50
@@ -142,7 +142,7 @@ impl WebviewServiceTrait for WebviewServiceImpl {
 
         let row = sqlx::query_as::<_, WebviewRow>(
             r#"
-            UPDATE webviews
+            UPDATE components_webviews
             SET name = COALESCE(NULLIF($2, ''), name),
                 url = COALESCE(NULLIF($3, ''), url),
                 refresh_interval_seconds = CASE WHEN $4 > 0 THEN $4 ELSE refresh_interval_seconds END,
@@ -173,7 +173,7 @@ impl WebviewServiceTrait for WebviewServiceImpl {
         request: Request<DeleteWebviewRequest>,
     ) -> Result<Response<DeleteWebviewResponse>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        sqlx::query("DELETE FROM webviews WHERE id = $1")
+        sqlx::query("DELETE FROM components_webviews WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await

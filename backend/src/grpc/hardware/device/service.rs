@@ -210,7 +210,7 @@ impl DeviceServiceTrait for DeviceServiceImpl {
 
         // Periksa apakah ada perintah tertunda (seperti CAPTURE_SCREENSHOT atau RELOAD_MANIFEST)
         let pending_command = if let Ok(Some(row)) = sqlx::query_scalar::<_, serde_json::Value>(
-            "SELECT payload_json FROM device_telemetry WHERE device_id = $1 AND payload_json->>'command_type' IS NOT NULL AND (payload_json->>'consumed')::boolean IS NOT TRUE ORDER BY created_at DESC LIMIT 1"
+            "SELECT payload_json FROM hardware_device_telemetry WHERE device_id = $1 AND payload_json->>'command_type' IS NOT NULL AND (payload_json->>'consumed')::boolean IS NOT TRUE ORDER BY created_at DESC LIMIT 1"
         )
         .bind(device_id)
         .fetch_optional(&self.pool)
@@ -218,7 +218,7 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             let cmd_type = row.get("command_type").and_then(|v| v.as_str()).map(|s| s.to_string());
             let cmd_id = row.get("command_id").and_then(|v| v.as_str()).map(|s| s.to_string());
             if let Some(cid) = cmd_id {
-                let _ = sqlx::query("UPDATE device_telemetry SET payload_json = payload_json || '{\"consumed\": true}'::jsonb WHERE device_id = $1 AND payload_json->>'command_id' = $2")
+                let _ = sqlx::query("UPDATE hardware_device_telemetry SET payload_json = payload_json || '{\"consumed\": true}'::jsonb WHERE device_id = $1 AND payload_json->>'command_id' = $2")
                     .bind(device_id)
                     .bind(cid)
                     .execute(&self.pool)
@@ -258,7 +258,7 @@ impl DeviceServiceTrait for DeviceServiceImpl {
         let mut proto = Self::map_device_entity(dev);
         if !proto.is_paired {
             if let Ok(Some(code)) = sqlx::query_scalar::<_, String>(
-                "SELECT pairing_code FROM device_pairings WHERE device_id = $1 AND status = 'pending' AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1"
+                "SELECT pairing_code FROM hardware_device_pairings WHERE device_id = $1 AND status = 'pending' AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1"
             )
             .bind(device_id)
             .fetch_optional(&self.pool)
@@ -285,7 +285,7 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             if !proto.is_paired {
                 if let Ok(dev_uuid) = Uuid::parse_str(&proto.id) {
                     if let Ok(Some(code)) = sqlx::query_scalar::<_, String>(
-                        "SELECT pairing_code FROM device_pairings WHERE device_id = $1 AND status = 'pending' AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1"
+                        "SELECT pairing_code FROM hardware_device_pairings WHERE device_id = $1 AND status = 'pending' AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1"
                     )
                     .bind(dev_uuid)
                     .fetch_optional(&self.pool)
@@ -405,7 +405,7 @@ impl DeviceServiceTrait for DeviceServiceImpl {
 
             let _ = sqlx::query(
                 r#"
-                INSERT INTO device_analytics (id, device_id, input_output, assets_stats, recorded_at)
+                INSERT INTO hardware_device_analytics (id, device_id, input_output, assets_stats, recorded_at)
                 VALUES ($1, $2, $3, $4, $5)
                 ON CONFLICT (id) DO NOTHING
                 "#,
@@ -449,7 +449,7 @@ impl DeviceServiceTrait for DeviceServiceImpl {
 
             let res = sqlx::query(
                 r#"
-                INSERT INTO device_analytics (id, device_id, input_output, assets_stats, recorded_at)
+                INSERT INTO hardware_device_analytics (id, device_id, input_output, assets_stats, recorded_at)
                 VALUES ($1, $2, $3, $4, $5)
                 ON CONFLICT (id) DO NOTHING
                 "#,
@@ -504,7 +504,7 @@ impl DeviceServiceTrait for DeviceServiceImpl {
         let query = format!(
             r#"
             SELECT id, device_id, input_output, assets_stats, recorded_at
-            FROM device_analytics
+            FROM hardware_device_analytics
             WHERE device_id = $1
               AND recorded_at >= NOW() - INTERVAL '{}'
             ORDER BY recorded_at ASC

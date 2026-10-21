@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package signage.components.v1.webview;
+
+import "common/v1/types.proto";
+
+message Webview {
+  string id = 1;
+  string name = 2;
+  string url = 3;
+  int32 refresh_interval_seconds = 4;
+  bool is_interactive = 5;
+  string created_at = 6;
+  string updated_at = 7;
+  float zoom_factor = 8;
+  string custom_css = 9;
+  bool custom_js_enabled = 10;
+  string user_agent = 11;
+  bool transparent_background = 12;
+}
+
+message CreateWebviewRequest {
+  string name = 1;
+  string url = 2;
+  int32 refresh_interval_seconds = 3;
+  bool is_interactive = 4;
+  float zoom_factor = 5;
+  string custom_css = 6;
+  bool custom_js_enabled = 7;
+  string user_agent = 8;
+  bool transparent_background = 9;
+}
+
+message GetWebviewRequest {
+  string id = 1;
+}
+
+message ListWebviewsRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+}
+
+message ListWebviewsResponse {
+  repeated Webview items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateWebviewRequest {
+  string id = 1;
+  string name = 2;
+  string url = 3;
+  int32 refresh_interval_seconds = 4;
+  bool is_interactive = 5;
+  float zoom_factor = 6;
+  string custom_css = 7;
+  bool custom_js_enabled = 8;
+  string user_agent = 9;
+  bool transparent_background = 10;
+}
+
+message DeleteWebviewRequest {
+  string id = 1;
+}
+
+message DeleteWebviewResponse {
+  bool success = 1;
+}

@@ -11,7 +11,7 @@ impl CanaryRepository {
     ) -> Result<CanaryGroupEntity, sqlx::Error> {
         let group = sqlx::query_as::<_, CanaryGroupEntity>(
             r#"
-            INSERT INTO canary_groups (name, description, rollout_percentage, is_active, target_layout_id)
+            INSERT INTO distribution_canary_groups (name, description, rollout_percentage, is_active, target_layout_id)
             VALUES ($1, $2, $3, $4, $5)
             RETURNING *
             "#,
@@ -32,7 +32,7 @@ impl CanaryRepository {
         id: Uuid,
     ) -> Result<Option<CanaryGroupEntity>, sqlx::Error> {
         let group = sqlx::query_as::<_, CanaryGroupEntity>(
-            "SELECT * FROM canary_groups WHERE id = $1",
+            "SELECT * FROM distribution_canary_groups WHERE id = $1",
         )
         .bind(id)
         .fetch_optional(pool)
@@ -43,7 +43,7 @@ impl CanaryRepository {
 
     pub async fn find_all(pool: &DbPool) -> Result<Vec<CanaryGroupEntity>, sqlx::Error> {
         let groups = sqlx::query_as::<_, CanaryGroupEntity>(
-            "SELECT * FROM canary_groups ORDER BY name ASC",
+            "SELECT * FROM distribution_canary_groups ORDER BY name ASC",
         )
         .fetch_all(pool)
         .await?;
@@ -58,7 +58,7 @@ impl CanaryRepository {
     ) -> Result<CanaryGroupEntity, sqlx::Error> {
         let group = sqlx::query_as::<_, CanaryGroupEntity>(
             r#"
-            UPDATE canary_groups
+            UPDATE distribution_canary_groups
             SET 
                 name = COALESCE($2, name),
                 description = COALESCE($3, description),
@@ -83,7 +83,7 @@ impl CanaryRepository {
     }
 
     pub async fn delete(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM canary_groups WHERE id = $1")
+        let result = sqlx::query("DELETE FROM distribution_canary_groups WHERE id = $1")
             .bind(id)
             .execute(pool)
             .await?;

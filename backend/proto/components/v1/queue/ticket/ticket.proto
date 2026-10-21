@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package signage.components.v1.queue.ticket;
+
+import "components/v1/queue/ticket/ticket.common.proto";
+
+service QueueTicketService {
+  rpc IssueTicket(IssueTicketRequest) returns (QueueTicket);
+  rpc CallNextTicket(CallNextTicketRequest) returns (CallNextTicketResponse);
+  rpc CallPreviousTicket(CallPreviousTicketRequest) returns (CallPreviousTicketResponse);
+  rpc ResetQueue(ResetQueueRequest) returns (ResetQueueResponse);
+  rpc GetQueueSyncState(GetQueueSyncStateRequest) returns (GetQueueSyncStateResponse);
+  rpc ListTickets(ListTicketsRequest) returns (ListTicketsResponse);
+  rpc UpdateTicketStatus(UpdateTicketStatusRequest) returns (QueueTicket);
+}

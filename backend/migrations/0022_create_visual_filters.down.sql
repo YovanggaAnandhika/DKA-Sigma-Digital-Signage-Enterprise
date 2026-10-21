@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS visual_filters CASCADE;

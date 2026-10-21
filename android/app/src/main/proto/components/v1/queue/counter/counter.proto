@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package signage.components.v1.queue.counter;
+
+import "components/v1/queue/counter/counter.common.proto";
+
+service QueueCounterService {
+  rpc AddCounter(AddCounterRequest) returns (QueueCounter);
+  rpc UpdateCounter(UpdateCounterRequest) returns (QueueCounter);
+  rpc DeleteCounter(DeleteCounterRequest) returns (DeleteCounterResponse);
+  rpc ListCounters(ListCountersRequest) returns (ListCountersResponse);
+  rpc SetCounterStatus(SetCounterStatusRequest) returns (QueueCounter);
+}

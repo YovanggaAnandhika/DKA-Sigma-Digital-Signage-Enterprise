@@ -196,7 +196,7 @@ impl ManifestService {
                 } else if let Some(album_id) = block.block.album_id {
                     // Enrich album photo assets for offline-first player caching
                     if let Ok(photos) = sqlx::query_as::<_, (Uuid,)>(
-                        "SELECT media_item_id FROM album_photos WHERE album_id = $1 ORDER BY position ASC"
+                        "SELECT media_item_id FROM components_album_photos WHERE album_id = $1 ORDER BY position ASC"
                     )
                     .bind(album_id)
                     .fetch_all(pool)
@@ -227,9 +227,9 @@ impl ManifestService {
                         playlist: None,
                     });
                 } else if let Some(queue_id) = block.block.queue_id {
-                    // Enrich custom chime audio assets from queue_audios for offline-first player caching
+                    // Enrich custom chime audio assets from components_queue_audios for offline-first player caching
                     if let Ok(audios) = sqlx::query_as::<_, (Option<Uuid>,)>(
-                        "SELECT media_item_id FROM queue_audios WHERE queue_display_id = $1 AND audio_type = 'media_item' AND is_active = true AND media_item_id IS NOT NULL"
+                        "SELECT media_item_id FROM components_queue_audios WHERE queue_display_id = $1 AND audio_type = 'media_item' AND is_active = true AND media_item_id IS NOT NULL"
                     )
                     .bind(queue_id)
                     .fetch_all(pool)

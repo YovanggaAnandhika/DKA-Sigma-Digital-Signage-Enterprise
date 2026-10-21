@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package signage.components.v1.album.photo;
+
+import "components/v1/album/photo/photo.common.proto";
+
+service AlbumPhotoService {
+  rpc AddAlbumPhoto(AddAlbumPhotoRequest) returns (AlbumPhoto);
+  rpc DeleteAlbumPhoto(DeleteAlbumPhotoRequest) returns (DeleteAlbumPhotoResponse);
+}
