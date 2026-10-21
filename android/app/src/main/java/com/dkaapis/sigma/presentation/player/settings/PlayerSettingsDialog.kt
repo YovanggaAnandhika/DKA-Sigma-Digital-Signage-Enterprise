@@ -2,10 +2,14 @@ package com.dkaapis.sigma.presentation.player.settings
 
 import android.app.AlertDialog
 import android.content.Context
+import android.graphics.Color
+import android.view.Gravity
 import android.view.WindowManager
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
+import androidx.coordinatorlayout.widget.CoordinatorLayout
 import com.dkaapis.sigma.R
 import com.dkaapis.sigma.presentation.player.settings.model.PlayerSettingsPayload
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -31,6 +35,30 @@ class PlayerSettingsDialog(
             window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
             behavior.state = BottomSheetBehavior.STATE_EXPANDED
             behavior.skipCollapsed = true
+            setOnShowListener {
+                val bottomSheet = findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
+                if (bottomSheet != null) {
+                    bottomSheet.setBackgroundColor(Color.TRANSPARENT)
+                    val b = BottomSheetBehavior.from(bottomSheet)
+                    b.state = BottomSheetBehavior.STATE_EXPANDED
+                    b.skipCollapsed = true
+
+                    val displayMetrics = context.resources.displayMetrics
+                    val isLandscape = displayMetrics.widthPixels > displayMetrics.heightPixels
+                    val lp = bottomSheet.layoutParams
+                    if (isLandscape) {
+                        val targetWidth = minOf(
+                            displayMetrics.widthPixels - (48 * displayMetrics.density).toInt(),
+                            (560 * displayMetrics.density).toInt()
+                        )
+                        lp.width = targetWidth
+                        if (lp is CoordinatorLayout.LayoutParams) {
+                            lp.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                        }
+                        bottomSheet.layoutParams = lp
+                    }
+                }
+            }
             setOnDismissListener { activeDialog = null }
         }
         activeDialog = dialog
@@ -39,7 +67,7 @@ class PlayerSettingsDialog(
             "ID Layar: ${payload.deviceId.ifBlank { "(Belum terdaftar)" }}"
 
         dialog.findViewById<TextView>(R.id.tvSettingsServerUrl)?.text =
-            "Endpoint: ${payload.serverHost}:${payload.serverGrpcPort}"
+            "Server: ${payload.serverHost}:${payload.serverGrpcPort}"
 
         dialog.findViewById<SwitchCompat>(R.id.switchProgressUpload)?.apply {
             isChecked = payload.isProgressUploadEnabled
@@ -66,7 +94,7 @@ class PlayerSettingsDialog(
         AlertDialog.Builder(context)
             .setTitle("Putus Hubungan Layar?")
             .setMessage("Layar ini akan diputuskan dari CMS Studio dan kembali ke mode pairing awal. Seluruh kredensial pairing lokal akan dihapus.")
-            .setPositiveButton("Ya, Putus Hubungan") { _, _ -> onConfirmed() }
+            .setPositiveButton("Putus Hubungan") { _, _ -> onConfirmed() }
             .setNegativeButton("Batal", null)
             .show()
     }

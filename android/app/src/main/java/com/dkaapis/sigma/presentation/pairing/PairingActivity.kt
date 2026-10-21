@@ -2,19 +2,24 @@ package com.dkaapis.sigma.presentation.pairing
 
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.Gravity
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.dkaapis.sigma.R
@@ -53,13 +58,15 @@ class PairingActivity : AppCompatActivity() {
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         } catch (_: Throwable) {}
 
-        // Warm retro-modern appearance for system bars
+        // Theme-adaptive appearance for system bars (handles both dark & light modes)
         try {
+            val isNightMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
-            insetsController.isAppearanceLightStatusBars = true
-            insetsController.isAppearanceLightNavigationBars = true
-            window.statusBarColor = Color.parseColor("#f7f5f0")
-            window.navigationBarColor = Color.parseColor("#f7f5f0")
+            insetsController.isAppearanceLightStatusBars = !isNightMode
+            insetsController.isAppearanceLightNavigationBars = !isNightMode
+            val bgColor = ContextCompat.getColor(this, R.color.screen_bg)
+            window.statusBarColor = bgColor
+            window.navigationBarColor = bgColor
         } catch (_: Throwable) {}
 
         binding = ActivityPairingBinding.inflate(layoutInflater)
@@ -84,7 +91,7 @@ class PairingActivity : AppCompatActivity() {
         binding.btnReconnect.setOnClickListener {
             binding.btnReconnect.isEnabled = false
             binding.btnReconnect.alpha = 0.6f
-            binding.btnReconnect.text = "Sedang Menghubungkan..."
+            binding.btnReconnect.text = "Menghubungkan..."
             viewModel.startPairing()
         }
 
@@ -154,7 +161,6 @@ class PairingActivity : AppCompatActivity() {
                         val dx1 = abs(ev.getX(1) - twoFingerStartX1)
                         val minDistance = 90 * resources.displayMetrics.density
 
-                        // Gesture: both fingers move downward past threshold, more vertical than horizontal
                         if (dy0 > minDistance && dy1 > minDistance && dy0 > dx0 && dy1 > dx1) {
                             gestureTriggered = true
                             showServerConfigBottomSheet()
@@ -195,8 +201,28 @@ class PairingActivity : AppCompatActivity() {
             behavior.state = BottomSheetBehavior.STATE_EXPANDED
             behavior.skipCollapsed = true
             setOnShowListener {
-                behavior.state = BottomSheetBehavior.STATE_EXPANDED
-                behavior.skipCollapsed = true
+                val bottomSheet = findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
+                if (bottomSheet != null) {
+                    bottomSheet.setBackgroundColor(Color.TRANSPARENT)
+                    val b = BottomSheetBehavior.from(bottomSheet)
+                    b.state = BottomSheetBehavior.STATE_EXPANDED
+                    b.skipCollapsed = true
+
+                    val displayMetrics = resources.displayMetrics
+                    val isLandscape = displayMetrics.widthPixels > displayMetrics.heightPixels
+                    val lp = bottomSheet.layoutParams
+                    if (isLandscape) {
+                        val targetWidth = minOf(
+                            displayMetrics.widthPixels - (48 * displayMetrics.density).toInt(),
+                            (560 * displayMetrics.density).toInt()
+                        )
+                        lp.width = targetWidth
+                        if (lp is CoordinatorLayout.LayoutParams) {
+                            lp.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                        }
+                        bottomSheet.layoutParams = lp
+                    }
+                }
             }
             setOnDismissListener {
                 gestureTriggered = false
@@ -276,16 +302,16 @@ class PairingActivity : AppCompatActivity() {
             binding.llStatusPill.setBackgroundResource(R.drawable.bg_status_pill_connecting)
             binding.vStatusLed.setBackgroundResource(R.drawable.led_dot_connecting)
             binding.tvStatusCode.text = "MENGHUBUNGKAN..."
-            binding.tvStatusCode.setTextColor(Color.parseColor("#b45309"))
+            binding.tvStatusCode.setTextColor(ContextCompat.getColor(this, R.color.status_connecting_text))
 
             binding.tvPairingCode.visibility = View.GONE
             binding.pbConnecting.visibility = View.VISIBLE
-            binding.tvStatusMessage.setTextColor(Color.parseColor("#78716c"))
+            binding.tvStatusMessage.setTextColor(ContextCompat.getColor(this, R.color.text_sub))
             binding.tvStatusMessage.text = "Menghubungkan ke ${ServerConfig.getHost(this)}..."
 
             binding.btnReconnect.isEnabled = false
             binding.btnReconnect.alpha = 0.6f
-            binding.btnReconnect.text = "Sedang Menghubungkan..."
+            binding.btnReconnect.text = "Menghubungkan..."
 
             viewModel.updateUseCase(newUseCase)
             dialog.dismiss()
@@ -308,22 +334,22 @@ class PairingActivity : AppCompatActivity() {
                         binding.llStatusPill.setBackgroundResource(R.drawable.bg_status_pill_connecting)
                         binding.vStatusLed.setBackgroundResource(R.drawable.led_dot_connecting)
                         binding.tvStatusCode.text = "MENGHUBUNGKAN..."
-                        binding.tvStatusCode.setTextColor(Color.parseColor("#b45309"))
+                        binding.tvStatusCode.setTextColor(ContextCompat.getColor(this@PairingActivity, R.color.status_connecting_text))
 
                         binding.tvPairingCode.visibility = View.GONE
                         binding.pbConnecting.visibility = View.VISIBLE
                         binding.tvStatusMessage.text = "Menghubungkan dan mendaftarkan perangkat ke server..."
-                        binding.tvStatusMessage.setTextColor(Color.parseColor("#78716c"))
+                        binding.tvStatusMessage.setTextColor(ContextCompat.getColor(this@PairingActivity, R.color.text_sub))
 
                         binding.btnReconnect.isEnabled = false
                         binding.btnReconnect.alpha = 0.6f
-                        binding.btnReconnect.text = "Sedang Menghubungkan..."
+                        binding.btnReconnect.text = "Menghubungkan..."
                     }
                     is PairingUiState.WaitingForAdmin -> {
                         binding.llStatusPill.setBackgroundResource(R.drawable.bg_status_pill_waiting)
                         binding.vStatusLed.setBackgroundResource(R.drawable.led_dot_waiting)
                         binding.tvStatusCode.text = "MENUNGGU PERSETUJUAN"
-                        binding.tvStatusCode.setTextColor(Color.parseColor("#0369a1"))
+                        binding.tvStatusCode.setTextColor(ContextCompat.getColor(this@PairingActivity, R.color.status_waiting_text))
 
                         val displayCode = state.pairingCode.ifBlank { state.deviceId }
                         if (displayCode.isNotBlank()) {
@@ -335,22 +361,22 @@ class PairingActivity : AppCompatActivity() {
 
                         binding.pbConnecting.visibility = View.VISIBLE
                         binding.tvStatusMessage.text = "Layar terdaftar di CMS Studio.\nSilakan setujui perangkat ini di dashboard admin."
-                        binding.tvStatusMessage.setTextColor(Color.parseColor("#57534e"))
+                        binding.tvStatusMessage.setTextColor(ContextCompat.getColor(this@PairingActivity, R.color.text_sub))
 
                         binding.btnReconnect.isEnabled = true
                         binding.btnReconnect.alpha = 1.0f
-                        binding.btnReconnect.text = "↻ Cek Ulang Status"
+                        binding.btnReconnect.text = "Periksa Status"
                     }
                     is PairingUiState.PairedSuccess -> {
                         binding.llStatusPill.setBackgroundResource(R.drawable.bg_status_pill_success)
                         binding.vStatusLed.setBackgroundResource(R.drawable.led_dot_success)
                         binding.tvStatusCode.text = "TERHUBUNG"
-                        binding.tvStatusCode.setTextColor(Color.parseColor("#047857"))
+                        binding.tvStatusCode.setTextColor(ContextCompat.getColor(this@PairingActivity, R.color.status_success_text))
 
                         binding.tvPairingCode.visibility = View.GONE
                         binding.pbConnecting.visibility = View.GONE
                         binding.tvStatusMessage.text = "Perangkat berhasil disetujui! Membuka tampilan player..."
-                        binding.tvStatusMessage.setTextColor(Color.parseColor("#047857"))
+                        binding.tvStatusMessage.setTextColor(ContextCompat.getColor(this@PairingActivity, R.color.status_success_text))
 
                         startActivity(Intent(this@PairingActivity, PlayerActivity::class.java))
                         finish()
@@ -359,16 +385,16 @@ class PairingActivity : AppCompatActivity() {
                         binding.llStatusPill.setBackgroundResource(R.drawable.bg_status_pill_offline)
                         binding.vStatusLed.setBackgroundResource(R.drawable.led_dot_offline)
                         binding.tvStatusCode.text = "OFFLINE"
-                        binding.tvStatusCode.setTextColor(Color.parseColor("#b91c1c"))
+                        binding.tvStatusCode.setTextColor(ContextCompat.getColor(this@PairingActivity, R.color.status_offline_text))
 
                         binding.tvPairingCode.visibility = View.GONE
                         binding.pbConnecting.visibility = View.GONE
                         binding.tvStatusMessage.text = formatHumanErrorMessage(state.message)
-                        binding.tvStatusMessage.setTextColor(Color.parseColor("#78716c"))
+                        binding.tvStatusMessage.setTextColor(ContextCompat.getColor(this@PairingActivity, R.color.text_sub))
 
                         binding.btnReconnect.isEnabled = true
                         binding.btnReconnect.alpha = 1.0f
-                        binding.btnReconnect.text = "↻ Hubungkan Ulang"
+                        binding.btnReconnect.text = "Hubungkan Ulang"
                     }
                 }
             }

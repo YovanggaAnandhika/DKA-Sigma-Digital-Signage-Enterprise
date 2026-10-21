@@ -35,7 +35,7 @@ class CrashReportActivity : AppCompatActivity() {
         }
 
         val header = TextView(this).apply {
-            text = "⚠️ DKASigma Signage — Diagnostik Crash"
+            text = "DKASigma Signage — Diagnostik Crash"
             textSize = 24f
             setTextColor(Color.parseColor("#f87171"))
             setTypeface(null, Typeface.BOLD)

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -7,15 +8,15 @@
     android:paddingStart="24dp"
     android:paddingEnd="24dp"
     android:paddingTop="12dp"
-    android:paddingBottom="32dp">
+    android:paddingBottom="24dp">
 
     <!-- Drag Handle -->
     <View
-        android:layout_width="48dp"
-        android:layout_height="5dp"
+        android:layout_width="36dp"
+        android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="16dp"
-        android:background="#cbd5e1" />
+        android:layout_marginBottom="14dp"
+        android:background="@color/sheet_drag_handle" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -28,23 +29,23 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Title & Subtitle -->
+            <!-- Title & Subtitle (No Emojis) -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="⚙️ Pengaturan Player Signage"
-                android:textColor="#0f172a"
-                android:textSize="20sp"
+                android:text="Pengaturan Layar"
+                android:textColor="@color/sheet_text_primary"
+                android:textSize="18sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:layout_marginBottom="16dp"
-                android:text="Kelola telemetri pengunggahan dan status koneksi perangkat layar."
-                android:textColor="#64748b"
-                android:textSize="13sp" />
+                android:layout_marginTop="2dp"
+                android:layout_marginBottom="14dp"
+                android:text="Status koneksi dan telemetri perangkat digital signage."
+                android:textColor="@color/sheet_text_secondary"
+                android:textSize="12sp" />
 
             <!-- Device Info Card -->
             <LinearLayout
@@ -52,16 +53,27 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:background="@drawable/bg_input_field"
-                android:padding="16dp"
-                android:layout_marginBottom="16dp">
+                android:padding="14dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:letterSpacing="0.08"
+                    android:text="IDENTITAS PERANGKAT"
+                    android:textColor="@color/sheet_text_muted"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/tvSettingsDeviceId"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Perangkat: DEV-..."
-                    android:textColor="#0f172a"
-                    android:textSize="14sp"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="monospace"
+                    android:text="ID Layar: DEV-..."
+                    android:textColor="@color/sheet_text_primary"
+                    android:textSize="13sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -69,20 +81,21 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
+                    android:fontFamily="monospace"
                     android:text="Server: ..."
-                    android:textColor="#64748b"
+                    android:textColor="@color/sheet_text_secondary"
                     android:textSize="12sp" />
             </LinearLayout>
 
-            <!-- Toggle Progress Upload -->
+            <!-- Toggle Progress Upload Card -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:background="@drawable/bg_input_field"
-                android:padding="16dp"
-                android:layout_marginBottom="24dp">
+                android:padding="14dp">
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -95,17 +108,17 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Upload Progres Unduhan Media"
-                        android:textColor="#0f172a"
-                        android:textSize="14sp"
+                        android:textColor="@color/sheet_text_primary"
+                        android:textSize="13sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Kirim persentase unduhan aset ke CMS Studio secara real-time via SSE."
-                        android:textColor="#64748b"
-                        android:textSize="12sp" />
+                        android:text="Kirim persentase unduhan aset ke CMS Studio secara real-time."
+                        android:textColor="@color/sheet_text_secondary"
+                        android:textSize="11sp" />
                 </LinearLayout>
 
                 <androidx.appcompat.widget.SwitchCompat
@@ -114,29 +127,41 @@
                     android:layout_height="wrap_content" />
             </LinearLayout>
 
-            <!-- Buttons -->
-            <Button
-                android:id="@+id/btnUnbindDevice"
+            <!-- Horizontal Action Buttons: Side by Side to prevent cut-off on landscape -->
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@drawable/bg_btn_danger"
-                android:text="🔓 Putus Hubungan Layar (Unbind)"
-                android:textColor="#ffffff"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textAllCaps="false"
-                android:layout_marginBottom="12dp" />
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:layout_marginBottom="4dp"
+                android:orientation="horizontal">
 
-            <Button
-                android:id="@+id/btnDismissSettings"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@drawable/bg_btn_secondary"
-                android:text="Tutup"
-                android:textColor="#334155"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textAllCaps="false" />
+                <Button
+                    android:id="@+id/btnUnbindDevice"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_btn_danger"
+                    app:backgroundTint="@null"
+                    android:text="Putus Hubungan Layar"
+                    android:textAllCaps="false"
+                    android:textColor="#ffffff"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/btnDismissSettings"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="10dp"
+                    android:background="@drawable/bg_btn_secondary"
+                    app:backgroundTint="@null"
+                    android:text="Tutup"
+                    android:textAllCaps="false"
+                    android:textColor="@color/sheet_btn_secondary_text"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
         </LinearLayout>
     </ScrollView>

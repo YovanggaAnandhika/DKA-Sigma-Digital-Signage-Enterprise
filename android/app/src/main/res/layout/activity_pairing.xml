@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:background="#f7f5f0"
+    android:background="@color/screen_bg"
     android:scrollbars="none">
 
     <LinearLayout
@@ -39,7 +39,7 @@
                 android:fontFamily="monospace"
                 android:letterSpacing="0.15"
                 android:text="DKASIGMA // DISPLAY SYSTEM"
-                android:textColor="#78716c"
+                android:textColor="@color/tag_text"
                 android:textSize="11sp"
                 android:textStyle="bold" />
 
@@ -50,7 +50,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
                 android:text="DKASigma Digital Signage"
-                android:textColor="#1c1917"
+                android:textColor="@color/text_headline"
                 android:textSize="25sp"
                 android:textStyle="bold" />
 
@@ -62,7 +62,7 @@
                 android:layout_marginTop="4dp"
                 android:gravity="center"
                 android:text="Layar terdeteksi otomatis. Silakan setujui perangkat ini di CMS Studio."
-                android:textColor="#78716c"
+                android:textColor="@color/text_sub"
                 android:textSize="13sp" />
 
             <!-- Tactile Status Pill with LED dot -->
@@ -92,7 +92,7 @@
                     android:layout_height="wrap_content"
                     android:letterSpacing="0.08"
                     android:text="OFFLINE"
-                    android:textColor="#b91c1c"
+                    android:textColor="@color/status_offline_text"
                     android:textSize="13sp"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -111,7 +111,7 @@
                 android:paddingTop="10dp"
                 android:paddingBottom="10dp"
                 android:text="---"
-                android:textColor="#1c1917"
+                android:textColor="@color/text_headline"
                 android:textSize="26sp"
                 android:textStyle="bold"
                 android:visibility="gone" />
@@ -134,10 +134,10 @@
                 android:gravity="center"
                 android:lineSpacingExtra="3dp"
                 android:text="Tidak dapat terhubung ke server layar saat ini."
-                android:textColor="#78716c"
+                android:textColor="@color/text_sub"
                 android:textSize="13sp" />
 
-            <!-- Action Buttons: Hubungkan Ulang & Pengaturan Server -->
+            <!-- Action Buttons: Hubungkan Ulang & Pengaturan Server (No Emojis) -->
             <LinearLayout
                 android:id="@+id/llActions"
                 android:layout_width="wrap_content"
@@ -154,9 +154,9 @@
                     app:backgroundTint="@null"
                     android:paddingStart="24dp"
                     android:paddingEnd="24dp"
-                    android:text="↻ Hubungkan Ulang"
+                    android:text="Hubungkan Ulang"
                     android:textAllCaps="false"
-                    android:textColor="#ffffff"
+                    android:textColor="@color/btn_reconnect_text"
                     android:textSize="13sp"
                     android:textStyle="bold" />
 
@@ -169,9 +169,9 @@
                     app:backgroundTint="@null"
                     android:paddingStart="18dp"
                     android:paddingEnd="18dp"
-                    android:text="⚙ Pengaturan Server"
+                    android:text="Pengaturan Server"
                     android:textAllCaps="false"
-                    android:textColor="#44403c"
+                    android:textColor="@color/btn_server_text"
                     android:textSize="13sp" />
             </LinearLayout>
 
@@ -192,7 +192,7 @@
             android:paddingTop="6dp"
             android:paddingBottom="6dp"
             android:text="Server: 10.20.30.63:50051 • Geser 2 jari untuk ubah"
-            android:textColor="#a8a29e"
+            android:textColor="@color/sheet_text_muted"
             android:textSize="12sp" />
 
     </LinearLayout>

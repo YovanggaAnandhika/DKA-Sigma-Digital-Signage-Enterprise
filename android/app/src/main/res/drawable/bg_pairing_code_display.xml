@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="#fafaf9" />
+    <solid android:color="@color/pairing_code_bg" />
     <corners android:radius="14dp" />
     <stroke
         android:width="1.5dp"
-        android:color="#d6d3cd" />
+        android:color="@color/pairing_code_border" />
 </shape>

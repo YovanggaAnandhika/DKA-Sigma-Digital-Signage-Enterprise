@@ -26,7 +26,7 @@ class EmergencyBannerOverlay(
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(32, 24, 32, 24)
-            text = "⚠️ PERINGATAN DARURAT: $alertMessage"
+            text = "PERINGATAN DARURAT: $alertMessage"
             elevation = 9999f
         }
     }

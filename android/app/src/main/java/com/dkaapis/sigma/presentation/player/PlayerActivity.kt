@@ -317,10 +317,15 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                     }
                     is PlayerUiState.Error -> {
                         loadingOverlay.visibility = View.VISIBLE
-                        badgeText.text = "⚠ KENDALA"
+                        badgeText.text = "KENDALA"
                         badgeText.setTextColor(Color.parseColor("#EF4444"))
                         loadingText.setTextColor(Color.parseColor("#EF4444"))
-                        loadingText.text = "Kendala: ${state.message}"
+                        val cleanMessage = if (state.message.contains("404")) {
+                            "Berkas media tidak ditemukan di server (HTTP 404)"
+                        } else {
+                            state.message
+                        }
+                        loadingText.text = "Kendala: $cleanMessage"
                         subDetailText.text = "Menunggu perintah sinkronisasi dari server CMS..."
                         progressBar.isIndeterminate = false
                         progressBar.progress = 0

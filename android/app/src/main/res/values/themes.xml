@@ -1,11 +1,11 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme -->
-    <style name="Theme.DKASigmaPlayer" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="colorPrimary">#0284c7</item>
-        <item name="colorPrimaryVariant">#0369a1</item>
+    <!-- Base application theme (DayNight adaptive) -->
+    <style name="Theme.DKASigmaPlayer" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary_500</item>
+        <item name="colorPrimaryVariant">@color/primary_600</item>
         <item name="colorOnPrimary">#ffffff</item>
-        <item name="android:statusBarColor">#0f172a</item>
-        <item name="android:navigationBarColor">#0f172a</item>
+        <item name="android:statusBarColor">@color/sheet_bg</item>
+        <item name="android:navigationBarColor">@color/sheet_bg</item>
     </style>
 
     <!-- Fullscreen kiosk signage theme -->
@@ -15,14 +15,14 @@
         <item name="android:windowBackground">#000000</item>
     </style>
 
-    <!-- Light theme for pairing -->
-    <style name="Theme.DKASigmaPlayer.Light" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="colorPrimary">#1c1917</item>
+    <!-- Pairing screen theme (DayNight adaptive) -->
+    <style name="Theme.DKASigmaPlayer.Light" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary_500</item>
         <item name="colorOnPrimary">#ffffff</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
-        <item name="android:windowBackground">#f7f5f0</item>
-        <item name="android:statusBarColor">#f7f5f0</item>
-        <item name="android:navigationBarColor">#f7f5f0</item>
+        <item name="android:windowBackground">@color/screen_bg</item>
+        <item name="android:statusBarColor">@color/screen_bg</item>
+        <item name="android:navigationBarColor">@color/screen_bg</item>
     </style>
 </resources>

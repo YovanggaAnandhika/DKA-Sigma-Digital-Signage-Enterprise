@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
-    android:color="#44403c">
+    android:color="@color/btn_reconnect_ripple">
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#1c1917" />
+            <solid android:color="@color/btn_reconnect_bg" />
             <corners android:radius="12dp" />
         </shape>
     </item>
