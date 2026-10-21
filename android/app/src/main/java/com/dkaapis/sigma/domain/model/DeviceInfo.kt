@@ -3,6 +3,7 @@ package com.dkaapis.sigma.domain.model
 data class DeviceInfo(
     val id: String = "",
     val name: String = "",
+    val hardwareFingerprint: String = "",
     val macAddress: String = "",
     val ipAddress: String = "",
     val screenWidth: Int = 1920,
@@ -19,6 +20,7 @@ data class PairingResult(
     val isSuccess: Boolean,
     val deviceId: String,
     val deviceToken: String,
+    val isPaired: Boolean = false,
     val pairingCode: String = "",
     val errorMessage: String? = null
 )

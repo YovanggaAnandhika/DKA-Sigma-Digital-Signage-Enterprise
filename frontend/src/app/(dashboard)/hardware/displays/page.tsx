@@ -86,15 +86,12 @@ export default function DisplaysPage() {
   }, []);
 
   const handleAccept = async (d: Device) => {
-    if (!d.pairingCode) {
-      alert('Perangkat tidak memiliki kode pairing yang valid');
-      return;
-    }
-    if (!confirm(`Setujui dan aktifkan layar "${d.name}" (Kode: ${d.pairingCode})?`)) return;
+    if (!confirm(`Setujui dan aktifkan layar "${d.name}"?`)) return;
     try {
       setPairingId(d.id);
       await api.pairDevice({
-        pairingCode: d.pairingCode,
+        deviceId: d.id,
+        pairingCode: d.pairingCode || undefined,
         deviceName: d.name,
       });
       await loadData();
@@ -187,7 +184,7 @@ export default function DisplaysPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            placeholder="Cari berdasarkan nama perangkat atau kode pairing..."
+            placeholder="Cari berdasarkan nama perangkat atau ID..."
             className="form-input"
             style={{ paddingLeft: '36px' }}
           />
@@ -201,7 +198,7 @@ export default function DisplaysPage() {
             <thead>
               <tr>
                 <th>Nama Perangkat</th>
-                <th>Kode Pairing</th>
+                <th>ID / Kode</th>
                 <th>Grup Layar</th>
                 <th>Status</th>
                 <th>Resolusi & Orientasi</th>
@@ -235,7 +232,7 @@ export default function DisplaysPage() {
                           fontWeight: 700,
                         }}
                       >
-                        {d.pairingCode}
+                        {d.pairingCode || d.hardwareFingerprint?.substring(0, 10) || d.id.substring(0, 8).toUpperCase()}
                       </span>
                     </td>
                     <td style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>

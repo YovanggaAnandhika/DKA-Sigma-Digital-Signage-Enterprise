@@ -5,20 +5,114 @@ use uuid::Uuid;
 pub struct DeviceRepository;
 
 impl DeviceRepository {
+    pub async fn find_by_hardware_fingerprint(
+        pool: &DbPool,
+        fingerprint: &str,
+    ) -> Result<Option<DeviceEntity>, sqlx::Error> {
+        let device = sqlx::query_as::<_, DeviceEntity>(
+            "SELECT * FROM hardware_devices WHERE hardware_fingerprint = $1"
+        )
+        .bind(fingerprint)
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(device)
+    }
+
     pub async fn register(
         pool: &DbPool,
         dto: RegisterDeviceDto,
         pairing_code: String,
-    ) -> Result<(DeviceEntity, String), sqlx::Error> {
+    ) -> Result<(DeviceEntity, bool, Option<String>), sqlx::Error> {
         let mut tx = pool.begin().await?;
 
+        // 1. Cek apakah ada hardware_fingerprint yang sudah terdaftar
+        if let Some(fingerprint) = &dto.hardware_fingerprint {
+            if !fingerprint.trim().is_empty() {
+                let existing = sqlx::query_as::<_, DeviceEntity>(
+                    "SELECT * FROM hardware_devices WHERE hardware_fingerprint = $1"
+                )
+                .bind(fingerprint)
+                .fetch_optional(&mut *tx)
+                .await?;
+
+                if let Some(dev) = existing {
+                    // Update info jaringan & layar terkini
+                    let updated = sqlx::query_as::<_, DeviceEntity>(
+                        r#"
+                        UPDATE hardware_devices
+                        SET 
+                            name = COALESCE($2, name),
+                            mac_address = COALESCE($3, mac_address),
+                            ip_address = COALESCE($4, ip_address),
+                            app_version = COALESCE($5, app_version),
+                            android_version = COALESCE($6, android_version),
+                            screen_width = COALESCE($7, screen_width),
+                            screen_height = COALESCE($8, screen_height),
+                            orientation = COALESCE($9, orientation),
+                            updated_at = NOW()
+                        WHERE id = $1
+                        RETURNING *
+                        "#,
+                    )
+                    .bind(dev.id)
+                    .bind(dto.name)
+                    .bind(dto.mac_address)
+                    .bind(dto.ip_address)
+                    .bind(dto.app_version)
+                    .bind(dto.android_version)
+                    .bind(dto.screen_width)
+                    .bind(dto.screen_height)
+                    .bind(dto.orientation)
+                    .fetch_one(&mut *tx)
+                    .await?;
+
+                    // Jika device sudah pernah dipair, ambil token aktif
+                    let mut active_token: Option<String> = None;
+                    if updated.is_paired {
+                        let token_row = sqlx::query_scalar::<_, Option<String>>(
+                            r#"
+                            SELECT device_token
+                            FROM hardware_device_pairings
+                            WHERE device_id = $1 AND status = 'paired' AND device_token IS NOT NULL
+                            ORDER BY created_at DESC
+                            LIMIT 1
+                            "#,
+                        )
+                        .bind(updated.id)
+                        .fetch_optional(&mut *tx)
+                        .await?
+                        .flatten();
+                        active_token = token_row;
+                    } else {
+                        // Belum dipair, buatkan pairing pending
+                        sqlx::query(
+                            r#"
+                            INSERT INTO hardware_device_pairings (device_id, pairing_code, status, expires_at)
+                            VALUES ($1, $2, 'pending', NOW() + INTERVAL '30 minutes')
+                            "#,
+                        )
+                        .bind(updated.id)
+                        .bind(&pairing_code)
+                        .execute(&mut *tx)
+                        .await?;
+                    }
+
+                    tx.commit().await?;
+                    return Ok((updated, dev.is_paired, active_token));
+                }
+            }
+        }
+
+        // Perangkat baru belum pernah terdaftar
         let device = sqlx::query_as::<_, DeviceEntity>(
             r#"
             INSERT INTO hardware_devices (
                 name, is_paired, screen_width, screen_height,
-                orientation, timezone, mac_address, app_version, android_version
+                orientation, timezone, mac_address, ip_address,
+                hardware_fingerprint, app_version, android_version
             )
-            VALUES ($1, FALSE, $2, $3, $4, 'UTC', $5, $6, $7)
+            VALUES ($1, FALSE, $2, $3, $4, 'UTC', $5, $6, $7, $8, $9)
             RETURNING *
             "#,
         )
@@ -27,6 +121,8 @@ impl DeviceRepository {
         .bind(dto.screen_height.unwrap_or(1080))
         .bind(dto.orientation.unwrap_or_else(|| "landscape".to_string()))
         .bind(dto.mac_address)
+        .bind(dto.ip_address)
+        .bind(dto.hardware_fingerprint)
         .bind(dto.app_version)
         .bind(dto.android_version)
         .fetch_one(&mut *tx)
@@ -45,7 +141,7 @@ impl DeviceRepository {
 
         tx.commit().await?;
 
-        Ok((device, pairing_code))
+        Ok((device, false, None))
     }
 
     pub async fn find_by_id(pool: &DbPool, id: Uuid) -> Result<Option<DeviceEntity>, sqlx::Error> {
@@ -85,9 +181,8 @@ impl DeviceRepository {
 
     pub async fn pair_device(
         pool: &DbPool,
-        pairing_id: Uuid,
-        id: Uuid,
-        name: &str,
+        device_id: Uuid,
+        name: Option<&str>,
         raw_token: &str,
         token_hash: &str,
         default_layout_id: Option<Uuid>,
@@ -99,7 +194,7 @@ impl DeviceRepository {
             r#"
             UPDATE hardware_devices
             SET 
-                name = $2,
+                name = COALESCE($2, name),
                 is_paired = TRUE,
                 device_token_hash = $3,
                 current_layout_id = COALESCE($4, current_layout_id),
@@ -109,7 +204,7 @@ impl DeviceRepository {
             RETURNING *
             "#,
         )
-        .bind(id)
+        .bind(device_id)
         .bind(name)
         .bind(token_hash)
         .bind(default_layout_id)
@@ -119,12 +214,11 @@ impl DeviceRepository {
 
         sqlx::query(
             r#"
-            UPDATE hardware_device_pairings
-            SET status = 'paired', paired_at = NOW(), device_token = $2
-            WHERE id = $1
+            INSERT INTO hardware_device_pairings (device_id, pairing_code, status, paired_at, device_token)
+            VALUES ($1, 'APPROVED', 'paired', NOW(), $2)
             "#,
         )
-        .bind(pairing_id)
+        .bind(device_id)
         .bind(raw_token)
         .execute(&mut *tx)
         .await?;
@@ -132,6 +226,42 @@ impl DeviceRepository {
         tx.commit().await?;
 
         Ok(device)
+    }
+
+    pub async fn get_pairing_status_by_device_id(
+        pool: &DbPool,
+        device_id: Uuid,
+    ) -> Result<Option<(Uuid, String, Option<String>)>, sqlx::Error> {
+        let dev = sqlx::query_as::<_, (Uuid, bool)>(
+            "SELECT id, is_paired FROM hardware_devices WHERE id = $1"
+        )
+        .bind(device_id)
+        .fetch_optional(pool)
+        .await?;
+
+        if let Some((id, is_paired)) = dev {
+            let status = if is_paired { "paired".to_string() } else { "pending".to_string() };
+            let token = if is_paired {
+                sqlx::query_scalar::<_, Option<String>>(
+                    r#"
+                    SELECT device_token
+                    FROM hardware_device_pairings
+                    WHERE device_id = $1 AND status = 'paired' AND device_token IS NOT NULL
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                    "#,
+                )
+                .bind(id)
+                .fetch_optional(pool)
+                .await?
+                .flatten()
+            } else {
+                None
+            };
+            return Ok(Some((id, status, token)));
+        }
+
+        Ok(None)
     }
 
     pub async fn get_pairing_status(

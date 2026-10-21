@@ -44,9 +44,11 @@ class DeviceRepositoryImpl(
         }
 
         val isLandscape = rawW >= rawH
+        val fingerprint = tokenStorage.getOrCreateHardwareFingerprint(context)
         DeviceInfo(
             id = tokenStorage.getDeviceId().orEmpty(),
             name = Build.MODEL ?: "Android Display",
+            hardwareFingerprint = fingerprint,
             macAddress = getMacAddress(),
             ipAddress = getIpAddress(),
             screenWidth = if (isLandscape) maxOf(rawW, rawH) else minOf(rawW, rawH),
@@ -70,7 +72,9 @@ class DeviceRepositoryImpl(
 
             val request = signage.hardware.v1.device.DeviceCommon.RegisterDeviceRequest.newBuilder()
                 .setDeviceName(info.name.ifEmpty { "Android Display" })
+                .setHardwareFingerprint(info.hardwareFingerprint)
                 .setMacAddress(info.macAddress.ifEmpty { "02:00:00:00:00:00" })
+                .setIpAddress(info.ipAddress)
                 .setAppVersion(info.appVersion)
                 .setAndroidVersion(info.androidVersion)
                 .setScreenWidth(info.screenWidth)
@@ -85,31 +89,40 @@ class DeviceRepositoryImpl(
                 tokenStorage.saveDeviceId(response.deviceId)
             }
 
-            PairingResult(
-                isSuccess = true,
-                deviceId = response.deviceId,
-                deviceToken = "",
-                pairingCode = response.pairingCode.uppercase()
-            )
+            // Jika device sudah pernah disetujui sebelumnya (reconnect / ganti jaringan)
+            if (response.isPaired && response.deviceToken.isNotEmpty()) {
+                tokenStorage.saveCredentials(response.deviceId, response.deviceToken)
+                PairingResult(
+                    isSuccess = true,
+                    isPaired = true,
+                    deviceId = response.deviceId,
+                    deviceToken = response.deviceToken,
+                    pairingCode = response.pairingCode
+                )
+            } else {
+                PairingResult(
+                    isSuccess = true,
+                    isPaired = false,
+                    deviceId = response.deviceId,
+                    deviceToken = "",
+                    pairingCode = response.pairingCode.uppercase()
+                )
+            }
         }.recoverCatching { e ->
-            val info = getLocalDeviceInfo()
-            PairingResult(
-                isSuccess = true,
-                deviceId = ("DEV-" + info.macAddress.replace(":", "").takeLast(6).ifEmpty { "123456" }).uppercase(),
-                deviceToken = "",
-                pairingCode = "DKA-" + (100..999).random(),
-                errorMessage = e.message
-            )
+            // Menampilkan kegagalan koneksi secara transparan tanpa kode dummy palsu
+            throw Exception("Gagal menghubungkan ke server signage: ${e.localizedMessage ?: e.message}")
         }
     }
 
     override suspend fun checkPairingStatus(pairingCode: String): Result<PairingResult> = withContext(Dispatchers.IO) {
         val savedToken = tokenStorage.getDeviceToken()
-        if (!savedToken.isNullOrEmpty()) {
+        val savedId = tokenStorage.getDeviceId().orEmpty()
+        if (!savedToken.isNullOrEmpty() && savedId.isNotEmpty()) {
             return@withContext Result.success(
                 PairingResult(
                     isSuccess = true,
-                    deviceId = tokenStorage.getDeviceId().orEmpty(),
+                    isPaired = true,
+                    deviceId = savedId,
                     deviceToken = savedToken,
                     pairingCode = pairingCode
                 )
@@ -118,6 +131,7 @@ class DeviceRepositoryImpl(
 
         runCatching {
             val request = signage.hardware.v1.device.DeviceCommon.CheckPairingStatusRequest.newBuilder()
+                .setDeviceId(savedId)
                 .setPairingCode(pairingCode)
                 .build()
 
@@ -128,6 +142,7 @@ class DeviceRepositoryImpl(
                 tokenStorage.saveCredentials(response.deviceId, response.deviceToken)
                 PairingResult(
                     isSuccess = true,
+                    isPaired = true,
                     deviceId = response.deviceId,
                     deviceToken = response.deviceToken,
                     pairingCode = pairingCode
@@ -135,19 +150,21 @@ class DeviceRepositoryImpl(
             } else {
                 PairingResult(
                     isSuccess = false,
+                    isPaired = false,
                     deviceId = response.deviceId,
                     deviceToken = "",
                     pairingCode = pairingCode,
-                    errorMessage = "Menunggu verifikasi admin di CMS"
+                    errorMessage = "Menunggu persetujuan admin di CMS"
                 )
             }
         }.recoverCatching { e ->
             PairingResult(
                 isSuccess = false,
-                deviceId = "",
+                isPaired = false,
+                deviceId = savedId,
                 deviceToken = "",
                 pairingCode = pairingCode,
-                errorMessage = e.message
+                errorMessage = "Gagal menghubungi server: ${e.message}"
             )
         }
     }

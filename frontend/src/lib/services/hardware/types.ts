@@ -26,6 +26,7 @@ export interface Device {
   sleepTime?: string;
   wakeTime?: string;
   powerScheduleEnabled?: boolean;
+  hardwareFingerprint?: string;
 }
 
 

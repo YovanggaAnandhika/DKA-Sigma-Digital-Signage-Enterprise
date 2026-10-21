@@ -164,7 +164,7 @@ export default function DisplayCommandToolbar() {
                 Layar Android telah terdaftar. Setujui pairing untuk mulai menyiarkan konten signage.
               </p>
               <div style={{ marginTop: '6px', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                Kode Pairing:{' '}
+                ID / Kode:{' '}
                 <span
                   style={{
                     fontFamily: 'monospace',
@@ -174,7 +174,7 @@ export default function DisplayCommandToolbar() {
                     letterSpacing: '0.05em',
                   }}
                 >
-                  {device.pairingCode || 'AU2-PZD'}
+                  {device.pairingCode || device.hardwareFingerprint?.substring(0, 12) || device.id.substring(0, 8).toUpperCase()}
                 </span>
               </div>
             </div>
@@ -207,12 +207,12 @@ export default function DisplayCommandToolbar() {
       {/* Overview Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
         <div className="card-elevated" style={{ padding: '14px 16px' }}>
-          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>Kode Pairing</div>
+          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>ID / Kode Layar</div>
           <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--text-primary)', marginTop: '4px' }}>
-            {device.pairingCode}
+            {device.pairingCode || device.hardwareFingerprint?.substring(0, 10) || device.id.substring(0, 8).toUpperCase()}
           </div>
           <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            {device.isPaired ? 'Terhubung' : 'Menunggu input'}
+            {device.isPaired ? 'Terhubung' : 'Menunggu persetujuan'}
           </div>
         </div>
 

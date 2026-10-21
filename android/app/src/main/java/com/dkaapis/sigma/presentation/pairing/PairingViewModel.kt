@@ -47,11 +47,17 @@ class PairingViewModel(
             val regResult = registerAndPairUseCase.register()
             if (regResult.isSuccess) {
                 val pairing = regResult.getOrThrow()
+                if (pairing.isPaired) {
+                    _uiState.value = PairingUiState.PairedSuccess
+                    return@launch
+                }
                 val code = pairing.pairingCode.ifEmpty { pairing.deviceId }
                 _uiState.value = PairingUiState.WaitingForAdmin(code, pairing.deviceId)
                 pollPairingStatus(code)
             } else {
-                _uiState.value = PairingUiState.Error(regResult.exceptionOrNull()?.message ?: "Gagal registrasi perangkat")
+                _uiState.value = PairingUiState.Error(
+                    regResult.exceptionOrNull()?.message ?: "Gagal menghubungkan ke server signage"
+                )
             }
         }
     }
@@ -59,9 +65,9 @@ class PairingViewModel(
     private fun pollPairingStatus(pairingCode: String) {
         activeJob = viewModelScope.launch {
             while (isActive) {
-                delay(5_000.milliseconds)
+                delay(3_000.milliseconds)
                 val statusResult = registerAndPairUseCase.checkStatus(pairingCode)
-                if (statusResult.isSuccess && statusResult.getOrNull()?.isSuccess == true) {
+                if (statusResult.isSuccess && (statusResult.getOrNull()?.isPaired == true || statusResult.getOrNull()?.isSuccess == true)) {
                     _uiState.value = PairingUiState.PairedSuccess
                     break
                 }

@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS hardware_devices (
     orientation VARCHAR(20) NOT NULL DEFAULT 'landscape',
     ip_address VARCHAR(45),
     mac_address VARCHAR(50),
+    hardware_fingerprint VARCHAR(100) UNIQUE,
     app_version VARCHAR(50),
     android_version VARCHAR(50),
     storage_total_bytes BIGINT NOT NULL DEFAULT 0,
@@ -30,6 +31,7 @@ CREATE TABLE IF NOT EXISTS hardware_devices (
 
 CREATE INDEX IF NOT EXISTS idx_devices_is_paired ON hardware_devices(is_paired);
 CREATE INDEX IF NOT EXISTS idx_devices_is_online ON hardware_devices(is_online);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_hardware_fingerprint ON hardware_devices(hardware_fingerprint);
 CREATE INDEX IF NOT EXISTS idx_devices_resolution ON hardware_devices(resolution_id);
 CREATE INDEX IF NOT EXISTS idx_devices_orientation ON hardware_devices(orientation_id);
 CREATE INDEX IF NOT EXISTS idx_devices_canary ON hardware_devices(canary_group_id);

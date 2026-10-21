@@ -15,23 +15,19 @@ impl DeviceService {
     pub async fn register_device(
         pool: &DbPool,
         dto: RegisterDeviceDto,
-    ) -> Result<(DeviceEntity, String), AppError> {
+    ) -> Result<(DeviceEntity, bool, Option<String>, String), AppError> {
         let code = Self::generate_pairing_code();
-        let (device, pairing_code) = DeviceRepository::register(pool, dto, code).await?;
-        Ok((device, pairing_code))
+        let (device, is_paired, token_opt) = DeviceRepository::register(pool, dto, code.clone()).await?;
+        Ok((device, is_paired, token_opt, code))
     }
 
     pub async fn pair_device(
         pool: &DbPool,
         dto: PairDeviceDto,
     ) -> Result<PairDeviceResultDto, AppError> {
-        let (device, pairing_id) = DeviceRepository::find_pending_pairing(pool, &dto.pairing_code)
+        let device = DeviceRepository::find_by_id(pool, dto.device_id)
             .await?
-            .ok_or_else(|| AppError::NotFound("Invalid or expired pairing code".into()))?;
-
-        if device.is_paired {
-            return Err(AppError::BadRequest("Device is already paired".into()));
-        }
+            .ok_or_else(|| AppError::NotFound("Device not found".into()))?;
 
         let raw_token = Uuid::new_v4().to_string();
         let mut hasher = Sha256::new();
@@ -40,9 +36,8 @@ impl DeviceService {
 
         let paired_device = DeviceRepository::pair_device(
             pool,
-            pairing_id,
             device.id,
-            &dto.device_name,
+            dto.device_name.as_deref(),
             &raw_token,
             &token_hash,
             dto.default_layout_id,
@@ -58,10 +53,24 @@ impl DeviceService {
 
     pub async fn get_pairing_status(
         pool: &DbPool,
-        code: &str,
+        device_id_str: Option<&str>,
+        code: Option<&str>,
     ) -> Result<Option<(Uuid, String, Option<String>)>, AppError> {
-        let status = DeviceRepository::get_pairing_status(pool, code).await?;
-        Ok(status)
+        if let Some(dev_id_str) = device_id_str {
+            if let Ok(dev_id) = Uuid::parse_str(dev_id_str) {
+                let status = DeviceRepository::get_pairing_status_by_device_id(pool, dev_id).await?;
+                if status.is_some() {
+                    return Ok(status);
+                }
+            }
+        }
+        if let Some(c) = code {
+            if !c.trim().is_empty() {
+                let status = DeviceRepository::get_pairing_status(pool, c).await?;
+                return Ok(status);
+            }
+        }
+        Ok(None)
     }
 
     pub async fn process_heartbeat(pool: &DbPool, dto: HeartbeatDto) -> Result<bool, AppError> {

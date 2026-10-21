@@ -18,6 +18,7 @@ pub struct DeviceEntity {
     pub timezone: String,
     pub ip_address: Option<String>,
     pub mac_address: Option<String>,
+    pub hardware_fingerprint: Option<String>,
     pub app_version: Option<String>,
     pub android_version: Option<String>,
     pub storage_total_bytes: i64,
@@ -51,6 +52,8 @@ pub struct DevicePairingEntity {
 pub struct RegisterDeviceDto {
     pub name: Option<String>,
     pub mac_address: Option<String>,
+    pub hardware_fingerprint: Option<String>,
+    pub ip_address: Option<String>,
     pub app_version: Option<String>,
     pub android_version: Option<String>,
     pub screen_width: Option<i32>,
@@ -60,8 +63,9 @@ pub struct RegisterDeviceDto {
 
 #[derive(Debug, Deserialize)]
 pub struct PairDeviceDto {
-    pub pairing_code: String,
-    pub device_name: String,
+    pub device_id: Uuid,
+    pub pairing_code: Option<String>,
+    pub device_name: Option<String>,
     pub store_location: Option<String>,
     pub default_layout_id: Option<Uuid>,
     pub canary_group_id: Option<Uuid>,

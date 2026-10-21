@@ -211,14 +211,15 @@ export function DisplayDetailProvider({
     };
   }, [deviceId]);
 
-  const executePairing = async (code: string) => {
+  const executePairing = async (code?: string) => {
     try {
       setApproving(true);
       await api.pairDevice({
-        pairingCode: code.toUpperCase(),
+        deviceId: device?.id || deviceId,
+        pairingCode: code ? code.toUpperCase() : undefined,
         deviceName: device?.name || 'Display Android',
       });
-      setCmdFeedback('Layar berhasil dipairing dan disetujui! Membuka streaming player...');
+      setCmdFeedback('Layar berhasil disetujui! Membuka streaming player...');
       await fetchDevice();
     } catch (err: any) {
       alert(err.message || 'Gagal menyetujui pairing perangkat');
@@ -228,13 +229,7 @@ export function DisplayDetailProvider({
   };
 
   const handleApprovePairing = async (codeToPair?: string) => {
-    const code = codeToPair || device?.pairingCode;
-    if (!code) {
-      const manualCode = prompt('Masukkan kode pairing dari layar Android (misal: AU2-PZD):');
-      if (!manualCode) return;
-      return executePairing(manualCode);
-    }
-    await executePairing(code);
+    await executePairing(codeToPair || device?.pairingCode);
   };
 
   const handleExportCSV = () => {

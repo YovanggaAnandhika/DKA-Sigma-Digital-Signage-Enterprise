@@ -94,7 +94,7 @@ class PairingActivity : AppCompatActivity() {
         }
 
         val subtitle = TextView(this).apply {
-            text = "Masukkan kode berikut pada CMS Studio untuk menghubungkan layar:"
+            text = "Layar terdeteksi otomatis. Silakan setujui perangkat ini di CMS Studio."
             textSize = 17f
             setTextColor(Color.parseColor("#475569"))
             gravity = Gravity.CENTER
@@ -102,10 +102,10 @@ class PairingActivity : AppCompatActivity() {
         }
 
         codeTextView = TextView(this).apply {
-            text = "--- ---"
-            textSize = 60f
+            text = "MENGHUBUNGKAN..."
+            textSize = 28f
             setTextColor(Color.parseColor("#0284c7"))
-            typeface = Typeface.MONOSPACE
+            typeface = Typeface.DEFAULT_BOLD
             setTypeface(typeface, Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(56, 20, 56, 20)
@@ -303,7 +303,9 @@ class PairingActivity : AppCompatActivity() {
             val newDeviceRepo = DeviceRepositoryImpl(this, tokenStorage, channelFactory)
             val newUseCase = RegisterAndPairUseCase(newDeviceRepo)
 
-            codeTextView.text = "--- ---"
+            codeTextView.text = "MENGHUBUNGKAN..."
+            codeTextView.setTextColor(Color.parseColor("#0284c7"))
+            statusTextView.setTextColor(Color.parseColor("#64748b"))
             statusTextView.text = "Menghubungkan ke ${ServerConfig.getHost(this)}..."
             progressBar.visibility = View.VISIBLE
 
@@ -326,22 +328,33 @@ class PairingActivity : AppCompatActivity() {
                 when (state) {
                     is PairingUiState.Initial, is PairingUiState.Registering -> {
                         progressBar.visibility = View.VISIBLE
+                        codeTextView.text = "MENGHUBUNGKAN..."
+                        codeTextView.setTextColor(Color.parseColor("#0284c7"))
+                        statusTextView.setTextColor(Color.parseColor("#64748b"))
                         statusTextView.text = "Mendaftarkan perangkat ke server..."
                     }
                     is PairingUiState.WaitingForAdmin -> {
                         progressBar.visibility = View.VISIBLE
-                        codeTextView.text = state.pairingCode.uppercase()
-                        statusTextView.text = "Layar terdaftar! Menunggu persetujuan admin CMS..."
+                        codeTextView.text = "MENUNGGU PERSETUJUAN"
+                        codeTextView.setTextColor(Color.parseColor("#0284c7"))
+                        statusTextView.setTextColor(Color.parseColor("#64748b"))
+                        statusTextView.text = "Layar terdaftar di CMS Studio. Menunggu admin menyetujui..."
                     }
                     is PairingUiState.PairedSuccess -> {
                         progressBar.visibility = View.GONE
+                        codeTextView.text = "DISETUJUI"
+                        codeTextView.setTextColor(Color.parseColor("#16a34a"))
+                        statusTextView.setTextColor(Color.parseColor("#16a34a"))
                         statusTextView.text = "Perangkat berhasil dihubungkan! Membuka player..."
                         startActivity(Intent(this@PairingActivity, PlayerActivity::class.java))
                         finish()
                     }
                     is PairingUiState.Error -> {
                         progressBar.visibility = View.GONE
-                        statusTextView.text = "Gagal: ${state.message}\n(Geser 2 jari ke bawah untuk ganti host)"
+                        codeTextView.text = "OFFLINE"
+                        codeTextView.setTextColor(Color.parseColor("#ef4444"))
+                        statusTextView.setTextColor(Color.parseColor("#ef4444"))
+                        statusTextView.text = "Gagal menghubungkan ke server.\n${state.message}\n(Geser 2 jari ke bawah untuk ganti host)"
                     }
                 }
             }

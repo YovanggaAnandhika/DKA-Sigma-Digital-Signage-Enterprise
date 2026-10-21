@@ -59,6 +59,7 @@ impl DeviceServiceImpl {
             sleep_time: dev.sleep_time.map(|t| t.format("%H:%M:%S").to_string()),
             wake_time: dev.wake_time.map(|t| t.format("%H:%M:%S").to_string()),
             power_schedule_enabled: dev.power_schedule_enabled,
+            hardware_fingerprint: dev.hardware_fingerprint.unwrap_or_default(),
         }
     }
 }
@@ -78,6 +79,8 @@ impl DeviceServiceTrait for DeviceServiceImpl {
         let dto = RegisterDeviceDto {
             name: req.device_name.filter(|s| !s.trim().is_empty()),
             mac_address: if req.mac_address.is_empty() { None } else { Some(req.mac_address) },
+            hardware_fingerprint: if req.hardware_fingerprint.is_empty() { None } else { Some(req.hardware_fingerprint) },
+            ip_address: if req.ip_address.is_empty() { None } else { Some(req.ip_address) },
             app_version: if req.app_version.is_empty() { None } else { Some(req.app_version) },
             android_version: if req.android_version.is_empty() { None } else { Some(req.android_version) },
             screen_width: Some(req.screen_width),
@@ -85,14 +88,15 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             orientation: Some(orientation_str),
         };
 
-        let (device, pairing_code) = DeviceService::register_device(&self.pool, dto)
+        let (device, is_paired, token_opt, pairing_code) = DeviceService::register_device(&self.pool, dto)
             .await
             .map_err(Status::from)?;
 
         Ok(Response::new(RegisterDeviceResponse {
             device_id: device.id.to_string(),
+            is_paired,
+            device_token: token_opt.unwrap_or_default(),
             pairing_code,
-            expires_in_seconds: 1800,
         }))
     }
 
@@ -103,22 +107,27 @@ impl DeviceServiceTrait for DeviceServiceImpl {
         let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
         let req = request.into_inner();
 
-        let default_layout_id = if req.default_layout_id.is_empty() {
-            None
+        let device_id = if !req.device_id.is_empty() {
+            Uuid::parse_str(&req.device_id)
+                .map_err(|_| Status::invalid_argument("ID Device tidak valid"))?
+        } else if let Some(code) = req.pairing_code.as_deref().filter(|s| !s.is_empty()) {
+            let (dev, _) = crate::modules::hardware::device::repositories::DeviceRepository::find_pending_pairing(&self.pool, code)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?
+                .ok_or_else(|| Status::not_found("Kode pairing tidak valid atau kadaluarsa"))?;
+            dev.id
         } else {
-            Uuid::parse_str(&req.default_layout_id).ok()
+            return Err(Status::invalid_argument("device_id diperlukan untuk menyetujui layar"));
         };
 
-        let canary_group_id = if req.canary_group_id.is_empty() {
-            None
-        } else {
-            Uuid::parse_str(&req.canary_group_id).ok()
-        };
+        let default_layout_id = req.default_layout_id.as_deref().and_then(|s| Uuid::parse_str(s).ok());
+        let canary_group_id = req.canary_group_id.as_deref().and_then(|s| Uuid::parse_str(s).ok());
 
         let dto = PairDeviceDto {
+            device_id,
             pairing_code: req.pairing_code,
             device_name: req.device_name,
-            store_location: if req.store_location.is_empty() { None } else { Some(req.store_location) },
+            store_location: req.store_location,
             default_layout_id,
             canary_group_id,
         };
@@ -142,7 +151,10 @@ impl DeviceServiceTrait for DeviceServiceImpl {
         request: Request<CheckPairingStatusRequest>,
     ) -> Result<Response<CheckPairingStatusResponse>, Status> {
         let req = request.into_inner();
-        let status_opt = DeviceService::get_pairing_status(&self.pool, &req.pairing_code)
+        let dev_id_opt = if !req.device_id.is_empty() { Some(req.device_id.as_str()) } else { None };
+        let code_opt = req.pairing_code.as_deref();
+
+        let status_opt = DeviceService::get_pairing_status(&self.pool, dev_id_opt, code_opt)
             .await
             .map_err(Status::from)?;
 

@@ -21,8 +21,9 @@ export async function getDevice(id: string): Promise<Device> {
   return d as Device;
 }
 
-export async function pairDevice(data: { pairingCode: string; deviceName: string; defaultLayoutId?: string; canaryGroupId?: string; }): Promise<Device> {
+export async function pairDevice(data: { deviceId?: string; pairingCode?: string; deviceName: string; defaultLayoutId?: string; canaryGroupId?: string; }): Promise<Device> {
   const result = await invokeApi<any>('/api/grpc/hardware/device/PairDevice', {
+    deviceId: data.deviceId,
     pairingCode: data.pairingCode,
     deviceName: data.deviceName,
     default_layout_id: data.defaultLayoutId,

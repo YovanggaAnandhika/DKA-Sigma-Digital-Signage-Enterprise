@@ -107,6 +107,46 @@ class TokenStorage(private val context: Context) {
         } catch (_: Throwable) {}
     }
 
+    fun getOrCreateHardwareFingerprint(context: Context): String {
+        val existing = try {
+            prefs.getString(KEY_HARDWARE_FINGERPRINT, null)
+        } catch (_: Throwable) {
+            try { getPlainPrefs().getString(KEY_HARDWARE_FINGERPRINT, null) } catch (_: Throwable) { null }
+        }
+
+        if (!existing.isNullOrBlank()) {
+            return existing
+        }
+
+        val androidId = try {
+            android.provider.Settings.Secure.getString(
+                context.contentResolver,
+                android.provider.Settings.Secure.ANDROID_ID
+            )
+        } catch (_: Throwable) {
+            null
+        }
+
+        val rawId = if (!androidId.isNullOrBlank() && androidId != "9774d56d682e549c") {
+            androidId
+        } else {
+            java.util.UUID.randomUUID().toString()
+        }
+
+        val cleanBoard = android.os.Build.BOARD?.replace(" ", "") ?: "GENERIC"
+        val fingerprint = "DKA-${cleanBoard}-${rawId}".take(64).uppercase()
+
+        try {
+            prefs.edit().putString(KEY_HARDWARE_FINGERPRINT, fingerprint).apply()
+        } catch (_: Throwable) {
+            try {
+                getPlainPrefs().edit().putString(KEY_HARDWARE_FINGERPRINT, fingerprint).apply()
+            } catch (_: Throwable) {}
+        }
+
+        return fingerprint
+    }
+
     fun isPaired(): Boolean {
         return !getDeviceId().isNullOrBlank() && !getDeviceToken().isNullOrBlank()
     }
@@ -116,5 +156,6 @@ class TokenStorage(private val context: Context) {
         private const val PREFS_NAME = "dkasigma_secure_prefs"
         private const val KEY_DEVICE_ID = "device_id"
         private const val KEY_DEVICE_TOKEN = "device_token"
+        private const val KEY_HARDWARE_FINGERPRINT = "hardware_fingerprint"
     }
 }

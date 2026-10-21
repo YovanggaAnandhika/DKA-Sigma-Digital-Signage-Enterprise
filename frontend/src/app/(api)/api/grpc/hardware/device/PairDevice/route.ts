@@ -11,10 +11,12 @@ export async function POST(req: NextRequest) {
     
     const request = new PairDeviceRequest();
     
-        if(body.pairingCode) request.setPairingCode(body.pairingCode);
-        if(body.deviceName) request.setDeviceName(body.deviceName);
-        if(body.defaultLayoutId) request.setDefaultLayoutId(body.defaultLayoutId);
-        if(body.canary_group_id) request.setCanaryGroupId(body.canary_group_id);
+    if (body.deviceId || body.device_id) request.setDeviceId(body.deviceId || body.device_id);
+    if (body.pairingCode || body.pairing_code) request.setPairingCode(body.pairingCode || body.pairing_code);
+    if (body.deviceName || body.device_name) request.setDeviceName(body.deviceName || body.device_name);
+    if (body.storeLocation || body.store_location) request.setStoreLocation(body.storeLocation || body.store_location);
+    if (body.defaultLayoutId || body.default_layout_id) request.setDefaultLayoutId(body.defaultLayoutId || body.default_layout_id);
+    if (body.canaryGroupId || body.canary_group_id) request.setCanaryGroupId(body.canaryGroupId || body.canary_group_id);
 
     return new Promise<NextResponse>((resolve) => {
       client.pairDevice(request, getGrpcMetadata(token), (error: any, response: any) => {
