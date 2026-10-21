@@ -2,10 +2,13 @@ use sqlx::PgPool;
 use tracing::info;
 
 use crate::modules::iam::permission::model::CreatePermissionDto;
+use crate::modules::iam::permission::repositories::PermissionRepository;
 use crate::modules::iam::permission::services::PermissionService;
 use crate::modules::iam::role::model::CreateRoleDto;
+use crate::modules::iam::role::repositories::RoleRepository;
 use crate::modules::iam::role::services::RoleService;
 use crate::modules::iam::user::model::CreateUserDto;
+use crate::modules::iam::user::repositories::UserRepository;
 use crate::modules::iam::user::services::UserService;
 
 pub async fn seed_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
@@ -34,47 +37,66 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Erro
     info!("Seeding permissions...");
     let mut perm_ids = Vec::new();
     for (code, name, desc, module) in permissions {
-        let perm = PermissionService::create_permission(pool, CreatePermissionDto {
-            code: code.to_string(),
-            name: name.to_string(),
-            description: Some(desc.to_string()),
-            module: module.to_string(),
-        }).await?;
-        perm_ids.push(perm.id);
+        let perm_id = match PermissionRepository::find_by_code(pool, code).await? {
+            Some(existing) => existing.id,
+            None => {
+                PermissionService::create_permission(pool, CreatePermissionDto {
+                    code: code.to_string(),
+                    name: name.to_string(),
+                    description: Some(desc.to_string()),
+                    module: module.to_string(),
+                }).await?.id
+            }
+        };
+        perm_ids.push(perm_id);
     }
 
     // 3. Seed System Roles
     info!("Seeding roles...");
-    let superadmin = RoleService::create_role(pool, CreateRoleDto {
-        name: "Super Administrator".to_string(),
-        slug: "superadmin".to_string(),
-        description: Some("Full platform access to all signage operations and settings".to_string()),
-        permission_ids: Some(perm_ids),
-    }).await?;
+    let superadmin_id = match RoleRepository::find_by_slug(pool, "superadmin").await? {
+        Some(existing) => {
+            RoleService::assign_permissions(pool, existing.id, perm_ids).await?;
+            existing.id
+        }
+        None => {
+            RoleService::create_role(pool, CreateRoleDto {
+                name: "Super Administrator".to_string(),
+                slug: "superadmin".to_string(),
+                description: Some("Full platform access to all signage operations and settings".to_string()),
+                permission_ids: Some(perm_ids),
+            }).await?.id
+        }
+    };
 
-    let _content_manager = RoleService::create_role(pool, CreateRoleDto {
-        name: "Content Manager".to_string(),
-        slug: "content-manager".to_string(),
-        description: Some("Can design layouts, manage media, and configure playlists".to_string()),
-        permission_ids: None,
-    }).await?;
+    if RoleRepository::find_by_slug(pool, "content-manager").await?.is_none() {
+        RoleService::create_role(pool, CreateRoleDto {
+            name: "Content Manager".to_string(),
+            slug: "content-manager".to_string(),
+            description: Some("Can design layouts, manage media, and configure playlists".to_string()),
+            permission_ids: None,
+        }).await?;
+    }
 
-    let _device_operator = RoleService::create_role(pool, CreateRoleDto {
-        name: "Device Operator".to_string(),
-        slug: "device-operator".to_string(),
-        description: Some("Can view device fleet telemetry and pair displays".to_string()),
-        permission_ids: None,
-    }).await?;
+    if RoleRepository::find_by_slug(pool, "device-operator").await?.is_none() {
+        RoleService::create_role(pool, CreateRoleDto {
+            name: "Device Operator".to_string(),
+            slug: "device-operator".to_string(),
+            description: Some("Can view device fleet telemetry and pair displays".to_string()),
+            permission_ids: None,
+        }).await?;
+    }
 
     // 4. Seed Default Superadmin User
-    info!("Seeding default administrator user...");
-    let _admin = UserService::create_user(pool, CreateUserDto {
-        email: "superadmin@dkasigma.io".to_string(),
-        password: "superadmin".to_string(),
-        full_name: "Master Signage Admin".to_string(),
-        role_ids: Some(vec![superadmin.id]),
-        role_group_ids: None,
-    }).await?;
+    if UserRepository::find_by_email(pool, "superadmin@dkasigma.io").await?.is_none() {
+        info!("Seeding default administrator user...");
+        let _admin = UserService::create_user(pool, CreateUserDto {
+            email: "superadmin@dkasigma.io".to_string(),
+            password: "superadmin".to_string(),
+            full_name: "Master Signage Admin".to_string(),
+            role_ids: Some(vec![superadmin_id]),
+            role_group_ids: None,
+        }).await?;
+    }
 
     info!("Database seeding completed successfully!");
     Ok(())
