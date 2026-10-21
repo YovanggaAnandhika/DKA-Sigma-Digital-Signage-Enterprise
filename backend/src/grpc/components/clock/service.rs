@@ -3,7 +3,7 @@ use uuid::Uuid;
 use sqlx::{PgPool, FromRow};
 use std::str::FromStr;
 
-use crate::grpc::proto::studio::v1::clock::{
+use crate::grpc::proto::components::v1::clock::{
     clock_service_server::ClockService as ClockServiceTrait,
     CreateClockRequest, GetClockRequest, ListClocksRequest, ListClocksResponse,
     UpdateClockRequest, DeleteClockRequest, DeleteClockResponse, Clock,

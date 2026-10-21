@@ -42,7 +42,12 @@ pub mod proto {
                 tonic::include_proto!("signage.studio.v1.media");
             }
             pub mod playlist {
-                tonic::include_proto!("signage.studio.v1.playlist");
+                pub mod playlist {
+                    tonic::include_proto!("signage.studio.v1.playlist.playlist");
+                }
+                pub mod item {
+                    tonic::include_proto!("signage.studio.v1.playlist.item");
+                }
             }
             pub mod layer {
                 tonic::include_proto!("signage.studio.v1.layer");
@@ -51,7 +56,12 @@ pub mod proto {
                 tonic::include_proto!("signage.studio.v1.layout");
             }
             pub mod schedule {
-                tonic::include_proto!("signage.studio.v1.schedule");
+                pub mod schedule {
+                    tonic::include_proto!("signage.studio.v1.schedule.schedule");
+                }
+                pub mod event {
+                    tonic::include_proto!("signage.studio.v1.schedule.event");
+                }
             }
             pub mod transition {
                 tonic::include_proto!("signage.studio.v1.transition");
@@ -59,20 +69,46 @@ pub mod proto {
             pub mod visual_filter {
                 tonic::include_proto!("signage.studio.v1.visual_filter");
             }
-            pub mod queue {
-                tonic::include_proto!("signage.studio.v1.queue");
-            }
+        }
+    }
+    pub mod components {
+        pub mod v1 {
             pub mod ticker {
-                tonic::include_proto!("signage.studio.v1.ticker");
+                tonic::include_proto!("signage.components.v1.ticker");
             }
             pub mod clock {
-                tonic::include_proto!("signage.studio.v1.clock");
+                tonic::include_proto!("signage.components.v1.clock");
             }
             pub mod webview {
-                tonic::include_proto!("signage.studio.v1.webview");
+                tonic::include_proto!("signage.components.v1.webview");
             }
             pub mod album {
-                tonic::include_proto!("signage.studio.v1.album");
+                pub mod album {
+                    tonic::include_proto!("signage.components.v1.album.album");
+                }
+                pub mod photo {
+                    tonic::include_proto!("signage.components.v1.album.photo");
+                }
+            }
+            pub mod queue {
+                pub mod display {
+                    tonic::include_proto!("signage.components.v1.queue.display");
+                }
+                pub mod layout_item {
+                    tonic::include_proto!("signage.components.v1.queue.layout_item");
+                }
+                pub mod counter {
+                    tonic::include_proto!("signage.components.v1.queue.counter");
+                }
+                pub mod ticket {
+                    tonic::include_proto!("signage.components.v1.queue.ticket");
+                }
+                pub mod audio {
+                    tonic::include_proto!("signage.components.v1.queue.audio");
+                }
+                pub mod sector {
+                    tonic::include_proto!("signage.components.v1.queue.sector");
+                }
             }
         }
     }

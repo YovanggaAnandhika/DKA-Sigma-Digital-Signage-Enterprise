@@ -3,7 +3,7 @@ use uuid::Uuid;
 use sqlx::{PgPool, FromRow};
 use std::str::FromStr;
 
-use crate::grpc::proto::studio::v1::webview::{
+use crate::grpc::proto::components::v1::webview::{
     webview_service_server::WebviewService as WebviewServiceTrait,
     CreateWebviewRequest, GetWebviewRequest, ListWebviewsRequest, ListWebviewsResponse,
     UpdateWebviewRequest, DeleteWebviewRequest, DeleteWebviewResponse, Webview,

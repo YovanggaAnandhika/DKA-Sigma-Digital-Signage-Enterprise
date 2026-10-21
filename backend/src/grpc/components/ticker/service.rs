@@ -3,7 +3,7 @@ use uuid::Uuid;
 use sqlx::{PgPool, FromRow};
 use std::str::FromStr;
 
-use crate::grpc::proto::studio::v1::ticker::{
+use crate::grpc::proto::components::v1::ticker::{
     ticker_service_server::TickerService as TickerServiceTrait,
     CreateTickerRequest, GetTickerRequest, ListTickersRequest, ListTickersResponse,
     UpdateTickerRequest, DeleteTickerRequest, DeleteTickerResponse, Ticker,
