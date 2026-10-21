@@ -44,5 +44,8 @@ macro_rules! register_components_services {
             .add_service(crate::grpc::proto::components::v1::queue::sector::queue_sector_service_server::QueueSectorServiceServer::new(
                 queue_service.clone()
             ))
+            .add_service(crate::grpc::proto::components::v1::queue::device::queue_device_service_server::QueueDeviceServiceServer::new(
+                queue_service.clone()
+            ))
     }};
 }

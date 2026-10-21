@@ -154,7 +154,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Instantiate service implementations
     let stream_manager = StreamConnectionManager::new();
 
-    
+    // Spawn MQTT Worker for IoT Queue Devices (NodeMCU ESP32)
+    spawn_mqtt_worker(pool.clone());
 
     // Build and serve Tonic gRPC server
     let mut router = Server::builder()
@@ -170,4 +171,145 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     Ok(())
+}
+
+fn spawn_mqtt_worker(pool: sqlx::PgPool) {
+    let mqtt_host = std::env::var("MQTT_HOST").unwrap_or_else(|_| "dka-product-sigma-mqtt".to_string());
+    let mqtt_port: u16 = std::env::var("MQTT_PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(1883);
+
+    tokio::spawn(async move {
+        let mut mqttoptions = rumqttc::MqttOptions::new("dka-backend-worker", &mqtt_host, mqtt_port);
+        mqttoptions.set_keep_alive(std::time::Duration::from_secs(15));
+        mqttoptions.set_clean_session(true);
+
+        loop {
+            tracing::info!("Connecting to MQTT Broker at {}:{}...", mqtt_host, mqtt_port);
+            let (client, mut eventloop) = rumqttc::AsyncClient::new(mqttoptions.clone(), 100);
+
+            // Subscribe to queue IoT actions & telemetry
+            if let Err(e) = client.subscribe("dka/iot/+/action", rumqttc::QoS::AtLeastOnce).await {
+                tracing::warn!("Failed to subscribe to dka/iot/+/action: {}. Retrying in 5s...", e);
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                continue;
+            }
+            let _ = client.subscribe("dka/iot/+/telemetry", rumqttc::QoS::AtMostOnce).await;
+            tracing::info!("Successfully connected & subscribed to MQTT topics for IoT Queue Devices");
+
+            loop {
+                match eventloop.poll().await {
+                    Ok(rumqttc::Event::Incoming(rumqttc::Packet::Publish(p))) => {
+                        let topic = p.topic;
+                        let payload_str = match std::str::from_utf8(&p.payload) {
+                            Ok(s) => s,
+                            Err(_) => continue,
+                        };
+
+                        if topic.ends_with("/action") {
+                            if let Ok(val) = serde_json::from_str::<serde_json::Value>(payload_str) {
+                                let device_uid = val.get("device_uid")
+                                    .and_then(|u| u.as_str())
+                                    .or_else(|| {
+                                        let parts: Vec<&str> = topic.split('/').collect();
+                                        if parts.len() >= 3 { Some(parts[2]) } else { None }
+                                    });
+
+                                let pin = val.get("pin").and_then(|p| p.as_i64()).unwrap_or(13) as i32;
+
+                                if let Some(uid) = device_uid {
+                                    let queue_svc = crate::grpc::components::queue::service::QueueServiceImpl::new(pool.clone());
+                                    use crate::grpc::proto::components::v1::queue::device::queue_device_service_server::QueueDeviceService;
+                                    use crate::grpc::proto::components::v1::queue::device::TriggerDeviceActionRequest;
+
+                                    let res = queue_svc.trigger_action(tonic::Request::new(TriggerDeviceActionRequest {
+                                        queue_display_id: String::new(),
+                                        device_uid: uid.to_string(),
+                                        pin,
+                                    })).await;
+
+                                    let ack_topic = format!("dka/iot/{}/ack", uid);
+                                    let (status, msg, action) = match res {
+                                        Ok(r) => {
+                                            let inner = r.into_inner();
+                                            (if inner.success { "OK" } else { "IGNORED" }, inner.message, inner.action)
+                                        }
+                                        Err(e) => ("ERROR", e.message().to_string(), "NONE".to_string()),
+                                    };
+
+                                    let ack_payload = serde_json::json!({
+                                        "status": status,
+                                        "action": action,
+                                        "pin": pin,
+                                        "message": msg,
+                                        "ts": chrono::Utc::now().timestamp(),
+                                    }).to_string();
+
+                                    let _ = client.publish(&ack_topic, rumqttc::QoS::AtLeastOnce, false, ack_payload.into_bytes()).await;
+
+                                    let _ = sqlx::query(
+                                        r#"
+                                        INSERT INTO components_queue_iot_discoveries (device_uid, last_seen_at)
+                                        VALUES ($1, NOW())
+                                        ON CONFLICT (device_uid) DO UPDATE SET last_seen_at = NOW()
+                                        "#
+                                    )
+                                    .bind(uid)
+                                    .execute(&pool)
+                                    .await;
+                                }
+                            }
+                        } else if topic.ends_with("/telemetry") {
+                            if let Ok(val) = serde_json::from_str::<serde_json::Value>(payload_str) {
+                                let parts: Vec<&str> = topic.split('/').collect();
+                                if parts.len() >= 3 {
+                                    let uid = parts[2];
+                                    let ip = val.get("ip").and_then(|i| i.as_str());
+                                    let fw = val.get("fw").and_then(|f| f.as_str());
+
+                                    let _ = sqlx::query(
+                                        r#"
+                                        INSERT INTO components_queue_iot_discoveries (device_uid, ip_address, firmware_version, last_seen_at)
+                                        VALUES ($1, $2, $3, NOW())
+                                        ON CONFLICT (device_uid) DO UPDATE
+                                        SET ip_address = COALESCE(EXCLUDED.ip_address, components_queue_iot_discoveries.ip_address),
+                                            firmware_version = COALESCE(EXCLUDED.firmware_version, components_queue_iot_discoveries.firmware_version),
+                                            last_seen_at = NOW()
+                                        "#
+                                    )
+                                    .bind(uid)
+                                    .bind(ip)
+                                    .bind(fw)
+                                    .execute(&pool)
+                                    .await;
+
+                                    let _ = sqlx::query(
+                                        r#"
+                                        UPDATE components_queue_iot_devices
+                                        SET last_seen_at = NOW(),
+                                            ip_address = COALESCE($2, ip_address),
+                                            firmware_version = COALESCE($3, firmware_version)
+                                        WHERE device_uid = $1
+                                        "#
+                                    )
+                                    .bind(uid)
+                                    .bind(ip)
+                                    .bind(fw)
+                                    .execute(&pool)
+                                    .await;
+                                }
+                            }
+                        }
+                    }
+                    Ok(_) => {}
+                    Err(e) => {
+                        tracing::warn!("MQTT event loop disconnected: {}. Reconnecting in 5s...", e);
+                        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                        break;
+                    }
+                }
+            }
+        }
+    });
 }

@@ -36,6 +36,13 @@ use crate::grpc::proto::components::v1::queue::sector::{
     queue_sector_service_server::QueueSectorService as QueueSectorServiceTrait,
     ListQueueSectorsRequest, ListQueueSectorsResponse, QueueSector,
 };
+use crate::grpc::proto::components::v1::queue::device::{
+    queue_device_service_server::QueueDeviceService as QueueDeviceServiceTrait,
+    RegisterQueueDeviceRequest, UpdateQueueDeviceRequest, DeleteQueueDeviceRequest,
+    DeleteQueueDeviceResponse, ListQueueDevicesRequest, ListQueueDevicesResponse,
+    TriggerDeviceActionRequest, TriggerDeviceActionResponse, QueueIotDevice, PinMapping,
+    ListDiscoveredDevicesRequest, ListDiscoveredDevicesResponse, DiscoveredDevice,
+};
 use crate::grpc::proto::common::v1::PaginationResponse;
 
 #[derive(FromRow)]
@@ -1826,5 +1833,494 @@ impl QueueSectorServiceTrait for QueueServiceImpl {
         }).collect();
 
         Ok(Response::new(ListQueueSectorsResponse { sectors }))
+    }
+}
+
+#[derive(FromRow)]
+struct QueueIotDeviceRow {
+    id: Uuid,
+    queue_display_id: Uuid,
+    device_uid: String,
+    name: String,
+    device_role: String,
+    counter_id: Option<Uuid>,
+    ticket_prefix: Option<String>,
+    pin_mappings: serde_json::Value,
+    is_active: bool,
+    ip_address: Option<String>,
+    firmware_version: Option<String>,
+    last_seen_at: Option<chrono::DateTime<chrono::Utc>>,
+    last_action: Option<String>,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl QueueIotDeviceRow {
+    fn into_proto(self) -> QueueIotDevice {
+        let pin_mappings = if let Some(arr) = self.pin_mappings.as_array() {
+            arr.iter().filter_map(|v| {
+                Some(PinMapping {
+                    pin: v.get("pin")?.as_i64()? as i32,
+                    action: v.get("action")?.as_str()?.to_string(),
+                    enabled: v.get("enabled").and_then(|b| b.as_bool()).unwrap_or(true),
+                    label: v.get("label").and_then(|s| s.as_str()).unwrap_or_default().to_string(),
+                })
+            }).collect()
+        } else {
+            Vec::new()
+        };
+
+        QueueIotDevice {
+            id: self.id.to_string(),
+            queue_display_id: self.queue_display_id.to_string(),
+            device_uid: self.device_uid,
+            name: self.name,
+            device_role: self.device_role,
+            counter_id: self.counter_id.map(|c| c.to_string()).unwrap_or_default(),
+            ticket_prefix: self.ticket_prefix.unwrap_or_else(|| "A".to_string()),
+            pin_mappings,
+            is_active: self.is_active,
+            ip_address: self.ip_address.unwrap_or_default(),
+            firmware_version: self.firmware_version.unwrap_or_else(|| "1.0.0".to_string()),
+            last_seen_at: self.last_seen_at.map(|t| t.to_rfc3339()).unwrap_or_default(),
+            last_action: self.last_action.unwrap_or_default(),
+            created_at: self.created_at.to_rfc3339(),
+            updated_at: self.updated_at.to_rfc3339(),
+        }
+    }
+}
+
+#[tonic::async_trait]
+impl QueueDeviceServiceTrait for QueueServiceImpl {
+    async fn register_device(
+        &self,
+        request: Request<RegisterQueueDeviceRequest>,
+    ) -> Result<Response<QueueIotDevice>, Status> {
+        let req = request.into_inner();
+        let display_id = Uuid::from_str(&req.queue_display_id)
+            .map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
+        let counter_id = req.counter_id.and_then(|c| Uuid::from_str(&c).ok());
+        let device_uid = req.device_uid.trim().to_string();
+        if device_uid.is_empty() {
+            return Err(Status::invalid_argument("device_uid cannot be empty"));
+        }
+        let name = if req.name.trim().is_empty() {
+            format!("NodeMCU ({})", &device_uid)
+        } else {
+            req.name.trim().to_string()
+        };
+
+        let pin_mappings_json = serde_json::to_value(
+            req.pin_mappings.iter().map(|p| {
+                serde_json::json!({
+                    "pin": p.pin,
+                    "action": p.action,
+                    "enabled": p.enabled,
+                    "label": p.label,
+                })
+            }).collect::<Vec<_>>()
+        ).unwrap_or(serde_json::json!([]));
+
+        let row = sqlx::query_as::<_, QueueIotDeviceRow>(
+            r#"
+            INSERT INTO components_queue_iot_devices (
+                queue_display_id, device_uid, name, device_role, counter_id,
+                ticket_prefix, pin_mappings, is_active
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ON CONFLICT (device_uid) DO UPDATE
+            SET queue_display_id = EXCLUDED.queue_display_id,
+                name = EXCLUDED.name,
+                device_role = EXCLUDED.device_role,
+                counter_id = EXCLUDED.counter_id,
+                ticket_prefix = EXCLUDED.ticket_prefix,
+                pin_mappings = EXCLUDED.pin_mappings,
+                is_active = EXCLUDED.is_active,
+                updated_at = NOW()
+            RETURNING id, queue_display_id, device_uid, name, device_role, counter_id,
+                      ticket_prefix, pin_mappings, is_active, ip_address, firmware_version,
+                      last_seen_at, last_action, created_at, updated_at
+            "#,
+        )
+        .bind(display_id)
+        .bind(device_uid)
+        .bind(name)
+        .bind(if req.device_role.is_empty() { "COUNTER_REMOTE".to_string() } else { req.device_role })
+        .bind(counter_id)
+        .bind(req.ticket_prefix.unwrap_or_else(|| "A".to_string()))
+        .bind(pin_mappings_json)
+        .bind(req.is_active)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(row.into_proto()))
+    }
+
+    async fn update_device(
+        &self,
+        request: Request<UpdateQueueDeviceRequest>,
+    ) -> Result<Response<QueueIotDevice>, Status> {
+        let req = request.into_inner();
+        let device_id = Uuid::from_str(&req.id)
+            .map_err(|_| Status::invalid_argument("Invalid device id"))?;
+        let counter_id = req.counter_id.and_then(|c| Uuid::from_str(&c).ok());
+
+        let pin_mappings_json = serde_json::to_value(
+            req.pin_mappings.iter().map(|p| {
+                serde_json::json!({
+                    "pin": p.pin,
+                    "action": p.action,
+                    "enabled": p.enabled,
+                    "label": p.label,
+                })
+            }).collect::<Vec<_>>()
+        ).unwrap_or(serde_json::json!([]));
+
+        let row = sqlx::query_as::<_, QueueIotDeviceRow>(
+            r#"
+            UPDATE components_queue_iot_devices
+            SET name = $2,
+                device_role = $3,
+                counter_id = $4,
+                ticket_prefix = $5,
+                pin_mappings = $6,
+                is_active = $7,
+                updated_at = NOW()
+            WHERE id = $1
+            RETURNING id, queue_display_id, device_uid, name, device_role, counter_id,
+                      ticket_prefix, pin_mappings, is_active, ip_address, firmware_version,
+                      last_seen_at, last_action, created_at, updated_at
+            "#,
+        )
+        .bind(device_id)
+        .bind(req.name)
+        .bind(req.device_role)
+        .bind(counter_id)
+        .bind(req.ticket_prefix.unwrap_or_else(|| "A".to_string()))
+        .bind(pin_mappings_json)
+        .bind(req.is_active)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(row.into_proto()))
+    }
+
+    async fn delete_device(
+        &self,
+        request: Request<DeleteQueueDeviceRequest>,
+    ) -> Result<Response<DeleteQueueDeviceResponse>, Status> {
+        let req = request.into_inner();
+        let device_id = Uuid::from_str(&req.id)
+            .map_err(|_| Status::invalid_argument("Invalid device id"))?;
+
+        sqlx::query("DELETE FROM components_queue_iot_devices WHERE id = $1")
+            .bind(device_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(DeleteQueueDeviceResponse {
+            success: true,
+            message: "Perangkat IoT antrean berhasil dihapus".to_string(),
+        }))
+    }
+
+    async fn list_devices(
+        &self,
+        request: Request<ListQueueDevicesRequest>,
+    ) -> Result<Response<ListQueueDevicesResponse>, Status> {
+        let req = request.into_inner();
+        let display_id = Uuid::from_str(&req.queue_display_id)
+            .map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
+
+        let rows = sqlx::query_as::<_, QueueIotDeviceRow>(
+            r#"
+            SELECT id, queue_display_id, device_uid, name, device_role, counter_id,
+                   ticket_prefix, pin_mappings, is_active, ip_address, firmware_version,
+                   last_seen_at, last_action, created_at, updated_at
+            FROM components_queue_iot_devices
+            WHERE queue_display_id = $1
+            ORDER BY created_at ASC
+            "#,
+        )
+        .bind(display_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let items = rows.into_iter().map(|r| r.into_proto()).collect();
+        Ok(Response::new(ListQueueDevicesResponse { items }))
+    }
+
+    async fn trigger_action(
+        &self,
+        request: Request<TriggerDeviceActionRequest>,
+    ) -> Result<Response<TriggerDeviceActionResponse>, Status> {
+        let req = request.into_inner();
+        let device_uid = req.device_uid.trim();
+
+        let device = sqlx::query_as::<_, QueueIotDeviceRow>(
+            r#"
+            SELECT id, queue_display_id, device_uid, name, device_role, counter_id,
+                   ticket_prefix, pin_mappings, is_active, ip_address, firmware_version,
+                   last_seen_at, last_action, created_at, updated_at
+            FROM components_queue_iot_devices
+            WHERE device_uid = $1
+            "#,
+        )
+        .bind(device_uid)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let device = match device {
+            Some(d) => d,
+            None => {
+                return Ok(Response::new(TriggerDeviceActionResponse {
+                    success: false,
+                    action: "NONE".to_string(),
+                    message: format!("Perangkat UID {} belum didaftarkan di sistem", device_uid),
+                }));
+            }
+        };
+
+        // Master switch check
+        if !device.is_active {
+            let _ = sqlx::query(
+                "UPDATE components_queue_iot_devices SET last_seen_at = NOW(), last_action = $2 WHERE id = $1"
+            )
+            .bind(device.id)
+            .bind(format!("IGNORED (Device Disabled, Pin {})", req.pin))
+            .execute(&self.pool)
+            .await;
+
+            return Ok(Response::new(TriggerDeviceActionResponse {
+                success: false,
+                action: "DISABLED".to_string(),
+                message: "Perangkat ini sedang dinonaktifkan (Master Disabled). Event diabaikan.".to_string(),
+            }));
+        }
+
+        // Per-pin mapping check
+        let pin_mappings = device.pin_mappings.as_array();
+        let matched_pin = pin_mappings.and_then(|arr| {
+            arr.iter().find(|p| p.get("pin").and_then(|v| v.as_i64()) == Some(req.pin as i64))
+        });
+
+        let (action, enabled) = match matched_pin {
+            Some(m) => {
+                let action = m.get("action").and_then(|a| a.as_str()).unwrap_or("CALL_NEXT");
+                let enabled = m.get("enabled").and_then(|e| e.as_bool()).unwrap_or(true);
+                (action.to_uppercase(), enabled)
+            }
+            None => {
+                // Default fallback jika belum dikonfigurasi secara spesifik
+                let default_action = match req.pin {
+                    13 => "CALL_NEXT",
+                    12 => "RECALL",
+                    14 => "TOGGLE_BREAK",
+                    27 => "TOGGLE_CLOSE",
+                    26 => "ISSUE_TICKET",
+                    _ => "CALL_NEXT",
+                };
+                (default_action.to_string(), true)
+            }
+        };
+
+        if !enabled {
+            let _ = sqlx::query(
+                "UPDATE components_queue_iot_devices SET last_seen_at = NOW(), last_action = $2 WHERE id = $1"
+            )
+            .bind(device.id)
+            .bind(format!("IGNORED (Pin {} Disabled)", req.pin))
+            .execute(&self.pool)
+            .await;
+
+            return Ok(Response::new(TriggerDeviceActionResponse {
+                success: false,
+                action: action.clone(),
+                message: format!("Tombol Pin {} ({}) sedang dinonaktifkan. Event diabaikan.", req.pin, action),
+            }));
+        }
+
+        // Execute action based on mapping
+        let result_msg = match action.as_str() {
+            "CALL_NEXT" | "NEXT" => {
+                if let Some(cid) = device.counter_id {
+                    let next_res = self.call_next_ticket(Request::new(CallNextTicketRequest {
+                        queue_display_id: device.queue_display_id.to_string(),
+                        counter_id: cid.to_string(),
+                    })).await;
+                    match next_res {
+                        Ok(r) => format!("Panggilan berikutnya berhasil: {}", r.into_inner().ticket.map(|t| t.ticket_number).unwrap_or_default()),
+                        Err(e) => format!("Gagal memanggil tiket: {}", e.message()),
+                    }
+                } else {
+                    "Perangkat belum terikat dengan loket mana pun".to_string()
+                }
+            }
+            "CALL_PREV" | "PREV" => {
+                if let Some(cid) = device.counter_id {
+                    let prev_res = self.call_previous_ticket(Request::new(CallPreviousTicketRequest {
+                        queue_display_id: device.queue_display_id.to_string(),
+                        counter_id: cid.to_string(),
+                    })).await;
+                    match prev_res {
+                        Ok(r) => format!("Panggilan mundur berhasil: {}", r.into_inner().ticket.map(|t| t.ticket_number).unwrap_or_default()),
+                        Err(e) => format!("Gagal memanggil tiket sebelumnya: {}", e.message()),
+                    }
+                } else {
+                    "Perangkat belum terikat dengan loket mana pun".to_string()
+                }
+            }
+            "RECALL" => {
+                if let Some(cid) = device.counter_id {
+                    let c_row: Option<(Option<String>,)> = sqlx::query_as(
+                        "SELECT current_ticket_number FROM components_queue_counters WHERE id = $1"
+                    )
+                    .bind(cid)
+                    .fetch_optional(&self.pool)
+                    .await
+                    .ok()
+                    .flatten();
+
+                    let current_ticket = c_row.and_then(|r| r.0).unwrap_or_default();
+                    if !current_ticket.is_empty() {
+                        let _ = sqlx::query(
+                            "UPDATE components_queue_counters SET last_called_at = NOW(), updated_at = NOW() WHERE id = $1"
+                        )
+                        .bind(cid)
+                        .execute(&self.pool)
+                        .await;
+                        format!("Panggilan ulang antrean {}", current_ticket)
+                    } else {
+                        "Belum ada tiket aktif di loket ini untuk dipanggil ulang".to_string()
+                    }
+                } else {
+                    "Perangkat belum terikat dengan loket mana pun".to_string()
+                }
+            }
+            "TOGGLE_BREAK" | "BREAK" => {
+                if let Some(cid) = device.counter_id {
+                    let current_status: Option<(String,)> = sqlx::query_as(
+                        "SELECT status FROM components_queue_counters WHERE id = $1"
+                    )
+                    .bind(cid)
+                    .fetch_optional(&self.pool)
+                    .await
+                    .ok()
+                    .flatten();
+
+                    let new_status = if current_status.map(|s| s.0 == "BREAK").unwrap_or(false) {
+                        "ACTIVE"
+                    } else {
+                        "BREAK"
+                    };
+
+                    let _ = self.set_counter_status(Request::new(SetCounterStatusRequest {
+                        counter_id: cid.to_string(),
+                        status: new_status.to_string(),
+                        status_note: Some(format!("Diubah via Tombol IoT (Pin {})", req.pin)),
+                    })).await;
+
+                    format!("Status loket diubah menjadi {}", new_status)
+                } else {
+                    "Perangkat belum terikat dengan loket mana pun".to_string()
+                }
+            }
+            "TOGGLE_CLOSE" | "CLOSE" | "LOCKED" => {
+                if let Some(cid) = device.counter_id {
+                    let current_status: Option<(String,)> = sqlx::query_as(
+                        "SELECT status FROM components_queue_counters WHERE id = $1"
+                    )
+                    .bind(cid)
+                    .fetch_optional(&self.pool)
+                    .await
+                    .ok()
+                    .flatten();
+
+                    let new_status = if current_status.map(|s| s.0 == "LOCKED").unwrap_or(false) {
+                        "ACTIVE"
+                    } else {
+                        "LOCKED"
+                    };
+
+                    let _ = self.set_counter_status(Request::new(SetCounterStatusRequest {
+                        counter_id: cid.to_string(),
+                        status: new_status.to_string(),
+                        status_note: Some(format!("Diubah via Tombol IoT (Pin {})", req.pin)),
+                    })).await;
+
+                    format!("Status loket diubah menjadi {}", new_status)
+                } else {
+                    "Perangkat belum terikat dengan loket mana pun".to_string()
+                }
+            }
+            "ISSUE_TICKET" | "TICKET" => {
+                let prefix = device.ticket_prefix.unwrap_or_else(|| "A".to_string());
+                let issue_res = self.issue_ticket(Request::new(IssueTicketRequest {
+                    queue_display_id: device.queue_display_id.to_string(),
+                    prefix,
+                })).await;
+                match issue_res {
+                    Ok(r) => format!("Tiket berhasil dicetak: {}", r.into_inner().ticket_number),
+                    Err(e) => format!("Gagal mencetak tiket: {}", e.message()),
+                }
+            }
+            _ => format!("Aksi '{}' tidak dikenal", action),
+        };
+
+        let _ = sqlx::query(
+            "UPDATE components_queue_iot_devices SET last_seen_at = NOW(), last_action = $2 WHERE id = $1"
+        )
+        .bind(device.id)
+        .bind(format!("{}: {}", action, result_msg))
+        .execute(&self.pool)
+        .await;
+
+        Ok(Response::new(TriggerDeviceActionResponse {
+            success: true,
+            action,
+            message: result_msg,
+        }))
+    }
+
+    async fn list_discovered_devices(
+        &self,
+        _request: Request<ListDiscoveredDevicesRequest>,
+    ) -> Result<Response<ListDiscoveredDevicesResponse>, Status> {
+        let rows = sqlx::query_as::<_, (String, Option<String>, Option<String>, chrono::DateTime<chrono::Utc>, Option<String>)>(
+            r#"
+            SELECT disc.device_uid,
+                   disc.ip_address,
+                   disc.firmware_version,
+                   disc.last_seen_at,
+                   qd.name as bound_display_name
+            FROM components_queue_iot_discoveries disc
+            LEFT JOIN components_queue_iot_devices dev ON dev.device_uid = disc.device_uid
+            LEFT JOIN components_queue_displays qd ON qd.id = dev.queue_display_id
+            ORDER BY disc.last_seen_at DESC
+            LIMIT 50
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let items = rows.into_iter().map(|(uid, ip, fw, seen, qname)| {
+            let is_paired = qname.is_some();
+            DiscoveredDevice {
+                device_uid: uid,
+                ip_address: ip.unwrap_or_default(),
+                firmware_version: fw.unwrap_or_else(|| "1.0.0".to_string()),
+                last_seen_at: seen.to_rfc3339(),
+                is_paired,
+                bound_display_name: qname.unwrap_or_default(),
+            }
+        }).collect();
+
+        Ok(Response::new(ListDiscoveredDevicesResponse { items }))
     }
 }

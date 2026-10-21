@@ -10,4 +10,5 @@ service QueueDeviceService {
   rpc DeleteDevice(DeleteQueueDeviceRequest) returns (DeleteQueueDeviceResponse);
   rpc ListDevices(ListQueueDevicesRequest) returns (ListQueueDevicesResponse);
   rpc TriggerAction(TriggerDeviceActionRequest) returns (TriggerDeviceActionResponse);
+  rpc ListDiscoveredDevices(ListDiscoveredDevicesRequest) returns (ListDiscoveredDevicesResponse);
 }

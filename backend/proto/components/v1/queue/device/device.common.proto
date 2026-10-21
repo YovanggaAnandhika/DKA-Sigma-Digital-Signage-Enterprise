@@ -76,3 +76,18 @@ message TriggerDeviceActionResponse {
   string action = 2;
   string message = 3;
 }
+
+message DiscoveredDevice {
+  string device_uid = 1;
+  string ip_address = 2;
+  string firmware_version = 3;
+  string last_seen_at = 4;
+  bool is_paired = 5;
+  string bound_display_name = 6;
+}
+
+message ListDiscoveredDevicesRequest {}
+
+message ListDiscoveredDevicesResponse {
+  repeated DiscoveredDevice items = 1;
+}
