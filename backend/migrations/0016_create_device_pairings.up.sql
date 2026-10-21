@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS device_pairings (
     expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '30 minutes'),
     approved_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     paired_at TIMESTAMPTZ,
+    device_token VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

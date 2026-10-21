@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS devices (
     timezone VARCHAR(100) NOT NULL DEFAULT 'UTC',
     is_online BOOLEAN NOT NULL DEFAULT FALSE,
     last_heartbeat_at TIMESTAMPTZ,
+    sleep_time TIME,
+    wake_time TIME,
+    power_schedule_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

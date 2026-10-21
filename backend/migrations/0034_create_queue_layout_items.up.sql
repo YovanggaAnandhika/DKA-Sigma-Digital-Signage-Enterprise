@@ -16,6 +16,10 @@ CREATE TABLE IF NOT EXISTS queue_layout_items (
     template_content TEXT NOT NULL DEFAULT '',
     config JSONB NOT NULL DEFAULT '{}'::jsonb,
     is_visible BOOLEAN NOT NULL DEFAULT true,
+    opacity FLOAT NOT NULL DEFAULT 1.0,
+    border_radius INT NOT NULL DEFAULT 0,
+    border_color VARCHAR(50) NOT NULL DEFAULT 'transparent',
+    border_width INT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

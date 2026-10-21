@@ -1,2 +1,0 @@
--- 0041_sync_complete_widget_defaults.down.sql
--- No-op: keep safe default data intact

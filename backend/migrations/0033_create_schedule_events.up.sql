@@ -6,6 +6,9 @@ CREATE TABLE IF NOT EXISTS schedule_events (
     end_time TIME NOT NULL,
     days_of_week VARCHAR(20) NOT NULL,
     priority INT NOT NULL DEFAULT 0,
+    start_date DATE,
+    end_date DATE,
+    version_hash VARCHAR(64),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

@@ -8,11 +8,3 @@ CREATE TABLE IF NOT EXISTS resolutions (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_resolution_dimensions UNIQUE (width, height)
 );
-
-INSERT INTO resolutions (name, width, height, aspect_ratio) VALUES
-    ('Full HD (1080p)', 1920, 1080, '16:9'),
-    ('4K Ultra HD (2160p)', 3840, 2160, '16:9'),
-    ('HD (720p)', 1280, 720, '16:9'),
-    ('Portrait Full HD (1080x1920)', 1080, 1920, '9:16'),
-    ('Portrait 4K (2160x3840)', 2160, 3840, '9:16')
-ON CONFLICT (width, height) DO NOTHING;

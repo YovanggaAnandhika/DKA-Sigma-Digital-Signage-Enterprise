@@ -5,8 +5,3 @@ CREATE TABLE IF NOT EXISTS orientations (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
-INSERT INTO orientations (name, value) VALUES
-    ('Landscape', 'landscape'),
-    ('Portrait', 'portrait')
-ON CONFLICT (value) DO NOTHING;

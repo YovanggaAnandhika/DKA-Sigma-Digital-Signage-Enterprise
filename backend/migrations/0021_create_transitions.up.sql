@@ -6,14 +6,3 @@ CREATE TABLE IF NOT EXISTS transitions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
--- Insert some default transitions
-INSERT INTO transitions (name, css_class, duration_ms) VALUES
-('Crossfade', 'transition-crossfade', 500),
-('Slide Left', 'transition-slide-left', 800),
-('Slide Right', 'transition-slide-right', 800),
-('Slide Up', 'transition-slide-up', 800),
-('Slide Down', 'transition-slide-down', 800),
-('Wipe Left', 'transition-wipe-left', 600),
-('Wipe Right', 'transition-wipe-right', 600)
-ON CONFLICT DO NOTHING;
