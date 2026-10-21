@@ -65,4 +65,5 @@ message PushLayoutToScheduleResponse {
   bool success = 1;
   string schedule_id = 2;
   string message = 3;
+  int32 affected_devices_count = 4;
 }

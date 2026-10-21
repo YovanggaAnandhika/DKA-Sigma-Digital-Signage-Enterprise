@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ScheduleServiceClient } from '@/lib/api/studio/v1/schedule/schedule_grpc_pb';
-import { RemoveScheduleEventRequest } from '@/lib/api/studio/v1/schedule/schedule.common_pb';
+import { ScheduleEventServiceClient } from '@/lib/api/studio/v1/schedule/event/schedule_event_grpc_pb';
+import { RemoveScheduleEventRequest } from '@/lib/api/studio/v1/schedule/event/schedule_event.common_pb';
 import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const token = getTokenFromRequest(req);
-    const client = new ScheduleServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = new ScheduleEventServiceClient(getGrpcHost(), getGrpcCredentials());
     
     const request = new RemoveScheduleEventRequest();
     if (body.id) request.setId(body.id);

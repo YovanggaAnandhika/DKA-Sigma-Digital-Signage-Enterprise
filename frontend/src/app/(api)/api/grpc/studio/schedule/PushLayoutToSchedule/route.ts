@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ScheduleServiceClient } from '@/lib/api/studio/v1/schedule/schedule_grpc_pb';
-import { PushLayoutToScheduleRequest } from '@/lib/api/studio/v1/schedule/schedule.common_pb';
+import { ScheduleServiceClient } from '@/lib/api/studio/v1/schedule/schedule/schedule_grpc_pb';
+import { PushLayoutToScheduleRequest } from '@/lib/api/studio/v1/schedule/schedule/schedule.common_pb';
 import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {

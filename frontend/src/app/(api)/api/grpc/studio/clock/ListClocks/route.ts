@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ClockServiceClient } from '@/lib/api/studio/v1/clock/clock_grpc_pb';
-import { ListClocksRequest } from '@/lib/api/studio/v1/clock/clock.common_pb';
+import { ClockServiceClient } from '@/lib/api/components/v1/clock/clock_grpc_pb';
+import { ListClocksRequest } from '@/lib/api/components/v1/clock/clock.common_pb';
 import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {

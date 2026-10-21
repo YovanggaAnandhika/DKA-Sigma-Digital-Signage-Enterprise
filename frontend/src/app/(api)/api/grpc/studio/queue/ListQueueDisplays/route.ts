@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { QueueServiceClient } from '@/lib/api/studio/v1/queue/queue_grpc_pb';
-import { ListQueueDisplaysRequest } from '@/lib/api/studio/v1/queue/queue.common_pb';
+import { QueueDisplayServiceClient } from '@/lib/api/components/v1/queue/display/display_grpc_pb';
+import { ListQueueDisplaysRequest } from '@/lib/api/components/v1/queue/display/display.common_pb';
 import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const token = getTokenFromRequest(req);
-    const client = new QueueServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = new QueueDisplayServiceClient(getGrpcHost(), getGrpcCredentials());
     const request = new ListQueueDisplaysRequest();
     if (body.search) request.setSearch(body.search);
 

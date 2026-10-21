@@ -28,7 +28,7 @@ impl ManifestServiceImpl {
         webview_id: Option<Uuid>,
     ) -> Option<String> {
         if let Some(qid) = queue_id {
-            let queue_service = crate::grpc::studio::queue::service::QueueServiceImpl::new(pool.clone());
+            let queue_service = crate::grpc::components::queue::service::QueueServiceImpl::new(pool.clone());
             if let Ok(detail) = queue_service.fetch_display_detail(qid).await {
                 let items_arr: Vec<_> = detail.items.iter().map(|it| serde_json::json!({
                     "id": it.id,
@@ -249,12 +249,12 @@ impl ManifestServiceImpl {
                     .map(|id| id.to_string())
                     .or_else(|| b.playlist.as_ref().and_then(|pl| pl.items.first().map(|i| i.media_item_id.to_string())))
                     .unwrap_or_default();
-                let proto_playlist = b.playlist.map(|pl| crate::grpc::proto::studio::v1::playlist::Playlist {
+                let proto_playlist = b.playlist.map(|pl| crate::grpc::proto::studio::v1::playlist::playlist::Playlist {
                     id: pl.playlist.id.to_string(),
                     name: pl.playlist.name,
                     description: pl.playlist.description.unwrap_or_default(),
                     is_shuffle: pl.playlist.is_shuffle,
-                    items: pl.items.into_iter().map(|item| crate::grpc::proto::studio::v1::playlist::PlaylistItem {
+                    items: pl.items.into_iter().map(|item| crate::grpc::proto::studio::v1::playlist::item::PlaylistItem {
                         id: item.id.to_string(),
                         playlist_id: item.playlist_id.to_string(),
                         media_item_id: item.media_item_id.to_string(),

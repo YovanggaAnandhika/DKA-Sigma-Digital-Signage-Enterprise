@@ -13,7 +13,7 @@ use crate::grpc::proto::studio::v1::layer::{
     UpdateLayerRequest,
 };
 use crate::grpc::proto::studio::v1::media::MediaItem as ProtoMediaItem;
-use crate::grpc::proto::studio::v1::playlist::Playlist as ProtoPlaylist;
+use crate::grpc::proto::studio::v1::playlist::playlist::Playlist as ProtoPlaylist;
 
 use crate::modules::studio::layer::layer::{
     model::{CreateLayerDto, LayerBlockDto, UpdateLayerDto, CreateLayerBlockDto, UpdateLayerBlockDto},

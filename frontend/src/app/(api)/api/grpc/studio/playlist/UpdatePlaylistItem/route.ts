@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PlaylistServiceClient } from '@/lib/api/studio/v1/playlist/playlist_grpc_pb';
-import { UpdatePlaylistItemRequest } from '@/lib/api/studio/v1/playlist/playlist.common_pb';
+import { PlaylistItemServiceClient } from '@/lib/api/studio/v1/playlist/item/playlist_item_grpc_pb';
+import { UpdatePlaylistItemRequest } from '@/lib/api/studio/v1/playlist/item/playlist_item.common_pb';
 import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const token = getTokenFromRequest(req);
-    const client = new PlaylistServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = new PlaylistItemServiceClient(getGrpcHost(), getGrpcCredentials());
     
     const request = new UpdatePlaylistItemRequest();
     if (body.id) request.setId(body.id);

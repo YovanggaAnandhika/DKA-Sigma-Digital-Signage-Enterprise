@@ -6,12 +6,16 @@ use crate::modules::studio::schedule::model::{
     ScheduleWithEventsDto, UpdateScheduleDto,
 };
 use crate::modules::studio::schedule::services::ScheduleService;
-use crate::grpc::proto::studio::v1::schedule::{
+use crate::grpc::proto::studio::v1::schedule::schedule::{
     schedule_service_server::ScheduleService as ScheduleServiceTrait,
-    AddScheduleEventRequest, CreateScheduleRequest, DeleteScheduleRequest, DeleteScheduleResponse,
-    GetScheduleRequest, ListSchedulesRequest, ListSchedulesResponse, RemoveScheduleEventRequest,
-    RemoveScheduleEventResponse, Schedule, ScheduleEvent, UpdateScheduleRequest,
-    PushLayoutToScheduleRequest, PushLayoutToScheduleResponse,
+    CreateScheduleRequest, DeleteScheduleRequest, DeleteScheduleResponse,
+    GetScheduleRequest, ListSchedulesRequest, ListSchedulesResponse, Schedule,
+    UpdateScheduleRequest, PushLayoutToScheduleRequest, PushLayoutToScheduleResponse,
+};
+use crate::grpc::proto::studio::v1::schedule::event::{
+    schedule_event_service_server::ScheduleEventService as ScheduleEventServiceTrait,
+    ScheduleEvent, AddScheduleEventRequest, RemoveScheduleEventRequest,
+    RemoveScheduleEventResponse,
 };
 
 #[derive(sqlx::FromRow)]
@@ -29,6 +33,18 @@ struct ScheduleEventWithLayoutRow {
     created_at: chrono::DateTime<chrono::Utc>,
 }
 
+#[derive(Clone)]
+pub struct ScheduleEventServiceImpl {
+    pub pool: DbPool,
+}
+
+impl ScheduleEventServiceImpl {
+    pub fn new(pool: DbPool) -> Self {
+        Self { pool }
+    }
+}
+
+#[derive(Clone)]
 pub struct ScheduleServiceImpl {
     pub pool: DbPool,
 }
@@ -200,53 +216,6 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         Ok(Response::new(DeleteScheduleResponse { success }))
     }
 
-    async fn add_schedule_event(
-        &self,
-        request: Request<AddScheduleEventRequest>,
-    ) -> Result<Response<ScheduleEvent>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
-        let req = request.into_inner();
-        let schedule_id = Uuid::parse_str(&req.schedule_id)
-            .map_err(|_| Status::invalid_argument("Invalid schedule ID"))?;
-        let layout_id = Uuid::parse_str(&req.layout_id)
-            .map_err(|_| Status::invalid_argument("Invalid layout ID"))?;
-
-        let dto = AddScheduleEventDto {
-            schedule_id,
-            layout_id,
-            start_time: req.start_time,
-            end_time: req.end_time,
-            days_of_week: req.days_of_week,
-            priority: req.priority,
-            start_date: req.start_date,
-            end_date: req.end_date,
-        };
-
-        let event = ScheduleService::add_schedule_event(&self.pool, dto)
-            .await
-            .map_err(Status::from)?;
-
-        Ok(Response::new(Self::map_event_entity(event)))
-    }
-
-    async fn remove_schedule_event(
-        &self,
-        request: Request<RemoveScheduleEventRequest>,
-    ) -> Result<Response<RemoveScheduleEventResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
-        let req = request.into_inner();
-        let id = Uuid::parse_str(&req.id)
-            .map_err(|_| Status::invalid_argument("Invalid event ID"))?;
-        let schedule_id = Uuid::parse_str(&req.schedule_id)
-            .map_err(|_| Status::invalid_argument("Invalid schedule ID"))?;
-
-        let success = ScheduleService::remove_schedule_event(&self.pool, id, schedule_id)
-            .await
-            .map_err(Status::from)?;
-
-        Ok(Response::new(RemoveScheduleEventResponse { success }))
-    }
-
     async fn push_layout_to_schedule(
         &self,
         request: Request<PushLayoutToScheduleRequest>,
@@ -408,4 +377,56 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
             affected_devices_count: affected,
         }))
     }
+}
+
+
+#[tonic::async_trait]
+impl ScheduleEventServiceTrait for ScheduleEventServiceImpl {
+    async fn add_schedule_event(
+        &self,
+        request: Request<AddScheduleEventRequest>,
+    ) -> Result<Response<ScheduleEvent>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
+        let req = request.into_inner();
+        let schedule_id = Uuid::parse_str(&req.schedule_id)
+            .map_err(|_| Status::invalid_argument("Invalid schedule ID"))?;
+        let layout_id = Uuid::parse_str(&req.layout_id)
+            .map_err(|_| Status::invalid_argument("Invalid layout ID"))?;
+
+        let dto = AddScheduleEventDto {
+            schedule_id,
+            layout_id,
+            start_time: req.start_time,
+            end_time: req.end_time,
+            days_of_week: req.days_of_week,
+            priority: req.priority,
+            start_date: req.start_date,
+            end_date: req.end_date,
+        };
+
+        let event = ScheduleService::add_schedule_event(&self.pool, dto)
+            .await
+            .map_err(Status::from)?;
+
+        Ok(Response::new(ScheduleServiceImpl::map_event_entity(event)))
+    }
+
+    async fn remove_schedule_event(
+        &self,
+        request: Request<RemoveScheduleEventRequest>,
+    ) -> Result<Response<RemoveScheduleEventResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
+        let req = request.into_inner();
+        let id = Uuid::parse_str(&req.id)
+            .map_err(|_| Status::invalid_argument("Invalid event ID"))?;
+        let schedule_id = Uuid::parse_str(&req.schedule_id)
+            .map_err(|_| Status::invalid_argument("Invalid schedule ID"))?;
+
+        let success = ScheduleService::remove_schedule_event(&self.pool, id, schedule_id)
+            .await
+            .map_err(Status::from)?;
+
+        Ok(Response::new(RemoveScheduleEventResponse { success }))
+    }
+
 }

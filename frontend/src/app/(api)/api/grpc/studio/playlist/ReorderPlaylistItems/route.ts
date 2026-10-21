@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PlaylistServiceClient } from '@/lib/api/studio/v1/playlist/playlist_grpc_pb';
-import { ReorderPlaylistItemsRequest } from '@/lib/api/studio/v1/playlist/playlist.common_pb';
+import { PlaylistServiceClient } from '@/lib/api/studio/v1/playlist/playlist/playlist_grpc_pb';
+import { ReorderPlaylistItemsRequest } from '@/lib/api/studio/v1/playlist/item/playlist_item.common_pb';
 import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {

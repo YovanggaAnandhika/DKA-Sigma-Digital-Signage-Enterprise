@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ManifestServiceClient } from '@/lib/api/distribution/v1/manifest/manifest_grpc_pb';
 import { GetActiveManifestRequest } from '@/lib/api/distribution/v1/manifest/manifest.common_pb';
-import { QueueServiceClient } from '@/lib/api/studio/v1/queue/queue_grpc_pb';
-import { GetQueueDisplayRequest } from '@/lib/api/studio/v1/queue/queue.common_pb';
-import { TickerServiceClient } from '@/lib/api/studio/v1/ticker/ticker_grpc_pb';
-import { GetTickerRequest } from '@/lib/api/studio/v1/ticker/ticker.common_pb';
-import { ClockServiceClient } from '@/lib/api/studio/v1/clock/clock_grpc_pb';
-import { GetClockRequest } from '@/lib/api/studio/v1/clock/clock.common_pb';
-import { WebviewServiceClient } from '@/lib/api/studio/v1/webview/webview_grpc_pb';
-import { GetWebviewRequest } from '@/lib/api/studio/v1/webview/webview.common_pb';
+import { QueueDisplayServiceClient } from '@/lib/api/components/v1/queue/display/display_grpc_pb';
+import { GetQueueDisplayRequest } from '@/lib/api/components/v1/queue/display/display.common_pb';
+import { TickerServiceClient } from '@/lib/api/components/v1/ticker/ticker_grpc_pb';
+import { GetTickerRequest } from '@/lib/api/components/v1/ticker/ticker.common_pb';
+import { ClockServiceClient } from '@/lib/api/components/v1/clock/clock_grpc_pb';
+import { GetClockRequest } from '@/lib/api/components/v1/clock/clock.common_pb';
+import { WebviewServiceClient } from '@/lib/api/components/v1/webview/webview_grpc_pb';
+import { GetWebviewRequest } from '@/lib/api/components/v1/webview/webview.common_pb';
 import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 import * as grpc from '@grpc/grpc-js';
 
@@ -18,7 +18,7 @@ async function fetchWidgetData(block: any, metadata: grpc.Metadata): Promise<any
 
   if (block.queueId) {
     return new Promise((resolve) => {
-      const client = new QueueServiceClient(host, creds);
+      const client = new QueueDisplayServiceClient(host, creds);
       const req = new GetQueueDisplayRequest();
       req.setId(block.queueId);
       client.getQueueDisplay(req, metadata, (err: any, res: any) => {

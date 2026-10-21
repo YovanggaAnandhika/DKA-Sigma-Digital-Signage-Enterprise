@@ -3,15 +3,30 @@ use uuid::Uuid;
 use crate::db::DbPool;
 use crate::modules::studio::playlist::model::{AddPlaylistItemDto, CreatePlaylistDto, PlaylistItemEntity, PlaylistWithItemsDto, UpdatePlaylistDto};
 use crate::modules::studio::playlist::services::PlaylistService;
-use crate::grpc::proto::studio::v1::playlist::{
+use crate::grpc::proto::studio::v1::playlist::playlist::{
     playlist_service_server::PlaylistService as PlaylistServiceTrait,
-    Playlist, PlaylistItem, CreatePlaylistRequest, GetPlaylistRequest,
+    Playlist, CreatePlaylistRequest, GetPlaylistRequest,
     ListPlaylistsRequest, ListPlaylistsResponse, UpdatePlaylistRequest,
-    DeletePlaylistRequest, DeletePlaylistResponse, AddPlaylistItemRequest,
-    UpdatePlaylistItemRequest, RemovePlaylistItemRequest, RemovePlaylistItemResponse,
-    ReorderPlaylistItemsRequest, ReorderPlaylistItemsResponse,
+    DeletePlaylistRequest, DeletePlaylistResponse, ReorderPlaylistItemsResponse,
+};
+use crate::grpc::proto::studio::v1::playlist::item::{
+    playlist_item_service_server::PlaylistItemService as PlaylistItemServiceTrait,
+    PlaylistItem, AddPlaylistItemRequest, UpdatePlaylistItemRequest,
+    RemovePlaylistItemRequest, RemovePlaylistItemResponse, ReorderPlaylistItemsRequest,
 };
 
+#[derive(Clone)]
+pub struct PlaylistItemServiceImpl {
+    pub pool: DbPool,
+}
+
+impl PlaylistItemServiceImpl {
+    pub fn new(pool: DbPool) -> Self {
+        Self { pool }
+    }
+}
+
+#[derive(Clone)]
 pub struct PlaylistServiceImpl {
     pub pool: DbPool,
 }
@@ -170,6 +185,34 @@ impl PlaylistServiceTrait for PlaylistServiceImpl {
         Ok(Response::new(DeletePlaylistResponse { success }))
     }
 
+    async fn reorder_playlist_items(
+        &self,
+        request: Request<crate::grpc::proto::studio::v1::playlist::item::ReorderPlaylistItemsRequest>,
+    ) -> Result<Response<ReorderPlaylistItemsResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_playlists")?;
+        let req = request.into_inner();
+        let playlist_id = Uuid::parse_str(&req.playlist_id)
+            .map_err(|_| Status::invalid_argument("ID Playlist tidak valid"))?;
+
+        let item_ids = req.item_ids_in_order.into_iter().filter_map(|s| Uuid::parse_str(&s).ok()).collect::<Vec<_>>();
+
+        PlaylistService::reorder_items(&self.pool, playlist_id, item_ids)
+            .await
+            .map_err(Status::from)?;
+
+        let dto = PlaylistService::get_playlist_by_id(&self.pool, playlist_id)
+            .await
+            .map_err(Status::from)?;
+
+        Ok(Response::new(ReorderPlaylistItemsResponse {
+            success: true,
+            playlist: Some(Self::map_playlist_with_items(dto)),
+        }))
+    }
+}
+
+#[tonic::async_trait]
+impl PlaylistItemServiceTrait for PlaylistItemServiceImpl {
     async fn add_playlist_item(
         &self,
         request: Request<AddPlaylistItemRequest>,
@@ -195,7 +238,7 @@ impl PlaylistServiceTrait for PlaylistServiceImpl {
             .await
             .map_err(Status::from)?;
 
-        Ok(Response::new(Self::map_item_entity(item)))
+        Ok(Response::new(PlaylistServiceImpl::map_item_entity(item)))
     }
 
     async fn update_playlist_item(
@@ -218,7 +261,7 @@ impl PlaylistServiceTrait for PlaylistServiceImpl {
         .await
         .map_err(Status::from)?;
 
-        Ok(Response::new(Self::map_item_entity(item)))
+        Ok(Response::new(PlaylistServiceImpl::map_item_entity(item)))
     }
 
     async fn remove_playlist_item(
@@ -235,30 +278,5 @@ impl PlaylistServiceTrait for PlaylistServiceImpl {
             .map_err(Status::from)?;
 
         Ok(Response::new(RemovePlaylistItemResponse { success }))
-    }
-
-    async fn reorder_playlist_items(
-        &self,
-        request: Request<ReorderPlaylistItemsRequest>,
-    ) -> Result<Response<ReorderPlaylistItemsResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_playlists")?;
-        let req = request.into_inner();
-        let playlist_id = Uuid::parse_str(&req.playlist_id)
-            .map_err(|_| Status::invalid_argument("ID Playlist tidak valid"))?;
-
-        let item_ids = req.item_ids_in_order.into_iter().filter_map(|s| Uuid::parse_str(&s).ok()).collect::<Vec<_>>();
-
-        PlaylistService::reorder_items(&self.pool, playlist_id, item_ids)
-            .await
-            .map_err(Status::from)?;
-
-        let dto = PlaylistService::get_playlist_by_id(&self.pool, playlist_id)
-            .await
-            .map_err(Status::from)?;
-
-        Ok(Response::new(ReorderPlaylistItemsResponse {
-            success: true,
-            playlist: Some(Self::map_playlist_with_items(dto)),
-        }))
     }
 }

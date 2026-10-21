@@ -5,11 +5,6 @@ pub mod playlist;
 pub mod schedule;
 pub mod transition;
 pub mod visual_filter;
-pub mod queue;
-pub mod ticker;
-pub mod clock;
-pub mod webview;
-pub mod album;
 
 #[macro_export]
 macro_rules! register_studio_services {
@@ -18,8 +13,11 @@ macro_rules! register_studio_services {
             .add_service(crate::grpc::proto::studio::v1::media::media_service_server::MediaServiceServer::new(
                 crate::grpc::studio::media::service::MediaServiceImpl::new($pool.clone())
             ))
-            .add_service(crate::grpc::proto::studio::v1::playlist::playlist_service_server::PlaylistServiceServer::new(
+            .add_service(crate::grpc::proto::studio::v1::playlist::playlist::playlist_service_server::PlaylistServiceServer::new(
                 crate::grpc::studio::playlist::service::PlaylistServiceImpl::new($pool.clone())
+            ))
+            .add_service(crate::grpc::proto::studio::v1::playlist::item::playlist_item_service_server::PlaylistItemServiceServer::new(
+                crate::grpc::studio::playlist::service::PlaylistItemServiceImpl::new($pool.clone())
             ))
             .add_service(crate::grpc::proto::studio::v1::layout::layout_service_server::LayoutServiceServer::new(
                 crate::grpc::studio::layout::service::LayoutServiceImpl::new($pool.clone())
@@ -33,8 +31,11 @@ macro_rules! register_studio_services {
             .add_service(crate::grpc::proto::studio::v1::layer::layer_item_override_service_server::LayerItemOverrideServiceServer::new(
                 crate::grpc::studio::layer::item_override::service::LayerItemOverrideServiceImpl::new($pool.clone())
             ))
-            .add_service(crate::grpc::proto::studio::v1::schedule::schedule_service_server::ScheduleServiceServer::new(
+            .add_service(crate::grpc::proto::studio::v1::schedule::schedule::schedule_service_server::ScheduleServiceServer::new(
                 crate::grpc::studio::schedule::service::ScheduleServiceImpl::new($pool.clone())
+            ))
+            .add_service(crate::grpc::proto::studio::v1::schedule::event::schedule_event_service_server::ScheduleEventServiceServer::new(
+                crate::grpc::studio::schedule::service::ScheduleEventServiceImpl::new($pool.clone())
             ))
             .add_service(crate::grpc::proto::studio::v1::transition::transition_service_server::TransitionServiceServer::new(
                 crate::grpc::studio::transition::service::MyTransitionService::new(
@@ -46,21 +47,5 @@ macro_rules! register_studio_services {
                     std::sync::Arc::new(crate::modules::studio::visual_filter::repositories::VisualFilterRepository::new($pool.clone()))
                 )
             ))
-            .add_service(crate::grpc::proto::studio::v1::queue::queue_service_server::QueueServiceServer::new(
-                crate::grpc::studio::queue::service::QueueServiceImpl::new($pool.clone())
-            ))
-            .add_service(crate::grpc::proto::studio::v1::ticker::ticker_service_server::TickerServiceServer::new(
-                crate::grpc::studio::ticker::service::TickerServiceImpl::new($pool.clone())
-            ))
-            .add_service(crate::grpc::proto::studio::v1::clock::clock_service_server::ClockServiceServer::new(
-                crate::grpc::studio::clock::service::ClockServiceImpl::new($pool.clone())
-            ))
-            .add_service(crate::grpc::proto::studio::v1::webview::webview_service_server::WebviewServiceServer::new(
-                crate::grpc::studio::webview::service::WebviewServiceImpl::new($pool.clone())
-            ))
-            .add_service(crate::grpc::proto::studio::v1::album::album_service_server::AlbumServiceServer::new(
-                crate::grpc::studio::album::service::AlbumServiceImpl::new($pool.clone())
-            ))
     };
 }
-

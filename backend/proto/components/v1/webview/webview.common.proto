@@ -9,26 +9,20 @@ message Webview {
   string name = 2;
   string url = 3;
   int32 refresh_interval_seconds = 4;
-  bool is_interactive = 5;
-  string created_at = 6;
-  string updated_at = 7;
-  float zoom_factor = 8;
-  string custom_css = 9;
-  bool custom_js_enabled = 10;
-  string user_agent = 11;
-  bool transparent_background = 12;
+  int32 zoom_scale = 5;
+  bool bypass_cache = 6;
+  string orientation = 7;
+  string created_at = 8;
+  string updated_at = 9;
 }
 
 message CreateWebviewRequest {
   string name = 1;
   string url = 2;
   int32 refresh_interval_seconds = 3;
-  bool is_interactive = 4;
-  float zoom_factor = 5;
-  string custom_css = 6;
-  bool custom_js_enabled = 7;
-  string user_agent = 8;
-  bool transparent_background = 9;
+  int32 zoom_scale = 4;
+  bool bypass_cache = 5;
+  string orientation = 6;
 }
 
 message GetWebviewRequest {
@@ -50,12 +44,9 @@ message UpdateWebviewRequest {
   string name = 2;
   string url = 3;
   int32 refresh_interval_seconds = 4;
-  bool is_interactive = 5;
-  float zoom_factor = 6;
-  string custom_css = 7;
-  bool custom_js_enabled = 8;
-  string user_agent = 9;
-  bool transparent_background = 10;
+  int32 zoom_scale = 5;
+  bool bypass_cache = 6;
+  string orientation = 7;
 }
 
 message DeleteWebviewRequest {

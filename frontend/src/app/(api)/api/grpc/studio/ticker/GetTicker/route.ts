@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { TickerServiceClient } from '@/lib/api/studio/v1/ticker/ticker_grpc_pb';
-import { GetTickerRequest } from '@/lib/api/studio/v1/ticker/ticker.common_pb';
+import { TickerServiceClient } from '@/lib/api/components/v1/ticker/ticker_grpc_pb';
+import { GetTickerRequest } from '@/lib/api/components/v1/ticker/ticker.common_pb';
 import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {

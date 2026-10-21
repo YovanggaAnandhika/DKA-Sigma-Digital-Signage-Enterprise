@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { WebviewServiceClient } from '@/lib/api/studio/v1/webview/webview_grpc_pb';
-import { ListWebviewsRequest } from '@/lib/api/studio/v1/webview/webview.common_pb';
+import { WebviewServiceClient } from '@/lib/api/components/v1/webview/webview_grpc_pb';
+import { ListWebviewsRequest } from '@/lib/api/components/v1/webview/webview.common_pb';
 import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {

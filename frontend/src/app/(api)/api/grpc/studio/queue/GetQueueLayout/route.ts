@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { QueueServiceClient } from '@/lib/api/studio/v1/queue/queue_grpc_pb';
-import { GetQueueLayoutRequest } from '@/lib/api/studio/v1/queue/queue.common_pb';
+import { QueueLayoutItemServiceClient } from '@/lib/api/components/v1/queue/layout_item/layout_item_grpc_pb';
+import { GetQueueLayoutRequest } from '@/lib/api/components/v1/queue/layout_item/layout_item.common_pb';
 import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const token = getTokenFromRequest(req);
-    const client = new QueueServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = new QueueLayoutItemServiceClient(getGrpcHost(), getGrpcCredentials());
     const request = new GetQueueLayoutRequest();
     if (body.queueDisplayId || body.queue_display_id) {
       request.setQueueDisplayId(body.queueDisplayId || body.queue_display_id);

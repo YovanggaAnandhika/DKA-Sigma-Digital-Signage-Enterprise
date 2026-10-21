@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { QueueServiceClient } from '@/lib/api/studio/v1/queue/queue_grpc_pb';
-import { GetQueueSyncStateRequest } from '@/lib/api/studio/v1/queue/queue.common_pb';
+import { QueueTicketServiceClient } from '@/lib/api/components/v1/queue/ticket/ticket_grpc_pb';
+import { GetQueueSyncStateRequest } from '@/lib/api/components/v1/queue/ticket/ticket.common_pb';
 import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function GET(req: NextRequest) {
   try {
     const queueDisplayId = req.nextUrl.searchParams.get('queueDisplayId') || req.nextUrl.searchParams.get('queue_display_id') || '';
     const token = getTokenFromRequest(req);
-    const client = new QueueServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = new QueueTicketServiceClient(getGrpcHost(), getGrpcCredentials());
     const request = new GetQueueSyncStateRequest();
     if (queueDisplayId) request.setQueueDisplayId(queueDisplayId);
 
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const token = getTokenFromRequest(req);
-    const client = new QueueServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = new QueueTicketServiceClient(getGrpcHost(), getGrpcCredentials());
     const request = new GetQueueSyncStateRequest();
     if (body.queueDisplayId || body.queue_display_id) request.setQueueDisplayId(body.queueDisplayId || body.queue_display_id);
 

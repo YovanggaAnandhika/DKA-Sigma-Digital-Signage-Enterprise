@@ -3,21 +3,38 @@ use uuid::Uuid;
 use sqlx::{PgPool, FromRow};
 use std::str::FromStr;
 
-use crate::grpc::proto::studio::v1::queue::{
-    queue_service_server::QueueService as QueueServiceTrait,
+use crate::grpc::proto::components::v1::queue::display::{
+    queue_display_service_server::QueueDisplayService as QueueDisplayServiceTrait,
     CreateQueueDisplayRequest, GetQueueDisplayRequest, ListQueueDisplaysRequest,
     ListQueueDisplaysResponse, UpdateQueueDisplayRequest, DeleteQueueDisplayRequest,
-    DeleteQueueDisplayResponse, SaveQueueLayoutRequest, SaveQueueLayoutResponse,
-    GetQueueLayoutRequest, GetQueueLayoutResponse, UpdateQueueLayoutItemRequest,
-    DeleteQueueLayoutItemRequest, DeleteQueueLayoutItemResponse, AddCounterRequest,
-    UpdateCounterRequest, DeleteCounterRequest, DeleteCounterResponse, ListCountersRequest,
-    ListCountersResponse, IssueTicketRequest, CallNextTicketRequest, CallNextTicketResponse,
+    DeleteQueueDisplayResponse, QueueDisplayDetail,
+};
+use crate::grpc::proto::components::v1::queue::layout_item::{
+    queue_layout_item_service_server::QueueLayoutItemService as QueueLayoutItemServiceTrait,
+    SaveQueueLayoutRequest, SaveQueueLayoutResponse, GetQueueLayoutRequest, GetQueueLayoutResponse,
+    UpdateQueueLayoutItemRequest, DeleteQueueLayoutItemRequest, DeleteQueueLayoutItemResponse,
+    QueueLayoutItem,
+};
+use crate::grpc::proto::components::v1::queue::counter::{
+    queue_counter_service_server::QueueCounterService as QueueCounterServiceTrait,
+    AddCounterRequest, UpdateCounterRequest, DeleteCounterRequest, DeleteCounterResponse,
+    ListCountersRequest, ListCountersResponse, SetCounterStatusRequest, QueueCounter,
+};
+use crate::grpc::proto::components::v1::queue::ticket::{
+    queue_ticket_service_server::QueueTicketService as QueueTicketServiceTrait,
+    IssueTicketRequest, CallNextTicketRequest, CallNextTicketResponse,
     CallPreviousTicketRequest, CallPreviousTicketResponse, ResetQueueRequest, ResetQueueResponse,
-    SetCounterStatusRequest, GetQueueSyncStateRequest, GetQueueSyncStateResponse,
-    ListTicketsRequest, ListTicketsResponse, UpdateTicketStatusRequest, AddAudioRequest,
-    DeleteAudioRequest, DeleteAudioResponse, ListAudiosRequest, ListAudiosResponse,
+    GetQueueSyncStateRequest, GetQueueSyncStateResponse, ListTicketsRequest, ListTicketsResponse,
+    UpdateTicketStatusRequest, QueueTicket,
+};
+use crate::grpc::proto::components::v1::queue::audio::{
+    queue_audio_service_server::QueueAudioService as QueueAudioServiceTrait,
+    AddAudioRequest, DeleteAudioRequest, DeleteAudioResponse, ListAudiosRequest, ListAudiosResponse,
+    QueueAudio,
+};
+use crate::grpc::proto::components::v1::queue::sector::{
+    queue_sector_service_server::QueueSectorService as QueueSectorServiceTrait,
     ListQueueSectorsRequest, ListQueueSectorsResponse, QueueSector,
-    QueueDisplayDetail, QueueLayoutItem, QueueCounter, QueueTicket, QueueAudio,
 };
 use crate::grpc::proto::common::v1::PaginationResponse;
 
@@ -146,6 +163,7 @@ struct QueueSectorRow {
     updated_at: chrono::DateTime<chrono::Utc>,
 }
 
+#[derive(Clone)]
 pub struct QueueServiceImpl {
     pub pool: PgPool,
 }
@@ -342,7 +360,8 @@ impl QueueServiceImpl {
 }
 
 #[tonic::async_trait]
-impl QueueServiceTrait for QueueServiceImpl {
+#[tonic::async_trait]
+impl QueueDisplayServiceTrait for QueueServiceImpl {
     async fn create_queue_display(
         &self,
         request: Request<CreateQueueDisplayRequest>,
@@ -699,6 +718,10 @@ impl QueueServiceTrait for QueueServiceImpl {
     }
 
     // Queue Layout Items ("Tata Letak Antrian")
+}
+
+#[tonic::async_trait]
+impl QueueLayoutItemServiceTrait for QueueServiceImpl {
     async fn save_queue_layout(
         &self,
         request: Request<SaveQueueLayoutRequest>,
@@ -895,6 +918,10 @@ impl QueueServiceTrait for QueueServiceImpl {
     }
 
     // Queue Counters
+}
+
+#[tonic::async_trait]
+impl QueueCounterServiceTrait for QueueServiceImpl {
     async fn add_counter(
         &self,
         request: Request<AddCounterRequest>,
@@ -1033,6 +1060,55 @@ impl QueueServiceTrait for QueueServiceImpl {
     }
 
     // Queue Tickets
+    async fn set_counter_status(
+        &self,
+        request: Request<SetCounterStatusRequest>,
+    ) -> Result<Response<QueueCounter>, Status> {
+        let req = request.into_inner();
+        let cid = Uuid::from_str(&req.counter_id)
+            .map_err(|_| Status::invalid_argument("Invalid counter_id"))?;
+        let status = match req.status.to_uppercase().as_str() {
+            "BREAK" | "ISTIRAHAT" => "BREAK",
+            "LOCKED" | "KUNCI" | "CLOSED" => "LOCKED",
+            _ => "ACTIVE",
+        };
+        let note = req.status_note.unwrap_or_default();
+
+        let row = sqlx::query_as::<_, QueueCounterRow>(
+            r#"
+            UPDATE components_queue_counters
+            SET status = $2, status_note = $3, updated_at = NOW()
+            WHERE id = $1
+            RETURNING id, queue_display_id, counter_number, counter_name, operator_name, is_active, status, status_note, current_ticket_number, last_called_at, created_at, updated_at
+            "#,
+        )
+        .bind(cid)
+        .bind(status)
+        .bind(&note)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(QueueCounter {
+            id: row.id.to_string(),
+            queue_display_id: row.queue_display_id.to_string(),
+            counter_number: row.counter_number,
+            counter_name: row.counter_name,
+            operator_name: row.operator_name.unwrap_or_default(),
+            is_active: row.is_active,
+            current_ticket_number: row.current_ticket_number.unwrap_or_default(),
+            last_called_at: row.last_called_at.map(|t| t.to_rfc3339()).unwrap_or_default(),
+            created_at: row.created_at.to_rfc3339(),
+            updated_at: row.updated_at.to_rfc3339(),
+            status: row.status,
+            status_note: row.status_note.unwrap_or_default(),
+        }))
+    }
+
+}
+
+#[tonic::async_trait]
+impl QueueTicketServiceTrait for QueueServiceImpl {
     async fn issue_ticket(
         &self,
         request: Request<IssueTicketRequest>,
@@ -1441,51 +1517,6 @@ impl QueueServiceTrait for QueueServiceImpl {
         }))
     }
 
-    async fn set_counter_status(
-        &self,
-        request: Request<SetCounterStatusRequest>,
-    ) -> Result<Response<QueueCounter>, Status> {
-        let req = request.into_inner();
-        let cid = Uuid::from_str(&req.counter_id)
-            .map_err(|_| Status::invalid_argument("Invalid counter_id"))?;
-        let status = match req.status.to_uppercase().as_str() {
-            "BREAK" | "ISTIRAHAT" => "BREAK",
-            "LOCKED" | "KUNCI" | "CLOSED" => "LOCKED",
-            _ => "ACTIVE",
-        };
-        let note = req.status_note.unwrap_or_default();
-
-        let row = sqlx::query_as::<_, QueueCounterRow>(
-            r#"
-            UPDATE components_queue_counters
-            SET status = $2, status_note = $3, updated_at = NOW()
-            WHERE id = $1
-            RETURNING id, queue_display_id, counter_number, counter_name, operator_name, is_active, status, status_note, current_ticket_number, last_called_at, created_at, updated_at
-            "#,
-        )
-        .bind(cid)
-        .bind(status)
-        .bind(&note)
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| Status::internal(e.to_string()))?;
-
-        Ok(Response::new(QueueCounter {
-            id: row.id.to_string(),
-            queue_display_id: row.queue_display_id.to_string(),
-            counter_number: row.counter_number,
-            counter_name: row.counter_name,
-            operator_name: row.operator_name.unwrap_or_default(),
-            is_active: row.is_active,
-            current_ticket_number: row.current_ticket_number.unwrap_or_default(),
-            last_called_at: row.last_called_at.map(|t| t.to_rfc3339()).unwrap_or_default(),
-            created_at: row.created_at.to_rfc3339(),
-            updated_at: row.updated_at.to_rfc3339(),
-            status: row.status,
-            status_note: row.status_note.unwrap_or_default(),
-        }))
-    }
-
     async fn get_queue_sync_state(
         &self,
         request: Request<GetQueueSyncStateRequest>,
@@ -1663,6 +1694,10 @@ impl QueueServiceTrait for QueueServiceImpl {
     }
 
     // Queue Audios
+}
+
+#[tonic::async_trait]
+impl QueueAudioServiceTrait for QueueServiceImpl {
     async fn add_audio(
         &self,
         request: Request<AddAudioRequest>,
@@ -1753,6 +1788,10 @@ impl QueueServiceTrait for QueueServiceImpl {
         Ok(Response::new(ListAudiosResponse { items }))
     }
 
+}
+
+#[tonic::async_trait]
+impl QueueSectorServiceTrait for QueueServiceImpl {
     async fn list_queue_sectors(
         &self,
         _request: Request<ListQueueSectorsRequest>,

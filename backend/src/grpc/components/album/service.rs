@@ -3,11 +3,14 @@ use uuid::Uuid;
 use sqlx::{PgPool, FromRow};
 use std::str::FromStr;
 
-use crate::grpc::proto::studio::v1::album::{
+use crate::grpc::proto::components::v1::album::album::{
     album_service_server::AlbumService as AlbumServiceTrait,
     CreateAlbumRequest, GetAlbumRequest, ListAlbumsRequest, ListAlbumsResponse,
-    UpdateAlbumRequest, DeleteAlbumRequest, DeleteAlbumResponse, AddAlbumPhotoRequest,
-    DeleteAlbumPhotoRequest, DeleteAlbumPhotoResponse, AlbumDetail, AlbumPhoto,
+    UpdateAlbumRequest, DeleteAlbumRequest, DeleteAlbumResponse, AlbumDetail, AddAlbumPhotoInput,
+};
+use crate::grpc::proto::components::v1::album::photo::{
+    album_photo_service_server::AlbumPhotoService as AlbumPhotoServiceTrait,
+    AddAlbumPhotoRequest, DeleteAlbumPhotoRequest, DeleteAlbumPhotoResponse, AlbumPhoto,
 };
 use crate::grpc::proto::common::v1::PaginationResponse;
 
@@ -20,6 +23,13 @@ struct AlbumRow {
     slide_duration_seconds: i32,
     created_at: chrono::DateTime<chrono::Utc>,
     updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Clone)]
+pub struct AlbumPhotoServiceImpl { pub pool: PgPool }
+
+impl AlbumPhotoServiceImpl {
+    pub fn new(pool: PgPool) -> Self { Self { pool } }
 }
 
 #[derive(FromRow)]
@@ -250,7 +260,10 @@ impl AlbumServiceTrait for AlbumServiceImpl {
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(DeleteAlbumResponse { success: true }))
     }
+}
 
+#[tonic::async_trait]
+impl AlbumPhotoServiceTrait for AlbumPhotoServiceImpl {
     async fn add_album_photo(
         &self,
         request: Request<AddAlbumPhotoRequest>,

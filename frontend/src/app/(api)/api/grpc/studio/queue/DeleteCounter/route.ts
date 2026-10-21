@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { QueueServiceClient } from '@/lib/api/studio/v1/queue/queue_grpc_pb';
-import { DeleteCounterRequest } from '@/lib/api/studio/v1/queue/queue.common_pb';
+import { QueueCounterServiceClient } from '@/lib/api/components/v1/queue/counter/counter_grpc_pb';
+import { DeleteCounterRequest } from '@/lib/api/components/v1/queue/counter/counter.common_pb';
 import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const token = getTokenFromRequest(req);
-    const client = new QueueServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = new QueueCounterServiceClient(getGrpcHost(), getGrpcCredentials());
     const request = new DeleteCounterRequest();
     if (body.id) request.setId(body.id);
 

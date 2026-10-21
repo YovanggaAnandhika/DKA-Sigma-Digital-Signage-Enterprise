@@ -38,12 +38,6 @@ use grpc::proto::studio::v1::layer::layer_item_override_service_server::LayerIte
 use grpc::proto::studio::v1::layer::layer_service_server::LayerServiceServer;
 use grpc::proto::studio::v1::layout::layout_service_server::LayoutServiceServer;
 use grpc::proto::studio::v1::media::media_service_server::MediaServiceServer;
-use grpc::proto::studio::v1::playlist::playlist_service_server::PlaylistServiceServer;
-use grpc::proto::studio::v1::schedule::schedule_service_server::ScheduleServiceServer;
-use grpc::studio::media::service::MediaServiceImpl;
-use grpc::studio::playlist::service::PlaylistServiceImpl;
-use grpc::studio::layout::service::LayoutServiceImpl;
-use grpc::studio::schedule::service::ScheduleServiceImpl;
 use std::env;
 use std::net::SocketAddr;
 use tonic::transport::Server;
@@ -168,6 +162,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let router = crate::register_hardware_services!(router, pool);
     let router = crate::register_iam_services!(router, pool, config);
     let router = crate::register_studio_services!(router, pool);
+    let router = crate::register_components_services!(router, pool);
     let router = crate::register_distribution_services!(router, pool, stream_manager.clone());
     let router = crate::register_common_services!(router, pool);
     
