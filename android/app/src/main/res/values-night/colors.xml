@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base App Palette (Dark) -->
+    <color name="primary_500">#0284c7</color>
+    <color name="primary_600">#0369a1</color>
+    <color name="black">#000000</color>
+    <color name="white">#ffffff</color>
+
+    <!-- Bottom Sheet & Dialog Colors (Dark) -->
+    <color name="sheet_bg">#18181b</color>
+    <color name="sheet_card_bg">#27272a</color>
+    <color name="sheet_card_border">#3f3f46</color>
+    <color name="sheet_drag_handle">#52525b</color>
+    <color name="sheet_text_primary">#f4f4f5</color>
+    <color name="sheet_text_secondary">#a1a1aa</color>
+    <color name="sheet_text_muted">#71717a</color>
+    <color name="sheet_btn_secondary_bg">#27272a</color>
+    <color name="sheet_btn_secondary_text">#e4e4e7</color>
+    <color name="sheet_btn_secondary_border">#3f3f46</color>
+    <color name="sheet_btn_danger_bg">#dc2626</color>
+    <color name="sheet_btn_danger_ripple">#b91c1c</color>
+
+    <!-- Pairing Screen Colors (Dark) -->
+    <color name="screen_bg">#09090b</color>
+    <color name="console_card_bg">#18181b</color>
+    <color name="console_card_border">#27272a</color>
+    <color name="tag_text">#a1a1aa</color>
+    <color name="text_headline">#f4f4f5</color>
+    <color name="text_sub">#a1a1aa</color>
+    <color name="pairing_code_bg">#27272a</color>
+    <color name="pairing_code_border">#3f3f46</color>
+    <color name="btn_reconnect_bg">#f4f4f5</color>
+    <color name="btn_reconnect_ripple">#e4e4e7</color>
+    <color name="btn_reconnect_text">#18181b</color>
+    <color name="btn_server_bg">#27272a</color>
+    <color name="btn_server_border">#3f3f46</color>
+    <color name="btn_server_text">#e4e4e7</color>
+
+    <!-- Status Pill Colors (Dark) -->
+    <color name="status_offline_bg">#450a0a</color>
+    <color name="status_offline_border">#7f1d1d</color>
+    <color name="status_offline_text">#f87171</color>
+    <color name="status_connecting_bg">#451a03</color>
+    <color name="status_connecting_border">#78350f</color>
+    <color name="status_connecting_text">#fbbf24</color>
+    <color name="status_waiting_bg">#082f49</color>
+    <color name="status_waiting_border">#075985</color>
+    <color name="status_waiting_text">#38bdf8</color>
+    <color name="status_success_bg">#052e16</color>
+    <color name="status_success_border">#14532d</color>
+    <color name="status_success_text">#4ade80</color>
+</resources>

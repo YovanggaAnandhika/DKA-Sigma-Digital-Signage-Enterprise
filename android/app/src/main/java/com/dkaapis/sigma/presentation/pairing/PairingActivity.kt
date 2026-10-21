@@ -3,23 +3,18 @@ package com.dkaapis.sigma.presentation.pairing
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Color
-import android.graphics.Typeface
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.Gravity
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.dkaapis.sigma.R
@@ -27,6 +22,7 @@ import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
 import com.dkaapis.sigma.data.local.ServerConfig
 import com.dkaapis.sigma.data.local.TokenStorage
 import com.dkaapis.sigma.data.repository.DeviceRepositoryImpl
+import com.dkaapis.sigma.databinding.ActivityPairingBinding
 import com.dkaapis.sigma.domain.usecase.RegisterAndPairUseCase
 import com.dkaapis.sigma.presentation.player.PlayerActivity
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -37,13 +33,10 @@ import kotlin.math.abs
 
 class PairingActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityPairingBinding
     private lateinit var viewModel: PairingViewModel
     private lateinit var tokenStorage: TokenStorage
     private lateinit var channelFactory: GrpcChannelFactory
-    private lateinit var codeTextView: TextView
-    private lateinit var statusTextView: TextView
-    private lateinit var serverInfoTextView: TextView
-    private lateinit var progressBar: ProgressBar
 
     // 2-finger swipe down gesture tracking
     private var twoFingerStartY0 = 0f
@@ -60,14 +53,17 @@ class PairingActivity : AppCompatActivity() {
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         } catch (_: Throwable) {}
 
-        // Light mode appearance for system bars
+        // Warm retro-modern appearance for system bars
         try {
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
             insetsController.isAppearanceLightStatusBars = true
             insetsController.isAppearanceLightNavigationBars = true
-            window.statusBarColor = Color.parseColor("#f8fafc")
-            window.navigationBarColor = Color.parseColor("#f8fafc")
+            window.statusBarColor = Color.parseColor("#f7f5f0")
+            window.navigationBarColor = Color.parseColor("#f7f5f0")
         } catch (_: Throwable) {}
+
+        binding = ActivityPairingBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         tokenStorage = TokenStorage(this)
         channelFactory = GrpcChannelFactory(this)
@@ -77,83 +73,57 @@ class PairingActivity : AppCompatActivity() {
 
         com.dkaapis.sigma.service.WatchdogService.setPlaybackActive(this, false)
 
-        // Light Mode Root Layout
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setBackgroundColor(Color.parseColor("#f8fafc"))
-            setPadding(48, 48, 48, 48)
-        }
-
-        val title = TextView(this).apply {
-            text = "DKASigma Digital Signage"
-            textSize = 34f
-            setTextColor(Color.parseColor("#0f172a"))
-            setTypeface(null, Typeface.BOLD)
-            gravity = Gravity.CENTER
-        }
-
-        val subtitle = TextView(this).apply {
-            text = "Layar terdeteksi otomatis. Silakan setujui perangkat ini di CMS Studio."
-            textSize = 17f
-            setTextColor(Color.parseColor("#475569"))
-            gravity = Gravity.CENTER
-            setPadding(0, 12, 0, 24)
-        }
-
-        codeTextView = TextView(this).apply {
-            text = "MENGHUBUNGKAN..."
-            textSize = 28f
-            setTextColor(Color.parseColor("#0284c7"))
-            typeface = Typeface.DEFAULT_BOLD
-            setTypeface(typeface, Typeface.BOLD)
-            gravity = Gravity.CENTER
-            setPadding(56, 20, 56, 20)
-            background = ContextCompat.getDrawable(this@PairingActivity, R.drawable.bg_pairing_code_card)
-        }
-
-        progressBar = ProgressBar(this).apply {
-            isIndeterminate = true
-            setPadding(0, 20, 0, 12)
-        }
-
-        statusTextView = TextView(this).apply {
-            text = "Menghubungkan ke server..."
-            textSize = 15f
-            setTextColor(Color.parseColor("#64748b"))
-            gravity = Gravity.CENTER
-            setPadding(0, 4, 0, 16)
-        }
-
-        serverInfoTextView = TextView(this).apply {
-            textSize = 12f
-            setTextColor(Color.parseColor("#94a3b8"))
-            gravity = Gravity.CENTER
-            isClickable = true
-            isFocusable = true
-            setPadding(24, 10, 24, 10)
-            setOnClickListener {
-                showServerConfigBottomSheet()
-            }
-        }
+        setupListeners()
         updateServerInfoText()
-
-        root.addView(title)
-        root.addView(subtitle)
-        root.addView(codeTextView)
-        root.addView(progressBar)
-        root.addView(statusTextView)
-        root.addView(serverInfoTextView)
-
-        setContentView(root)
         observeState()
+
         viewModel.startPairing()
+    }
+
+    private fun setupListeners() {
+        binding.btnReconnect.setOnClickListener {
+            binding.btnReconnect.isEnabled = false
+            binding.btnReconnect.alpha = 0.6f
+            binding.btnReconnect.text = "Sedang Menghubungkan..."
+            viewModel.startPairing()
+        }
+
+        binding.btnServerSettings.setOnClickListener {
+            showServerConfigBottomSheet()
+        }
+
+        binding.tvServerInfo.setOnClickListener {
+            showServerConfigBottomSheet()
+        }
     }
 
     private fun updateServerInfoText() {
         val host = ServerConfig.getHost(this)
-        val grpcPort = ServerConfig.getGrpcPort(this)
-        serverInfoTextView.text = "Server gRPC: $host:$grpcPort • Geser 2 jari ke bawah untuk ubah"
+        val port = ServerConfig.getGrpcPort(this)
+        binding.tvServerInfo.text = "Server: $host:$port • Geser 2 jari ke bawah untuk ubah"
+    }
+
+    private fun formatHumanErrorMessage(rawMessage: String): String {
+        val lower = rawMessage.lowercase()
+        return when {
+            lower.contains("unavailable") || lower.contains("connection refused") || lower.contains("failed to connect") ->
+                "Tidak dapat terhubung ke server layar saat ini.\nPastikan server aktif dan perangkat berada dalam jaringan yang sama."
+            lower.contains("deadline_exceeded") || lower.contains("timeout") ->
+                "Waktu koneksi ke server habis.\nPeriksa stabilitas sinyal Wi-Fi atau jaringan lokal."
+            lower.contains("unauthenticated") || lower.contains("permission_denied") ->
+                "Otorisasi perangkat belum disetujui.\nSilakan setujui perangkat ini di CMS Studio."
+            lower.contains("not_found") ->
+                "Alamat server tidak ditemukan.\nPeriksa kembali konfigurasi host dan port di pengaturan server."
+            else -> {
+                val cleaned = rawMessage
+                    .replace(Regex("(?i)io\\.grpc\\.[a-zA-Z0-9_.]+:?"), "")
+                    .replace(Regex("(?i)StatusRuntimeException:?"), "")
+                    .replace(Regex("(?i)grpc"), "server")
+                    .replace(Regex("(?i)unavailable"), "tidak tersedia")
+                    .trim()
+                if (cleaned.isNotBlank()) cleaned else "Terjadi kendala saat menghubungkan ke server layar."
+            }
+        }
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
@@ -254,8 +224,8 @@ class PairingActivity : AppCompatActivity() {
                 .removePrefix("https://")
                 .trimEnd('/')
             val host = if (rawHost.isEmpty()) "192.168.1.46" else rawHost
-            val grpcPort = etGrpcPort.text.toString().toIntOrNull() ?: 50051
-            tvPreview.text = "Target gRPC: $host:$grpcPort"
+            val port = etGrpcPort.text.toString().toIntOrNull() ?: 50051
+            tvPreview.text = "Server Target: $host:$port"
         }
 
         refreshInputs()
@@ -289,9 +259,9 @@ class PairingActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val grpcPort = etGrpcPort.text.toString().toIntOrNull() ?: 50051
+            val port = etGrpcPort.text.toString().toIntOrNull() ?: 50051
 
-            ServerConfig.saveConfig(this, inputHost, grpcPort, 80)
+            ServerConfig.saveConfig(this, inputHost, port, 80)
             updateServerInfoText()
 
             // Reset credentials so the device pairs cleanly with the new server
@@ -303,18 +273,26 @@ class PairingActivity : AppCompatActivity() {
             val newDeviceRepo = DeviceRepositoryImpl(this, tokenStorage, channelFactory)
             val newUseCase = RegisterAndPairUseCase(newDeviceRepo)
 
-            codeTextView.text = "MENGHUBUNGKAN..."
-            codeTextView.setTextColor(Color.parseColor("#0284c7"))
-            statusTextView.setTextColor(Color.parseColor("#64748b"))
-            statusTextView.text = "Menghubungkan ke ${ServerConfig.getHost(this)}..."
-            progressBar.visibility = View.VISIBLE
+            binding.llStatusPill.setBackgroundResource(R.drawable.bg_status_pill_connecting)
+            binding.vStatusLed.setBackgroundResource(R.drawable.led_dot_connecting)
+            binding.tvStatusCode.text = "MENGHUBUNGKAN..."
+            binding.tvStatusCode.setTextColor(Color.parseColor("#b45309"))
+
+            binding.tvPairingCode.visibility = View.GONE
+            binding.pbConnecting.visibility = View.VISIBLE
+            binding.tvStatusMessage.setTextColor(Color.parseColor("#78716c"))
+            binding.tvStatusMessage.text = "Menghubungkan ke ${ServerConfig.getHost(this)}..."
+
+            binding.btnReconnect.isEnabled = false
+            binding.btnReconnect.alpha = 0.6f
+            binding.btnReconnect.text = "Sedang Menghubungkan..."
 
             viewModel.updateUseCase(newUseCase)
             dialog.dismiss()
 
             Toast.makeText(
                 this,
-                "Server disimpan: ${ServerConfig.getHost(this)}:$grpcPort",
+                "Server disimpan: ${ServerConfig.getHost(this)}:$port",
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -327,34 +305,70 @@ class PairingActivity : AppCompatActivity() {
             viewModel.uiState.collectLatest { state ->
                 when (state) {
                     is PairingUiState.Initial, is PairingUiState.Registering -> {
-                        progressBar.visibility = View.VISIBLE
-                        codeTextView.text = "MENGHUBUNGKAN..."
-                        codeTextView.setTextColor(Color.parseColor("#0284c7"))
-                        statusTextView.setTextColor(Color.parseColor("#64748b"))
-                        statusTextView.text = "Mendaftarkan perangkat ke server..."
+                        binding.llStatusPill.setBackgroundResource(R.drawable.bg_status_pill_connecting)
+                        binding.vStatusLed.setBackgroundResource(R.drawable.led_dot_connecting)
+                        binding.tvStatusCode.text = "MENGHUBUNGKAN..."
+                        binding.tvStatusCode.setTextColor(Color.parseColor("#b45309"))
+
+                        binding.tvPairingCode.visibility = View.GONE
+                        binding.pbConnecting.visibility = View.VISIBLE
+                        binding.tvStatusMessage.text = "Menghubungkan dan mendaftarkan perangkat ke server..."
+                        binding.tvStatusMessage.setTextColor(Color.parseColor("#78716c"))
+
+                        binding.btnReconnect.isEnabled = false
+                        binding.btnReconnect.alpha = 0.6f
+                        binding.btnReconnect.text = "Sedang Menghubungkan..."
                     }
                     is PairingUiState.WaitingForAdmin -> {
-                        progressBar.visibility = View.VISIBLE
-                        codeTextView.text = "MENUNGGU PERSETUJUAN"
-                        codeTextView.setTextColor(Color.parseColor("#0284c7"))
-                        statusTextView.setTextColor(Color.parseColor("#64748b"))
-                        statusTextView.text = "Layar terdaftar di CMS Studio. Menunggu admin menyetujui..."
+                        binding.llStatusPill.setBackgroundResource(R.drawable.bg_status_pill_waiting)
+                        binding.vStatusLed.setBackgroundResource(R.drawable.led_dot_waiting)
+                        binding.tvStatusCode.text = "MENUNGGU PERSETUJUAN"
+                        binding.tvStatusCode.setTextColor(Color.parseColor("#0369a1"))
+
+                        val displayCode = state.pairingCode.ifBlank { state.deviceId }
+                        if (displayCode.isNotBlank()) {
+                            binding.tvPairingCode.visibility = View.VISIBLE
+                            binding.tvPairingCode.text = displayCode
+                        } else {
+                            binding.tvPairingCode.visibility = View.GONE
+                        }
+
+                        binding.pbConnecting.visibility = View.VISIBLE
+                        binding.tvStatusMessage.text = "Layar terdaftar di CMS Studio.\nSilakan setujui perangkat ini di dashboard admin."
+                        binding.tvStatusMessage.setTextColor(Color.parseColor("#57534e"))
+
+                        binding.btnReconnect.isEnabled = true
+                        binding.btnReconnect.alpha = 1.0f
+                        binding.btnReconnect.text = "↻ Cek Ulang Status"
                     }
                     is PairingUiState.PairedSuccess -> {
-                        progressBar.visibility = View.GONE
-                        codeTextView.text = "DISETUJUI"
-                        codeTextView.setTextColor(Color.parseColor("#16a34a"))
-                        statusTextView.setTextColor(Color.parseColor("#16a34a"))
-                        statusTextView.text = "Perangkat berhasil dihubungkan! Membuka player..."
+                        binding.llStatusPill.setBackgroundResource(R.drawable.bg_status_pill_success)
+                        binding.vStatusLed.setBackgroundResource(R.drawable.led_dot_success)
+                        binding.tvStatusCode.text = "TERHUBUNG"
+                        binding.tvStatusCode.setTextColor(Color.parseColor("#047857"))
+
+                        binding.tvPairingCode.visibility = View.GONE
+                        binding.pbConnecting.visibility = View.GONE
+                        binding.tvStatusMessage.text = "Perangkat berhasil disetujui! Membuka tampilan player..."
+                        binding.tvStatusMessage.setTextColor(Color.parseColor("#047857"))
+
                         startActivity(Intent(this@PairingActivity, PlayerActivity::class.java))
                         finish()
                     }
                     is PairingUiState.Error -> {
-                        progressBar.visibility = View.GONE
-                        codeTextView.text = "OFFLINE"
-                        codeTextView.setTextColor(Color.parseColor("#ef4444"))
-                        statusTextView.setTextColor(Color.parseColor("#ef4444"))
-                        statusTextView.text = "Gagal menghubungkan ke server.\n${state.message}\n(Geser 2 jari ke bawah untuk ganti host)"
+                        binding.llStatusPill.setBackgroundResource(R.drawable.bg_status_pill_offline)
+                        binding.vStatusLed.setBackgroundResource(R.drawable.led_dot_offline)
+                        binding.tvStatusCode.text = "OFFLINE"
+                        binding.tvStatusCode.setTextColor(Color.parseColor("#b91c1c"))
+
+                        binding.tvPairingCode.visibility = View.GONE
+                        binding.pbConnecting.visibility = View.GONE
+                        binding.tvStatusMessage.text = formatHumanErrorMessage(state.message)
+                        binding.tvStatusMessage.setTextColor(Color.parseColor("#78716c"))
+
+                        binding.btnReconnect.isEnabled = true
+                        binding.btnReconnect.alpha = 1.0f
+                        binding.btnReconnect.text = "↻ Hubungkan Ulang"
                     }
                 }
             }

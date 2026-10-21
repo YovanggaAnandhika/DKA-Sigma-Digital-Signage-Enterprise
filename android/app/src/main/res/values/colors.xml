@@ -1,10 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <!-- Base App Palette -->
+    <color name="primary_500">#0284c7</color>
+    <color name="primary_600">#0369a1</color>
+    <color name="black">#000000</color>
+    <color name="white">#ffffff</color>
+
+    <!-- Bottom Sheet & Dialog Colors (Light) -->
+    <color name="sheet_bg">#ffffff</color>
+    <color name="sheet_card_bg">#f8fafc</color>
+    <color name="sheet_card_border">#e2e8f0</color>
+    <color name="sheet_drag_handle">#cbd5e1</color>
+    <color name="sheet_text_primary">#0f172a</color>
+    <color name="sheet_text_secondary">#64748b</color>
+    <color name="sheet_text_muted">#94a3b8</color>
+    <color name="sheet_btn_secondary_bg">#f1f5f9</color>
+    <color name="sheet_btn_secondary_text">#334155</color>
+    <color name="sheet_btn_secondary_border">#cbd5e1</color>
+    <color name="sheet_btn_danger_bg">#dc2626</color>
+    <color name="sheet_btn_danger_ripple">#b91c1c</color>
+
+    <!-- Pairing Screen Colors (Light) -->
+    <color name="screen_bg">#f7f5f0</color>
+    <color name="console_card_bg">#ffffff</color>
+    <color name="console_card_border">#e7e3da</color>
+    <color name="tag_text">#78716c</color>
+    <color name="text_headline">#1c1917</color>
+    <color name="text_sub">#78716c</color>
+    <color name="pairing_code_bg">#fafaf9</color>
+    <color name="pairing_code_border">#d6d3cd</color>
+    <color name="btn_reconnect_bg">#1c1917</color>
+    <color name="btn_reconnect_ripple">#44403c</color>
+    <color name="btn_reconnect_text">#ffffff</color>
+    <color name="btn_server_bg">#fafaf9</color>
+    <color name="btn_server_border">#d6d3cd</color>
+    <color name="btn_server_text">#44403c</color>
+
+    <!-- Status Pill Colors (Light) -->
+    <color name="status_offline_bg">#fef2f2</color>
+    <color name="status_offline_border">#fecaca</color>
+    <color name="status_offline_text">#b91c1c</color>
+    <color name="status_connecting_bg">#fffbeb</color>
+    <color name="status_connecting_border">#fde68a</color>
+    <color name="status_connecting_text">#b45309</color>
+    <color name="status_waiting_bg">#f0f9ff</color>
+    <color name="status_waiting_border">#bae6fd</color>
+    <color name="status_waiting_text">#0369a1</color>
+    <color name="status_success_bg">#ecfdf5</color>
+    <color name="status_success_border">#a7f3d0</color>
+    <color name="status_success_text">#047857</color>
 </resources>

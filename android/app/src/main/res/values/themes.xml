@@ -17,12 +17,12 @@
 
     <!-- Light theme for pairing -->
     <style name="Theme.DKASigmaPlayer.Light" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="colorPrimary">#0284c7</item>
+        <item name="colorPrimary">#1c1917</item>
         <item name="colorOnPrimary">#ffffff</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
-        <item name="android:windowBackground">#f8fafc</item>
-        <item name="android:statusBarColor">#f8fafc</item>
-        <item name="android:navigationBarColor">#f8fafc</item>
+        <item name="android:windowBackground">#f7f5f0</item>
+        <item name="android:statusBarColor">#f7f5f0</item>
+        <item name="android:navigationBarColor">#f7f5f0</item>
     </style>
 </resources>
