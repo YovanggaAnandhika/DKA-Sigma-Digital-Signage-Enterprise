@@ -52,14 +52,13 @@ services:
     environment:
       TZ: Asia/Makassar
       NODE_ENV: development
-      #PORT: 80
+      PORT: 80
       DKA_GRPC_SERVER_HOST: "dka-product-sigma-backend:50051"
       DKA_GRPC_SERVER_SECURE: "false"
     volumes:
       - type: bind
         source: ./frontend
-        target: /app
-    working_dir: /app
+        target: /home/app
     command: bun run dev
     depends_on:
       - backend
