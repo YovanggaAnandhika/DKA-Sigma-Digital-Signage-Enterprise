@@ -67,7 +67,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args: Vec<String> = env::args().collect();
     let has_migrate = args.iter().any(|arg| arg == "--migrate");
-    let has_fresh = args.iter().any(|arg| arg == "--fresh");
+    let has_migrate_fresh = args.iter().any(|arg| arg == "--migrate:fresh");
+    let has_migrate_revert = args.iter().any(|arg| arg == "--migrate:revert");
     let has_seed = args.iter().any(|arg| arg == "--seed");
 
     let config = Config::from_env();
@@ -84,17 +85,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    // CLI Arguments Handler: --migrate, --fresh, --seed
-    if has_migrate || has_seed {
-        if has_fresh {
-            info!("--fresh flag detected. Resetting entire database schema...");
+    // CLI Arguments Handler: --migrate, --migrate:fresh, --migrate:revert, --seed
+    if has_migrate || has_migrate_fresh || has_migrate_revert || has_seed {
+        if has_migrate_fresh {
+            info!("--migrate:fresh flag detected. Resetting entire database schema...");
             if let Err(e) = db::drop_all_tables(&pool).await {
                 tracing::error!("Failed to drop database schema: {}", e);
                 return Err(e.into());
             }
-        }
-
-        if has_migrate {
+            info!("Running migrations on fresh schema...");
+            if let Err(e) = db::run_migrations(&pool).await {
+                tracing::error!("Migration failed: {}", e);
+                return Err(e.into());
+            }
+        } else if has_migrate_revert {
+            info!("--migrate:revert flag detected. Reverting last migration...");
+            if let Err(e) = db::revert_migration(&pool).await {
+                tracing::error!("Migration revert failed: {}", e);
+                return Err(e);
+            }
+        } else if has_migrate {
             info!("--migrate flag detected. Running migrations...");
             if let Err(e) = db::run_migrations(&pool).await {
                 tracing::error!("Migration failed: {}", e);

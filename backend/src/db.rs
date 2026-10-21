@@ -62,3 +62,30 @@ pub async fn drop_all_tables(pool: &DbPool) -> Result<(), sqlx::Error> {
     info!("Public schema recreated cleanly.");
     Ok(())
 }
+
+pub async fn revert_migration(pool: &DbPool) -> Result<(), Box<dyn std::error::Error>> {
+    info!("Checking applied migrations for revert...");
+    let rows: Vec<(i64,)> = sqlx::query_as(
+        "SELECT version FROM _sqlx_migrations WHERE success = true ORDER BY version ASC",
+    )
+    .fetch_all(pool)
+    .await
+    .unwrap_or_default();
+
+    if rows.is_empty() {
+        info!("No applied migrations found in _sqlx_migrations to revert.");
+        return Ok(());
+    }
+
+    let last_version = rows.last().unwrap().0;
+    let target = if rows.len() >= 2 {
+        rows[rows.len() - 2].0
+    } else {
+        0
+    };
+
+    info!("Reverting migration version {} down to {}...", last_version, target);
+    sqlx::migrate!("./migrations").undo(pool, target).await?;
+    info!("Migration successfully reverted to version {}", target);
+    Ok(())
+}
