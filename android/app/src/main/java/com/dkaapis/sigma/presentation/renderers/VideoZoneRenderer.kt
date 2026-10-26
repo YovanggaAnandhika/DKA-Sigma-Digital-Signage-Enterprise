@@ -57,7 +57,6 @@ class VideoZoneRenderer(
             .build()
             .apply {
             repeatMode = Player.REPEAT_MODE_ALL
-            videoScalingMode = androidx.media3.common.C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
 
             for (item in playlist) {
                 val itemUri = Uri.fromFile(item.file)
