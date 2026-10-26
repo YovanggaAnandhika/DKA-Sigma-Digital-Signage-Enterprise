@@ -15,6 +15,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -579,12 +580,64 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         return super.dispatchTouchEvent(ev)
     }
 
+    private var lastBackPressTimestamp = 0L
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_SETTINGS) {
+        // 1. Tombol langsung pada remote: Menu, Settings, Info, Guide
+        if (keyCode == KeyEvent.KEYCODE_MENU ||
+            keyCode == KeyEvent.KEYCODE_SETTINGS ||
+            keyCode == KeyEvent.KEYCODE_INFO ||
+            keyCode == KeyEvent.KEYCODE_GUIDE ||
+            keyCode == KeyEvent.KEYCODE_PROG_RED) {
             openSettingsBottomSheet()
             return true
         }
+
+        // 2. Mulai tracking long-press untuk tombol DPAD Center (OK), Enter, dan Back
+        if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+            keyCode == KeyEvent.KEYCODE_ENTER ||
+            keyCode == KeyEvent.KEYCODE_BACK) {
+            event?.startTracking()
+            return true
+        }
+
         return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyLongPress(keyCode: Int, event: KeyEvent?): Boolean {
+        // Tahan tombol OK / Center atau tombol Back selama 1.5 - 2 detik untuk membuka pengaturan
+        if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+            keyCode == KeyEvent.KEYCODE_ENTER ||
+            keyCode == KeyEvent.KEYCODE_BACK) {
+            openSettingsBottomSheet()
+            return true
+        }
+        return super.onKeyLongPress(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+        if (event?.isCanceled == true) {
+            return true
+        }
+
+        // Tekan tombol Back 2x cepat (dalam 1.5 detik) untuk membuka pengaturan
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            if (settingsDialog.isShowing()) {
+                return super.onKeyUp(keyCode, event)
+            }
+            val now = System.currentTimeMillis()
+            if (now - lastBackPressTimestamp < 1500L) {
+                lastBackPressTimestamp = 0L
+                openSettingsBottomSheet()
+                return true
+            } else {
+                lastBackPressTimestamp = now
+                Toast.makeText(this, "Tekan Back sekali lagi untuk buka Pengaturan", Toast.LENGTH_SHORT).show()
+                return true
+            }
+        }
+
+        return super.onKeyUp(keyCode, event)
     }
 
     private fun openSettingsBottomSheet() {
