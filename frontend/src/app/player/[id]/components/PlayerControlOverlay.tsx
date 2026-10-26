@@ -11,6 +11,7 @@ interface PlayerControlOverlayProps {
   queueState: { ticket: string; counter: string; isCalling: boolean };
   triggerQueueCall: (customTicket?: string, customCounter?: string) => void;
   isAudioDucked: boolean;
+  hasQueue?: boolean;
 }
 
 export default function PlayerControlOverlay({
@@ -21,6 +22,7 @@ export default function PlayerControlOverlay({
   queueState,
   triggerQueueCall,
   isAudioDucked,
+  hasQueue = false,
 }: PlayerControlOverlayProps) {
   return (
     <>
@@ -84,50 +86,54 @@ export default function PlayerControlOverlay({
           <span>Kiosk • {canvasW}×{canvasH}</span>
         </div>
 
-        <div style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
+        {hasQueue && (
+          <>
+            <div style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
 
-        {/* Simulasi Panggil Antrian Button */}
-        <button
-          onClick={() => triggerQueueCall('A-001', 'LOKET 01')}
-          disabled={queueState.isCalling}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            backgroundColor: queueState.isCalling ? 'rgba(16, 185, 129, 0.2)' : '#10b981',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '9999px',
-            padding: '4px 12px',
-            fontSize: '0.6875rem',
-            fontWeight: 700,
-            cursor: queueState.isCalling ? 'not-allowed' : 'pointer',
-          }}
-          title="Klik untuk mensimulasikan panggilan suara TTS antrian dan audio ducking video"
-        >
-          <Volume2 size={13} />
-          <span>{queueState.isCalling ? 'Memanggil...' : 'Simulasi Panggil A-001'}</span>
-        </button>
+            {/* Simulasi Panggil Antrian Button */}
+            <button
+              onClick={() => triggerQueueCall('A-001', 'LOKET 01')}
+              disabled={queueState.isCalling}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: queueState.isCalling ? 'rgba(16, 185, 129, 0.2)' : '#10b981',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '9999px',
+                padding: '4px 12px',
+                fontSize: '0.6875rem',
+                fontWeight: 700,
+                cursor: queueState.isCalling ? 'not-allowed' : 'pointer',
+              }}
+              title="Klik untuk mensimulasikan panggilan suara TTS antrian dan audio ducking video"
+            >
+              <Volume2 size={13} />
+              <span>{queueState.isCalling ? 'Memanggil...' : 'Simulasi Panggil A-001'}</span>
+            </button>
 
-        <button
-          onClick={() => triggerQueueCall('A-002', 'LOKET 02')}
-          disabled={queueState.isCalling}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            color: '#ffffff',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            borderRadius: '9999px',
-            padding: '4px 10px',
-            fontSize: '0.6875rem',
-            fontWeight: 700,
-            cursor: queueState.isCalling ? 'not-allowed' : 'pointer',
-          }}
-        >
-          <span>A-002</span>
-        </button>
+            <button
+              onClick={() => triggerQueueCall('A-002', 'LOKET 02')}
+              disabled={queueState.isCalling}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '9999px',
+                padding: '4px 10px',
+                fontSize: '0.6875rem',
+                fontWeight: 700,
+                cursor: queueState.isCalling ? 'not-allowed' : 'pointer',
+              }}
+            >
+              <span>A-002</span>
+            </button>
+          </>
+        )}
 
         {/* Audio Volume Status Indicator */}
         <div

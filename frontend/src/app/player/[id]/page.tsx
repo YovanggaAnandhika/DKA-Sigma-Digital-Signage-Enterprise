@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { invokeApi } from '@/lib/core/invokeApi';
@@ -95,8 +95,42 @@ export default function WebKioskPlayerPage() {
   const activeChimeAudioRef = useRef<HTMLAudioElement | null>(null);
   const activeChimeTimerRef = useRef<any>(null);
 
+  // Deteksi seluruh ID antrean yang terpasang pada layout aktif player ini
+  const activeQueueIds = useMemo(() => {
+    if (!manifest?.layout?.layersList) return new Set<string>();
+    const ids = new Set<string>();
+    for (const layer of manifest.layout.layersList) {
+      const blocks = layer.blocksList || (layer as any).timelineBlocksList || [];
+      for (const block of blocks) {
+        if (block.queueId) {
+          ids.add(block.queueId);
+        }
+        if (block.widgetDataJson) {
+          try {
+            const parsed = JSON.parse(block.widgetDataJson);
+            if (parsed.id) ids.add(parsed.id);
+            if (parsed.queueDisplayId) ids.add(parsed.queueDisplayId);
+          } catch (_) {}
+        }
+        if ((block as any).widgetData?.id) {
+          ids.add((block as any).widgetData.id);
+        }
+      }
+      if (layer.name?.toLowerCase().includes('antrian') || layer.name?.toLowerCase().includes('queue')) {
+        ids.add('__generic_queue__');
+      }
+    }
+    return ids;
+  }, [manifest]);
+
+  const activeQueueIdsRef = useRef(activeQueueIds);
+  useEffect(() => {
+    activeQueueIdsRef.current = activeQueueIds;
+  }, [activeQueueIds]);
+
   // Announce Queue Ticket with Custom Audio Chime + Indonesian TTS and Automatic Video Ducking
   const triggerQueueCall = useCallback((customTicket?: string, customCounter?: string, isRecall: boolean = false) => {
+    if (activeQueueIdsRef.current.size === 0) return;
     const ticket = customTicket || queueState.ticket;
     const counter = customCounter || queueState.counter;
 
@@ -219,6 +253,18 @@ export default function WebKioskPlayerPage() {
         try {
           const data = JSON.parse(event.data);
           if (data && (data.type === 'CALL_QUEUE' || data.type === 'QUEUE_CALL')) {
+            const currentQueueIds = activeQueueIdsRef.current;
+            // Cegah kebocoran antrian: Abaikan jika player ini tidak memasang antrian
+            if (currentQueueIds.size === 0) {
+              return;
+            }
+
+            const targetQueueId = data.queueId || data.queue_id;
+            // Hanya layani jika target ID antrian cocok dengan yang dipasang di player ini
+            if (targetQueueId && !currentQueueIds.has(targetQueueId) && !currentQueueIds.has('__generic_queue__')) {
+              return;
+            }
+
             const ticketNum = data.ticketNumber;
             const counterNm = data.counterName;
             const isRecall = data.callType === 'recall';
@@ -418,6 +464,7 @@ export default function WebKioskPlayerPage() {
         queueState={queueState}
         triggerQueueCall={triggerQueueCall}
         isAudioDucked={isAudioDucked}
+        hasQueue={activeQueueIds.size > 0}
       />
     </div>
   );

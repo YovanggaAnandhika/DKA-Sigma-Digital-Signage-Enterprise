@@ -337,6 +337,10 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     }
 
     private fun renderManifest(manifest: Manifest) {
+        activeQueueRenderer = null
+        activeQueueDisplayId = ""
+        activeQueueDataJson = null
+
         val payload = ZoneRenderContextPayload(
             activity = this,
             canvasLayout = canvasLayout,
@@ -492,7 +496,10 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             if (event.source == "player_touch" && event.sourceDeviceId.isNotBlank() && event.sourceDeviceId == currentDevId) {
                 return@runOnUiThread
             }
-            if (event.targetQueueId.isNotBlank() && activeQueueDisplayId.isNotBlank() && event.targetQueueId != activeQueueDisplayId) {
+            if (activeQueueDisplayId.isBlank()) {
+                return@runOnUiThread
+            }
+            if (event.targetQueueId.isNotBlank() && event.targetQueueId != activeQueueDisplayId) {
                 return@runOnUiThread
             }
 
@@ -513,14 +520,16 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     override fun onQueueReset(targetQueueId: String, resetToNumber: String) {
         runOnUiThread {
-            if (targetQueueId.isNotBlank() && activeQueueDisplayId.isNotBlank() && targetQueueId != activeQueueDisplayId) return@runOnUiThread
+            if (activeQueueDisplayId.isBlank()) return@runOnUiThread
+            if (targetQueueId.isNotBlank() && targetQueueId != activeQueueDisplayId) return@runOnUiThread
             activeQueueRenderer?.resetQueue(resetToNumber)
         }
     }
 
     override fun onCounterStatusChanged(targetQueueId: String, counterName: String, status: String) {
         runOnUiThread {
-            if (targetQueueId.isNotBlank() && activeQueueDisplayId.isNotBlank() && targetQueueId != activeQueueDisplayId) return@runOnUiThread
+            if (activeQueueDisplayId.isBlank()) return@runOnUiThread
+            if (targetQueueId.isNotBlank() && targetQueueId != activeQueueDisplayId) return@runOnUiThread
             activeQueueRenderer?.setCounterStatus(counterName, status)
             audioManager.speakCounterStatus(CounterStatusPayload(counterName = counterName, status = status))
         }
