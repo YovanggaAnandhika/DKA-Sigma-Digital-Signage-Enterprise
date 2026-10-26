@@ -15,6 +15,9 @@ class DkaSignageApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && getProcessName().endsWith(":restart")) {
+            return
+        }
         instance = this
         setupCrashHandler()
         Log.i(TAG, "DKASigma Signage Player Initialized (PID: ${android.os.Process.myPid()})")

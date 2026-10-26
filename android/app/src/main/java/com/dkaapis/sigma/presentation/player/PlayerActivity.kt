@@ -480,7 +480,18 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     }
 
     override fun onReboot() {
-        runOnUiThread { telemetryManager.handleReboot() }
+        runOnUiThread {
+            loadingOverlay.visibility = View.VISIBLE
+            progressBar.isIndeterminate = true
+            badgeText.text = "● MEMUAT ULANG"
+            badgeText.setTextColor(Color.parseColor("#3B82F6"))
+            loadingText.text = "Memuat Ulang Player..."
+            subDetailText.text = "Mengeksekusi perintah reboot/restart dari CMS..."
+
+            loadingOverlay.postDelayed({
+                telemetryManager.handleReboot()
+            }, 600)
+        }
     }
 
     override fun onUnpair() {
