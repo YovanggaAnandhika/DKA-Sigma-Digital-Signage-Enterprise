@@ -7,6 +7,7 @@ import android.widget.FrameLayout
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.dkaapis.sigma.data.analytics.AssetStatsData
@@ -34,28 +35,38 @@ class VideoZoneRenderer(
     fun createPlaylistView(parent: ViewGroup, playlist: List<VideoPlaylistItem>): PlayerView {
         this.playlistItems = playlist
 
-        // Optimized load control: 2.5s min buffer, 6s max buffer (local offline files don't need 50s RAM buffer)
+        // Optimized load control: 8s min buffer, 15s max buffer, 1.5s playback buffer
+        // Melindungi dari jitter I/O flash memory eMMC pada TV Android tanpa membebani RAM
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                /* minBufferMs = */ 2_500,
-                /* maxBufferMs = */ 6_000,
-                /* bufferForPlaybackMs = */ 500,
-                /* bufferForPlaybackAfterRebufferMs = */ 1_000
+                /* minBufferMs = */ 8_000,
+                /* maxBufferMs = */ 15_000,
+                /* bufferForPlaybackMs = */ 1_500,
+                /* bufferForPlaybackAfterRebufferMs = */ 2_500
             )
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
 
-        val player = ExoPlayer.Builder(context)
+        val renderersFactory = DefaultRenderersFactory(context).apply {
+            setEnableDecoderFallback(true)
+            setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+        }
+
+        val player = ExoPlayer.Builder(context, renderersFactory)
             .setLoadControl(loadControl)
             .build()
             .apply {
             repeatMode = Player.REPEAT_MODE_ALL
+            videoScalingMode = androidx.media3.common.C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
 
             for (item in playlist) {
                 val itemUri = Uri.fromFile(item.file)
                 val mediaItemBuilder = MediaItem.Builder()
                     .setUri(itemUri)
-                    .setMimeType(androidx.media3.common.MimeTypes.VIDEO_MP4)
+
+                if (item.file.name.endsWith(".mp4", ignoreCase = true)) {
+                    mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.VIDEO_MP4)
+                }
 
                 if (item.durationSeconds > 0) {
                     mediaItemBuilder.setClippingConfiguration(
@@ -101,7 +112,7 @@ class VideoZoneRenderer(
                 }
 
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                    android.util.Log.e("VideoZoneRenderer", "Playback error in playlist item $currentMediaItemIndex: ${error.message}", error)
+                    android.util.Log.e("VideoZoneRenderer", "Playback error in playlist item $currentMediaItemIndex (${error.errorCodeName}): ${error.message}, cause: ${error.cause?.message}", error)
                     // Auto-fallback: lewati video korup otomatis agar layar tidak hang/layar hitam
                     try {
                         if (playlist.size > 1) {
