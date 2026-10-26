@@ -89,6 +89,19 @@
             android:name="com.dkaapis.sigma.service.WatchdogService"
             android:exported="false" />
 
+        <!-- ══ Kiosk Accessibility Service for Google TV Launcher Override ══ -->
+        <service
+            android:name="com.dkaapis.sigma.service.KioskAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/kiosk_accessibility_service_config" />
+        </service>
+
         <!-- Kiosk Autostart on TV Box boot -->
         <receiver
             android:name="com.dkaapis.sigma.service.BootReceiver"

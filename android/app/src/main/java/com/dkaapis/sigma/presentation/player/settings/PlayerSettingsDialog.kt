@@ -2,7 +2,9 @@ package com.dkaapis.sigma.presentation.player.settings
 
 import android.app.AlertDialog
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
+import android.provider.Settings
 import android.view.Gravity
 import android.view.WindowManager
 import android.widget.Button
@@ -73,6 +75,15 @@ class PlayerSettingsDialog(
             isChecked = payload.isProgressUploadEnabled
             setOnCheckedChangeListener { _, isChecked ->
                 payload.onProgressUploadToggled(isChecked)
+            }
+        }
+
+        dialog.findViewById<Button>(R.id.btnOpenAccessibilitySettings)?.setOnClickListener {
+            runCatching {
+                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
             }
         }
 

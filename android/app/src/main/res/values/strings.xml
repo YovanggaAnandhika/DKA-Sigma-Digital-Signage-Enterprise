@@ -10,4 +10,6 @@
     <string name="server_port">50051</string>
     <string name="server_use_tls">false</string>
     <string name="server_http_base_url">http://192.168.1.46:80</string>
+
+    <string name="kiosk_accessibility_description">Layanan otomatisasi kiosk untuk menjaga DKASigma Player tetap aktif di layar utama Android TV / Google TV dan mencegah tertutup saat tombol Home ditekan.</string>
 </resources>
