@@ -32,6 +32,7 @@ class WatchdogPingHelper(
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var isRunning = false
+    private var lastAnalyticsSyncTimeMs = 0L
 
     private val heartbeatRunnable = object : Runnable {
         override fun run() {
@@ -39,7 +40,11 @@ class WatchdogPingHelper(
             scope.launch {
                 runCatching {
                     processHeartbeat()
-                    syncAnalyticsMetrics()
+                    val now = System.currentTimeMillis()
+                    if (now - lastAnalyticsSyncTimeMs >= 15000L) {
+                        lastAnalyticsSyncTimeMs = now
+                        syncAnalyticsMetrics()
+                    }
                 }.onFailure { err ->
                     Log.w(TAG, "Watchdog tick failure: ${err.message}")
                 }

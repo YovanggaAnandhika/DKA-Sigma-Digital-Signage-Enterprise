@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
             clearInterval(interval);
           }
         });
-      }, 4000);
+      }, 1000);
 
       req.signal.addEventListener('abort', () => {
         clearInterval(interval);

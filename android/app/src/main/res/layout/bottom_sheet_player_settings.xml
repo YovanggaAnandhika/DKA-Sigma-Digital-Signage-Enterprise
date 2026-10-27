@@ -18,9 +18,30 @@
         android:layout_marginBottom="14dp"
         android:background="@color/sheet_drag_handle" />
 
-    <ScrollView
+    <!-- Sticky Header: Title & Subtitle -->
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:text="Pengaturan Layar"
+        android:textColor="@color/sheet_text_primary"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:layout_marginBottom="12dp"
+        android:text="Status koneksi dan telemetri perangkat digital signage."
+        android:textColor="@color/sheet_text_secondary"
+        android:textSize="12sp" />
+
+    <!-- Scrollable Cards Body -->
+    <ScrollView
+        android:id="@+id/scrollSettingsContent"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:fillViewport="true"
         android:scrollbars="none">
 
@@ -28,24 +49,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
-
-            <!-- Title & Subtitle (No Emojis) -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Pengaturan Layar"
-                android:textColor="@color/sheet_text_primary"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:layout_marginBottom="14dp"
-                android:text="Status koneksi dan telemetri perangkat digital signage."
-                android:textColor="@color/sheet_text_secondary"
-                android:textSize="12sp" />
 
             <!-- Device Info Card -->
             <LinearLayout
@@ -124,7 +127,8 @@
                 <androidx.appcompat.widget.SwitchCompat
                     android:id="@+id/switchProgressUpload"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:focusable="true" />
             </LinearLayout>
 
             <!-- Google TV Kiosk / Accessibility Helper Card -->
@@ -132,6 +136,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
+                android:layout_marginBottom="4dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:background="@drawable/bg_input_field"
@@ -171,45 +176,49 @@
                     android:textAllCaps="false"
                     android:textColor="@color/sheet_btn_secondary_text"
                     android:textSize="12sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <!-- Horizontal Action Buttons: Side by Side to prevent cut-off on landscape -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:layout_marginBottom="4dp"
-                android:orientation="horizontal">
-
-                <Button
-                    android:id="@+id/btnUnbindDevice"
-                    android:layout_width="0dp"
-                    android:layout_height="44dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_btn_danger"
-                    app:backgroundTint="@null"
-                    android:text="Putus Hubungan Layar"
-                    android:textAllCaps="false"
-                    android:textColor="#ffffff"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-
-                <Button
-                    android:id="@+id/btnDismissSettings"
-                    android:layout_width="0dp"
-                    android:layout_height="44dp"
-                    android:layout_weight="1"
-                    android:layout_marginStart="10dp"
-                    android:background="@drawable/bg_btn_secondary"
-                    app:backgroundTint="@null"
-                    android:text="Tutup"
-                    android:textAllCaps="false"
-                    android:textColor="@color/sheet_btn_secondary_text"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:focusable="true" />
             </LinearLayout>
 
         </LinearLayout>
     </ScrollView>
+
+    <!-- Sticky Footer Action Buttons: Always visible outside ScrollView -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnUnbindDevice"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_btn_danger"
+            app:backgroundTint="@null"
+            android:text="Putus Hubungan Layar"
+            android:textAllCaps="false"
+            android:textColor="#ffffff"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+
+        <Button
+            android:id="@+id/btnDismissSettings"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/bg_btn_secondary"
+            app:backgroundTint="@null"
+            android:text="Tutup"
+            android:textAllCaps="false"
+            android:textColor="@color/sheet_btn_secondary_text"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+    </LinearLayout>
 </LinearLayout>

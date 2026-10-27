@@ -54,9 +54,6 @@ class PairingActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        try {
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        } catch (_: Throwable) {}
 
         // Theme-adaptive appearance for system bars (handles both dark & light modes)
         try {

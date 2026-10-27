@@ -98,6 +98,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private var activeQueueDisplayId: String = ""
     private var activeQueueDataJson: String? = null
     private var lastDownloadProgressReportTime: Long = 0L
+    private var hasActivePlayback: Boolean = false
 
     private val streamingHttpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -118,7 +119,6 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     }
 
     private fun setupWindowEnvironment() {
-        runCatching { requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         runCatching {
             @Suppress("DEPRECATION")
@@ -273,26 +273,30 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                         finish()
                     }
                     is PlayerUiState.SyncingManifest -> {
-                        WatchdogService.setPlaybackActive(this@PlayerActivity, false)
-                        loadingOverlay.visibility = View.VISIBLE
-                        badgeText.text = "● SINKRONISASI JADWAL"
-                        badgeText.setTextColor(Color.parseColor("#38BDF8"))
-                        loadingText.text = state.message
-                        subDetailText.text = "Mengecek pembaruan jadwal dan integritas manifest..."
-                        progressBar.isIndeterminate = true
+                        if (!hasActivePlayback) {
+                            WatchdogService.setPlaybackActive(this@PlayerActivity, false)
+                            loadingOverlay.visibility = View.VISIBLE
+                            badgeText.text = "● SINKRONISASI JADWAL"
+                            badgeText.setTextColor(Color.parseColor("#38BDF8"))
+                            loadingText.text = state.message
+                            subDetailText.text = "Mengecek pembaruan jadwal dan integritas manifest..."
+                            progressBar.isIndeterminate = true
+                        }
                     }
                     is PlayerUiState.DownloadingAssets -> {
-                        WatchdogService.setPlaybackActive(this@PlayerActivity, false)
-                        loadingOverlay.visibility = View.VISIBLE
-                        badgeText.text = "● MENGUNDUH ASET MEDIA"
-                        badgeText.setTextColor(Color.parseColor("#10B981"))
-                        progressBar.isIndeterminate = false
-                        progressBar.progress = state.progressPercent
+                        if (!hasActivePlayback) {
+                            WatchdogService.setPlaybackActive(this@PlayerActivity, false)
+                            loadingOverlay.visibility = View.VISIBLE
+                            badgeText.text = "● MENGUNDUH ASET MEDIA"
+                            badgeText.setTextColor(Color.parseColor("#10B981"))
+                            progressBar.isIndeterminate = false
+                            progressBar.progress = state.progressPercent
 
-                        val downloadedMb = String.format(Locale.US, "%.1f", state.downloadedBytes / (1024.0 * 1024.0))
-                        val totalMb = String.format(Locale.US, "%.1f", state.totalBytes / (1024.0 * 1024.0))
-                        loadingText.text = "Mengunduh Aset Media (${state.assetIndex}/${state.total}) • ${state.progressPercent}%"
-                        subDetailText.text = "${state.currentFileName}\n[ $downloadedMb MB / $totalMb MB ]"
+                            val downloadedMb = String.format(Locale.US, "%.1f", state.downloadedBytes / (1024.0 * 1024.0))
+                            val totalMb = String.format(Locale.US, "%.1f", state.totalBytes / (1024.0 * 1024.0))
+                            loadingText.text = "Mengunduh Aset Media (${state.assetIndex}/${state.total}) • ${state.progressPercent}%"
+                            subDetailText.text = "${state.currentFileName}\n[ $downloadedMb MB / $totalMb MB ]"
+                        }
 
                         val devId = deviceRepo.getSavedDeviceId()
                         val now = System.currentTimeMillis()
@@ -306,6 +310,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                         }
                     }
                     is PlayerUiState.Playing -> {
+                        hasActivePlayback = true
                         WatchdogService.setPlaybackActive(this@PlayerActivity, true)
                         loadingOverlay.visibility = View.GONE
                         renderManifest(state.manifest)
@@ -658,6 +663,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     }
 
     private fun unbindDeviceAndExit() {
+        hasActivePlayback = false
         tokenStorage.clear()
         WatchdogService.setPlaybackActive(this, false)
         runCatching { stopService(Intent(this, PlayerForegroundService::class.java)) }

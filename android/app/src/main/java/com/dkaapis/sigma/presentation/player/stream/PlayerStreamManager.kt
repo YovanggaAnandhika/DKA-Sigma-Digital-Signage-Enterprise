@@ -43,18 +43,19 @@ class PlayerStreamManager(
                         .addHeader("Accept", "text/event-stream")
                         .build()
 
-                    val response = httpClient.newCall(request).execute()
-                    if (response.isSuccessful) {
-                        onConnected()
+                    httpClient.newCall(request).execute().use { response ->
+                        if (response.isSuccessful) {
+                            onConnected()
 
-                        response.body?.byteStream()?.bufferedReader()?.useLines { lines ->
-                            for (line in lines) {
-                                if (!isActive) break
-                                if (line.startsWith("data: ")) {
-                                    val jsonStr = line.substring(6).trim()
-                                    runCatching {
-                                        val data = JSONObject(jsonStr)
-                                        eventParser.parseAndDispatch(data, listener)
+                            response.body?.byteStream()?.bufferedReader()?.useLines { lines ->
+                                for (line in lines) {
+                                    if (!isActive) break
+                                    if (line.startsWith("data: ")) {
+                                        val jsonStr = line.substring(6).trim()
+                                        runCatching {
+                                            val data = JSONObject(jsonStr)
+                                            eventParser.parseAndDispatch(data, listener)
+                                        }
                                     }
                                 }
                             }

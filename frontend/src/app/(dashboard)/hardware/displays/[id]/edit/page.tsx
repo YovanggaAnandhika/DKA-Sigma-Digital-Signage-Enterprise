@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/services';
 import type { Device, DisplayGroup, Schedule, Resolution } from '@/lib/services';
-import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Save, RefreshCw, Trash2 } from 'lucide-react';
 import { SingleSelect } from '@/components/ui/SingleSelect';
 
 export default function EditDisplayPage() {
@@ -283,14 +283,38 @@ export default function EditDisplayPage() {
             )}
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-            <Link href={`/hardware/displays/${params.id}`} className="btn btn-secondary">
-              Batal
-            </Link>
-            <button type="submit" disabled={saving} className="btn btn-primary">
-              <Save size={14} />
-              <span>{saving ? 'Menyimpan...' : 'Simpan Perubahan'}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginTop: '12px' }}>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={async () => {
+                if (!confirm(`Putus hubungan dan unbind player "${formData.name}"?\n\nPerangkat akan dihapus dari sistem CMS dan kembali ke mode registrasi pairing awal.`)) return;
+                try {
+                  setSaving(true);
+                  await api.deleteDevice(params.id);
+                  router.push('/hardware/displays');
+                } catch (err: any) {
+                  alert(err.message || 'Gagal memutuskan hubungan perangkat');
+                  setSaving(false);
+                }
+              }}
+              className="btn btn-danger"
+              style={{ padding: '8px 14px', fontSize: '0.8125rem', gap: '6px' }}
+              title="Putus hubungan dan hapus pairing layar ini"
+            >
+              <Trash2 size={14} />
+              <span>Putus Hubungan (Unbind)</span>
             </button>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <Link href={`/hardware/displays/${params.id}`} className="btn btn-secondary">
+                Batal
+              </Link>
+              <button type="submit" disabled={saving} className="btn btn-primary">
+                <Save size={14} />
+                <span>{saving ? 'Menyimpan...' : 'Simpan Perubahan'}</span>
+              </button>
+            </div>
           </div>
         </form>
       </div>

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Play,
@@ -12,11 +13,15 @@ import {
   Edit,
   CheckCircle2,
   Zap,
+  Unlink2,
 } from 'lucide-react';
 import { ServerCommandType } from '@/lib/services/hardware/device.service';
+import { api } from '@/lib/services';
 import { useDisplayDetail } from '../context/DisplayDetailContext';
 
 export default function DisplayCommandToolbar() {
+  const router = useRouter();
+  const [unbinding, setUnbinding] = React.useState(false);
   const {
     device,
     sendingCmd,
@@ -27,6 +32,27 @@ export default function DisplayCommandToolbar() {
   } = useDisplayDetail();
 
   if (!device) return null;
+
+  const isTrulyOnline = Boolean(
+    device.isOnline &&
+    device.lastHeartbeatAt &&
+    (Date.now() - new Date(device.lastHeartbeatAt).getTime() <= 10000)
+  );
+
+  const handleUnbind = async () => {
+    if (!device) return;
+    if (!confirm(`Putus hubungan dan unbind player "${device.name}"?\n\nPerangkat akan dihapus dari sistem CMS dan kembali ke mode pairing awal.`)) {
+      return;
+    }
+    try {
+      setUnbinding(true);
+      await api.deleteDevice(device.id);
+      router.push('/hardware/displays');
+    } catch (err: any) {
+      alert(err.message || 'Gagal memutuskan hubungan perangkat');
+      setUnbinding(false);
+    }
+  };
 
   return (
     <>
@@ -42,14 +68,14 @@ export default function DisplayCommandToolbar() {
                 {device.name}
               </h1>
               <span
-                title={device.isOnline ? 'Online' : 'Offline'}
-                aria-label={device.isOnline ? 'Online' : 'Offline'}
+                title={isTrulyOnline ? 'Online' : 'Offline'}
+                aria-label={isTrulyOnline ? 'Online' : 'Offline'}
                 style={{
                   width: '8px',
                   height: '8px',
                   borderRadius: '50%',
-                  backgroundColor: device.isOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
-                  boxShadow: device.isOnline ? '0 0 6px rgba(16, 185, 129, 0.5)' : 'none',
+                  backgroundColor: isTrulyOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
+                  boxShadow: isTrulyOnline ? '0 0 6px rgba(16, 185, 129, 0.5)' : 'none',
                   display: 'inline-block',
                 }}
               />
@@ -114,6 +140,18 @@ export default function DisplayCommandToolbar() {
             <Edit size={14} />
             <span>Edit</span>
           </Link>
+
+          <button
+            type="button"
+            onClick={handleUnbind}
+            disabled={unbinding}
+            className="btn btn-danger"
+            style={{ padding: '6px 12px', fontSize: '0.8125rem', gap: '6px' }}
+            title="Putus hubungan dan hapus pairing layar ini"
+          >
+            <Unlink2 size={14} />
+            <span>{unbinding ? 'Memutuskan...' : 'Unbind Layar'}</span>
+          </button>
         </div>
       </div>
 
@@ -239,10 +277,17 @@ export default function DisplayCommandToolbar() {
         <div className="card-elevated" style={{ padding: '14px 16px' }}>
           <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>Heartbeat</div>
           <div style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px' }}>
-            {device.lastHeartbeatAt ? new Date(device.lastHeartbeatAt).toLocaleTimeString('id-ID') : 'Baru saja'}
+            {device.lastHeartbeatAt ? new Date(device.lastHeartbeatAt).toLocaleTimeString('id-ID') : '-'}
           </div>
-          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Sinkron
+          <div
+            style={{
+              fontSize: '0.6875rem',
+              color: isTrulyOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
+              marginTop: '2px',
+              fontWeight: 600,
+            }}
+          >
+            {isTrulyOnline ? 'Sinkron (Online)' : 'Terputus (Offline)'}
           </div>
         </div>
       </div>

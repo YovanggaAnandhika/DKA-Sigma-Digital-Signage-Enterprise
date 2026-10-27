@@ -31,6 +31,13 @@ impl DeviceServiceImpl {
             _ => DeviceOrientation::OrientationLandscape as i32,
         };
 
+        let is_online = if let Some(last_hb) = dev.last_heartbeat_at {
+            let elapsed = chrono::Utc::now().signed_duration_since(last_hb);
+            dev.is_online && elapsed.num_seconds() >= 0 && elapsed.num_seconds() <= 10
+        } else {
+            false
+        };
+
         Device {
             id: dev.id.to_string(),
             name: dev.name,
@@ -49,7 +56,7 @@ impl DeviceServiceImpl {
             current_layout_id: dev.current_layout_id.map(|id| id.to_string()).unwrap_or_default(),
             current_layout_name: "".to_string(),
             canary_group_id: dev.canary_group_id.map(|id| id.to_string()).unwrap_or_default(),
-            is_online: dev.is_online,
+            is_online,
             last_heartbeat_at: dev.last_heartbeat_at.map(|t| t.to_rfc3339()).unwrap_or_default(),
             created_at: dev.created_at.to_rfc3339(),
             updated_at: dev.updated_at.to_rfc3339(),

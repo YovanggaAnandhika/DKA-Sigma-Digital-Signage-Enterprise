@@ -121,6 +121,13 @@ export function DisplayDetailProvider({
     } catch (_) {}
   };
 
+  const checkTrulyOnline = (dev: Device | null): boolean => {
+    if (!dev || !dev.isOnline) return false;
+    if (!dev.lastHeartbeatAt) return false;
+    const elapsed = Date.now() - new Date(dev.lastHeartbeatAt).getTime();
+    return elapsed >= 0 && elapsed <= 10000;
+  };
+
   const pollLiveData = async () => {
     if (!deviceId) return;
     try {
@@ -133,7 +140,7 @@ export function DisplayDetailProvider({
 
       if (updatedDevice) {
         setDevice(updatedDevice);
-        setIsLiveConnected(updatedDevice.isOnline);
+        setIsLiveConnected(checkTrulyOnline(updatedDevice));
       }
       if (updatedTelemetry) {
         setTelemetry(updatedTelemetry);
@@ -149,7 +156,7 @@ export function DisplayDetailProvider({
       setLoading(true);
       const data = await api.getDevice(deviceId);
       setDevice(data);
-      setIsLiveConnected(data.isOnline);
+      setIsLiveConnected(checkTrulyOnline(data));
 
       await Promise.allSettled([
         api.listPlaybackLogs({ deviceId, limit: 15 }).then((res) => setPlaybackLogs(res.items)),
@@ -176,10 +183,10 @@ export function DisplayDetailProvider({
   useEffect(() => {
     if (!deviceId) return;
 
-    // Polling berkala setiap 3 detik agar telemetri, heartbeat, screenshot & CPU/RAM selalu live
+    // Polling berkala setiap 1 detik agar telemetri, heartbeat, screenshot & status selalu real-time
     const pollTimer = setInterval(() => {
       pollLiveData();
-    }, 3000);
+    }, 1000);
 
     return () => clearInterval(pollTimer);
   }, [deviceId, timeRange]);

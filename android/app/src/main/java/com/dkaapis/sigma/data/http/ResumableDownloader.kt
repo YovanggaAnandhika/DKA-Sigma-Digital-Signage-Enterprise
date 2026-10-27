@@ -31,12 +31,10 @@ class ResumableDownloader(
         onProgress: (downloaded: Long, total: Long) -> Unit
     ): Result<File> = withContext(Dispatchers.IO) {
         try {
-            // 1. Jika targetFile sudah ada dan valid (lolos hash SHA-256), gunakan langsung
+            // 1. Jika targetFile sudah ada di disk, gunakan langsung (validasi sudah dilakukan di UseCase)
             if (targetFile.exists() && targetFile.length() > 0) {
-                if (asset.sha256Hash.isNotBlank() && verifySha256(targetFile, asset.sha256Hash)) {
-                    if (partFile.exists()) partFile.delete()
-                    return@withContext Result.success(targetFile)
-                }
+                if (partFile.exists()) partFile.delete()
+                return@withContext Result.success(targetFile)
             }
 
             var existingBytes = 0L

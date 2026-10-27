@@ -48,17 +48,25 @@ class PlayerSettingsDialog(
                     val displayMetrics = context.resources.displayMetrics
                     val isLandscape = displayMetrics.widthPixels > displayMetrics.heightPixels
                     val lp = bottomSheet.layoutParams
+                    val targetHeight = (displayMetrics.heightPixels * (if (isLandscape) 0.92f else 0.85f)).toInt()
                     if (isLandscape) {
                         val targetWidth = minOf(
                             displayMetrics.widthPixels - (48 * displayMetrics.density).toInt(),
-                            (560 * displayMetrics.density).toInt()
+                            (580 * displayMetrics.density).toInt()
                         )
                         lp.width = targetWidth
-                        if (lp is CoordinatorLayout.LayoutParams) {
-                            lp.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-                        }
-                        bottomSheet.layoutParams = lp
+                    } else {
+                        val targetWidth = minOf(
+                            displayMetrics.widthPixels - (32 * displayMetrics.density).toInt(),
+                            (480 * displayMetrics.density).toInt()
+                        )
+                        lp.width = targetWidth
                     }
+                    lp.height = targetHeight
+                    if (lp is CoordinatorLayout.LayoutParams) {
+                        lp.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                    }
+                    bottomSheet.layoutParams = lp
                 }
             }
             setOnDismissListener { activeDialog = null }

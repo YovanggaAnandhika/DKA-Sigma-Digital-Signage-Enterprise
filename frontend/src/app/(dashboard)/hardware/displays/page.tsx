@@ -31,6 +31,10 @@ export default function DisplaysPage() {
 
   useEffect(() => {
     loadData();
+    const timer = setInterval(() => {
+      loadData();
+    }, 1000);
+    return () => clearInterval(timer);
   }, [loadData]);
 
   // Realtime Fleet Observability via Server-Sent Events (SSE)
@@ -253,24 +257,31 @@ export default function DisplaysPage() {
                         >
                           MENUNGGU PERSETUJUAN
                         </span>
-                      ) : (
-                        <div
-                          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                          title={d.isOnline ? 'Online' : 'Offline'}
-                          aria-label={d.isOnline ? 'Online' : 'Offline'}
-                        >
-                          <span
-                            style={{
-                              width: '8px',
-                              height: '8px',
-                              borderRadius: '50%',
-                              backgroundColor: d.isOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
-                              boxShadow: d.isOnline ? '0 0 6px rgba(16, 185, 129, 0.5)' : 'none',
-                              display: 'inline-block',
-                            }}
-                          />
-                        </div>
-                      )}
+                      ) : (() => {
+                        const isTrulyOnline = Boolean(
+                          d.isOnline &&
+                          d.lastHeartbeatAt &&
+                          (Date.now() - new Date(d.lastHeartbeatAt).getTime() <= 10000)
+                        );
+                        return (
+                          <div
+                            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                            title={isTrulyOnline ? 'Online' : 'Offline'}
+                            aria-label={isTrulyOnline ? 'Online' : 'Offline'}
+                          >
+                            <span
+                              style={{
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                backgroundColor: isTrulyOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
+                                boxShadow: isTrulyOnline ? '0 0 6px rgba(16, 185, 129, 0.5)' : 'none',
+                                display: 'inline-block',
+                              }}
+                            />
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td>
                       {d.screenWidth + "x" + d.screenHeight} ({d.orientation})
