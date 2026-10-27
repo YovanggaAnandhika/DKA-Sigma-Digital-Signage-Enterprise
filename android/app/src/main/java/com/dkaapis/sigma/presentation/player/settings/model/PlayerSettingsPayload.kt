@@ -11,5 +11,7 @@ data class PlayerSettingsPayload(
     val onProgressUploadToggled: (Boolean) -> Unit = {},
     val isKioskModeEnabled: Boolean = false,
     val onKioskModeToggled: (Boolean) -> Unit = {},
+    val onScreenSleepRequested: () -> Unit = {},
+    val onExitAppRequested: () -> Unit = {},
     val onUnbindRequested: () -> Unit = {}
 )
