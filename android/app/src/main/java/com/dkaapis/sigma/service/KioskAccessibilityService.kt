@@ -4,24 +4,29 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import com.dkaapis.sigma.data.local.PlayerSettingsStorage
 import com.dkaapis.sigma.presentation.player.PlayerActivity
 
 /**
- * Layanan Aksesibilitas Kiosk untuk Google TV / Android TV.
- * Mengatasi pembatasan hardcoded Google TV Launcher (com.google.android.apps.tv.launcherx)
- * dengan mendeteksi kembalinya sistem ke launcher bawaan saat booting atau penekanan tombol Home,
- * lalu segera mengalihkan fokus kembali ke DKASigma Player.
+ * Layanan Aksesibilitas Kiosk untuk Google TV / Android TV (Opsional).
+ * Hanya berjalan apabila mode Kiosk diaktifkan oleh pengguna di Pengaturan Layar.
  */
 class KioskAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        if (!PlayerSettingsStorage(this).isKioskModeEnabled()) {
+            Log.i(TAG, "Mode Kiosk nonaktif di pengaturan. Menonaktifkan KioskAccessibilityService.")
+            disableSelf()
+            return
+        }
         Log.i(TAG, "KioskAccessibilityService aktif. Menjaga DKASigma aktif di Google TV.")
         launchPlayerIfNeeded()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null || event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        if (!PlayerSettingsStorage(this).isKioskModeEnabled()) return
         val pkgName = event.packageName?.toString() ?: return
 
         // Periksa apakah layar beralih ke launcher Google TV / Android TV

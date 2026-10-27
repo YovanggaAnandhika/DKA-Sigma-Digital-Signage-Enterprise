@@ -131,52 +131,66 @@
                     android:focusable="true" />
             </LinearLayout>
 
-            <!-- Google TV Kiosk / Accessibility Helper Card -->
+            <!-- Google TV Kiosk / Accessibility Helper Card (Opsional) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:layout_marginBottom="4dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
+                android:orientation="vertical"
                 android:background="@drawable/bg_input_field"
                 android:padding="14dp">
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:paddingEnd="12dp">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-                    <TextView
-                        android:layout_width="match_parent"
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="Autostart Google TV (Kiosk)"
-                        android:textColor="@color/sheet_text_primary"
-                        android:textSize="13sp"
-                        android:textStyle="bold" />
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:paddingEnd="12dp">
 
-                    <TextView
-                        android:layout_width="match_parent"
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Mode Kiosk &amp; Autostart (Opsional)"
+                            android:textColor="@color/sheet_text_primary"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Aktifkan agar player otomatis menyala saat TV boot &amp; mengunci tombol Home. Nonaktifkan agar bebas blokir Play Protect."
+                            android:textColor="@color/sheet_text_secondary"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchKioskMode"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Buka Aksesibilitas sistem untuk mengaktifkan otomatisasi buka DKASigma saat boot &amp; tombol Home."
-                        android:textColor="@color/sheet_text_secondary"
-                        android:textSize="11sp" />
+                        android:focusable="true" />
                 </LinearLayout>
 
                 <Button
                     android:id="@+id/btnOpenAccessibilitySettings"
-                    android:layout_width="wrap_content"
-                    android:layout_height="38dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="36dp"
+                    android:layout_marginTop="10dp"
                     android:background="@drawable/bg_btn_secondary"
                     app:backgroundTint="@null"
-                    android:text="Atur"
+                    android:text="Buka Pengaturan Aksesibilitas TV"
                     android:textAllCaps="false"
                     android:textColor="@color/sheet_btn_secondary_text"
                     android:textSize="12sp"
                     android:textStyle="bold"
+                    android:visibility="gone"
                     android:focusable="true" />
             </LinearLayout>
 

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.provider.Settings
 import android.view.Gravity
+import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.FrameLayout
@@ -86,7 +87,18 @@ class PlayerSettingsDialog(
             }
         }
 
-        dialog.findViewById<Button>(R.id.btnOpenAccessibilitySettings)?.setOnClickListener {
+        val btnAccessibility = dialog.findViewById<Button>(R.id.btnOpenAccessibilitySettings)
+        btnAccessibility?.visibility = if (payload.isKioskModeEnabled) View.VISIBLE else View.GONE
+
+        dialog.findViewById<SwitchCompat>(R.id.switchKioskMode)?.apply {
+            isChecked = payload.isKioskModeEnabled
+            setOnCheckedChangeListener { _, isChecked ->
+                payload.onKioskModeToggled(isChecked)
+                btnAccessibility?.visibility = if (isChecked) View.VISIBLE else View.GONE
+            }
+        }
+
+        btnAccessibility?.setOnClickListener {
             runCatching {
                 val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

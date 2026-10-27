@@ -9,5 +9,7 @@ data class PlayerSettingsPayload(
     val serverGrpcPort: Int = 50051,
     val isProgressUploadEnabled: Boolean = true,
     val onProgressUploadToggled: (Boolean) -> Unit = {},
+    val isKioskModeEnabled: Boolean = false,
+    val onKioskModeToggled: (Boolean) -> Unit = {},
     val onUnbindRequested: () -> Unit = {}
 )

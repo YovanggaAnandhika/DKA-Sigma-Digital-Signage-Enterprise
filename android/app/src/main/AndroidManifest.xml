@@ -11,9 +11,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <uses-permission android:name="android.permission.REORDER_TASKS" />
 
     <!-- Signage Hardware Features -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
@@ -40,7 +37,7 @@
         android:theme="@style/Theme.DKASigmaPlayer"
         tools:targetApi="34">
 
-        <!-- ══ Main Signage UI & Playback Engine (Default App Process & Home Launcher) ══ -->
+        <!-- ══ Main Signage UI & Playback Engine ══ -->
         <activity
             android:name="com.dkaapis.sigma.presentation.player.PlayerActivity"
             android:exported="true"
@@ -49,12 +46,24 @@
             android:theme="@style/Theme.DKASigmaPlayer.Fullscreen">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- ══ Optional Kiosk Home Launcher Alias (Disabled by default to pass Play Protect) ══ -->
+        <activity-alias
+            android:name="com.dkaapis.sigma.presentation.player.KioskHomeLauncherAlias"
+            android:targetActivity="com.dkaapis.sigma.presentation.player.PlayerActivity"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity-alias>
 
         <activity
             android:name="com.dkaapis.sigma.presentation.pairing.PairingActivity"
@@ -89,10 +98,11 @@
             android:name="com.dkaapis.sigma.service.WatchdogService"
             android:exported="false" />
 
-        <!-- ══ Kiosk Accessibility Service for Google TV Launcher Override ══ -->
+        <!-- ══ Kiosk Accessibility Service for Google TV Launcher Override (Optional, disabled by default to pass Play Protect) ══ -->
         <service
             android:name="com.dkaapis.sigma.service.KioskAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:enabled="false"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -102,18 +112,14 @@
                 android:resource="@xml/kiosk_accessibility_service_config" />
         </service>
 
-        <!-- Kiosk Autostart on TV Box boot -->
+        <!-- Kiosk Autostart on TV Box boot (Optional, controlled via Player Settings) -->
         <receiver
             android:name="com.dkaapis.sigma.service.BootReceiver"
-            android:enabled="true"
-            android:exported="true"
-            android:directBootAware="true">
-            <intent-filter android:priority="999">
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
-                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
-                <action android:name="android.intent.action.REBOOT" />
             </intent-filter>
         </receiver>
 

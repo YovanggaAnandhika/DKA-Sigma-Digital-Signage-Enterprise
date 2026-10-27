@@ -169,7 +169,9 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     private fun initDependencies() {
         tokenStorage = TokenStorage(this)
-        playerSettingsStorage = PlayerSettingsStorage(this)
+        playerSettingsStorage = PlayerSettingsStorage(this).apply {
+            applyKioskComponentsState()
+        }
         settingsDialog = PlayerSettingsDialog(this)
         swipeDetector = TwoFingerSwipeDetector(this) {
             openSettingsBottomSheet()
@@ -695,6 +697,10 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                 isProgressUploadEnabled = playerSettingsStorage.isProgressUploadEnabled(),
                 onProgressUploadToggled = { enabled ->
                     playerSettingsStorage.setProgressUploadEnabled(enabled)
+                },
+                isKioskModeEnabled = playerSettingsStorage.isKioskModeEnabled(),
+                onKioskModeToggled = { enabled ->
+                    playerSettingsStorage.setKioskModeEnabled(enabled)
                 },
                 onUnbindRequested = {
                     unbindDeviceAndExit()

@@ -6,12 +6,17 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import com.dkaapis.sigma.data.local.PlayerSettingsStorage
 import com.dkaapis.sigma.presentation.player.PlayerActivity
 
 class BootReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
+        if (!PlayerSettingsStorage(context).isKioskModeEnabled()) {
+            Log.d(TAG, "Autostart boot dilewati karena Mode Kiosk nonaktif.")
+            return
+        }
         Log.i(TAG, "Menerima broadcast autostart perangkat: $action. Menyiapkan peluncuran DKASigma Player...")
 
         val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
