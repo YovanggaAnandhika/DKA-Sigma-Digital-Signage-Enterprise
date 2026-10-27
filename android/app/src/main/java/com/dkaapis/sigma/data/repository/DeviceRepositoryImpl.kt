@@ -10,7 +10,6 @@ import com.dkaapis.sigma.domain.repository.DeviceRepository
 import com.dkaapis.sigma.domain.repository.HeartbeatResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import java.net.NetworkInterface
 import java.util.Collections
 import java.util.concurrent.TimeUnit
@@ -20,11 +19,6 @@ class DeviceRepositoryImpl(
     private val tokenStorage: TokenStorage,
     private val channelFactory: GrpcChannelFactory
 ) : DeviceRepository {
-
-    private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
-        .build()
 
     override suspend fun getLocalDeviceInfo(): DeviceInfo = withContext(Dispatchers.IO) {
         val wm = context.getSystemService(Context.WINDOW_SERVICE) as? android.view.WindowManager
