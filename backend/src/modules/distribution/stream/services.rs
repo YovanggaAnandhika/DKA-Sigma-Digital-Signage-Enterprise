@@ -48,21 +48,33 @@ impl StreamConnectionManager {
             created_at: Utc::now().to_rfc3339(),
         };
 
-        // Log to telemetry table
-        let _ = StreamRepository::log_command(pool, &command).await;
-
-        let map = self.active_displays.lock().await;
-        if dto.device_id.is_nil() {
-            for tx in map.values() {
-                let _ = tx.send(command.clone()).await;
+        let mut pushed_live = false;
+        {
+            let map = self.active_displays.lock().await;
+            if dto.device_id.is_nil() {
+                for tx in map.values() {
+                    if tx.try_send(command.clone()).is_ok() {
+                        pushed_live = true;
+                    }
+                }
+            } else if let Some(tx) = map.get(&dto.device_id) {
+                if tx.try_send(command.clone()).is_ok() {
+                    pushed_live = true;
+                }
             }
+        }
+
+        // Log ke tabel telemetri; jika sudah terkirim instan via live stream, tandai consumed=true
+        // agar tidak dieksekusi ganda saat polling heartbeat 3 detik berikutnya.
+        let _ = StreamRepository::log_command(pool, &command, pushed_live).await;
+
+        if dto.device_id.is_nil() {
             Ok(PushCommandResultDto {
                 success: true,
                 command_id: command.command_id,
                 message: "Command broadcasted to all live connected displays".into(),
             })
-        } else if let Some(tx) = map.get(&dto.device_id) {
-            let _ = tx.send(command.clone()).await;
+        } else if pushed_live {
             Ok(PushCommandResultDto {
                 success: true,
                 command_id: command.command_id,

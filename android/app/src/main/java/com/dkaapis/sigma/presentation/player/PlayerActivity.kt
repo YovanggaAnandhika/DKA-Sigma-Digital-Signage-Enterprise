@@ -512,11 +512,9 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             }
             isScreenSleepActive = sleep
 
-            telemetryManager.handleDisplayPowerCec(turnOn = !sleep)
-
             val lp = window.attributes
             if (sleep) {
-                lp.screenBrightness = 0.0f // Redupkan backlight ke titik terendah OS
+                lp.screenBrightness = 0.0f // Redupkan backlight ke titik terendah OS secara instan
                 window.attributes = lp
                 sleepBlackoutOverlay.visibility = View.VISIBLE
                 sleepBlackoutOverlay.bringToFront()
@@ -532,6 +530,11 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                     zoneManager.resumePlayback()
                     WatchdogService.setPlaybackActive(this, true)
                 }
+            }
+
+            // Kirim sinyal HDMI-CEC di background thread agar refleksi/IPC binder tidak memblokir UI thread
+            lifecycleScope.launch(Dispatchers.IO) {
+                telemetryManager.handleDisplayPowerCec(turnOn = !sleep)
             }
         }
     }

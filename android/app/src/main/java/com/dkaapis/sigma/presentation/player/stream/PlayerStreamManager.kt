@@ -72,10 +72,10 @@ class PlayerStreamManager(
                     // Emisi pesan inisial untuk mendaftarkan koneksi di server
                     clientMessageFlow.emit(createPing())
 
-                    // Background keepalive ping berkala setiap 20 detik (timeout socket server 45 detik)
+                    // Background keepalive ping berkala setiap 10 detik (timeout socket server 45 detik)
                     val pingJob = launch {
                         while (isActive) {
-                            delay(20_000L)
+                            delay(10_000L)
                             clientMessageFlow.emit(createPing())
                         }
                     }
@@ -93,9 +93,9 @@ class PlayerStreamManager(
                         pingJob.cancel()
                     }
                 }.onFailure { err ->
-                    Log.w(TAG, "gRPC DisplayStream disconnected: ${err.message}, reconnecting in 3s...")
+                    Log.w(TAG, "gRPC DisplayStream disconnected: ${err.message}, reconnecting in 1s...")
                 }
-                delay(3000)
+                delay(1000)
             }
         }
     }
