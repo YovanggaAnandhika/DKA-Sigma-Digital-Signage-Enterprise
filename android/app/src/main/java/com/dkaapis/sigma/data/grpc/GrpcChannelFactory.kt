@@ -21,7 +21,7 @@ class GrpcChannelFactory(
         private fun resolveHost(context: Context): String = try {
             com.dkaapis.sigma.data.local.ServerConfig.getHost(context)
         } catch (_: Exception) {
-            "192.168.1.46"
+            "10.20.30.64"
         }
 
         private fun resolvePort(context: Context): Int = try {

@@ -191,7 +191,7 @@
             android:paddingEnd="16dp"
             android:paddingTop="6dp"
             android:paddingBottom="6dp"
-            android:text="Server: 10.20.30.63:50051 • Geser 2 jari untuk ubah"
+            android:text="Server: 10.20.30.64:50051 • Geser 2 jari untuk ubah"
             android:textColor="@color/sheet_text_muted"
             android:textSize="12sp" />
 

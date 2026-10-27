@@ -246,7 +246,7 @@ class PairingActivity : AppCompatActivity() {
                 .removePrefix("http://")
                 .removePrefix("https://")
                 .trimEnd('/')
-            val host = if (rawHost.isEmpty()) "192.168.1.46" else rawHost
+            val host = if (rawHost.isEmpty()) "10.20.30.64" else rawHost
             val port = etGrpcPort.text.toString().toIntOrNull() ?: 50051
             tvPreview.text = "Server Target: $host:$port"
         }
