@@ -60,6 +60,10 @@ class PlayerViewModel(
         syncManifest()
     }
 
+    fun resetActiveManifest() {
+        activeManifest = null
+    }
+
     fun syncManifest(force: Boolean = false) {
         if (!force && syncJob?.isActive == true) {
             return
@@ -99,7 +103,7 @@ class PlayerViewModel(
                                     _uiState.value = PlayerUiState.Playing(downloadState.manifest)
                                 }
                                 is DownloadState.Error -> {
-                                    if (activeManifest == null) {
+                                    if (activeManifest == null || force) {
                                         _uiState.value = PlayerUiState.Error(downloadState.message)
                                     } else {
                                         android.util.Log.w("PlayerViewModel", "Background sync error: ${downloadState.message}, continuing active playback.")
@@ -108,7 +112,7 @@ class PlayerViewModel(
                             }
                         }
                     } else {
-                        if (activeManifest == null) {
+                        if (activeManifest == null || force) {
                             _uiState.value = PlayerUiState.Error("Manifest kosong dari server")
                         }
                     }
@@ -116,7 +120,7 @@ class PlayerViewModel(
                     val err = result.exceptionOrNull()
                     if (!registerAndPairUseCase.isAlreadyPaired()) {
                         _uiState.value = PlayerUiState.NotPaired
-                    } else if (activeManifest == null) {
+                    } else if (activeManifest == null || force) {
                         _uiState.value = PlayerUiState.Error(err?.message ?: "Gagal sinkronisasi manifest")
                     } else {
                         android.util.Log.w("PlayerViewModel", "Manifest sync failed: ${err?.message}, continuing active playback.")
@@ -124,7 +128,7 @@ class PlayerViewModel(
                 }
             } catch (e: Exception) {
                 if (e !is CancellationException) {
-                    if (activeManifest == null) {
+                    if (activeManifest == null || force) {
                         _uiState.value = PlayerUiState.Error(e.message ?: "Gagal sinkronisasi")
                     } else {
                         android.util.Log.w("PlayerViewModel", "Sync exception: ${e.message}, continuing active playback.")
