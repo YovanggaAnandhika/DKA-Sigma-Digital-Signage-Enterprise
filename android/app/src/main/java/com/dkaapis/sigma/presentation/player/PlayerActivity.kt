@@ -106,6 +106,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private var lastDownloadProgressReportTime: Long = 0L
     private var hasActivePlayback: Boolean = false
     private var screenWakeLock: PowerManager.WakeLock? = null
+    private var cpuPartialWakeLock: PowerManager.WakeLock? = null
     private var isScreenSleepActive: Boolean = false
     private var manualSleepOverride: Boolean? = null
     private var activePowerSchedule: PowerSchedule? = null
@@ -156,11 +157,15 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     @Suppress("DEPRECATION")
     private fun acquireScreenWakeLock() {
         runCatching {
-            if (screenWakeLock?.isHeld == true) return
             val pm = getSystemService(POWER_SERVICE) as? PowerManager ?: return
+            if (cpuPartialWakeLock?.isHeld == true) {
+                cpuPartialWakeLock?.release()
+                cpuPartialWakeLock = null
+            }
+            if (screenWakeLock?.isHeld == true) return
             // shortcut: SCREEN_BRIGHT_WAKE_LOCK deprecated in API 13, tapi tetap dibutuhkan pada firmware TV (Polytron/MediaTek/Realtek) yang mengabaikan FLAG_KEEP_SCREEN_ON saat idle lama
             screenWakeLock = pm.newWakeLock(
-                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE,
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
                 "DKASigma:SignageScreenWakeLock"
             ).apply {
                 setReferenceCounted(false)
@@ -175,6 +180,26 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                 screenWakeLock?.release()
             }
             screenWakeLock = null
+        }
+        runCatching {
+            if (cpuPartialWakeLock?.isHeld == true) {
+                cpuPartialWakeLock?.release()
+            }
+            cpuPartialWakeLock = null
+        }
+    }
+
+    private fun acquireCpuOnlyWakeLock() {
+        runCatching {
+            if (cpuPartialWakeLock?.isHeld == true) return
+            val pm = getSystemService(POWER_SERVICE) as? PowerManager ?: return
+            cpuPartialWakeLock = pm.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "DKASigma:SignageCpuSleepWakeLock"
+            ).apply {
+                setReferenceCounted(false)
+                acquire()
+            }
         }
     }
 
@@ -514,6 +539,14 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
             val lp = window.attributes
             if (sleep) {
+                // Lepas semua pengunci layar (WakeLock, FLAG_KEEP_SCREEN_ON, decorView.keepScreenOn)
+                // agar panel backlight TV diizinkan mati penuh oleh driver display/SurfaceControl/CEC
+                releaseScreenWakeLock()
+                acquireCpuOnlyWakeLock()
+                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                window.decorView.keepScreenOn = false
+                canvasLayout.keepScreenOn = false
+
                 lp.screenBrightness = 0.0f // Redupkan backlight ke titik terendah OS secara instan
                 window.attributes = lp
                 sleepBlackoutOverlay.visibility = View.VISIBLE
@@ -522,6 +555,9 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                 zoneManager.pausePlayback()
                 WatchdogService.setPlaybackActive(this, false)
             } else {
+                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                window.decorView.keepScreenOn = true
+                canvasLayout.keepScreenOn = true
                 lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
                 window.attributes = lp
                 sleepBlackoutOverlay.visibility = View.GONE
@@ -532,7 +568,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                 }
             }
 
-            // Kirim sinyal HDMI-CEC di background thread agar refleksi/IPC binder tidak memblokir UI thread
+            // Kirim sinyal power off/on panel (SurfaceControl / sysfs bl_power / HDMI-CEC) di background thread
             lifecycleScope.launch(Dispatchers.IO) {
                 telemetryManager.handleDisplayPowerCec(turnOn = !sleep)
             }

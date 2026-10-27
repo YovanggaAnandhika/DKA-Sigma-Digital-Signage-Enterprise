@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DeviceServiceClient } from '@/lib/api/hardware/v1/device/device_grpc_pb';
 import { HeartbeatRequest } from '@/lib/api/hardware/v1/device/device.common_pb';
-import { getGrpcHost, getGrpcCredentials } from '@/lib/core/grpcClient';
+import { getGrpcClient } from '@/lib/core/grpcClient';
 import * as grpc from '@grpc/grpc-js';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const client = new DeviceServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = getGrpcClient(DeviceServiceClient);
 
     const request = new HeartbeatRequest();
     if (body.deviceId) request.setDeviceId(body.deviceId);

@@ -31,9 +31,16 @@ export default function DisplaysPage() {
 
   useEffect(() => {
     loadData();
-    const timer = setInterval(() => {
-      loadData();
-    }, 1000);
+    let isFetching = false;
+    const timer = setInterval(async () => {
+      if (isFetching) return;
+      isFetching = true;
+      try {
+        await loadData();
+      } finally {
+        isFetching = false;
+      }
+    }, 3000);
     return () => clearInterval(timer);
   }, [loadData]);
 

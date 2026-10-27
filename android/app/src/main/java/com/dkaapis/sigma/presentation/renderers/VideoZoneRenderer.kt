@@ -246,11 +246,15 @@ class VideoZoneRenderer(
     }
 
     fun pause() {
-        runCatching { exoPlayer?.pause() }
+        runCatching {
+            playerView?.keepScreenOn = false
+            exoPlayer?.pause()
+        }
     }
 
     fun resume() {
         runCatching {
+            playerView?.keepScreenOn = true
             exoPlayer?.let { player ->
                 if (player.playbackState == Player.STATE_IDLE || player.playbackState == Player.STATE_ENDED) {
                     player.prepare()

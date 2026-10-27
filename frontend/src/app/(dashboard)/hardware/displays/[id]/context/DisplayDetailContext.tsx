@@ -183,10 +183,17 @@ export function DisplayDetailProvider({
   useEffect(() => {
     if (!deviceId) return;
 
-    // Polling berkala setiap 1 detik agar telemetri, heartbeat, screenshot & status selalu real-time
-    const pollTimer = setInterval(() => {
-      pollLiveData();
-    }, 1000);
+    let isPolling = false;
+    // Polling berkala setiap 3 detik dengan anti-overlap agar tidak menumpuk request gRPC
+    const pollTimer = setInterval(async () => {
+      if (isPolling) return;
+      isPolling = true;
+      try {
+        await pollLiveData();
+      } finally {
+        isPolling = false;
+      }
+    }, 3000);
 
     return () => clearInterval(pollTimer);
   }, [deviceId, timeRange]);

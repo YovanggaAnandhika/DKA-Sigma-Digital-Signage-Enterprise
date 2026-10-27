@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DeviceServiceClient } from '@/lib/api/hardware/v1/device/device_grpc_pb';
 import { IngestDeviceAnalyticsRequest, AnalyticsSnapshot } from '@/lib/api/hardware/v1/device/device.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 import { deviceStreamHub } from '@/lib/core/deviceStreamHub';
 
@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const token = getTokenFromRequest(req);
-    const client = new DeviceServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = getGrpcClient(DeviceServiceClient);
 
     const deviceId = body.deviceId || body.device_id;
     if (!deviceId) {

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { StreamServiceClient } from '@/lib/api/distribution/v1/stream/stream_grpc_pb';
 import { PushCommandRequest, ServerCommandType } from '@/lib/api/distribution/v1/stream/stream.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const token = getTokenFromRequest(req);
-    const client = new StreamServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = getGrpcClient(StreamServiceClient);
     const request = new PushCommandRequest();
 
     if (body.deviceId || body.device_id) {

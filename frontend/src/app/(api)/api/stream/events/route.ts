@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { DeviceServiceClient } from '@/lib/api/hardware/v1/device/device_grpc_pb';
 import { ListDevicesRequest } from '@/lib/api/hardware/v1/device/device.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   const encoder = new TextEncoder();
   const token = getTokenFromRequest(req);
-  const client = new DeviceServiceClient(getGrpcHost(), getGrpcCredentials());
+  const client = getGrpcClient(DeviceServiceClient);
 
   const stream = new ReadableStream({
     start(controller) {
@@ -21,12 +21,15 @@ export async function GET(req: NextRequest) {
         encoder.encode(`event: connected\ndata: ${JSON.stringify({ status: 'connected', timestamp: Date.now() })}\n\n`)
       );
 
-      // 2. Poll fleet status every 4 seconds and push SSE events
+      // 2. Poll fleet status every 3 seconds and push SSE events
+      let isRequesting = false;
       const interval = setInterval(() => {
-        if (!token) return;
+        if (!token || isRequesting) return;
+        isRequesting = true;
         const request = new ListDevicesRequest();
 
         client.listDevices(request, getGrpcMetadata(token), (err: any, response: any) => {
+          isRequesting = false;
           if (err || !response) {
             if (err?.code === 16) {
               clearInterval(interval);
@@ -51,7 +54,7 @@ export async function GET(req: NextRequest) {
             clearInterval(interval);
           }
         });
-      }, 1000);
+      }, 3000);
 
       req.signal.addEventListener('abort', () => {
         clearInterval(interval);
