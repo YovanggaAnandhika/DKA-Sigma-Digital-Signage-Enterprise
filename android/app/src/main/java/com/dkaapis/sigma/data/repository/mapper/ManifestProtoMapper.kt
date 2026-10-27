@@ -15,7 +15,7 @@ import signage.distribution.v1.manifest.ManifestCommon
  */
 class ManifestProtoMapper {
 
-    fun mapToDomain(proto: ManifestCommon.CompiledManifest, baseUrl: String): Manifest = with(proto) {
+    fun mapToDomain(proto: ManifestCommon.CompiledManifest, baseUrl: String = ""): Manifest = with(proto) {
         val trimmedBase = baseUrl.trimEnd('/')
         Manifest(
             manifestId = manifestId,
@@ -76,9 +76,11 @@ class ManifestProtoMapper {
                 )
             },
             requiredAssets = requiredAssetsList.mapIndexed { i, asset ->
+                val rawUrl = asset.url
+                val resolvedUrl = if (trimmedBase.isNotEmpty() && rawUrl.startsWith("/")) "$trimmedBase$rawUrl" else rawUrl
                 MediaAsset(
                     mediaId = asset.mediaId,
-                    url = if (asset.url.startsWith("/")) "$trimmedBase${asset.url}" else asset.url,
+                    url = resolvedUrl,
                     sha256Hash = asset.sha256Hash,
                     fileSizeBytes = asset.fileSizeBytes,
                     localFilename = asset.localFilename.ifEmpty { "media_$i" },

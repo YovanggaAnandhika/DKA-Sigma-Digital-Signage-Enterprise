@@ -16,7 +16,7 @@ import org.json.JSONObject
  */
 class ManifestJsonDeserializer {
 
-    fun parse(root: JSONObject, baseUrl: String): Manifest = with(root) {
+    fun parse(root: JSONObject, baseUrl: String = ""): Manifest = with(root) {
         val layout = optJSONObject("layout") ?: JSONObject()
         val canvasW = layout.optInt("canvasWidth", optInt("canvasWidth", 1920))
         val canvasH = layout.optInt("canvasHeight", optInt("canvasHeight", 1080))
@@ -131,15 +131,16 @@ class ManifestJsonDeserializer {
         }.toMap()
     }
 
-    private fun parseAssets(arr: JSONArray?, baseUrl: String): List<MediaAsset> {
+    private fun parseAssets(arr: JSONArray?, baseUrl: String = ""): List<MediaAsset> {
         if (arr == null) return emptyList()
         val trimmedBase = baseUrl.trimEnd('/')
         return (0 until arr.length()).map { i ->
             val a = arr.getJSONObject(i)
-            val url = a.optString("url", "").let { if (it.startsWith("/")) "$trimmedBase$it" else it }
+            val rawUrl = a.optString("url", "")
+            val resolvedUrl = if (trimmedBase.isNotEmpty() && rawUrl.startsWith("/")) "$trimmedBase$rawUrl" else rawUrl
             MediaAsset(
                 mediaId = a.optString("mediaId"),
-                url = url,
+                url = resolvedUrl,
                 sha256Hash = a.optString("sha256Hash"),
                 fileSizeBytes = a.optLong("fileSizeBytes", 0L),
                 localFilename = a.optString("localFilename", "media_$i"),

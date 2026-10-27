@@ -1,6 +1,7 @@
 package com.dkaapis.sigma.data.repository
 
-import com.dkaapis.sigma.data.http.ResumableDownloader
+import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
+import com.dkaapis.sigma.data.grpc.GrpcMediaDownloader
 import com.dkaapis.sigma.data.local.MediaDiskCache
 import com.dkaapis.sigma.domain.model.MediaAsset
 import com.dkaapis.sigma.domain.repository.MediaStorageRepository
@@ -10,8 +11,13 @@ import java.io.File
 
 class MediaStorageRepositoryImpl(
     private val diskCache: MediaDiskCache,
-    private val downloader: ResumableDownloader = ResumableDownloader()
+    private val downloader: GrpcMediaDownloader
 ) : MediaStorageRepository {
+
+    constructor(diskCache: MediaDiskCache, channelFactory: GrpcChannelFactory) : this(
+        diskCache,
+        GrpcMediaDownloader(channelFactory)
+    )
 
     override fun isAssetCachedAndValid(asset: MediaAsset): Boolean {
         val file = diskCache.getAssetFile(asset.mediaId)

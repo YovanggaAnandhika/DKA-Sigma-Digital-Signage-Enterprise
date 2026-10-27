@@ -1,34 +1,44 @@
 package com.dkaapis.sigma.presentation.player.stream
 
 import android.util.Log
+import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
+import com.dkaapis.sigma.data.local.TokenStorage
 import com.dkaapis.sigma.presentation.player.stream.model.QueueSyncStatePayload
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import org.json.JSONObject
+import signage.distribution.v1.stream.StreamCommon
+import signage.distribution.v1.stream.StreamServiceGrpcKt
 
 /**
- * Orkestrator Aliran Data Realtime (SSE) untuk Signage Player:
- * Mengkoordinasikan koneksi event stream, rekonsiliasi state antrean,
- * dan pengiriman event balik (touch / progress) ke server.
+ * Orkestrator Aliran Data Realtime gRPC Murni (DisplayStream):
+ * Mengkoordinasikan stream dua arah port 50051 antara server gRPC dan Android Player,
+ * rekonsiliasi state antrean via gRPC, dan pengiriman event balik (touch/progress).
  */
 class PlayerStreamManager(
     private val scope: CoroutineScope,
-    private val httpClient: OkHttpClient,
+    private val channelFactory: GrpcChannelFactory,
+    private val tokenStorage: TokenStorage,
     private val listener: OnDeviceEventListener
 ) {
     private val eventParser = DeviceSseEventParser()
-    private val queueSyncHelper = QueueSyncHelper(httpClient)
-    private val touchBroadcaster = PlayerTouchBroadcaster(httpClient)
+    private val queueSyncHelper = QueueSyncHelper(channelFactory)
+    private val touchBroadcaster = PlayerTouchBroadcaster(channelFactory)
     private var streamJob: Job? = null
 
+    // Outgoing client stream channel for DisplayStream
+    private val clientMessageFlow = MutableSharedFlow<StreamCommon.StreamClientMessage>(
+        extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
     fun startStream(
-        baseUrl: String,
         deviceId: String,
         onConnected: suspend () -> Unit
     ) {
@@ -38,60 +48,83 @@ class PlayerStreamManager(
         streamJob = scope.launch(Dispatchers.IO) {
             while (isActive) {
                 runCatching {
-                    val request = Request.Builder()
-                        .url("$baseUrl/api/stream/device?deviceId=$deviceId")
-                        .addHeader("Accept", "text/event-stream")
+                    Log.i(TAG, "Membuka gRPC DisplayStream dua arah untuk perangkat $deviceId...")
+                    val channel = channelFactory.getChannel()
+                    val stub = StreamServiceGrpcKt.StreamServiceCoroutineStub(channel)
+
+                    val deviceToken = tokenStorage.getDeviceToken().orEmpty()
+
+                    // Emisi pesan inisial untuk mendaftarkan koneksi di server
+                    val initialPing = StreamCommon.StreamClientMessage.newBuilder()
+                        .setDeviceId(deviceId)
+                        .setDeviceToken(deviceToken)
+                        .setTimestamp(System.currentTimeMillis())
+                        .setPing(
+                            StreamCommon.HeartbeatPing.newBuilder()
+                                .setMemoryPercent(30)
+                                .setStorageFreeBytes(1024L * 1024L * 1024L)
+                                .build()
+                        )
                         .build()
 
-                    httpClient.newCall(request).execute().use { response ->
-                        if (response.isSuccessful) {
-                            onConnected()
+                    clientMessageFlow.tryEmit(initialPing)
 
-                            response.body?.byteStream()?.bufferedReader()?.useLines { lines ->
-                                for (line in lines) {
-                                    if (!isActive) break
-                                    if (line.startsWith("data: ")) {
-                                        val jsonStr = line.substring(6).trim()
-                                        runCatching {
-                                            val data = JSONObject(jsonStr)
-                                            eventParser.parseAndDispatch(data, listener)
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                    // Panggil RPC streaming dua arah
+                    val responseFlow = stub.displayStream(clientMessageFlow)
+                    onConnected()
+
+                    responseFlow.collect { serverMsg ->
+                        if (!isActive) return@collect
+                        handleServerMessage(serverMsg)
                     }
                 }.onFailure { err ->
-                    Log.w(TAG, "SSE Stream disconnected: ${err.message}, reconnecting in 3s...")
+                    Log.w(TAG, "gRPC DisplayStream disconnected: ${err.message}, reconnecting in 3s...")
                 }
                 delay(3000)
             }
         }
     }
 
+    private fun handleServerMessage(msg: StreamCommon.StreamServerMessage) {
+        when (msg.commandType) {
+            StreamCommon.ServerCommandType.COMMAND_RELOAD_MANIFEST -> listener.onReloadManifest()
+            StreamCommon.ServerCommandType.COMMAND_CAPTURE_SCREENSHOT -> listener.onCaptureScreenshot()
+            StreamCommon.ServerCommandType.COMMAND_REBOOT_PLAYER -> listener.onReboot()
+            StreamCommon.ServerCommandType.COMMAND_CLEAR_CACHE -> listener.onClearCache()
+            else -> {
+                // Parse payload_json jika ada (e.g. CALL_QUEUE, UNPAIR, RESET_QUEUE, dll)
+                if (msg.payloadJson.isNotBlank()) {
+                    runCatching {
+                        val json = JSONObject(msg.payloadJson)
+                        eventParser.parseAndDispatch(json, listener)
+                    }.onFailure { e ->
+                        Log.w(TAG, "Gagal mengurai payload JSON server: ${e.message}")
+                    }
+                }
+            }
+        }
+    }
+
     suspend fun syncQueueOnReconnect(
-        baseUrl: String,
         queueDisplayId: String,
         activeCounterName: String,
         currentJson: String?
     ): QueueSyncStatePayload? {
-        return queueSyncHelper.syncQueueState(baseUrl, queueDisplayId, activeCounterName, currentJson)
+        return queueSyncHelper.syncQueueState(queueDisplayId, activeCounterName, currentJson)
     }
 
     fun broadcastTouch(
-        baseUrl: String,
         deviceId: String,
         queueId: String,
         ticketNum: String,
         counterNm: String
     ) {
         scope.launch {
-            touchBroadcaster.broadcastQueueTouch(baseUrl, deviceId, queueId, ticketNum, counterNm)
+            touchBroadcaster.broadcastQueueTouch(deviceId, queueId, ticketNum, counterNm)
         }
     }
 
     fun broadcastDownloadProgress(
-        baseUrl: String,
         deviceId: String,
         assetIndex: Int,
         totalAssets: Int,
@@ -102,14 +135,14 @@ class PlayerStreamManager(
     ) {
         scope.launch {
             touchBroadcaster.broadcastDownloadProgress(
-                baseUrl, deviceId, assetIndex, totalAssets, progressPercent, downloadedBytes, totalBytes, fileName
+                deviceId, assetIndex, totalAssets, progressPercent, downloadedBytes, totalBytes, fileName
             )
         }
     }
 
-    fun broadcastDownloadComplete(baseUrl: String, deviceId: String) {
+    fun broadcastDownloadComplete(deviceId: String) {
         scope.launch {
-            touchBroadcaster.broadcastDownloadComplete(baseUrl, deviceId)
+            touchBroadcaster.broadcastDownloadComplete(deviceId)
         }
     }
 

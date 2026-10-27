@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
 import com.dkaapis.sigma.data.local.ManifestStorage
-import com.dkaapis.sigma.data.local.ServerConfig
 import com.dkaapis.sigma.data.repository.mapper.ManifestJsonDeserializer
 import com.dkaapis.sigma.data.repository.mapper.ManifestJsonSerializer
 import com.dkaapis.sigma.data.repository.mapper.ManifestProtoMapper
@@ -43,8 +42,7 @@ class ManifestRepositoryImpl(
             when {
                 response.isUpToDate -> getLocalCachedManifest()
                 response.hasManifest() -> {
-                    val baseUrl = ServerConfig.getHttpBaseUrl(context)
-                    val parsed = protoMapper.mapToDomain(response.manifest, baseUrl)
+                    val parsed = protoMapper.mapToDomain(response.manifest)
                     val json = jsonSerializer.serialize(parsed)
                     manifestStorage.saveManifest(json)
                     parsed
@@ -60,8 +58,7 @@ class ManifestRepositoryImpl(
     override suspend fun getLocalCachedManifest(): Manifest? = withContext(Dispatchers.IO) {
         val json = manifestStorage.getActiveManifestJson() ?: return@withContext null
         runCatching {
-            val baseUrl = ServerConfig.getHttpBaseUrl(context)
-            jsonDeserializer.parse(JSONObject(json), baseUrl)
+            jsonDeserializer.parse(JSONObject(json))
         }.getOrNull()
     }
 

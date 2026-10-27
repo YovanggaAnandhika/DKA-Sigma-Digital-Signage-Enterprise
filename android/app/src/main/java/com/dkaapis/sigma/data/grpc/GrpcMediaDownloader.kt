@@ -1,29 +1,27 @@
-package com.dkaapis.sigma.data.http
+package com.dkaapis.sigma.data.grpc
 
 import android.os.Build
 import android.util.Log
 import com.dkaapis.sigma.domain.model.MediaAsset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import signage.studio.v1.media.MediaCommon
+import signage.studio.v1.media.MediaServiceGrpcKt
 import java.io.File
-import java.io.FileInputStream
 import java.io.RandomAccessFile
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
-import java.security.MessageDigest
-import java.util.concurrent.TimeUnit
 
-class ResumableDownloader(
-    private val client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
-        .writeTimeout(15, TimeUnit.SECONDS)
-        .retryOnConnectionFailure(true)
-        .build()
+/**
+ * Pengunduh berkas media berbasis gRPC murni (StreamMediaFile):
+ * - Menggunakan port 50051 (StreamMediaFile RPC) tanpa port HTTP 80
+ * - Mendukung resumable range download dengan start_byte offset
+ * - Streaming chunk 256KB langsung ditulis ke disk .part file
+ * - Multi-tier move strategi (.part -> file final)
+ */
+class GrpcMediaDownloader(
+    private val channelFactory: GrpcChannelFactory
 ) {
-
     suspend fun download(
         asset: MediaAsset,
         partFile: File,
@@ -31,7 +29,7 @@ class ResumableDownloader(
         onProgress: (downloaded: Long, total: Long) -> Unit
     ): Result<File> = withContext(Dispatchers.IO) {
         try {
-            // 1. Jika targetFile sudah ada di disk, gunakan langsung (validasi sudah dilakukan di UseCase)
+            // 1. Jika targetFile sudah ada di disk, gunakan langsung
             if (targetFile.exists() && targetFile.length() > 0) {
                 if (partFile.exists()) partFile.delete()
                 return@withContext Result.success(targetFile)
@@ -42,38 +40,46 @@ class ResumableDownloader(
                 existingBytes = partFile.length()
             }
 
-            val requestBuilder = Request.Builder().url(asset.url)
-            if (existingBytes > 0) {
-                requestBuilder.header("Range", "bytes=$existingBytes-")
+            val channel = channelFactory.getChannel()
+            val stub = MediaServiceGrpcKt.MediaServiceCoroutineStub(channel)
+
+            // Tentukan nama file yang diminta ke backend
+            val filenameToRequest = when {
+                asset.localFilename.isNotBlank() && !asset.localFilename.startsWith("media_") -> asset.localFilename
+                asset.url.isNotBlank() -> asset.url.substringAfterLast('/')
+                else -> asset.mediaId
             }
 
-            val response = client.newCall(requestBuilder.build()).execute()
-            if (!response.isSuccessful && response.code != 206) {
-                // If range request is not satisfiable (e.g. file changed), restart from 0
-                if (response.code == 416) {
-                    partFile.delete()
-                    return@withContext download(asset, partFile, targetFile, onProgress)
-                }
-                return@withContext Result.failure(Exception("HTTP error code: ${response.code}"))
-            }
+            Log.i(TAG, "Requesting gRPC media stream for '$filenameToRequest' (start_byte=$existingBytes, targetSize=${asset.fileSizeBytes})")
 
-            val body = response.body ?: return@withContext Result.failure(Exception("Empty body"))
-            val contentLength = body.contentLength()
-            val totalBytes = if (response.code == 206) existingBytes + contentLength else contentLength
+            val request = MediaCommon.StreamMediaFileRequest.newBuilder()
+                .setFilename(filenameToRequest)
+                .setStartByte(existingBytes)
+                .setEndByte(-1L)
+                .build()
+
+            var totalBytes = if (asset.fileSizeBytes > 0) asset.fileSizeBytes else existingBytes
+            var currentBytes = existingBytes
+            var lastProgressEmitTime = 0L
 
             RandomAccessFile(partFile, "rw").use { randomAccess ->
-                randomAccess.seek(existingBytes)
+                if (existingBytes > 0) {
+                    randomAccess.seek(existingBytes)
+                }
 
-                val buffer = ByteArray(65536)
-                var bytesRead: Int
-                var currentBytes = existingBytes
-                val inputStream = body.byteStream()
-                var lastProgressEmitTime = 0L
+                stub.streamMediaFile(request).collect { response ->
+                    if (response.errorMessage.isNotEmpty()) {
+                        throw Exception("gRPC StreamMediaFile error: ${response.errorMessage}")
+                    }
 
-                inputStream.use { stream ->
-                    while (stream.read(buffer).also { bytesRead = it } != -1) {
-                        randomAccess.write(buffer, 0, bytesRead)
-                        currentBytes += bytesRead
+                    if (response.totalSize > 0) {
+                        totalBytes = response.totalSize
+                    }
+
+                    val chunk = response.chunkData.toByteArray()
+                    if (chunk.isNotEmpty()) {
+                        randomAccess.write(chunk)
+                        currentBytes += chunk.size
 
                         val now = System.currentTimeMillis()
                         if (now - lastProgressEmitTime >= 100L || currentBytes >= totalBytes) {
@@ -82,21 +88,24 @@ class ResumableDownloader(
                         }
                     }
                 }
-                onProgress(currentBytes, totalBytes)
 
                 try {
                     randomAccess.fd.sync()
                 } catch (_: Exception) {}
             }
 
-            // Download completed, pindahkan .part ke targetFile dengan strategi multi-tier
+            onProgress(currentBytes, totalBytes)
+
+            // Pindahkan file .part ke targetFile dengan multi-tier fallback
             val moveSuccess = movePartToTarget(partFile, targetFile)
             if (moveSuccess && targetFile.exists() && targetFile.length() > 0) {
+                Log.i(TAG, "Download gRPC sukses untuk $filenameToRequest (${targetFile.length()} bytes)")
                 Result.success(targetFile)
             } else {
-                Result.failure(Exception("Gagal memindahkan file .part ke target"))
+                Result.failure(Exception("Gagal memindahkan berkas .part ke target ($filenameToRequest)"))
             }
         } catch (e: Exception) {
+            Log.e(TAG, "Gagal mengunduh media via gRPC: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -124,7 +133,7 @@ class ResumableDownloader(
                     return true
                 }
             } catch (e: Exception) {
-                Log.w("ResumableDownloader", "Files.move failed: ${e.message}")
+                Log.w(TAG, "Files.move failed: ${e.message}")
             }
         }
 
@@ -139,26 +148,13 @@ class ResumableDownloader(
             partFile.delete()
             return targetFile.exists() && targetFile.length() > 0
         } catch (e: Exception) {
-            Log.e("ResumableDownloader", "Stream copy fallback failed: ${e.message}", e)
+            Log.e(TAG, "Stream copy fallback failed: ${e.message}", e)
         }
 
         return false
     }
 
-    private fun verifySha256(file: File, expectedHash: String): Boolean {
-        return try {
-            val digest = MessageDigest.getInstance("SHA-256")
-            FileInputStream(file).use { fis ->
-                val buffer = ByteArray(65536)
-                var bytesRead: Int
-                while (fis.read(buffer).also { bytesRead = it } != -1) {
-                    digest.update(buffer, 0, bytesRead)
-                }
-            }
-            val computed = digest.digest().joinToString("") { "%02x".format(it) }
-            computed.equals(expectedHash.trim(), ignoreCase = true)
-        } catch (_: Exception) {
-            false
-        }
+    companion object {
+        private const val TAG = "GrpcMediaDownloader"
     }
 }

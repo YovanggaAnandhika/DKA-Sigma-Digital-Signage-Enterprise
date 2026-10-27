@@ -14,7 +14,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import org.json.JSONObject
 import java.io.File
 
@@ -26,14 +25,12 @@ import java.io.File
 class PlayerAudioManager(
     private val context: Context,
     private val scope: CoroutineScope,
-    private val httpClient: OkHttpClient,
     private val config: AudioConfigPayload
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val pcmSynthesizer = PcmChimeSynthesizer()
     private val mediaPlayerChime = MediaPlayerChimePlayer()
     private val speechInterpolator = QueueSpeechInterpolator()
-    private val remoteTtsDownloader = RemoteTtsDownloader(httpClient)
 
     private var activeTtsPlayer: MediaPlayer? = null
     private var activeChimeThread: Thread? = null
@@ -207,22 +204,10 @@ class PlayerAudioManager(
     }
 
     private fun playTtsVoice(utteranceText: String, expectedGen: Long) {
-        scope.launch(Dispatchers.IO) {
-            if (currentSpeechGeneration != expectedGen) return@launch
-
-            val cachedFile = remoteTtsDownloader.downloadTtsAudio(context, utteranceText)
-            if (cachedFile != null) {
-                withContext(Dispatchers.Main) {
-                    if (currentSpeechGeneration == expectedGen) {
-                        playTtsAudioFile(cachedFile, expectedGen)
-                    }
-                }
-            } else {
-                withContext(Dispatchers.Main) {
-                    if (currentSpeechGeneration == expectedGen) {
-                        playLocalTtsOrFallback(utteranceText, expectedGen)
-                    }
-                }
+        if (currentSpeechGeneration != expectedGen) return
+        mainHandler.post {
+            if (currentSpeechGeneration == expectedGen) {
+                playLocalTtsOrFallback(utteranceText, expectedGen)
             }
         }
     }

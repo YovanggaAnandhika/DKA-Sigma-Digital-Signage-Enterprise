@@ -1,24 +1,20 @@
 package com.dkaapis.sigma.presentation.player.stream
 
 import android.util.Log
+import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import signage.distribution.v1.stream.StreamCommon
+import signage.distribution.v1.stream.StreamServiceGrpcKt
 
 /**
- * Pengirim event broadcast dari player ke backend via SSE POST /api/stream/device
+ * Pengirim event broadcast dari player ke backend via gRPC StreamService.PushCommand port 50051
  */
 class PlayerTouchBroadcaster(
-    private val httpClient: OkHttpClient
+    private val channelFactory: GrpcChannelFactory
 ) {
-    private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
-
     suspend fun broadcastQueueTouch(
-        baseUrl: String,
         deviceId: String,
         queueId: String,
         ticketNum: String,
@@ -35,14 +31,13 @@ class PlayerTouchBroadcaster(
                 put("source", "player_touch")
                 put("sourceDeviceId", deviceId)
             }
-            sendPost(baseUrl, payload)
+            sendGrpcCommand(payload)
         }.onFailure { err ->
-            Log.w(TAG, "Gagal broadcast sentuh antrian: ${err.message}")
+            Log.w(TAG, "Gagal broadcast sentuh antrian via gRPC: ${err.message}")
         }
     }
 
     suspend fun broadcastDownloadProgress(
-        baseUrl: String,
         deviceId: String,
         assetIndex: Int,
         totalAssets: Int,
@@ -62,14 +57,13 @@ class PlayerTouchBroadcaster(
                 put("totalBytes", totalBytes)
                 put("fileName", fileName)
             }
-            sendPost(baseUrl, payload)
+            sendGrpcCommand(payload)
         }.onFailure { err ->
-            Log.w(TAG, "Gagal broadcast download progress: ${err.message}")
+            Log.w(TAG, "Gagal broadcast download progress via gRPC: ${err.message}")
         }
     }
 
     suspend fun broadcastDownloadComplete(
-        baseUrl: String,
         deviceId: String
     ) = withContext(Dispatchers.IO) {
         runCatching {
@@ -79,23 +73,20 @@ class PlayerTouchBroadcaster(
                 put("progressPercent", 100)
                 put("isSync", true)
             }
-            sendPost(baseUrl, payload)
+            sendGrpcCommand(payload)
         }.onFailure { err ->
-            Log.w(TAG, "Gagal broadcast download complete: ${err.message}")
+            Log.w(TAG, "Gagal broadcast download complete via gRPC: ${err.message}")
         }
     }
 
-    private fun sendPost(baseUrl: String, json: JSONObject) {
-        val body = json.toString().toRequestBody(jsonMediaType)
-        val request = Request.Builder()
-            .url("$baseUrl/api/stream/device")
-            .post(body)
+    private suspend fun sendGrpcCommand(json: JSONObject) {
+        val stub = StreamServiceGrpcKt.StreamServiceCoroutineStub(channelFactory.getChannel())
+        val req = StreamCommon.PushCommandRequest.newBuilder()
+            .setDeviceId("00000000-0000-0000-0000-000000000000") // Broadcast to all connected displays
+            .setCommandType(StreamCommon.ServerCommandType.COMMAND_EMERGENCY_BROADCAST)
+            .setPayloadJson(json.toString())
             .build()
-        httpClient.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                Log.w(TAG, "POST /api/stream/device status=${response.code}")
-            }
-        }
+        stub.pushCommand(req)
     }
 
     companion object {

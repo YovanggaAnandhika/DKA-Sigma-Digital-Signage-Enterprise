@@ -52,7 +52,16 @@ impl StreamConnectionManager {
         let _ = StreamRepository::log_command(pool, &command).await;
 
         let map = self.active_displays.lock().await;
-        if let Some(tx) = map.get(&dto.device_id) {
+        if dto.device_id.is_nil() {
+            for tx in map.values() {
+                let _ = tx.send(command.clone()).await;
+            }
+            Ok(PushCommandResultDto {
+                success: true,
+                command_id: command.command_id,
+                message: "Command broadcasted to all live connected displays".into(),
+            })
+        } else if let Some(tx) = map.get(&dto.device_id) {
             let _ = tx.send(command.clone()).await;
             Ok(PushCommandResultDto {
                 success: true,

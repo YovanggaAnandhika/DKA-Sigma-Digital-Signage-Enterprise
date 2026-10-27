@@ -1,21 +1,21 @@
 package com.dkaapis.sigma.presentation.player.stream
 
 import android.util.Log
+import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
 import com.dkaapis.sigma.presentation.player.stream.model.QueueSyncStatePayload
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import org.json.JSONObject
+import signage.components.v1.queue.display.DisplayCommon
+import signage.components.v1.queue.display.QueueDisplayServiceGrpcKt
 
 /**
- * Pembantu rekonsiliasi state antrean dengan server saat koneksi internet pulih.
+ * Pembantu rekonsiliasi state antrean dengan server via gRPC murni port 50051 saat koneksi internet pulih.
  */
 class QueueSyncHelper(
-    private val httpClient: OkHttpClient
+    private val channelFactory: GrpcChannelFactory
 ) {
     suspend fun syncQueueState(
-        baseUrl: String,
         queueDisplayId: String,
         activeCounterName: String,
         currentJson: String?
@@ -23,29 +23,22 @@ class QueueSyncHelper(
         if (queueDisplayId.isBlank()) return@withContext null
 
         runCatching {
-            val syncUrl = "$baseUrl/api/grpc/studio/queue/GetQueueSyncState?queueDisplayId=$queueDisplayId"
-            val request = Request.Builder().url(syncUrl).get().build()
-            val response = httpClient.newCall(request).execute()
+            val stub = QueueDisplayServiceGrpcKt.QueueDisplayServiceCoroutineStub(channelFactory.getChannel())
+            val request = DisplayCommon.GetQueueDisplayRequest.newBuilder()
+                .setId(queueDisplayId)
+                .build()
 
-            if (!response.isSuccessful) return@withContext null
-            val respBody = response.body?.string()?.takeIf { it.isNotBlank() } ?: return@withContext null
+            val detail = stub.getQueueDisplay(request)
+            val latestNum = detail.latestCalledNumber
 
-            val syncObj = JSONObject(respBody)
-            val latestNum = syncObj.optString("currentTicketNumber",
-                syncObj.optString("latestCalledNumber",
-                syncObj.optString("current_ticket_number",
-                syncObj.optString("latest_called_number", ""))))
+            var counterNm = ""
+            var counterStatus = "ACTIVE"
 
-            var counterNm = syncObj.optString("currentCounterName", syncObj.optString("current_counter_name", ""))
-            var counterStatus = syncObj.optString("status", syncObj.optString("counterStatus", "ACTIVE")).uppercase()
-
-            val countersArr = syncObj.optJSONArray("countersList") ?: syncObj.optJSONArray("counters")
-            if (countersArr != null && countersArr.length() > 0) {
-                for (i in 0 until countersArr.length()) {
-                    val cObj = countersArr.getJSONObject(i)
-                    val cName = cObj.optString("counterName", cObj.optString("counter_name", ""))
-                    val cStatus = cObj.optString("status", "ACTIVE").uppercase()
-                    if (i == 0 && counterNm.isBlank()) {
+            if (detail.countersCount > 0) {
+                for (c in detail.countersList) {
+                    val cName = c.counterName
+                    val cStatus = c.status.ifBlank { "ACTIVE" }.uppercase()
+                    if (counterNm.isBlank()) {
                         counterNm = cName
                         counterStatus = cStatus
                     }
@@ -58,11 +51,11 @@ class QueueSyncHelper(
             }
             if (counterNm.isBlank()) counterNm = "LOKET 01"
 
-            val tLabel = syncObj.optString("ticketLabel", syncObj.optString("ticket_label", ""))
-            val cLabel = syncObj.optString("counterLabel", syncObj.optString("counter_label", ""))
-            val ttsCall = syncObj.optString("ttsTemplateCall", syncObj.optString("tts_template_call", ""))
-            val ttsRecall = syncObj.optString("ttsTemplateRecall", syncObj.optString("tts_template_recall", ""))
-            val ttsBreak = syncObj.optString("ttsTemplateBreak", syncObj.optString("tts_template_break", ""))
+            val tLabel = detail.ticketLabel
+            val cLabel = detail.counterLabel
+            val ttsCall = detail.ttsTemplateCall
+            val ttsRecall = detail.ttsTemplateRecall
+            val ttsBreak = detail.ttsTemplateBreak
 
             val mergedJson = runCatching {
                 JSONObject(currentJson ?: "{}").apply {
@@ -85,7 +78,7 @@ class QueueSyncHelper(
                 updatedJson = mergedJson
             )
         }.onFailure { err ->
-            Log.w(TAG, "Gagal rekonsiliasi antrian saat rekoneksi: ${err.message}")
+            Log.w(TAG, "Gagal rekonsiliasi antrian gRPC saat rekoneksi: ${err.message}")
         }.getOrNull()
     }
 
