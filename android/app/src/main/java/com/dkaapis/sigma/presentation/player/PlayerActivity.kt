@@ -892,6 +892,12 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                 onKioskModeToggled = { enabled ->
                     playerSettingsStorage.setKioskModeEnabled(enabled)
                 },
+                onScreenSleepRequested = {
+                    setScreenSleepMode(true, isManual = true)
+                },
+                onExitAppRequested = {
+                    exitApplicationCompletely()
+                },
                 onUnbindRequested = {
                     unbindDeviceAndExit()
                 }
