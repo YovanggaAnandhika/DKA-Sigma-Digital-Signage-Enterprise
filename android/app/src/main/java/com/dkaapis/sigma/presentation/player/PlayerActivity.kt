@@ -63,9 +63,7 @@ import com.dkaapis.sigma.service.WatchdogService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 /**
  * Aktivitas Utama Pemutar Signage DKASigma:
@@ -99,12 +97,6 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private var activeQueueDataJson: String? = null
     private var lastDownloadProgressReportTime: Long = 0L
     private var hasActivePlayback: Boolean = false
-
-    private val streamingHttpClient = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(0, TimeUnit.MILLISECONDS)
-        .retryOnConnectionFailure(true)
-        .build()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -147,7 +139,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
         val channelFactory = GrpcChannelFactory(this)
         deviceRepo = DeviceRepositoryImpl(this, tokenStorage, channelFactory)
-        storageRepo = MediaStorageRepositoryImpl(MediaDiskCache(this))
+        storageRepo = MediaStorageRepositoryImpl(MediaDiskCache(this), channelFactory)
 
         val manifestRepo = ManifestRepositoryImpl(this, ManifestStorage(this), channelFactory)
         val analyticsSyncManager = AnalyticsSyncManager(this, tokenStorage, AnalyticsLocalBuffer(this), channelFactory)
@@ -164,7 +156,6 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         audioManager = PlayerAudioManager(
             context = this,
             scope = lifecycleScope,
-            httpClient = streamingHttpClient,
             config = AudioConfigPayload(
                 onDuckingChanged = { zoneManager.setDuckedVolume(it) },
                 onStopCallEffect = { activeQueueRenderer?.stopCallEffect() },
@@ -199,7 +190,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
         streamManager = PlayerStreamManager(
             scope = lifecycleScope,
-            httpClient = streamingHttpClient,
+            channelFactory = channelFactory,
+            tokenStorage = tokenStorage,
             listener = this
         )
     }
@@ -303,9 +295,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                         val canReportProgress = playerSettingsStorage.isProgressUploadEnabled()
                         if (canReportProgress && !devId.isNullOrEmpty() && (now - lastDownloadProgressReportTime >= 1000L || state.progressPercent == 100)) {
                             lastDownloadProgressReportTime = now
-                            val baseUrl = ServerConfig.getHttpBaseUrl(this@PlayerActivity)
                             streamManager.broadcastDownloadProgress(
-                                baseUrl, devId, state.assetIndex, state.total, state.progressPercent, state.downloadedBytes, state.totalBytes, state.currentFileName
+                                devId, state.assetIndex, state.total, state.progressPercent, state.downloadedBytes, state.totalBytes, state.currentFileName
                             )
                         }
                     }
@@ -317,8 +308,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
                         val devId = deviceRepo.getSavedDeviceId()
                         if (!devId.isNullOrEmpty()) {
-                            val baseUrl = ServerConfig.getHttpBaseUrl(this@PlayerActivity)
-                            streamManager.broadcastDownloadComplete(baseUrl, devId)
+                            streamManager.broadcastDownloadComplete(devId)
                         }
                     }
                     is PlayerUiState.Error -> {
@@ -362,8 +352,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             onQueueTapNext = { ticketNum, counterNm ->
                 audioManager.speakQueueTicket(QueueSpeechPayload(ticketNumber = ticketNum, counterName = counterNm))
                 deviceRepo.getSavedDeviceId()?.let { devId ->
-                    val baseUrl = ServerConfig.getHttpBaseUrl(this)
-                    streamManager.broadcastTouch(baseUrl, devId, activeQueueDisplayId, ticketNum, counterNm)
+                    streamManager.broadcastTouch(devId, activeQueueDisplayId, ticketNum, counterNm)
                 }
             }
         )
@@ -373,9 +362,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private fun reconcileQueueState() {
         val qId = activeQueueDisplayId.takeIf { it.isNotBlank() } ?: return
         lifecycleScope.launch(Dispatchers.IO) {
-            val baseUrl = ServerConfig.getHttpBaseUrl(this@PlayerActivity)
             val currentCounter = activeQueueRenderer?.getCurrentCounter() ?: ""
-            val syncRes = streamManager.syncQueueOnReconnect(baseUrl, qId, currentCounter, activeQueueDataJson)
+            val syncRes = streamManager.syncQueueOnReconnect(qId, currentCounter, activeQueueDataJson)
             if (syncRes != null) {
                 activeQueueDataJson = syncRes.updatedJson
                 runOnUiThread {
@@ -410,8 +398,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     private fun startRealtimeStreams() {
         val devId = deviceRepo.getSavedDeviceId() ?: return
-        val baseUrl = ServerConfig.getHttpBaseUrl(this)
-        streamManager.startStream(baseUrl, devId) {
+        streamManager.startStream(devId) {
             reconcileQueueState()
         }
     }

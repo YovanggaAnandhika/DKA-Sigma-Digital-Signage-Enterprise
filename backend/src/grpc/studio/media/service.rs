@@ -55,6 +55,39 @@ impl MediaServiceImpl {
             updated_at: m.updated_at.to_rfc3339(),
         }
     }
+
+    pub async fn resolve_file_path(&self, clean_filename: &str) -> Result<std::path::PathBuf, Status> {
+        let upload_dir = std::env::var("UPLOAD_DIR").unwrap_or_else(|_| "./uploads".to_string());
+        let file_path = std::path::Path::new(&upload_dir).join(clean_filename);
+
+        if file_path.exists() {
+            return Ok(file_path);
+        }
+
+        let screenshot_path = std::path::Path::new(&upload_dir).join("screenshots").join(clean_filename);
+        if screenshot_path.exists() {
+            return Ok(screenshot_path);
+        }
+
+        // Coba periksa apakah clean_filename diawali atau berupa UUID media_id
+        let prefix = clean_filename.split('_').next().unwrap_or(clean_filename);
+        if let Ok(media_id) = Uuid::parse_str(prefix) {
+            if let Ok(Some(media)) = crate::modules::studio::media::repositories::MediaRepository::find_by_id(&self.pool, media_id).await {
+                let real_name = std::path::Path::new(&media.public_url)
+                    .file_name()
+                    .and_then(|f| f.to_str())
+                    .unwrap_or("");
+                if !real_name.is_empty() {
+                    let db_path = std::path::Path::new(&upload_dir).join(real_name);
+                    if db_path.exists() {
+                        return Ok(db_path);
+                    }
+                }
+            }
+        }
+
+        Err(Status::not_found(format!("File {} tidak ditemukan di backend", clean_filename)))
+    }
 }
 
 #[tonic::async_trait]
@@ -308,17 +341,7 @@ impl MediaServiceTrait for MediaServiceImpl {
             .and_then(|f| f.to_str())
             .ok_or_else(|| Status::invalid_argument("Nama file tidak valid"))?;
 
-        let upload_dir = std::env::var("UPLOAD_DIR").unwrap_or_else(|_| "./uploads".to_string());
-        let mut file_path = std::path::Path::new(&upload_dir).join(clean_filename);
-
-        if !file_path.exists() {
-            let screenshot_path = std::path::Path::new(&upload_dir).join("screenshots").join(clean_filename);
-            if screenshot_path.exists() {
-                file_path = screenshot_path;
-            } else {
-                return Err(Status::not_found(format!("File {} tidak ditemukan di backend", clean_filename)));
-            }
-        }
+        let file_path = self.resolve_file_path(clean_filename).await?;
 
         let file_data = tokio::fs::read(&file_path)
             .await
@@ -366,17 +389,7 @@ impl MediaServiceTrait for MediaServiceImpl {
             .and_then(|f| f.to_str())
             .ok_or_else(|| Status::invalid_argument("Nama file tidak valid"))?;
 
-        let upload_dir = std::env::var("UPLOAD_DIR").unwrap_or_else(|_| "./uploads".to_string());
-        let mut file_path = std::path::Path::new(&upload_dir).join(clean_filename);
-
-        if !file_path.exists() {
-            let screenshot_path = std::path::Path::new(&upload_dir).join("screenshots").join(clean_filename);
-            if screenshot_path.exists() {
-                file_path = screenshot_path;
-            } else {
-                return Err(Status::not_found(format!("File {} tidak ditemukan di backend", clean_filename)));
-            }
-        }
+        let file_path = self.resolve_file_path(clean_filename).await?;
 
         let ext = std::path::Path::new(clean_filename)
             .extension()

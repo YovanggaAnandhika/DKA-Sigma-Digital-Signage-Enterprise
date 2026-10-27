@@ -43,10 +43,11 @@ class GrpcMediaDownloader(
             val channel = channelFactory.getChannel()
             val stub = MediaServiceGrpcKt.MediaServiceCoroutineStub(channel)
 
-            // Tentukan nama file yang diminta ke backend
+            // Tentukan nama file yang diminta ke backend (prioritaskan URL karena mengandung timestamp prefix backend)
             val filenameToRequest = when {
+                asset.url.isNotBlank() && asset.url.contains('/') -> asset.url.substringAfterLast('/')
+                asset.url.isNotBlank() -> asset.url
                 asset.localFilename.isNotBlank() && !asset.localFilename.startsWith("media_") -> asset.localFilename
-                asset.url.isNotBlank() -> asset.url.substringAfterLast('/')
                 else -> asset.mediaId
             }
 
