@@ -284,7 +284,7 @@ class PairingActivity : AppCompatActivity() {
 
             val port = etGrpcPort.text.toString().toIntOrNull() ?: 50051
 
-            ServerConfig.saveConfig(this, inputHost, port, 80)
+            ServerConfig.saveConfig(this, inputHost, port)
             updateServerInfoText()
 
             // Reset credentials so the device pairs cleanly with the new server
