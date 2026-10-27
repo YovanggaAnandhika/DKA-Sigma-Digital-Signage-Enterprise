@@ -112,6 +112,16 @@ class PlayerSettingsDialog(
             }
         }
 
+        dialog.findViewById<Button>(R.id.btnSleepScreenNow)?.setOnClickListener {
+            dialog.dismiss()
+            payload.onScreenSleepRequested()
+        }
+
+        dialog.findViewById<Button>(R.id.btnExitApp)?.setOnClickListener {
+            dialog.dismiss()
+            payload.onExitAppRequested()
+        }
+
         dialog.findViewById<Button>(R.id.btnDismissSettings)?.setOnClickListener {
             dialog.dismiss()
         }
