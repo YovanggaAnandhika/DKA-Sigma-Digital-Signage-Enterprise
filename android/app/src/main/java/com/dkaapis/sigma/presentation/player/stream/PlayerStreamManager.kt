@@ -34,6 +34,7 @@ class PlayerStreamManager(
 
     // Outgoing client stream channel for DisplayStream
     private val clientMessageFlow = MutableSharedFlow<StreamCommon.StreamClientMessage>(
+        replay = 1,
         extraBufferCapacity = 64,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
@@ -54,28 +55,42 @@ class PlayerStreamManager(
 
                     val deviceToken = tokenStorage.getDeviceToken().orEmpty()
 
+                    fun createPing(): StreamCommon.StreamClientMessage {
+                        return StreamCommon.StreamClientMessage.newBuilder()
+                            .setDeviceId(deviceId)
+                            .setDeviceToken(deviceToken)
+                            .setTimestamp(System.currentTimeMillis())
+                            .setPing(
+                                StreamCommon.HeartbeatPing.newBuilder()
+                                    .setMemoryPercent(30)
+                                    .setStorageFreeBytes(1024L * 1024L * 1024L)
+                                    .build()
+                            )
+                            .build()
+                    }
+
                     // Emisi pesan inisial untuk mendaftarkan koneksi di server
-                    val initialPing = StreamCommon.StreamClientMessage.newBuilder()
-                        .setDeviceId(deviceId)
-                        .setDeviceToken(deviceToken)
-                        .setTimestamp(System.currentTimeMillis())
-                        .setPing(
-                            StreamCommon.HeartbeatPing.newBuilder()
-                                .setMemoryPercent(30)
-                                .setStorageFreeBytes(1024L * 1024L * 1024L)
-                                .build()
-                        )
-                        .build()
+                    clientMessageFlow.emit(createPing())
 
-                    clientMessageFlow.tryEmit(initialPing)
+                    // Background keepalive ping berkala setiap 20 detik (timeout socket server 45 detik)
+                    val pingJob = launch {
+                        while (isActive) {
+                            delay(20_000L)
+                            clientMessageFlow.emit(createPing())
+                        }
+                    }
 
-                    // Panggil RPC streaming dua arah
-                    val responseFlow = stub.displayStream(clientMessageFlow)
-                    onConnected()
+                    try {
+                        // Panggil RPC streaming dua arah
+                        val responseFlow = stub.displayStream(clientMessageFlow)
+                        onConnected()
 
-                    responseFlow.collect { serverMsg ->
-                        if (!isActive) return@collect
-                        handleServerMessage(serverMsg)
+                        responseFlow.collect { serverMsg ->
+                            if (!isActive) return@collect
+                            handleServerMessage(serverMsg)
+                        }
+                    } finally {
+                        pingJob.cancel()
                     }
                 }.onFailure { err ->
                     Log.w(TAG, "gRPC DisplayStream disconnected: ${err.message}, reconnecting in 3s...")

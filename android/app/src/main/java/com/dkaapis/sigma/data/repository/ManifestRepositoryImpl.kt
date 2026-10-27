@@ -23,7 +23,8 @@ import signage.distribution.v1.manifest.ManifestServiceGrpcKt
 class ManifestRepositoryImpl(
     private val context: Context,
     private val manifestStorage: ManifestStorage,
-    private val channelFactory: GrpcChannelFactory
+    private val channelFactory: GrpcChannelFactory,
+    private val tokenStorage: com.dkaapis.sigma.data.local.TokenStorage? = null
 ) : ManifestRepository {
 
     private val protoMapper = ManifestProtoMapper()
@@ -33,8 +34,10 @@ class ManifestRepositoryImpl(
     override suspend fun fetchActiveManifest(deviceId: String, currentHash: String): Result<Manifest?> = withContext(Dispatchers.IO) {
         runCatching {
             val stub = ManifestServiceGrpcKt.ManifestServiceCoroutineStub(channelFactory.getChannel())
+            val deviceToken = tokenStorage?.getDeviceToken().orEmpty()
             val request = ManifestCommon.GetActiveManifestRequest.newBuilder()
                 .setDeviceId(deviceId)
+                .setDeviceToken(deviceToken)
                 .setClientCurrentHash(currentHash)
                 .build()
 

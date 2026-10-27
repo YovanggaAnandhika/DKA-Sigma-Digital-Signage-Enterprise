@@ -141,7 +141,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         deviceRepo = DeviceRepositoryImpl(this, tokenStorage, channelFactory)
         storageRepo = MediaStorageRepositoryImpl(MediaDiskCache(this), channelFactory)
 
-        val manifestRepo = ManifestRepositoryImpl(this, ManifestStorage(this), channelFactory)
+        val manifestRepo = ManifestRepositoryImpl(this, ManifestStorage(this), channelFactory, tokenStorage)
         val analyticsSyncManager = AnalyticsSyncManager(this, tokenStorage, AnalyticsLocalBuffer(this), channelFactory)
         val hardwareProfiler = DeviceHardwareProfiler(this)
 
