@@ -768,8 +768,21 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     }
 
     private var lastBackPressTimestamp = 0L
+    private var backPressCount = 0
+    private val keySequenceHandler = Handler(Looper.getMainLooper())
+    private val delayedOpenSettingsRunnable = Runnable {
+        if (backPressCount in 2..3) {
+            backPressCount = 0
+            openSettingsBottomSheet()
+        }
+    }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (isScreenSleepActive) {
+            setScreenSleepMode(false, isManual = true)
+            return true
+        }
+
         // 1. Tombol langsung pada remote: Menu, Settings, Info, Guide
         if (keyCode == KeyEvent.KEYCODE_MENU ||
             keyCode == KeyEvent.KEYCODE_SETTINGS ||
@@ -796,6 +809,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
             keyCode == KeyEvent.KEYCODE_ENTER ||
             keyCode == KeyEvent.KEYCODE_BACK) {
+            keySequenceHandler.removeCallbacks(delayedOpenSettingsRunnable)
+            backPressCount = 0
             openSettingsBottomSheet()
             return true
         }
@@ -807,24 +822,60 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             return true
         }
 
-        // Tekan tombol Back 2x cepat (dalam 1.5 detik) untuk membuka pengaturan
+        // Tekan Back 2x cepat -> Buka Pengaturan | Tekan Back 4x cepat -> Tutup Aplikasi Sempurna
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            if (settingsDialog.isShowing()) {
-                return super.onKeyUp(keyCode, event)
-            }
             val now = System.currentTimeMillis()
-            if (now - lastBackPressTimestamp < 1500L) {
-                lastBackPressTimestamp = 0L
-                openSettingsBottomSheet()
-                return true
+            if (now - lastBackPressTimestamp <= 1200L) {
+                backPressCount++
             } else {
-                lastBackPressTimestamp = now
-                Toast.makeText(this, "Tekan Back sekali lagi untuk buka Pengaturan", Toast.LENGTH_SHORT).show()
-                return true
+                backPressCount = 1
+            }
+            lastBackPressTimestamp = now
+            keySequenceHandler.removeCallbacks(delayedOpenSettingsRunnable)
+
+            when {
+                backPressCount >= 4 -> {
+                    backPressCount = 0
+                    settingsDialog.dismiss()
+                    Toast.makeText(this, "Menutup DKASigma Player...", Toast.LENGTH_SHORT).show()
+                    exitApplicationCompletely()
+                    return true
+                }
+                backPressCount == 1 -> {
+                    if (settingsDialog.isShowing()) {
+                        settingsDialog.dismiss()
+                    } else {
+                        Toast.makeText(this, "Tekan Back 2x: Pengaturan • 4x: Keluar Aplikasi", Toast.LENGTH_SHORT).show()
+                    }
+                    return true
+                }
+                else -> {
+                    // Tunggu 450ms untuk melihat apakah pengguna lanjut menekan sampai 4x
+                    keySequenceHandler.postDelayed(delayedOpenSettingsRunnable, 450L)
+                    return true
+                }
             }
         }
 
         return super.onKeyUp(keyCode, event)
+    }
+
+    private fun exitApplicationCompletely() {
+        keySequenceHandler.removeCallbacks(delayedOpenSettingsRunnable)
+        hasActivePlayback = false
+        WatchdogService.setPlaybackActive(this, false)
+        releaseScreenWakeLock()
+        audioManager.release()
+        zoneManager.release()
+        streamManager.stopStream()
+        telemetryManager.stop()
+        runCatching { stopService(Intent(this, PlayerForegroundService::class.java)) }
+        runCatching { stopService(Intent(this, WatchdogService::class.java)) }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            finishAndRemoveTask()
+        } else {
+            finish()
+        }
     }
 
     private fun openSettingsBottomSheet() {
@@ -859,6 +910,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     override fun onDestroy() {
         super.onDestroy()
+        keySequenceHandler.removeCallbacks(delayedOpenSettingsRunnable)
         releaseScreenWakeLock()
         audioManager.release()
         streamManager.stopStream()
