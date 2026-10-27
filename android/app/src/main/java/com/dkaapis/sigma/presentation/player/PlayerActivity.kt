@@ -265,22 +265,24 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                         finish()
                     }
                     is PlayerUiState.SyncingManifest -> {
-                        if (!hasActivePlayback) {
+                        if (!hasActivePlayback || loadingOverlay.visibility == View.VISIBLE) {
                             WatchdogService.setPlaybackActive(this@PlayerActivity, false)
                             loadingOverlay.visibility = View.VISIBLE
                             badgeText.text = "● SINKRONISASI JADWAL"
                             badgeText.setTextColor(Color.parseColor("#38BDF8"))
+                            loadingText.setTextColor(Color.WHITE)
                             loadingText.text = state.message
                             subDetailText.text = "Mengecek pembaruan jadwal dan integritas manifest..."
                             progressBar.isIndeterminate = true
                         }
                     }
                     is PlayerUiState.DownloadingAssets -> {
-                        if (!hasActivePlayback) {
+                        if (!hasActivePlayback || loadingOverlay.visibility == View.VISIBLE) {
                             WatchdogService.setPlaybackActive(this@PlayerActivity, false)
                             loadingOverlay.visibility = View.VISIBLE
                             badgeText.text = "● MENGUNDUH ASET MEDIA"
                             badgeText.setTextColor(Color.parseColor("#10B981"))
+                            loadingText.setTextColor(Color.WHITE)
                             progressBar.isIndeterminate = false
                             progressBar.progress = state.progressPercent
 
@@ -453,13 +455,21 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     override fun onClearCache() {
         runOnUiThread {
+            hasActivePlayback = false
+            zoneManager.release()
+            canvasLayout.removeAllViews()
+            viewModel.resetActiveManifest()
+            WatchdogService.setPlaybackActive(this@PlayerActivity, false)
+
             telemetryManager.handleClearCache(
                 onShowUiProgress = {
                     loadingOverlay.visibility = View.VISIBLE
                     progressBar.isIndeterminate = true
                     badgeText.text = "BERSIHKAN CACHE"
                     badgeText.setTextColor(Color.parseColor("#F59E0B"))
+                    loadingText.setTextColor(Color.WHITE)
                     loadingText.text = "Membersihkan Cache Media Lokal..."
+                    subDetailText.text = "Menghapus cache media dan manifest lokal..."
                 },
                 onSyncRequested = {
                     loadingOverlay.postDelayed({ viewModel.syncManifest(force = true) }, 1000)
