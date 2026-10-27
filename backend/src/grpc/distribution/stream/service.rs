@@ -190,6 +190,7 @@ impl StreamServiceTrait for StreamServiceImpl {
             ServerCommandType::CommandRebootPlayer => LiveCommandType::RebootPlayer,
             ServerCommandType::CommandEmergencyBroadcast => LiveCommandType::EmergencyBroadcast,
             ServerCommandType::CommandClearCache => LiveCommandType::ClearCache,
+            ServerCommandType::CommandUnspecified if !req.payload_json.is_empty() => LiveCommandType::EmergencyBroadcast,
             _ => LiveCommandType::ReloadManifest,
         };
 

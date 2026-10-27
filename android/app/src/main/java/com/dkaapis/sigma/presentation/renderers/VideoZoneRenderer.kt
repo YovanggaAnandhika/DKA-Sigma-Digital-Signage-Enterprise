@@ -245,6 +245,21 @@ class VideoZoneRenderer(
         }
     }
 
+    fun pause() {
+        runCatching { exoPlayer?.pause() }
+    }
+
+    fun resume() {
+        runCatching {
+            exoPlayer?.let { player ->
+                if (player.playbackState == Player.STATE_IDLE || player.playbackState == Player.STATE_ENDED) {
+                    player.prepare()
+                }
+                player.play()
+            }
+        }
+    }
+
     fun release() {
         if (lastTrackIndex in playlistItems.indices && currentTrackStartTimeMs > 0L) {
             val item = playlistItems[lastTrackIndex]

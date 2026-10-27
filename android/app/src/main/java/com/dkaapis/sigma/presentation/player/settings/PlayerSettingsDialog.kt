@@ -29,6 +29,11 @@ class PlayerSettingsDialog(
 
     fun isShowing(): Boolean = activeDialog?.isShowing == true
 
+    fun dismiss() {
+        activeDialog?.dismiss()
+        activeDialog = null
+    }
+
     fun show(payload: PlayerSettingsPayload) {
         if (isShowing()) return
 

@@ -53,6 +53,10 @@ class PlayerTelemetryManager(
         commandHandler.handleReboot(activity)
     }
 
+    fun handleDisplayPowerCec(turnOn: Boolean): Boolean {
+        return commandHandler.trySetDisplayPowerByCec(activity, turnOn)
+    }
+
     fun handleCaptureScreenshot(window: Window) {
         if (isCapturingScreenshot) return
         isCapturingScreenshot = true

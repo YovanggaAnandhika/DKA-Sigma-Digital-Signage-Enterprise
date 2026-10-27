@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   Zap,
   Unlink2,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { ServerCommandType } from '@/lib/services/hardware/device.service';
 import { api } from '@/lib/services';
@@ -123,6 +125,40 @@ export default function DisplayCommandToolbar() {
           >
             <RotateCcw size={14} />
             <span>Reboot</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              handleSendCommand(
+                ServerCommandType.COMMAND_EMERGENCY_BROADCAST,
+                'Mode Tidur (Matikan Layar)',
+                JSON.stringify({ type: 'SCREEN_SLEEP' })
+              )
+            }
+            disabled={!!sendingCmd}
+            className="btn btn-secondary"
+            title="Matikan panel/backlight layar (HDMI-CEC Standby / Blackout) saat toko tutup namun player tetap aktif"
+          >
+            <Moon size={14} />
+            <span>Matikan Layar</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              handleSendCommand(
+                ServerCommandType.COMMAND_EMERGENCY_BROADCAST,
+                'Bangunkan Layar',
+                JSON.stringify({ type: 'SCREEN_WAKE' })
+              )
+            }
+            disabled={!!sendingCmd}
+            className="btn btn-secondary"
+            title="Nyalakan kembali tampilan layar & audio dari mode tidur (HDMI-CEC Wake)"
+          >
+            <Sun size={14} />
+            <span>Nyalakan Layar</span>
           </button>
 
           <button

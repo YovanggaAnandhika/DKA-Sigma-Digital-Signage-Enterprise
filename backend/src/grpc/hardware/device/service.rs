@@ -235,6 +235,14 @@ impl DeviceServiceTrait for DeviceServiceImpl {
         .fetch_optional(&self.pool)
         .await {
             let cmd_type = row.get("command_type").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let payload_str = row.get("payload_json").and_then(|v| v.as_str()).unwrap_or("");
+            let effective_cmd = if payload_str.contains("SCREEN_SLEEP") {
+                Some("SCREEN_SLEEP".to_string())
+            } else if payload_str.contains("SCREEN_WAKE") {
+                Some("SCREEN_WAKE".to_string())
+            } else {
+                cmd_type
+            };
             let cmd_id = row.get("command_id").and_then(|v| v.as_str()).map(|s| s.to_string());
             if let Some(cid) = cmd_id {
                 let _ = sqlx::query("UPDATE hardware_device_telemetry SET payload_json = payload_json || '{\"consumed\": true}'::jsonb WHERE device_id = $1 AND payload_json->>'command_id' = $2")
@@ -243,12 +251,12 @@ impl DeviceServiceTrait for DeviceServiceImpl {
                     .execute(&self.pool)
                     .await;
             }
-            if let Some(ref c) = cmd_type {
+            if let Some(ref c) = effective_cmd {
                 if c.to_lowercase().contains("reload") {
                     needs_manifest_sync = true;
                 }
             }
-            cmd_type
+            effective_cmd
         } else {
             None
         };

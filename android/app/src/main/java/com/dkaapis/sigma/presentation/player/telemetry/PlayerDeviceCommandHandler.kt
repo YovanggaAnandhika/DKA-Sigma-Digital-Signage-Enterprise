@@ -57,6 +57,30 @@ class PlayerDeviceCommandHandler {
         }
     }
 
+    /**
+     * Mencoba mengirim sinyal HDMI-CEC Standby / One Touch Play pada perangkat STB/TV yang mendukung
+     * (jika aplikasi memiliki akses HdmiControlManager atau sysfs CEC).
+     */
+    fun trySetDisplayPowerByCec(context: Context, turnOn: Boolean): Boolean {
+        return runCatching {
+            val hdmiService = context.getSystemService("hdmi_control") ?: return false
+            val clazz = hdmiService.javaClass
+            if (turnOn) {
+                val clientMethod = clazz.methods.firstOrNull { it.name == "getPlaybackClient" }
+                val client = clientMethod?.invoke(hdmiService) ?: return false
+                val touchPlay = client.javaClass.methods.firstOrNull { it.name == "oneTouchPlay" && it.parameterTypes.size == 1 }
+                touchPlay?.invoke(client, null)
+                true
+            } else {
+                val standbyMethod = clazz.methods.firstOrNull { it.name == "sendStandby" }
+                if (standbyMethod != null && standbyMethod.parameterTypes.size == 2) {
+                    standbyMethod.invoke(hdmiService, 4, 0) // DEVICE_PLAYBACK (4) -> ADDR_TV (0)
+                    true
+                } else false
+            }
+        }.getOrDefault(false)
+    }
+
     companion object {
         private const val TAG = "PlayerDeviceCommandHandler"
     }

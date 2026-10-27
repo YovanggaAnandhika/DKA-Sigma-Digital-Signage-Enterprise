@@ -7,6 +7,8 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.view.Gravity
 import android.view.View
@@ -37,6 +39,7 @@ import com.dkaapis.sigma.data.repository.DeviceRepositoryImpl
 import com.dkaapis.sigma.data.repository.ManifestRepositoryImpl
 import com.dkaapis.sigma.data.repository.MediaStorageRepositoryImpl
 import com.dkaapis.sigma.domain.model.Manifest
+import com.dkaapis.sigma.domain.model.PowerSchedule
 import com.dkaapis.sigma.domain.usecase.DownloadAndVerifyMediaUseCase
 import com.dkaapis.sigma.domain.usecase.RegisterAndPairUseCase
 import com.dkaapis.sigma.domain.usecase.SyncManifestUseCase
@@ -62,8 +65,11 @@ import com.dkaapis.sigma.presentation.renderers.QueueZoneRenderer
 import com.dkaapis.sigma.service.PlayerForegroundService
 import com.dkaapis.sigma.service.WatchdogService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import java.util.Locale
 
 /**
@@ -88,6 +94,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     private lateinit var canvasLayout: SignageCanvasLayout
     private lateinit var loadingOverlay: FrameLayout
+    private lateinit var sleepBlackoutOverlay: View
     private lateinit var badgeText: TextView
     private lateinit var loadingText: TextView
     private lateinit var subDetailText: TextView
@@ -99,6 +106,9 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private var lastDownloadProgressReportTime: Long = 0L
     private var hasActivePlayback: Boolean = false
     private var screenWakeLock: PowerManager.WakeLock? = null
+    private var isScreenSleepActive: Boolean = false
+    private var manualSleepOverride: Boolean? = null
+    private var activePowerSchedule: PowerSchedule? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -107,6 +117,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         setupViews()
         observeState()
         startBackgroundServices()
+        startPowerScheduleMonitor()
 
         viewModel.initializePlayer()
         startRealtimeStreams()
@@ -288,10 +299,19 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                 addView(subDetailText)
             })
         }
+        sleepBlackoutOverlay = View(this).apply {
+            setBackgroundColor(Color.BLACK)
+            layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            visibility = View.GONE
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { setScreenSleepMode(false, isManual = true) }
+        }
         setContentView(FrameLayout(this).apply {
             setBackgroundColor(Color.BLACK)
             addView(canvasLayout)
             addView(loadingOverlay)
+            addView(sleepBlackoutOverlay)
         })
     }
 
@@ -378,6 +398,9 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         activeQueueRenderer = null
         activeQueueDisplayId = ""
         activeQueueDataJson = null
+        activePowerSchedule = manifest.powerSchedule
+        manualSleepOverride = null
+        evaluatePowerSchedule()
 
         val payload = ZoneRenderContextPayload(
             activity = this,
@@ -424,6 +447,92 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             command.contains("CaptureScreenshot", ignoreCase = true) || command.contains("Screenshot", ignoreCase = true) -> onCaptureScreenshot()
             command.contains("Reboot", ignoreCase = true) -> onReboot()
             command.contains("Unpair", ignoreCase = true) || command.contains("Decommission", ignoreCase = true) -> onUnpair()
+            command.contains("SCREEN_SLEEP", ignoreCase = true) || command.contains("Sleep", ignoreCase = true) || command.contains("Standby", ignoreCase = true) -> onScreenSleep()
+            command.contains("SCREEN_WAKE", ignoreCase = true) || command.contains("Wake", ignoreCase = true) -> onScreenWake()
+        }
+    }
+
+    private fun startPowerScheduleMonitor() {
+        lifecycleScope.launch {
+            while (isActive) {
+                evaluatePowerSchedule()
+                delay(30_000L)
+            }
+        }
+    }
+
+    private fun evaluatePowerSchedule() {
+        if (manualSleepOverride != null) return
+        val ps = activePowerSchedule
+        if (ps == null || !ps.enabled) {
+            if (isScreenSleepActive) setScreenSleepMode(false, isManual = false)
+            return
+        }
+        val shouldSleep = isCurrentlyInSleepWindow(ps.sleepTime, ps.wakeTime)
+        if (shouldSleep != isScreenSleepActive) {
+            setScreenSleepMode(shouldSleep, isManual = false)
+        }
+    }
+
+    private fun isCurrentlyInSleepWindow(sleepTimeStr: String, wakeTimeStr: String): Boolean {
+        fun parseMinutes(timeStr: String): Int? {
+            val parts = timeStr.trim().split(":")
+            if (parts.size < 2) return null
+            val h = parts[0].toIntOrNull() ?: return null
+            val m = parts[1].toIntOrNull() ?: return null
+            return (h * 60) + m
+        }
+        val sleepMins = parseMinutes(sleepTimeStr) ?: return false
+        val wakeMins = parseMinutes(wakeTimeStr) ?: return false
+        if (sleepMins == wakeMins) return false
+
+        val cal = Calendar.getInstance()
+        val nowMins = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
+        return if (sleepMins < wakeMins) {
+            nowMins in sleepMins until wakeMins
+        } else {
+            // Rentang lintas tengah malam (misal 22:00 s/d 06:00)
+            nowMins >= sleepMins || nowMins < wakeMins
+        }
+    }
+
+    /**
+     * Mengatur mode tidur layar (Toko Tutup):
+     * 1. Mencoba kirim sinyal HDMI-CEC Standby / Wake jika hardware mendukung.
+     * 2. Menurunkan kecerahan jendela ke minimum (0.0f), menampilkan layar hitam pekat (blackout),
+     *    dan menjeda pemutaran video + suara sementara aplikasi dan gRPC stream tetap hidup.
+     */
+    private fun setScreenSleepMode(sleep: Boolean, isManual: Boolean) {
+        runOnUiThread {
+            if (isManual) {
+                manualSleepOverride = sleep
+            }
+            if (isScreenSleepActive == sleep && sleepBlackoutOverlay.visibility == (if (sleep) View.VISIBLE else View.GONE)) {
+                return@runOnUiThread
+            }
+            isScreenSleepActive = sleep
+
+            telemetryManager.handleDisplayPowerCec(turnOn = !sleep)
+
+            val lp = window.attributes
+            if (sleep) {
+                lp.screenBrightness = 0.0f // Redupkan backlight ke titik terendah OS
+                window.attributes = lp
+                sleepBlackoutOverlay.visibility = View.VISIBLE
+                sleepBlackoutOverlay.bringToFront()
+                audioManager.stopCurrentVoice()
+                zoneManager.pausePlayback()
+                WatchdogService.setPlaybackActive(this, false)
+            } else {
+                lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                window.attributes = lp
+                sleepBlackoutOverlay.visibility = View.GONE
+                acquireScreenWakeLock()
+                if (hasActivePlayback) {
+                    zoneManager.resumePlayback()
+                    WatchdogService.setPlaybackActive(this, true)
+                }
+            }
         }
     }
 
@@ -544,6 +653,14 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         }
     }
 
+    override fun onScreenSleep() {
+        setScreenSleepMode(true, isManual = true)
+    }
+
+    override fun onScreenWake() {
+        setScreenSleepMode(false, isManual = true)
+    }
+
     override fun onQueueCall(event: QueueCallEventModel) {
         runOnUiThread {
             val currentDevId = deviceRepo.getSavedDeviceId() ?: ""
@@ -591,13 +708,35 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     override fun onResume() {
         super.onResume()
-        acquireScreenWakeLock()
+        if (!isScreenSleepActive) {
+            acquireScreenWakeLock()
+            if (hasActivePlayback) {
+                zoneManager.resumePlayback()
+                WatchdogService.setPlaybackActive(this, true)
+            }
+        }
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        // Saat tombol HOME ditekan di remote TV (dan Mode Kiosk OFF), tutup aplikasi sepenuhnya termasuk suara
+        if (!playerSettingsStorage.isKioskModeEnabled()) {
+            exitApplicationCompletely()
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Pastikan suara video & TTS langsung berhenti saat Activity tidak lagi di layar depan
+        audioManager.stopCurrentVoice()
+        zoneManager.pausePlayback()
+        WatchdogService.setPlaybackActive(this, false)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
-            acquireScreenWakeLock()
+            if (!isScreenSleepActive) acquireScreenWakeLock()
             runCatching {
                 WindowCompat.getInsetsController(window, window.decorView).hide(WindowInsetsCompat.Type.systemBars())
             }

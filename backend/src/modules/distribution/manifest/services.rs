@@ -313,6 +313,7 @@ impl ManifestService {
         for a in &assets_vec {
             hasher.update(format!("{}:{}", a.media_id, a.sha256_hash).as_bytes());
         }
+        hasher.update(format!("{}:{:?}:{:?}", device.power_schedule_enabled, device.sleep_time, device.wake_time).as_bytes());
 
         let version_hash = if let Some(sh) = &scheduled_version_hash {
             sh.clone()

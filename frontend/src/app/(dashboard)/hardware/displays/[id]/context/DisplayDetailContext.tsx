@@ -57,7 +57,7 @@ interface DisplayDetailContextType {
   fetchAnalytics: (range: string) => Promise<void>;
   handleApprovePairing: (codeToPair?: string) => Promise<void>;
   handleExportCSV: () => void;
-  handleSendCommand: (cmdType: ServerCommandType, label: string) => Promise<void>;
+  handleSendCommand: (cmdType: ServerCommandType, label: string, payloadJson?: string) => Promise<void>;
   sortedHistory: DeviceAnalyticsRecord[];
   activeAssetsList: AssetStats[];
   currentCpu: number;
@@ -304,11 +304,11 @@ export function DisplayDetailProvider({
     URL.revokeObjectURL(url);
   };
 
-  const handleSendCommand = async (cmdType: ServerCommandType, label: string) => {
+  const handleSendCommand = async (cmdType: ServerCommandType, label: string, payloadJson?: string) => {
     try {
       setSendingCmd(label);
       setCmdFeedback(null);
-      await pushDeviceCommand(deviceId, cmdType);
+      await pushDeviceCommand(deviceId, cmdType, payloadJson);
       setCmdFeedback(`Perintah "${label}" berhasil dikirim ke player.`);
       setTimeout(() => setCmdFeedback(null), 4000);
 

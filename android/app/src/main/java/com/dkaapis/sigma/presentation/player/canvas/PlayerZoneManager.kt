@@ -96,6 +96,14 @@ class PlayerZoneManager {
         videoRenderers.forEach { it.setDuckedVolume(isDucked) }
     }
 
+    fun pausePlayback() {
+        videoRenderers.forEach { it.pause() }
+    }
+
+    fun resumePlayback() {
+        videoRenderers.forEach { it.resume() }
+    }
+
     fun getVideoRenderers(): List<VideoZoneRenderer> = videoRenderers
 
     fun release() {

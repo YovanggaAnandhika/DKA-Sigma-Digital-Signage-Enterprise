@@ -6,6 +6,7 @@ import com.dkaapis.sigma.domain.model.LayerZone
 import com.dkaapis.sigma.domain.model.Manifest
 import com.dkaapis.sigma.domain.model.MediaAsset
 import com.dkaapis.sigma.domain.model.MediaType
+import com.dkaapis.sigma.domain.model.PowerSchedule
 import com.dkaapis.sigma.domain.model.ZoneWidgetType
 import signage.distribution.v1.manifest.ManifestCommon
 
@@ -89,6 +90,14 @@ class ManifestProtoMapper {
                 )
             },
             totalDownloadSizeBytes = totalDownloadSizeBytes,
+            powerSchedule = if (hasPowerSchedule()) {
+                PowerSchedule(
+                    enabled = powerSchedule.enabled,
+                    sleepTime = powerSchedule.sleepTime.ifBlank { "22:00:00" },
+                    wakeTime = powerSchedule.wakeTime.ifBlank { "06:00:00" }
+                )
+            } else null,
+            isCanary = isCanary,
             generatedAt = generatedAt
         )
     }

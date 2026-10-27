@@ -16,6 +16,8 @@ interface OnDeviceEventListener {
     fun onCaptureScreenshot()
     fun onReboot()
     fun onUnpair()
+    fun onScreenSleep()
+    fun onScreenWake()
     fun onQueueCall(event: QueueCallEventModel)
     fun onQueueReset(targetQueueId: String, resetToNumber: String)
     fun onCounterStatusChanged(targetQueueId: String, counterName: String, status: String)
@@ -55,6 +57,8 @@ class DeviceSseEventParser {
             "SCREENSHOT" -> listener.onCaptureScreenshot()
             "REBOOT" -> listener.onReboot()
             "UNPAIR", "DECOMMISSION" -> listener.onUnpair()
+            "SCREEN_SLEEP", "SLEEP", "STANDBY" -> listener.onScreenSleep()
+            "SCREEN_WAKE", "WAKE" -> listener.onScreenWake()
             "CALL_QUEUE", "QUEUE_CALL" -> {
                 val callType = data.optString("callType", data.optString("call_type", "next"))
                 val isRecall = callType.equals("recall", ignoreCase = true) || callType.equals("repeat", ignoreCase = true)

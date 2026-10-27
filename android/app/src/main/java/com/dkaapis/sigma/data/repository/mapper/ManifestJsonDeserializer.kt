@@ -6,6 +6,7 @@ import com.dkaapis.sigma.domain.model.LayerZone
 import com.dkaapis.sigma.domain.model.Manifest
 import com.dkaapis.sigma.domain.model.MediaAsset
 import com.dkaapis.sigma.domain.model.MediaType
+import com.dkaapis.sigma.domain.model.PowerSchedule
 import com.dkaapis.sigma.domain.model.ZoneWidgetType
 import org.json.JSONArray
 import org.json.JSONObject
@@ -32,6 +33,13 @@ class ManifestJsonDeserializer {
             zones = parseZones(layout.optJSONArray("layersList") ?: layout.optJSONArray("layers") ?: optJSONArray("zones"), canvasW, canvasH),
             requiredAssets = parseAssets(optJSONArray("requiredAssetsList") ?: optJSONArray("requiredAssets"), baseUrl),
             totalDownloadSizeBytes = optLong("totalDownloadSizeBytes", 0L),
+            powerSchedule = optJSONObject("powerSchedule")?.let { ps ->
+                PowerSchedule(
+                    enabled = ps.optBoolean("enabled", false),
+                    sleepTime = ps.optString("sleepTime", "22:00:00"),
+                    wakeTime = ps.optString("wakeTime", "06:00:00")
+                )
+            },
             generatedAt = optString("generatedAt")
         )
     }

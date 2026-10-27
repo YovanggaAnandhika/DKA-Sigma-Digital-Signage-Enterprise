@@ -20,6 +20,13 @@ class ManifestJsonSerializer {
             put("canvasHeight", manifest.canvasHeight)
             put("totalDownloadSizeBytes", manifest.totalDownloadSizeBytes)
             put("generatedAt", manifest.generatedAt)
+            manifest.powerSchedule?.let { ps ->
+                put("powerSchedule", JSONObject().apply {
+                    put("enabled", ps.enabled)
+                    put("sleepTime", ps.sleepTime)
+                    put("wakeTime", ps.wakeTime)
+                })
+            }
 
             val layoutObj = JSONObject().apply {
                 put("id", manifest.layoutId)
