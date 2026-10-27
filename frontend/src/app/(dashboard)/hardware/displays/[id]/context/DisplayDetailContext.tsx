@@ -105,7 +105,7 @@ export function DisplayDetailProvider({
     try {
       const records = await getDeviceAnalyticsHistory(deviceId, range, 60);
       setAnalyticsHistory(records);
-      if (records.length > 0 && !realtimeMetrics) {
+      if (records.length > 0) {
         const last = records[records.length - 1];
         const initialList =
           last.assetsStatsList && last.assetsStatsList.length > 0
@@ -121,11 +121,35 @@ export function DisplayDetailProvider({
     } catch (_) {}
   };
 
+  const pollLiveData = async () => {
+    if (!deviceId) return;
+    try {
+      const [updatedDevice, updatedTelemetry, updatedScreenshots] = await Promise.all([
+        api.getDevice(deviceId).catch(() => null),
+        api.getLatestDeviceTelemetry(deviceId).catch(() => null),
+        api.listDeviceScreenshots(deviceId, 10).catch(() => null),
+        fetchAnalytics(timeRange),
+      ]);
+
+      if (updatedDevice) {
+        setDevice(updatedDevice);
+        setIsLiveConnected(updatedDevice.isOnline);
+      }
+      if (updatedTelemetry) {
+        setTelemetry(updatedTelemetry);
+      }
+      if (updatedScreenshots && updatedScreenshots.length > 0) {
+        setScreenshots(updatedScreenshots);
+      }
+    } catch (_) {}
+  };
+
   const fetchDevice = async () => {
     try {
       setLoading(true);
       const data = await api.getDevice(deviceId);
       setDevice(data);
+      setIsLiveConnected(data.isOnline);
 
       await Promise.allSettled([
         api.listPlaybackLogs({ deviceId, limit: 15 }).then((res) => setPlaybackLogs(res.items)),
@@ -148,6 +172,17 @@ export function DisplayDetailProvider({
   useEffect(() => {
     fetchAnalytics(timeRange);
   }, [timeRange]);
+
+  useEffect(() => {
+    if (!deviceId) return;
+
+    // Polling berkala setiap 3 detik agar telemetri, heartbeat, screenshot & CPU/RAM selalu live
+    const pollTimer = setInterval(() => {
+      pollLiveData();
+    }, 3000);
+
+    return () => clearInterval(pollTimer);
+  }, [deviceId, timeRange]);
 
   useEffect(() => {
     if (!deviceId) return;
@@ -270,24 +305,10 @@ export function DisplayDetailProvider({
       setCmdFeedback(`Perintah "${label}" berhasil dikirim ke player.`);
       setTimeout(() => setCmdFeedback(null), 4000);
 
-      if (cmdType === ServerCommandType.COMMAND_CAPTURE_SCREENSHOT) {
-        setTimeout(() => {
-          api
-            .listDeviceScreenshots(deviceId, 10)
-            .then((res) => {
-              if (res && res.length > 0) setScreenshots(res);
-            })
-            .catch(() => {});
-        }, 3500);
-        setTimeout(() => {
-          api
-            .listDeviceScreenshots(deviceId, 10)
-            .then((res) => {
-              if (res && res.length > 0) setScreenshots(res);
-            })
-            .catch(() => {});
-        }, 6500);
-      }
+      // Segera poll ulang beberapa kali untuk merefleksikan aksi secara instan
+      setTimeout(() => pollLiveData(), 1200);
+      setTimeout(() => pollLiveData(), 3000);
+      setTimeout(() => pollLiveData(), 6000);
     } catch (err: any) {
       alert(`Gagal mengirim perintah: ${err.message}`);
     } finally {
