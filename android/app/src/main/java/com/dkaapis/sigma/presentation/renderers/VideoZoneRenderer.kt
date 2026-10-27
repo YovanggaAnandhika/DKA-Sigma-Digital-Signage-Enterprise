@@ -3,7 +3,7 @@ package com.dkaapis.sigma.presentation.renderers
 import android.content.Context
 import android.net.Uri
 import android.view.ViewGroup
-import android.widget.FrameLayout
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -27,6 +27,8 @@ class VideoZoneRenderer(
     var onPlaybackCompleted: ((mediaId: String, durationSeconds: Int) -> Unit)? = null
     private var lastTrackIndex: Int = -1
     private var currentTrackStartTimeMs: Long = 0L
+    private var lastCheckedRenderedFrames: Int = -1
+    private var stallTickCount: Int = 0
 
     fun createView(parent: ViewGroup, videoFile: File, isMuted: Boolean = false, volumeLevel: Int = 100): PlayerView {
         return createPlaylistView(parent, listOf(VideoPlaylistItem(videoFile, 0, isMuted, volumeLevel = volumeLevel)))
@@ -54,6 +56,7 @@ class VideoZoneRenderer(
 
         val player = ExoPlayer.Builder(context, renderersFactory)
             .setLoadControl(loadControl)
+            .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
             .apply {
             repeatMode = Player.REPEAT_MODE_ALL
@@ -139,12 +142,54 @@ class VideoZoneRenderer(
         val inflater = android.view.LayoutInflater.from(context)
         val view = (inflater.inflate(com.dkaapis.sigma.R.layout.item_video_player, parent, false) as PlayerView).apply {
             this.player = player
+            keepScreenOn = true
         }
         playerView = view
         return view
     }
 
+    /**
+     * Memeriksa apakah decoder video mengalami macet (freeze) saat status READY/PLAYING.
+     * Dipanggil berkala dari heartbeat/analitik setiap 15 detik.
+     */
+    fun checkAndRecoverFromStall() {
+        val player = exoPlayer ?: return
+        if (!player.playWhenReady) return
+
+        val state = player.playbackState
+        if (state == Player.STATE_IDLE || state == Player.STATE_ENDED) {
+            android.util.Log.w("VideoZoneRenderer", "Player di zona '$zoneName' berhenti (state=$state), memulihkan playback...")
+            runCatching {
+                player.prepare()
+                player.play()
+            }
+            return
+        }
+
+        val rendered = player.videoDecoderCounters?.renderedOutputBufferCount ?: 0
+        if (state == Player.STATE_READY && player.isPlaying) {
+            if (rendered > 0 && rendered == lastCheckedRenderedFrames) {
+                stallTickCount++
+                if (stallTickCount >= 2) {
+                    android.util.Log.w("VideoZoneRenderer", "Decoder video beku terdeteksi di '$zoneName' (rendered=$rendered tidak bergerak selama 30s). Reset pipeline...")
+                    stallTickCount = 0
+                    runCatching {
+                        val pos = player.currentPosition
+                        player.stop()
+                        player.seekTo(player.currentMediaItemIndex, pos)
+                        player.prepare()
+                        player.play()
+                    }
+                }
+            } else {
+                stallTickCount = 0
+            }
+        }
+        lastCheckedRenderedFrames = rendered
+    }
+
     fun getCurrentPlaybackStats(): AssetStatsData? {
+        checkAndRecoverFromStall()
         val player = exoPlayer ?: return null
         val idx = player.currentMediaItemIndex
         val item = playlistItems.getOrNull(idx)

@@ -37,13 +37,18 @@ class WatchdogPingHelper(
     private val heartbeatRunnable = object : Runnable {
         override fun run() {
             WatchdogService.pingFromPlayer(activity)
+            val now = System.currentTimeMillis()
+            val shouldSyncAnalytics = (now - lastAnalyticsSyncTimeMs >= 15000L)
+            val allAssetStats = if (shouldSyncAnalytics) {
+                lastAnalyticsSyncTimeMs = now
+                callbacks.collectAssetStats()
+            } else emptyList()
+
             scope.launch {
                 runCatching {
                     processHeartbeat()
-                    val now = System.currentTimeMillis()
-                    if (now - lastAnalyticsSyncTimeMs >= 15000L) {
-                        lastAnalyticsSyncTimeMs = now
-                        syncAnalyticsMetrics()
+                    if (shouldSyncAnalytics) {
+                        syncAnalyticsMetrics(allAssetStats)
                     }
                 }.onFailure { err ->
                     Log.w(TAG, "Watchdog tick failure: ${err.message}")
@@ -80,10 +85,9 @@ class WatchdogPingHelper(
         }
     }
 
-    private suspend fun syncAnalyticsMetrics() {
+    private suspend fun syncAnalyticsMetrics(allAssetStats: List<AssetStatsData>) {
         runCatching {
             val hwMetrics = hardwareProfiler.sampleMetrics()
-            val allAssetStats = callbacks.collectAssetStats()
             val assetsArray = JSONArray().apply {
                 if (allAssetStats.isNotEmpty()) {
                     for (stat in allAssetStats) {

@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -97,6 +98,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private var activeQueueDataJson: String? = null
     private var lastDownloadProgressReportTime: Long = 0L
     private var hasActivePlayback: Boolean = false
+    private var screenWakeLock: PowerManager.WakeLock? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -111,7 +113,17 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     }
 
     private fun setupWindowEnvironment() {
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        }
+        acquireScreenWakeLock()
         runCatching {
             @Suppress("DEPRECATION")
             window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
@@ -122,10 +134,36 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                     WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
             WindowCompat.setDecorFitsSystemWindows(window, false)
+            window.decorView.keepScreenOn = true
             WindowCompat.getInsetsController(window, window.decorView).apply {
                 hide(WindowInsetsCompat.Type.systemBars())
                 systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun acquireScreenWakeLock() {
+        runCatching {
+            if (screenWakeLock?.isHeld == true) return
+            val pm = getSystemService(POWER_SERVICE) as? PowerManager ?: return
+            // shortcut: SCREEN_BRIGHT_WAKE_LOCK deprecated in API 13, tapi tetap dibutuhkan pada firmware TV (Polytron/MediaTek/Realtek) yang mengabaikan FLAG_KEEP_SCREEN_ON saat idle lama
+            screenWakeLock = pm.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE,
+                "DKASigma:SignageScreenWakeLock"
+            ).apply {
+                setReferenceCounted(false)
+                acquire()
+            }
+        }
+    }
+
+    private fun releaseScreenWakeLock() {
+        runCatching {
+            if (screenWakeLock?.isHeld == true) {
+                screenWakeLock?.release()
+            }
+            screenWakeLock = null
         }
     }
 
@@ -549,9 +587,15 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        acquireScreenWakeLock()
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
+            acquireScreenWakeLock()
             runCatching {
                 WindowCompat.getInsetsController(window, window.decorView).hide(WindowInsetsCompat.Type.systemBars())
             }
@@ -670,6 +714,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     override fun onDestroy() {
         super.onDestroy()
+        releaseScreenWakeLock()
         audioManager.release()
         streamManager.stopStream()
         telemetryManager.stop()

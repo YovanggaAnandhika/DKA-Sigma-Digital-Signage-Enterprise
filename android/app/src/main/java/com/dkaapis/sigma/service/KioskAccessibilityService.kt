@@ -53,12 +53,17 @@ class KioskAccessibilityService : AccessibilityService() {
             "com.google.android.apps.tv.launcherx",    // Google TV launcher
             "com.google.android.tvlauncher",           // Android TV home launcher
             "com.google.android.tungsten.setupwraith", // Setup wizard
-            "com.google.android.katniss"               // Google Assistant TV launcher overlay
+            "com.google.android.katniss",              // Google Assistant TV launcher overlay
+            "com.google.android.deskclock",            // Screen saver / Clock Daydream
+            "com.google.android.backdrop"              // Google TV Ambient Mode / Screensaver
         )
 
         fun isStockLauncherPackage(pkg: String): Boolean {
             return pkg in STOCK_LAUNCHER_PACKAGES ||
                     pkg.contains("launcherx", ignoreCase = true) ||
+                    pkg.contains("screensaver", ignoreCase = true) ||
+                    pkg.contains("dreams", ignoreCase = true) ||
+                    pkg.contains("backdrop", ignoreCase = true) ||
                     (pkg.contains("tvlauncher", ignoreCase = true) && !pkg.contains("sigma", ignoreCase = true))
         }
     }
