@@ -14,6 +14,7 @@ import {
   callPreviousTicket as apiCallPreviousTicket,
   resetQueue as apiResetQueue,
   setCounterStatus as apiSetCounterStatus,
+  getQueueSyncState,
 } from '@/lib/services/studio/queue.service';
 import { modal } from '@/components/ui/ModalDialog';
 
@@ -101,6 +102,7 @@ export default function TabEditorControllTab() {
             const ticketNum = data.ticketNumber;
             const counterNm = data.counterName;
             if (ticketNum) {
+              lastSyncedTicketRef.current = ticketNum;
               startInvertEffect();
 
               if (queue.audioChimeEnabled && (data.source === 'player_touch' || data.source === 'iot_mqtt')) {
@@ -178,6 +180,112 @@ export default function TabEditorControllTab() {
       if (eventSource) eventSource.close();
     };
   }, [queue.id, queue.prefix]);
+
+  // Sinkronisasi state antrian dari database setiap 1.5 detik (menangkap perubahan dari tombol fisik ESP32 / MQTT)
+  const lastSyncedTicketRef = useRef<string>(queue.currentNumber || '');
+  const lastSyncedCalledAtRef = useRef<string>('');
+  useEffect(() => {
+    lastSyncedTicketRef.current = queue.currentNumber || '';
+  }, [queue.currentNumber]);
+
+  useEffect(() => {
+    if (!queue.id) return;
+    let isSyncing = false;
+
+    const timer = setInterval(async () => {
+      if (isSyncing || calling) return;
+      isSyncing = true;
+      try {
+        const sync = await getQueueSyncState(queue.id).catch(() => null);
+        if (!sync) return;
+
+        const dbTicket = sync.currentTicketNumber || sync.current_ticket_number;
+        const dbCounters: any[] = sync.countersList || sync.counters || [];
+
+        // Cari loket yang terakhir memanggil tiket tersebut
+        const callerCounter =
+          dbCounters.find((c) => (c.currentTicketNumber || c.current_ticket_number) === dbTicket) ||
+          dbCounters[0];
+        const callerName = callerCounter?.counterName || callerCounter?.counter_name || activeCounter.counterName;
+        const callerCalledAt = callerCounter?.lastCalledAt || callerCounter?.last_called_at || '';
+
+        const isNewTicket = dbTicket && dbTicket !== lastSyncedTicketRef.current;
+        const isRecallSameTicket =
+          dbTicket &&
+          dbTicket === lastSyncedTicketRef.current &&
+          callerCalledAt &&
+          lastSyncedCalledAtRef.current &&
+          callerCalledAt !== lastSyncedCalledAtRef.current;
+
+        if (callerCalledAt) {
+          lastSyncedCalledAtRef.current = callerCalledAt;
+        }
+
+        if (isNewTicket || isRecallSameTicket) {
+          lastSyncedTicketRef.current = dbTicket;
+          startInvertEffect();
+
+          if (queue.audioChimeEnabled) {
+            triggerChime();
+            setTimeout(() => {
+              speakQueueAnnouncement(
+                dbTicket,
+                callerName,
+                Boolean(isRecallSameTicket),
+                () => stopInvertEffect(),
+                queue
+              );
+            }, 1200);
+          } else {
+            speakQueueAnnouncement(
+              dbTicket,
+              callerName,
+              Boolean(isRecallSameTicket),
+              () => stopInvertEffect(),
+              queue
+            );
+          }
+
+          setQueue((prev) => ({
+            ...prev,
+            currentNumber: dbTicket,
+            currentCounter: callerName,
+            counters: prev.counters.map((c) => {
+              const matched = dbCounters.find((dc) => dc.id === c.id);
+              return matched ? { ...c, status: matched.status || c.status } : c;
+            }),
+          }));
+
+          setSimulator((prev) => ({
+            ...prev,
+            currentNumber: dbTicket,
+            currentCounter: callerName,
+            currentSeq: parseInt(dbTicket.replace(/[^0-9]/g, ''), 10) || prev.currentSeq,
+          }));
+
+          recordCallHistory(dbTicket, callerName, isRecallSameTicket ? 'recall' : 'next');
+        } else if (dbCounters.length > 0) {
+          // Sinkronkan status loket (BREAK / LOCKED / ACTIVE) jika berubah dari tombol IoT
+          setQueue((prev) => {
+            let changed = false;
+            const updatedCounters = prev.counters.map((c) => {
+              const matched = dbCounters.find((dc) => dc.id === c.id);
+              if (matched && matched.status && matched.status !== c.status) {
+                changed = true;
+                return { ...c, status: matched.status };
+              }
+              return c;
+            });
+            return changed ? { ...prev, counters: updatedCounters } : prev;
+          });
+        }
+      } finally {
+        isSyncing = false;
+      }
+    }, 1500);
+
+    return () => clearInterval(timer);
+  }, [queue.id, calling, queue.audioChimeEnabled]);
 
   const broadcastToAndroid = (payload: Record<string, any>) => {
     try {

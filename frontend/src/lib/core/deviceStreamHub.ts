@@ -114,8 +114,65 @@ class DeviceStreamHub {
   }
 }
 
-const globalForHub = global as unknown as { deviceStreamHub?: DeviceStreamHub };
+const globalForHub = global as unknown as {
+  deviceStreamHub?: DeviceStreamHub;
+  deviceStreamBridgeStarted?: boolean;
+};
+
 export const deviceStreamHub = globalForHub.deviceStreamHub || new DeviceStreamHub();
 if (process.env.NODE_ENV !== 'production') {
   globalForHub.deviceStreamHub = deviceStreamHub;
 }
+
+function startGlobalBackendStreamBridge() {
+  if (globalForHub.deviceStreamBridgeStarted || typeof window !== 'undefined') return;
+  globalForHub.deviceStreamBridgeStarted = true;
+
+  const connect = () => {
+    try {
+      const client = new StreamServiceClient(getGrpcHost(), getGrpcCredentials());
+      const call = client.displayStream();
+
+      const sendPing = () => {
+        try {
+          const msg = new StreamClientMessage();
+          msg.setDeviceId('web-sse-bridge');
+          msg.setTimestamp(Date.now());
+          const ping = new HeartbeatPing();
+          ping.setMemoryPercent(0);
+          ping.setStorageFreeBytes(0);
+          msg.setPing(ping);
+          call.write(msg);
+        } catch (_) {}
+      };
+
+      sendPing();
+      const pingTimer = setInterval(sendPing, 15000);
+
+      call.on('data', (serverMsg: any) => {
+        try {
+          const obj = serverMsg.toObject ? serverMsg.toObject() : serverMsg;
+          const rawJson = obj.payloadJson || obj.payload_json;
+          if (rawJson && typeof rawJson === 'string' && rawJson.trim().startsWith('{')) {
+            const parsed = JSON.parse(rawJson);
+            deviceStreamHub.broadcast('all', parsed);
+          }
+        } catch (_) {}
+      });
+
+      const cleanupAndReconnect = () => {
+        clearInterval(pingTimer);
+        setTimeout(connect, 2000);
+      };
+
+      call.on('error', cleanupAndReconnect);
+      call.on('end', cleanupAndReconnect);
+    } catch (_) {
+      setTimeout(connect, 3000);
+    }
+  };
+
+  connect();
+}
+
+startGlobalBackendStreamBridge();
