@@ -66,7 +66,20 @@ char topicTelemetry[64];
 int pinLastState[NUM_PINS];
 int pinCurrentState[NUM_PINS];
 unsigned long pinLastDebounceTime[NUM_PINS];
-const unsigned long DEBOUNCE_DELAY_MS = 50;
+const unsigned long DEBOUNCE_DELAY_MS = 30;
+
+void resetButtonStates() {
+  while (Serial.available() > 0) {
+    Serial.read();
+  }
+  unsigned long now = millis();
+  for (int i = 0; i < NUM_PINS; i++) {
+    int state = digitalRead(MONITORED_PINS[i]);
+    pinLastState[i] = state;
+    pinCurrentState[i] = state;
+    pinLastDebounceTime[i] = now;
+  }
+}
 
 unsigned long lastTelemetryTime = 0;
 const unsigned long TELEMETRY_INTERVAL_MS = 30000; // Tiap 30 detik
@@ -202,6 +215,12 @@ void reconnectMqtt() {
 
       // Kirim telemetri awal saat online
       sendTelemetry();
+
+      // Sinkronkan status awal semua pin & bersihkan buffer Serial agar tekan
+      // RST tidak memicu panggilan palsu
+      resetButtonStates();
+      Serial.println("[Siap] Tekan tombol fisik BOOT (GPIO 0) di board atau "
+                     "ketik 'n' di Serial Monitor untuk panggil antrean.");
     } else {
       Serial.print("GAGAL, rc=");
       Serial.print(mqttClient.state());
@@ -266,6 +285,7 @@ void setup() {
   }
 
   setupWifi();
+  resetButtonStates();
 
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setCallback(onMqttMessage);
@@ -296,25 +316,30 @@ void loop() {
     cmd.trim();
     if (cmd.length() > 0) {
       int targetPin = -1;
-      if (cmd.equalsIgnoreCase("n") || cmd.equalsIgnoreCase("next"))
+      if (cmd.equalsIgnoreCase("n") || cmd.equalsIgnoreCase("next") ||
+          cmd == "13" || cmd == "0")
         targetPin = 13;
-      else if (cmd.equalsIgnoreCase("r") || cmd.equalsIgnoreCase("recall"))
+      else if (cmd.equalsIgnoreCase("r") || cmd.equalsIgnoreCase("recall") ||
+               cmd == "12")
         targetPin = 12;
-      else if (cmd.equalsIgnoreCase("b") || cmd.equalsIgnoreCase("break"))
+      else if (cmd.equalsIgnoreCase("b") || cmd.equalsIgnoreCase("break") ||
+               cmd == "14")
         targetPin = 14;
-      else if (cmd.equalsIgnoreCase("c") || cmd.equalsIgnoreCase("close"))
+      else if (cmd.equalsIgnoreCase("c") || cmd.equalsIgnoreCase("close") ||
+               cmd == "27")
         targetPin = 27;
-      else if (cmd.equalsIgnoreCase("p") || cmd.equalsIgnoreCase("prev"))
+      else if (cmd.equalsIgnoreCase("p") || cmd.equalsIgnoreCase("prev") ||
+               cmd == "26")
         targetPin = 26;
-      else
-        targetPin = cmd.toInt();
+      else if (cmd == "25")
+        targetPin = 25;
+      else if (cmd == "33")
+        targetPin = 33;
 
-      if (targetPin >= 0) {
+      if (targetPin > 0) {
         Serial.printf("[Serial Trigger] Mensimulasikan penekanan GPIO %d...\n",
                       targetPin);
-        // Jika menekan GPIO 0 (tombol BOOT) dan belum dipetakan di web, kirim
-        // sebagai Pin 13 (Next)
-        sendButtonPress(targetPin == 0 ? 13 : targetPin);
+        sendButtonPress(targetPin);
       }
     }
   }
