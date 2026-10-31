@@ -54,60 +54,69 @@ impl StreamServiceTrait for StreamServiceImpl {
                                     if registered_device_id.is_none() {
                                         registered_device_id = Some(dev_id);
                                         manager.register_connection(dev_id, tx.clone()).await;
-                                        let _ = sqlx::query("UPDATE hardware_devices SET is_online = TRUE, last_heartbeat_at = NOW() WHERE id = $1")
-                                            .bind(dev_id)
-                                            .execute(&pool)
-                                            .await;
+                                        if !dev_id.is_nil() {
+                                            let _ = sqlx::query("UPDATE hardware_devices SET is_online = TRUE, last_heartbeat_at = NOW() WHERE id = $1")
+                                                .bind(dev_id)
+                                                .execute(&pool)
+                                                .await;
+                                        }
                                     }
 
                                     // Handle stream client payload (Ping telemetry, Screenshot upload, Command ACK)
-                                    if let Some(payload) = client_msg.payload {
-                                        match payload {
-                                            crate::grpc::proto::distribution::v1::stream::stream_client_message::Payload::Ping(ping) => {
-                                                let _ = sqlx::query("UPDATE hardware_devices SET is_online = TRUE, last_heartbeat_at = NOW() WHERE id = $1")
-                                                    .bind(dev_id)
-                                                    .execute(&pool)
-                                                    .await;
-
-                                                let telemetry_json = serde_json::json!({
-                                                    "memory_percent": ping.memory_percent,
-                                                    "storage_free_bytes": ping.storage_free_bytes,
-                                                    "current_playing_media_id": ping.current_playing_media_id,
-                                                });
-
-                                                let _ = sqlx::query(
-                                                    "INSERT INTO hardware_device_telemetry (device_id, payload_json) VALUES ($1, $2)"
-                                                )
-                                                .bind(dev_id)
-                                                .bind(telemetry_json)
-                                                .execute(&pool)
-                                                .await;
-                                            }
-                                            crate::grpc::proto::distribution::v1::stream::stream_client_message::Payload::Screenshot(screenshot) => {
-                                                if !screenshot.image_data.is_empty() {
-                                                    let upload_dir = std::env::var("UPLOAD_DIR").unwrap_or_else(|_| "./uploads".to_string());
-                                                    let screenshots_dir = std::path::Path::new(&upload_dir).join("screenshots");
-                                                    let _ = tokio::fs::create_dir_all(&screenshots_dir).await;
-
-                                                    let filename = format!("{}_{}.jpg", dev_id, chrono::Utc::now().timestamp_millis());
-                                                    let file_path = screenshots_dir.join(&filename);
-                                                    if let Ok(_) = tokio::fs::write(&file_path, &screenshot.image_data).await {
-                                                        let file_url = format!("/api/assets/screenshots/{}", filename);
-                                                        let _ = sqlx::query(
-                                                            "INSERT INTO hardware_device_screenshots (device_id, file_url) VALUES ($1, $2)"
-                                                        )
+                                    if !dev_id.is_nil() {
+                                        if let Some(payload) = client_msg.payload {
+                                            match payload {
+                                                crate::grpc::proto::distribution::v1::stream::stream_client_message::Payload::Ping(ping) => {
+                                                    let _ = sqlx::query("UPDATE hardware_devices SET is_online = TRUE, last_heartbeat_at = NOW() WHERE id = $1")
                                                         .bind(dev_id)
-                                                        .bind(file_url)
                                                         .execute(&pool)
                                                         .await;
+
+                                                    let telemetry_json = serde_json::json!({
+                                                        "memory_percent": ping.memory_percent,
+                                                        "storage_free_bytes": ping.storage_free_bytes,
+                                                        "current_playing_media_id": ping.current_playing_media_id,
+                                                    });
+
+                                                    let _ = sqlx::query(
+                                                        "INSERT INTO hardware_device_telemetry (device_id, payload_json) VALUES ($1, $2)"
+                                                    )
+                                                    .bind(dev_id)
+                                                    .bind(telemetry_json)
+                                                    .execute(&pool)
+                                                    .await;
+                                                }
+                                                crate::grpc::proto::distribution::v1::stream::stream_client_message::Payload::Screenshot(screenshot) => {
+                                                    if !screenshot.image_data.is_empty() {
+                                                        let upload_dir = std::env::var("UPLOAD_DIR").unwrap_or_else(|_| "./uploads".to_string());
+                                                        let screenshots_dir = std::path::Path::new(&upload_dir).join("screenshots");
+                                                        let _ = tokio::fs::create_dir_all(&screenshots_dir).await;
+
+                                                        let filename = format!("{}_{}.jpg", dev_id, chrono::Utc::now().timestamp_millis());
+                                                        let file_path = screenshots_dir.join(&filename);
+                                                        if let Ok(_) = tokio::fs::write(&file_path, &screenshot.image_data).await {
+                                                            let file_url = format!("/api/assets/screenshots/{}", filename);
+                                                            let _ = sqlx::query(
+                                                                "INSERT INTO hardware_device_screenshots (device_id, file_url) VALUES ($1, $2)"
+                                                            )
+                                                            .bind(dev_id)
+                                                            .bind(file_url)
+                                                            .execute(&pool)
+                                                            .await;
+                                                        }
                                                     }
                                                 }
-                                            }
-                                            crate::grpc::proto::distribution::v1::stream::stream_client_message::Payload::CommandAck(ack) => {
-                                                tracing::info!("Received command ACK from device {}: success={}, msg={}", dev_id, ack.success, ack.error_message);
+                                                crate::grpc::proto::distribution::v1::stream::stream_client_message::Payload::CommandAck(ack) => {
+                                                    tracing::info!("Received command ACK from device {}: success={}, msg={}", dev_id, ack.success, ack.error_message);
+                                                }
                                             }
                                         }
                                     }
+                                } else if registered_device_id.is_none() {
+                                    // Web bridge atau listener anonim: berikan UUID unik sementara agar menerima broadcast (Uuid::nil)
+                                    let bridge_id = Uuid::new_v4();
+                                    registered_device_id = Some(bridge_id);
+                                    manager.register_connection(bridge_id, tx.clone()).await;
                                 }
 
                                 // Acknowledge received message to keep stream alive

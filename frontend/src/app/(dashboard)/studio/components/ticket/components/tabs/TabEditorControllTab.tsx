@@ -103,19 +103,30 @@ export default function TabEditorControllTab() {
             if (ticketNum) {
               startInvertEffect();
 
-              if (queue.audioChimeEnabled && data.source === 'player_touch') {
+              if (queue.audioChimeEnabled && (data.source === 'player_touch' || data.source === 'iot_mqtt')) {
                 triggerChime();
+                setTimeout(() => {
+                  speakQueueAnnouncement(
+                    ticketNum,
+                    counterNm || activeCounter.counterName,
+                    data.callType === 'recall',
+                    () => {
+                      stopInvertEffect();
+                    },
+                    queue
+                  );
+                }, 1200);
+              } else {
+                speakQueueAnnouncement(
+                  ticketNum,
+                  counterNm || activeCounter.counterName,
+                  data.callType === 'recall',
+                  () => {
+                    stopInvertEffect();
+                  },
+                  queue
+                );
               }
-
-              speakQueueAnnouncement(
-                ticketNum,
-                counterNm || activeCounter.counterName,
-                data.callType === 'recall',
-                () => {
-                  stopInvertEffect();
-                },
-                queue
-              );
 
               setQueue((prev) => ({
                 ...prev,

@@ -116,6 +116,21 @@ export default function TabIotTab() {
 
   useEffect(() => {
     fetchDevices();
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource('/api/stream/device?deviceId=all');
+      es.onmessage = (ev) => {
+        try {
+          const data = JSON.parse(ev.data);
+          if (data && (data.type === 'CALL_QUEUE' || data.type === 'COUNTER_STATUS_CHANGED')) {
+            fetchDevices();
+          }
+        } catch (_) {}
+      };
+    } catch (_) {}
+    return () => {
+      if (es) es.close();
+    };
   }, [fetchDevices]);
 
   const unpairedDevices = discoveredDevices.filter((d) => !d.isPaired);

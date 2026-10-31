@@ -3,34 +3,37 @@
  * DKASigma Digital Signage Enterprise - IoT Queue Controller Firmware
  * Modul: NodeMCU ESP32 (ESP-WROOM-32 / ESP32 Dev Module)
  * Protokol: MQTT (PubSubClient) + JSON (ArduinoJson)
- * 
+ *
  * Fitur:
  * - Multi-tombol fisik berbasis pin GPIO (INPUT_PULLUP)
- * - Otomatis mendeteksi MAC Address sebagai Device UID (tanpa perlu setting manual)
+ * - Otomatis mendeteksi MAC Address sebagai Device UID (tanpa perlu setting
+ * manual)
  * - Anti-bouncing presisi berbasis millis() (50ms debouncing)
- * - Penanganan ACK visual LED: Kedip 2x jika aksi berhasil, kedip lambat jika dinonaktifkan
+ * - Penanganan ACK visual LED: Kedip 2x jika aksi berhasil, kedip lambat jika
+ * dinonaktifkan
  * - Telemetri periodik (Wi-Fi RSSI, IP address, uptime) tiap 30 detik
  * =========================================================================================
  */
 
-#include <WiFi.h>
-#include <PubSubClient.h>
 #include <ArduinoJson.h>
+#include <PubSubClient.h>
+#include <WiFi.h>
 
 // =========================================================================================
 // 1. KONFIGURASI WI-FI & MQTT BROKER
 // =========================================================================================
-const char* WIFI_SSID     = "47 Signature 2";
-const char* WIFI_PASSWORD = "JUMATBERKAH";
+const char *WIFI_SSID = "DKA HOME";
+const char *WIFI_PASSWORD = "Cyberhack2010";
 
 // Alamat IP atau Hostname MQTT Broker (Server DKASigma / Nginx Proxy)
-// Contoh jika di jaringan lokal: "192.168.1.100" atau "mqtt.local.sigma.dkaapis.com"
-const char* MQTT_SERVER   = "10.153.214.168";
-const int   MQTT_PORT     = 1883;
+// Contoh jika di jaringan lokal: "192.168.1.100" atau
+// "mqtt.local.sigma.dkaapis.com"
+const char *MQTT_SERVER = "10.71.246.3";
+const int MQTT_PORT = 1883;
 
 // Autentikasi MQTT (Kosongkan jika broker disetel mode anonymous)
-const char* MQTT_USER     = "";
-const char* MQTT_PASSWORD = "";
+const char *MQTT_USER = "";
+const char *MQTT_PASSWORD = "";
 
 // =========================================================================================
 // 2. KONFIGURASI PIN HARDWARE
@@ -38,12 +41,14 @@ const char* MQTT_PASSWORD = "";
 // Pin LED Indikator Onboard (Umumnya GPIO 2 pada modul NodeMCU ESP32)
 const int PIN_LED_STATUS = 2;
 
-// Pin Buzzer Piezo Pasif / Aktif (Opsional, hubungkan ke GND dan GPIO 4, set -1 jika tidak ada)
-const int PIN_BUZZER     = 4;
+// Pin Buzzer Piezo Pasif / Aktif (Opsional, hubungkan ke GND dan GPIO 4, set -1
+// jika tidak ada)
+const int PIN_BUZZER = 4;
 
-// Daftar pin GPIO yang dipantau untuk tombol pushbutton (terhubung antara GPIO dan GND)
-// Pin-pin ini dapat dipetakan langsung dari web dashboard DKASigma Studio!
-const int MONITORED_PINS[] = {13, 12, 14, 27, 26, 25, 33};
+// Daftar pin GPIO yang dipantau untuk tombol pushbutton (terhubung antara GPIO
+// dan GND) Pin 0 adalah tombol fisik bawaan "BOOT" di atas board ESP32 (bisa
+// langsung ditekan tanpa kabel!)
+const int MONITORED_PINS[] = {0, 13, 12, 14, 27, 26, 25, 33};
 const int NUM_PINS = sizeof(MONITORED_PINS) / sizeof(MONITORED_PINS[0]);
 
 // =========================================================================================
@@ -71,10 +76,10 @@ const unsigned long TELEMETRY_INTERVAL_MS = 30000; // Tiap 30 detik
 // =========================================================================================
 void triggerBuzzer(int durationMs, int toneFreq = 2000) {
   if (PIN_BUZZER >= 0) {
-    #if defined(ESP32)
-      // Gunakan tone sederhana jika hardware mendukung
-      tone(PIN_BUZZER, toneFreq, durationMs);
-    #endif
+#if defined(ESP32)
+    // Gunakan tone sederhana jika hardware mendukung
+    tone(PIN_BUZZER, toneFreq, durationMs);
+#endif
   }
 }
 
@@ -101,9 +106,10 @@ void blinkFeedback(bool success) {
 // =========================================================================================
 // 5. MQTT CALLBACK & SUBSCRIPTION
 // =========================================================================================
-void onMqttMessage(char* topic, byte* payload, unsigned int length) {
+void onMqttMessage(char *topic, byte *payload, unsigned int length) {
   char message[256];
-  if (length >= sizeof(message)) length = sizeof(message) - 1;
+  if (length >= sizeof(message))
+    length = sizeof(message) - 1;
   memcpy(message, payload, length);
   message[length] = '\0';
 
@@ -116,11 +122,12 @@ void onMqttMessage(char* topic, byte* payload, unsigned int length) {
   StaticJsonDocument<256> doc;
   DeserializationError err = deserializeJson(doc, message);
   if (!err) {
-    const char* status = doc["status"] | "OK";
-    const char* action = doc["action"] | "";
-    const char* msg    = doc["message"] | "";
+    const char *status = doc["status"] | "OK";
+    const char *action = doc["action"] | "";
+    const char *msg = doc["message"] | "";
 
-    Serial.printf("[ACK] Status: %s, Aksi: %s, Pesan: %s\n", status, action, msg);
+    Serial.printf("[ACK] Status: %s, Aksi: %s, Pesan: %s\n", status, action,
+                  msg);
 
     if (strcmp(status, "OK") == 0) {
       blinkFeedback(true);
@@ -161,7 +168,8 @@ void setupWifi() {
   // Siapkan topik MQTT
   snprintf(topicAction, sizeof(topicAction), "dka/iot/%s/action", deviceUid);
   snprintf(topicAck, sizeof(topicAck), "dka/iot/%s/ack", deviceUid);
-  snprintf(topicTelemetry, sizeof(topicTelemetry), "dka/iot/%s/telemetry", deviceUid);
+  snprintf(topicTelemetry, sizeof(topicTelemetry), "dka/iot/%s/telemetry",
+           deviceUid);
 
   Serial.println("=================================================");
   Serial.println("   DKASigma Digital Signage - IoT Controller    ");
@@ -207,10 +215,10 @@ void reconnectMqtt() {
 void sendTelemetry() {
   StaticJsonDocument<200> doc;
   doc["device_uid"] = deviceUid;
-  doc["ip"]         = WiFi.localIP().toString();
-  doc["rssi"]       = WiFi.RSSI();
-  doc["fw"]         = "1.0.0";
-  doc["uptime_ms"]  = millis();
+  doc["ip"] = WiFi.localIP().toString();
+  doc["rssi"] = WiFi.RSSI();
+  doc["fw"] = "1.0.0";
+  doc["uptime_ms"] = millis();
 
   char buffer[200];
   serializeJson(doc, buffer);
@@ -221,15 +229,16 @@ void sendTelemetry() {
 void sendButtonPress(int pin) {
   StaticJsonDocument<200> doc;
   doc["device_uid"] = deviceUid;
-  doc["pin"]        = pin;
-  doc["event"]      = "PRESS";
-  doc["uptime_ms"]  = millis();
+  doc["pin"] = pin;
+  doc["event"] = "PRESS";
+  doc["uptime_ms"] = millis();
 
   char buffer[200];
   serializeJson(doc, buffer);
   mqttClient.publish(topicAction, buffer);
 
-  Serial.printf("[Tombol Ditekan] GPIO %d dipublikasikan ke %s: %s\n", pin, topicAction, buffer);
+  Serial.printf("[Tombol Ditekan] GPIO %d dipublikasikan ke %s: %s\n", pin,
+                topicAction, buffer);
 }
 
 // =========================================================================================
@@ -278,6 +287,38 @@ void loop() {
     sendTelemetry();
   }
 
+  // Simulasi via Serial Monitor Arduino IDE (Tanpa kabel jumper!)
+  // Ketik angka pin (misal: 13, 12, 14) atau huruf:
+  // 'n' = Next (Pin 13), 'r' = Recall (Pin 12), 'b' = Break (Pin 14), 'c' =
+  // Close (Pin 27), 'p' = Prev (Pin 26)
+  if (Serial.available() > 0) {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+    if (cmd.length() > 0) {
+      int targetPin = -1;
+      if (cmd.equalsIgnoreCase("n") || cmd.equalsIgnoreCase("next"))
+        targetPin = 13;
+      else if (cmd.equalsIgnoreCase("r") || cmd.equalsIgnoreCase("recall"))
+        targetPin = 12;
+      else if (cmd.equalsIgnoreCase("b") || cmd.equalsIgnoreCase("break"))
+        targetPin = 14;
+      else if (cmd.equalsIgnoreCase("c") || cmd.equalsIgnoreCase("close"))
+        targetPin = 27;
+      else if (cmd.equalsIgnoreCase("p") || cmd.equalsIgnoreCase("prev"))
+        targetPin = 26;
+      else
+        targetPin = cmd.toInt();
+
+      if (targetPin >= 0) {
+        Serial.printf("[Serial Trigger] Mensimulasikan penekanan GPIO %d...\n",
+                      targetPin);
+        // Jika menekan GPIO 0 (tombol BOOT) dan belum dipetakan di web, kirim
+        // sebagai Pin 13 (Next)
+        sendButtonPress(targetPin == 0 ? 13 : targetPin);
+      }
+    }
+  }
+
   // Deteksi penekanan tombol fisik (Active LOW dengan internal pullup)
   for (int i = 0; i < NUM_PINS; i++) {
     int pin = MONITORED_PINS[i];
@@ -293,7 +334,9 @@ void loop() {
 
         // Tombol baru saja ditekan (transisi dari HIGH ke LOW)
         if (pinCurrentState[i] == LOW) {
-          sendButtonPress(pin);
+          // Tombol BOOT onboard (GPIO 0) otomatis memicu GPIO 13 (CALL_NEXT)
+          // agar bisa dites tanpa kabel
+          sendButtonPress(pin == 0 ? 13 : pin);
         }
       }
     }
