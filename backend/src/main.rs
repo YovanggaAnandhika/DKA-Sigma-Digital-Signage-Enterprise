@@ -155,7 +155,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let stream_manager = StreamConnectionManager::new();
 
     // Spawn MQTT Worker for IoT Queue Devices (NodeMCU ESP32)
-    spawn_mqtt_worker(pool.clone());
+    spawn_mqtt_worker(pool.clone(), stream_manager.clone());
 
     // Build and serve Tonic gRPC server
     let mut router = Server::builder()
@@ -163,7 +163,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let router = crate::register_hardware_services!(router, pool);
     let router = crate::register_iam_services!(router, pool, config);
     let router = crate::register_studio_services!(router, pool);
-    let router = crate::register_components_services!(router, pool);
+    let router = crate::register_components_services!(router, pool, stream_manager.clone());
     let router = crate::register_distribution_services!(router, pool, stream_manager.clone());
     let router = crate::register_common_services!(router, pool);
     
@@ -173,7 +173,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn spawn_mqtt_worker(pool: sqlx::PgPool) {
+fn spawn_mqtt_worker(pool: sqlx::PgPool, stream_manager: StreamConnectionManager) {
     let mqtt_host = std::env::var("MQTT_HOST").unwrap_or_else(|_| "dka-product-sigma-mqtt".to_string());
     let mqtt_port: u16 = std::env::var("MQTT_PORT")
         .ok()
@@ -219,7 +219,7 @@ fn spawn_mqtt_worker(pool: sqlx::PgPool) {
                                 let pin = val.get("pin").and_then(|p| p.as_i64()).unwrap_or(13) as i32;
 
                                 if let Some(uid) = device_uid {
-                                    let queue_svc = crate::grpc::components::queue::service::QueueServiceImpl::new(pool.clone());
+                                    let queue_svc = crate::grpc::components::queue::service::QueueServiceImpl::with_stream_manager(pool.clone(), stream_manager.clone());
                                     use crate::grpc::proto::components::v1::queue::device::queue_device_service_server::QueueDeviceService;
                                     use crate::grpc::proto::components::v1::queue::device::TriggerDeviceActionRequest;
 

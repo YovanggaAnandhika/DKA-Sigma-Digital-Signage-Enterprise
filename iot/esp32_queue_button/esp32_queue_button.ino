@@ -20,12 +20,12 @@
 // =========================================================================================
 // 1. KONFIGURASI WI-FI & MQTT BROKER
 // =========================================================================================
-const char* WIFI_SSID     = "NAMA_WIFI_ANDA";
-const char* WIFI_PASSWORD = "PASSWORD_WIFI_ANDA";
+const char* WIFI_SSID     = "47 Signature 2";
+const char* WIFI_PASSWORD = "JUMATBERKAH";
 
 // Alamat IP atau Hostname MQTT Broker (Server DKASigma / Nginx Proxy)
 // Contoh jika di jaringan lokal: "192.168.1.100" atau "mqtt.local.sigma.dkaapis.com"
-const char* MQTT_SERVER   = "192.168.1.100";
+const char* MQTT_SERVER   = "10.153.214.168";
 const int   MQTT_PORT     = 1883;
 
 // Autentikasi MQTT (Kosongkan jika broker disetel mode anonymous)
@@ -142,16 +142,6 @@ void setupWifi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-  // Dapatkan MAC address dan bentuk Device UID
-  String mac = WiFi.macAddress();
-  mac.replace(":", "");
-  snprintf(deviceUid, sizeof(deviceUid), "ESP32_%s", mac.c_str());
-
-  // Siapkan topik MQTT
-  snprintf(topicAction, sizeof(topicAction), "dka/iot/%s/action", deviceUid);
-  snprintf(topicAck, sizeof(topicAck), "dka/iot/%s/ack", deviceUid);
-  snprintf(topicTelemetry, sizeof(topicTelemetry), "dka/iot/%s/telemetry", deviceUid);
-
   while (WiFi.status() != WL_CONNECTED) {
     digitalWrite(PIN_LED_STATUS, !digitalRead(PIN_LED_STATUS));
     delay(250);
@@ -163,11 +153,21 @@ void setupWifi() {
   Serial.print("[Wi-Fi] Alamat IP ESP32: ");
   Serial.println(WiFi.localIP());
 
+  // Dapatkan MAC address setelah Wi-Fi aktif dan bentuk Device UID
+  String mac = WiFi.macAddress();
+  mac.replace(":", "");
+  snprintf(deviceUid, sizeof(deviceUid), "ESP32_%s", mac.c_str());
+
+  // Siapkan topik MQTT
+  snprintf(topicAction, sizeof(topicAction), "dka/iot/%s/action", deviceUid);
+  snprintf(topicAck, sizeof(topicAck), "dka/iot/%s/ack", deviceUid);
+  snprintf(topicTelemetry, sizeof(topicTelemetry), "dka/iot/%s/telemetry", deviceUid);
+
   Serial.println("=================================================");
   Serial.println("   DKASigma Digital Signage - IoT Controller    ");
   Serial.print("   DEVICE UID : ");
   Serial.println(deviceUid);
-  Serial.println("   (Salin UID ini ke tab 'Perangkat IoT' di Web)");
+  Serial.println("   (Salin UID ini atau klik 'Setujui' di Web)   ");
   Serial.println("=================================================");
 }
 

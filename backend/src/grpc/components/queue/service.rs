@@ -173,11 +173,90 @@ struct QueueSectorRow {
 #[derive(Clone)]
 pub struct QueueServiceImpl {
     pub pool: PgPool,
+    pub stream_manager: Option<crate::modules::distribution::stream::services::StreamConnectionManager>,
 }
 
 impl QueueServiceImpl {
     pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+        Self { pool, stream_manager: None }
+    }
+
+    pub fn with_stream_manager(
+        pool: PgPool,
+        stream_manager: crate::modules::distribution::stream::services::StreamConnectionManager,
+    ) -> Self {
+        Self {
+            pool,
+            stream_manager: Some(stream_manager),
+        }
+    }
+
+    async fn broadcast_queue_call(
+        &self,
+        queue_display_id: Uuid,
+        ticket_number: &str,
+        counter_name: &str,
+        call_type: &str,
+    ) {
+        let Some(ref mgr) = self.stream_manager else { return };
+        let disp: Option<(String, String, String, String, String)> = sqlx::query_as(
+            "SELECT name, ticket_label, counter_label, tts_template_call, tts_template_recall FROM components_queue_displays WHERE id = $1"
+        )
+        .bind(queue_display_id)
+        .fetch_optional(&self.pool)
+        .await
+        .ok()
+        .flatten();
+
+        let (qname, tlabel, clabel, tts_call, tts_recall) = disp.unwrap_or_else(|| (
+            "Layar Antrian".to_string(),
+            "NOMOR ANTRIAN".to_string(),
+            "LOKET".to_string(),
+            "Nomor antrian {ticket}, silakan menuju ke {counter}".to_string(),
+            "Panggilan ulang nomor antrian {ticket}, silakan menuju ke {counter}".to_string(),
+        ));
+
+        let payload = serde_json::json!({
+            "type": "CALL_QUEUE",
+            "queueId": queue_display_id.to_string(),
+            "queueName": qname,
+            "ticketNumber": ticket_number,
+            "counterName": counter_name,
+            "callType": call_type,
+            "source": "iot_mqtt",
+            "ticketLabel": tlabel,
+            "counterLabel": clabel,
+            "ttsTemplateCall": tts_call,
+            "ttsTemplateRecall": tts_recall,
+        });
+
+        let _ = mgr.send_command(&self.pool, crate::modules::distribution::stream::model::PushCommandDto {
+            device_id: Uuid::nil(),
+            command_type: crate::modules::distribution::stream::model::LiveCommandType::EmergencyBroadcast,
+            payload_json: Some(payload.to_string()),
+        }).await;
+    }
+
+    async fn broadcast_counter_status(
+        &self,
+        queue_display_id: Uuid,
+        counter_name: &str,
+        status: &str,
+    ) {
+        let Some(ref mgr) = self.stream_manager else { return };
+        let payload = serde_json::json!({
+            "type": "COUNTER_STATUS_CHANGED",
+            "queueId": queue_display_id.to_string(),
+            "counterName": counter_name,
+            "status": status,
+            "source": "iot_mqtt",
+        });
+
+        let _ = mgr.send_command(&self.pool, crate::modules::distribution::stream::model::PushCommandDto {
+            device_id: Uuid::nil(),
+            command_type: crate::modules::distribution::stream::model::LiveCommandType::EmergencyBroadcast,
+            payload_json: Some(payload.to_string()),
+        }).await;
     }
 
     pub async fn fetch_display_detail(&self, id: Uuid) -> Result<QueueDisplayDetail, Status> {
@@ -2154,7 +2233,15 @@ impl QueueDeviceServiceTrait for QueueServiceImpl {
                         counter_id: cid.to_string(),
                     })).await;
                     match next_res {
-                        Ok(r) => format!("Panggilan berikutnya berhasil: {}", r.into_inner().ticket.map(|t| t.ticket_number).unwrap_or_default()),
+                        Ok(r) => {
+                            let inner = r.into_inner();
+                            let tnum = inner.ticket.map(|t| t.ticket_number).unwrap_or_default();
+                            let cname = inner.counter.map(|c| c.counter_name).unwrap_or_else(|| "LOKET 01".to_string());
+                            if !tnum.is_empty() {
+                                self.broadcast_queue_call(device.queue_display_id, &tnum, &cname, "next").await;
+                            }
+                            format!("Panggilan berikutnya berhasil: {}", tnum)
+                        }
                         Err(e) => format!("Gagal memanggil tiket: {}", e.message()),
                     }
                 } else {
@@ -2168,7 +2255,15 @@ impl QueueDeviceServiceTrait for QueueServiceImpl {
                         counter_id: cid.to_string(),
                     })).await;
                     match prev_res {
-                        Ok(r) => format!("Panggilan mundur berhasil: {}", r.into_inner().ticket.map(|t| t.ticket_number).unwrap_or_default()),
+                        Ok(r) => {
+                            let inner = r.into_inner();
+                            let tnum = inner.ticket.map(|t| t.ticket_number).unwrap_or_default();
+                            let cname = inner.counter.map(|c| c.counter_name).unwrap_or_else(|| "LOKET 01".to_string());
+                            if !tnum.is_empty() {
+                                self.broadcast_queue_call(device.queue_display_id, &tnum, &cname, "back").await;
+                            }
+                            format!("Panggilan mundur berhasil: {}", tnum)
+                        }
                         Err(e) => format!("Gagal memanggil tiket sebelumnya: {}", e.message()),
                     }
                 } else {
@@ -2177,8 +2272,8 @@ impl QueueDeviceServiceTrait for QueueServiceImpl {
             }
             "RECALL" => {
                 if let Some(cid) = device.counter_id {
-                    let c_row: Option<(Option<String>,)> = sqlx::query_as(
-                        "SELECT current_ticket_number FROM components_queue_counters WHERE id = $1"
+                    let c_row: Option<(Option<String>, String)> = sqlx::query_as(
+                        "SELECT current_ticket_number, counter_name FROM components_queue_counters WHERE id = $1"
                     )
                     .bind(cid)
                     .fetch_optional(&self.pool)
@@ -2186,7 +2281,9 @@ impl QueueDeviceServiceTrait for QueueServiceImpl {
                     .ok()
                     .flatten();
 
-                    let current_ticket = c_row.and_then(|r| r.0).unwrap_or_default();
+                    let (current_ticket, cname) = c_row
+                        .map(|(t, n)| (t.unwrap_or_default(), n))
+                        .unwrap_or_else(|| (String::new(), "LOKET 01".to_string()));
                     if !current_ticket.is_empty() {
                         let _ = sqlx::query(
                             "UPDATE components_queue_counters SET last_called_at = NOW(), updated_at = NOW() WHERE id = $1"
@@ -2194,6 +2291,7 @@ impl QueueDeviceServiceTrait for QueueServiceImpl {
                         .bind(cid)
                         .execute(&self.pool)
                         .await;
+                        self.broadcast_queue_call(device.queue_display_id, &current_ticket, &cname, "recall").await;
                         format!("Panggilan ulang antrean {}", current_ticket)
                     } else {
                         "Belum ada tiket aktif di loket ini untuk dipanggil ulang".to_string()
@@ -2204,8 +2302,8 @@ impl QueueDeviceServiceTrait for QueueServiceImpl {
             }
             "TOGGLE_BREAK" | "BREAK" => {
                 if let Some(cid) = device.counter_id {
-                    let current_status: Option<(String,)> = sqlx::query_as(
-                        "SELECT status FROM components_queue_counters WHERE id = $1"
+                    let current_status: Option<(String, String)> = sqlx::query_as(
+                        "SELECT status, counter_name FROM components_queue_counters WHERE id = $1"
                     )
                     .bind(cid)
                     .fetch_optional(&self.pool)
@@ -2213,6 +2311,7 @@ impl QueueDeviceServiceTrait for QueueServiceImpl {
                     .ok()
                     .flatten();
 
+                    let cname = current_status.as_ref().map(|s| s.1.clone()).unwrap_or_else(|| "LOKET 01".to_string());
                     let new_status = if current_status.map(|s| s.0 == "BREAK").unwrap_or(false) {
                         "ACTIVE"
                     } else {
@@ -2225,6 +2324,7 @@ impl QueueDeviceServiceTrait for QueueServiceImpl {
                         status_note: Some(format!("Diubah via Tombol IoT (Pin {})", req.pin)),
                     })).await;
 
+                    self.broadcast_counter_status(device.queue_display_id, &cname, new_status).await;
                     format!("Status loket diubah menjadi {}", new_status)
                 } else {
                     "Perangkat belum terikat dengan loket mana pun".to_string()
@@ -2232,8 +2332,8 @@ impl QueueDeviceServiceTrait for QueueServiceImpl {
             }
             "TOGGLE_CLOSE" | "CLOSE" | "LOCKED" => {
                 if let Some(cid) = device.counter_id {
-                    let current_status: Option<(String,)> = sqlx::query_as(
-                        "SELECT status FROM components_queue_counters WHERE id = $1"
+                    let current_status: Option<(String, String)> = sqlx::query_as(
+                        "SELECT status, counter_name FROM components_queue_counters WHERE id = $1"
                     )
                     .bind(cid)
                     .fetch_optional(&self.pool)
@@ -2241,6 +2341,7 @@ impl QueueDeviceServiceTrait for QueueServiceImpl {
                     .ok()
                     .flatten();
 
+                    let cname = current_status.as_ref().map(|s| s.1.clone()).unwrap_or_else(|| "LOKET 01".to_string());
                     let new_status = if current_status.map(|s| s.0 == "LOCKED").unwrap_or(false) {
                         "ACTIVE"
                     } else {
@@ -2253,6 +2354,7 @@ impl QueueDeviceServiceTrait for QueueServiceImpl {
                         status_note: Some(format!("Diubah via Tombol IoT (Pin {})", req.pin)),
                     })).await;
 
+                    self.broadcast_counter_status(device.queue_display_id, &cname, new_status).await;
                     format!("Status loket diubah menjadi {}", new_status)
                 } else {
                     "Perangkat belum terikat dengan loket mana pun".to_string()
