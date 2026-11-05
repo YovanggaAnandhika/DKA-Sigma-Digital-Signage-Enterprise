@@ -190,14 +190,27 @@ impl QueueIotBindingServiceTrait for QueueIotBindingServiceImpl {
             .map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
         let device_id = Uuid::from_str(&req.iot_device_id)
             .map_err(|_| Status::invalid_argument("Invalid IoT device id"))?;
-        let result = sqlx::query(
-            "DELETE FROM components_queue_iot_bindings WHERE iot_device_id = $1 AND queue_display_id = $2",
+        let mut transaction = self.pool.begin().await.map_err(db_error)?;
+        let is_bound_to_queue = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM components_queue_iot_bindings WHERE iot_device_id = $1 AND queue_display_id = $2)",
         )
         .bind(device_id)
         .bind(queue_id)
-        .execute(&self.pool)
+        .fetch_one(&mut *transaction)
         .await
         .map_err(db_error)?;
+        if !is_bound_to_queue {
+            return Ok(Response::new(UnbindIotDeviceResponse { success: false }));
+        }
+
+        let result = sqlx::query(
+            "DELETE FROM components_queue_iot_bindings WHERE iot_device_id = $1",
+        )
+        .bind(device_id)
+        .execute(&mut *transaction)
+        .await
+        .map_err(db_error)?;
+        transaction.commit().await.map_err(db_error)?;
 
         Ok(Response::new(UnbindIotDeviceResponse {
             success: result.rows_affected() > 0,
