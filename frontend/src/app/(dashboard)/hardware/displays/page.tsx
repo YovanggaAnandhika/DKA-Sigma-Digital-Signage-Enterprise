@@ -143,7 +143,7 @@ export default function DisplaysPage() {
           </div>
           <div>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-              Layar Retail (Player Fleet)
+              Layar Pemutar
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
               Registrasi dan pairing display player.

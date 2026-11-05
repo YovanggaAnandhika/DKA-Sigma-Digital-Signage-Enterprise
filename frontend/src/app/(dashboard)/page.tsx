@@ -109,7 +109,7 @@ export default function DashboardPage() {
           </button>
           <Link href="/hardware/displays" className="btn btn-primary">
             <Tv size={16} />
-            <span>Layar Retail</span>
+            <span>Layar Pemutar</span>
           </Link>
         </div>
       </div>
