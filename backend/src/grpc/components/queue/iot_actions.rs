@@ -86,7 +86,8 @@ impl QueueServiceImpl {
         let action = mapping_action(mapping);
         let targets = sqlx::query_as::<_, IotQueueTarget>(
             r#"
-            SELECT q.id, q.name, q.prefix, b.ticket_prefix, b.counter_id, c.counter_name
+            SELECT q.id AS queue_display_id, q.name AS queue_name, q.prefix AS queue_prefix,
+                   b.ticket_prefix, b.counter_id, c.counter_name
             FROM components_queue_iot_bindings b
             JOIN components_queue_displays q ON q.id = b.queue_display_id
             LEFT JOIN components_queue_counters c ON c.id = b.counter_id
