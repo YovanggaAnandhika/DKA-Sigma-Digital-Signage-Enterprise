@@ -55,7 +55,7 @@
 
 ## Audit Checklist (not yet verified)
 
-- [ ] Compare `backend/proto/**` with `android/app/src/main/proto/**` for field/tag drift.
+- [ ] Verify Android Gradle continues consuming `backend/proto/` directly and generates clients for new contracts; do not restore an Android proto copy.
 - [ ] Check `require_permission` coverage in every `backend/src/grpc/*/service.rs`.
 - [ ] Verify whether `(api)/api/grpc/**` rejects requests without a session; inspect `frontend/src/middleware.ts`.
 - [ ] Test direct dashboard access without a session; inspect `AuthGuard`.
