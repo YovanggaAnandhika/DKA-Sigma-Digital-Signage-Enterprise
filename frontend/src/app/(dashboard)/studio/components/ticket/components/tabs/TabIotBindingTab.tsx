@@ -70,6 +70,20 @@ export default function TabIotBindingTab() {
     }
   };
 
+  const saveCounterSelection = async (device: QueueIotBinding) => {
+    try {
+      setError('');
+      await bindIotDevice(
+        queue.id!,
+        device.iotDeviceId,
+        counterSelections[device.iotDeviceId] || undefined,
+      );
+      await refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Gagal memperbarui loket binding IoT.');
+    }
+  };
+
   if (isNew || !queue.id) {
     return <p className="card-elevated" style={{ padding: '20px', color: 'var(--text-secondary)' }}>
       Simpan queue terlebih dahulu sebelum mengatur binding perangkat IoT.
@@ -100,7 +114,6 @@ export default function TabIotBindingTab() {
             className="form-input"
             aria-label={`Pilih loket untuk ${device.deviceName}`}
             value={counterSelections[device.iotDeviceId] || ''}
-            disabled={device.isBound}
             onChange={(event) => setCounterSelections((selections) => ({ ...selections, [device.iotDeviceId]: event.target.value }))}
           >
             <option value="">Tanpa loket khusus</option>
@@ -108,9 +121,16 @@ export default function TabIotBindingTab() {
               <option key={counter.id} value={counter.id}>{counter.counterName}</option>
             ))}
           </select>
-          <button type="button" className={device.isBound ? 'btn btn-outline' : 'btn btn-primary'} onClick={() => void toggleBinding(device)}>
-            {device.isBound ? <><Unlink size={14} /> Lepas</> : <><Link2 size={14} /> Ikat</>}
-          </button>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            {device.isBound && (counterSelections[device.iotDeviceId] || '') !== device.counterId && (
+              <button type="button" className="btn btn-primary" onClick={() => void saveCounterSelection(device)}>
+                Simpan Loket
+              </button>
+            )}
+            <button type="button" className={device.isBound ? 'btn btn-outline' : 'btn btn-primary'} onClick={() => void toggleBinding(device)}>
+              {device.isBound ? <><Unlink size={14} /> Lepas</> : <><Link2 size={14} /> Ikat</>}
+            </button>
+          </div>
         </article>
       ))}
     </section>

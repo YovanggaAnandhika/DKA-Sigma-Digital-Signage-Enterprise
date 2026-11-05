@@ -724,17 +724,26 @@ impl QueueDisplayServiceTrait for QueueServiceImpl {
 
         // Sync counters if passed
         if !req.counters.is_empty() {
-            sqlx::query("DELETE FROM components_queue_counters WHERE queue_display_id = $1")
-                .bind(id)
-                .execute(&self.pool)
-                .await
-                .ok();
+            let mut transaction = self.pool.begin().await.map_err(|error| {
+                tracing::error!("Failed to start queue counter sync transaction: {error}");
+                Status::internal("Internal error")
+            })?;
+            let mut retained_counter_ids = Vec::with_capacity(req.counters.len());
+
             for c in req.counters {
                 let cid = Uuid::from_str(&c.id).unwrap_or_else(|_| Uuid::new_v4());
-                sqlx::query(
+                let saved_id = sqlx::query_scalar::<_, Uuid>(
                     r#"
                     INSERT INTO components_queue_counters (id, queue_display_id, counter_number, counter_name, operator_name, is_active)
                     VALUES ($1, $2, $3, $4, $5, $6)
+                    ON CONFLICT (id) DO UPDATE
+                    SET counter_number = EXCLUDED.counter_number,
+                        counter_name = EXCLUDED.counter_name,
+                        operator_name = EXCLUDED.operator_name,
+                        is_active = EXCLUDED.is_active,
+                        updated_at = NOW()
+                    WHERE components_queue_counters.queue_display_id = EXCLUDED.queue_display_id
+                    RETURNING id
                     "#,
                 )
                 .bind(cid)
@@ -743,10 +752,32 @@ impl QueueDisplayServiceTrait for QueueServiceImpl {
                 .bind(&c.counter_name)
                 .bind(&c.operator_name)
                 .bind(c.is_active)
-                .execute(&self.pool)
+                .fetch_optional(&mut *transaction)
                 .await
-                .ok();
+                .map_err(|error| {
+                    tracing::error!("Failed to save queue counter {cid}: {error}");
+                    Status::internal("Internal error")
+                })?
+                .ok_or_else(|| Status::invalid_argument("Counter does not belong to this queue"))?;
+                retained_counter_ids.push(saved_id);
             }
+
+            sqlx::query(
+                "DELETE FROM components_queue_counters \
+                 WHERE queue_display_id = $1 AND NOT (id = ANY($2))",
+            )
+            .bind(id)
+            .bind(&retained_counter_ids)
+            .execute(&mut *transaction)
+            .await
+            .map_err(|error| {
+                tracing::error!("Failed to remove deleted queue counters: {error}");
+                Status::internal("Internal error")
+            })?;
+            transaction.commit().await.map_err(|error| {
+                tracing::error!("Failed to commit queue counter sync: {error}");
+                Status::internal("Internal error")
+            })?;
         }
 
         // Sync audios if passed
