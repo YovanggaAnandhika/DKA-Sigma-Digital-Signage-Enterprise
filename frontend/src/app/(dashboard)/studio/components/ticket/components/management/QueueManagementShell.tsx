@@ -57,7 +57,7 @@ export default function QueueManagementShell({ activeTab }: QueueManagementShell
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
-    <nav className="dashboard-tabs" aria-label="Navigasi manajemen antrean">
+      <nav className="dashboard-tabs" aria-label="Navigasi manajemen antrean">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
