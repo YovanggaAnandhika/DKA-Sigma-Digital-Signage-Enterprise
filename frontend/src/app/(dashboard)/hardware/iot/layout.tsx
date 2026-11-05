@@ -63,17 +63,7 @@ export default function IotLayout({ children }: { children: React.ReactNode }) {
 
       <nav
         aria-label="Navigasi perangkat IoT"
-        className="card-elevated"
-        style={{
-          padding: '5px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          overflowX: 'auto',
-          backgroundColor: 'var(--bg-surface)',
-          border: '1px solid var(--border-subtle)',
-          borderRadius: '10px',
-        }}
+        className="iot-tabs"
       >
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -83,39 +73,14 @@ export default function IotLayout({ children }: { children: React.ReactNode }) {
               key={tab.href}
               href={tab.href}
               aria-current={active ? 'page' : undefined}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 14px',
-                borderRadius: '7px',
-                textDecoration: 'none',
-                whiteSpace: 'nowrap',
-                backgroundColor: active ? 'var(--primary-600)' : 'transparent',
-                color: active ? '#fff' : 'var(--text-secondary)',
-                fontWeight: active ? 600 : 500,
-                fontSize: '0.8125rem',
-              }}
+              className="iot-tab"
             >
-              <Icon size={15} />
+              <Icon size={19} strokeWidth={2.2} />
               {tab.label}
               {tab.href === '/hardware/iot/approval' && pendingCount > 0 && (
                 <span
                   aria-label={`${pendingCount} perangkat menunggu persetujuan`}
-                  style={{
-                    minWidth: '18px',
-                    height: '18px',
-                    padding: '0 5px',
-                    borderRadius: '999px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: 'var(--accent-rose)',
-                    color: '#fff',
-                    fontSize: '0.6875rem',
-                    fontWeight: 700,
-                    lineHeight: 1,
-                  }}
+                  className="iot-tab-badge"
                 >
                   {pendingCount > 99 ? '99+' : pendingCount}
                 </span>

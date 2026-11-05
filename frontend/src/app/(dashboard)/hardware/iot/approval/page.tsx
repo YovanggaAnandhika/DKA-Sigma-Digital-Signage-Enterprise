@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Check, RefreshCw } from 'lucide-react';
+import { Check, LoaderCircle, RefreshCw } from 'lucide-react';
 import { approveIotDevice, IotDevice, listIotDevices } from '@/lib/services/studio/iot.service';
 
 export default function IotApprovalPage() {
@@ -42,8 +42,15 @@ export default function IotApprovalPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button type="button" className="btn btn-outline" onClick={() => void refresh()} disabled={loading}>
-          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Muat ulang
+        <button
+          type="button"
+          className="btn btn-outline iot-icon-button"
+          onClick={() => void refresh()}
+          disabled={loading}
+          aria-label="Muat ulang daftar perangkat"
+          title="Muat ulang daftar perangkat"
+        >
+          <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
       {error && <p role="alert" style={{ color: 'var(--accent-rose)' }}>{error}</p>}
@@ -61,8 +68,17 @@ export default function IotApprovalPage() {
               {device.deviceUid} · {device.ipAddress || 'IP belum diketahui'} · Terakhir terlihat {device.lastSeenAt || '-'}
             </div>
           </div>
-          <button type="button" className="btn btn-primary" onClick={() => void approve(device.id)} disabled={approvingId === device.id}>
-            <Check size={15} /> {approvingId === device.id ? 'Menyetujui...' : 'Setujui'}
+          <button
+            type="button"
+            className="btn btn-primary iot-icon-button"
+            onClick={() => void approve(device.id)}
+            disabled={approvingId === device.id}
+            aria-label={`Setujui ${device.name}`}
+            title={approvingId === device.id ? 'Menyetujui perangkat...' : 'Setujui perangkat'}
+          >
+            {approvingId === device.id
+              ? <LoaderCircle size={19} className="animate-spin" />
+              : <Check size={19} />}
           </button>
         </article>
       ))}

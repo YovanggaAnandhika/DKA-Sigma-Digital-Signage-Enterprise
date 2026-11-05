@@ -29,8 +29,15 @@ export default function IotDevicesPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button type="button" className="btn btn-outline" onClick={() => void refresh()} disabled={loading}>
-          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Muat ulang
+        <button
+          type="button"
+          className="btn btn-outline iot-icon-button"
+          onClick={() => void refresh()}
+          disabled={loading}
+          aria-label="Muat ulang daftar perangkat"
+          title="Muat ulang daftar perangkat"
+        >
+          <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
       {error && <p role="alert" style={{ color: 'var(--accent-rose)' }}>{error}</p>}
@@ -58,8 +65,13 @@ export default function IotDevicesPage() {
                   <td>{device.ipAddress || '-'}</td>
                   <td>{device.isActive ? 'Aktif' : 'Nonaktif'}</td>
                   <td style={{ textAlign: 'right' }}>
-                    <Link href={`/hardware/iot/devices/${device.id}/edit`} className="btn btn-outline">
-                      <Settings2 size={14} /> Konfigurasi
+                    <Link
+                      href={`/hardware/iot/devices/${device.id}/edit`}
+                      className="btn btn-outline iot-icon-button"
+                      aria-label={`Konfigurasi ${device.name}`}
+                      title="Konfigurasi perangkat"
+                    >
+                      <Settings2 size={18} />
                     </Link>
                   </td>
                 </tr>

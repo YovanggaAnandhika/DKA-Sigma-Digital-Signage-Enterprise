@@ -143,9 +143,22 @@ export default function EditIotDevicePage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-        <Link href="/hardware/iot/devices" className="btn btn-outline"><ArrowLeft size={15} /> Kembali ke perangkat</Link>
-        <button type="button" className="btn btn-outline" style={{ color: 'var(--accent-rose)' }} onClick={() => void remove()}>
-          <Trash2 size={15} /> Hapus perangkat
+        <Link
+          href="/hardware/iot/devices"
+          className="btn btn-outline iot-icon-button"
+          aria-label="Kembali ke daftar perangkat"
+          title="Kembali ke perangkat"
+        >
+          <ArrowLeft size={19} />
+        </Link>
+        <button
+          type="button"
+          className="btn btn-outline iot-icon-button iot-icon-button-danger"
+          onClick={() => void remove()}
+          aria-label="Hapus perangkat"
+          title="Hapus perangkat"
+        >
+          <Trash2 size={18} />
         </button>
       </div>
 
@@ -201,14 +214,16 @@ export default function EditIotDevicePage() {
           </div>
           <button
             type="button"
-            className="btn btn-outline"
+            className="btn btn-outline iot-icon-button"
             disabled={!canAddPin}
+            aria-label="Tambah mapping pin"
+            title="Tambah pin"
             onClick={() => {
               const pin = SUPPORTED_PINS.find((candidate) => !usedPins.has(candidate));
               if (pin !== undefined) setMappings((items) => [...items, { pin, action: 'CALL_NEXT', enabled: true, label: '' }]);
             }}
           >
-            <Plus size={14} /> Tambah pin
+            <Plus size={19} />
           </button>
         </header>
 
@@ -295,24 +310,22 @@ export default function EditIotDevicePage() {
                         <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                           <button
                             type="button"
-                            className="btn btn-outline"
-                            style={{ width: '34px', height: '34px', padding: 0, justifyContent: 'center' }}
+                            className="btn btn-outline iot-icon-button"
                             disabled={!mapping.enabled || isTesting}
                             onClick={() => void testMapping(mapping.pin, mapping.action)}
                             aria-label={`Uji aksi pin ${mapping.pin}`}
                             title="Uji aksi nyata"
                           >
-                            {isTesting ? <LoaderCircle size={15} className="animate-spin" /> : <Activity size={15} />}
+                            {isTesting ? <LoaderCircle size={18} className="animate-spin" /> : <Activity size={18} />}
                           </button>
                           <button
                             type="button"
-                            className="btn btn-outline"
-                            style={{ width: '34px', height: '34px', padding: 0, justifyContent: 'center', color: 'var(--accent-rose)' }}
+                            className="btn btn-outline iot-icon-button iot-icon-button-danger"
                             onClick={() => setMappings((items) => items.filter((_, current) => current !== index))}
                             aria-label={`Hapus mapping pin ${mapping.pin}`}
                             title="Hapus mapping"
                           >
-                            <Trash2 size={15} />
+                            <Trash2 size={18} />
                           </button>
                         </div>
                       </td>
@@ -329,8 +342,15 @@ export default function EditIotDevicePage() {
           <span style={{ color: 'var(--text-muted)', fontSize: '0.74rem' }}>
             Terakhir terdeteksi: {formatLastSeen(device.lastSeenAt)}
           </span>
-          <button type="button" className="btn btn-primary" disabled={saving} onClick={() => void save()}>
-            <Save size={14} /> {saving ? 'Menyimpan...' : 'Simpan konfigurasi'}
+          <button
+            type="button"
+            className="btn btn-primary iot-icon-button"
+            disabled={saving}
+            onClick={() => void save()}
+            aria-label={saving ? 'Menyimpan konfigurasi' : 'Simpan konfigurasi'}
+            title={saving ? 'Menyimpan konfigurasi...' : 'Simpan konfigurasi'}
+          >
+            {saving ? <LoaderCircle size={19} className="animate-spin" /> : <Save size={19} />}
           </button>
         </div>
       </section>
