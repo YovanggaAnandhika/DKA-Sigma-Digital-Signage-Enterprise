@@ -20,6 +20,7 @@ pub fn spawn_mqtt_worker(pool: PgPool, stream_manager: StreamConnectionManager) 
             (Some(username), Some(password)) if !username.is_empty() && !password.is_empty() => {
                 mqttoptions.set_credentials(username, password);
             }
+            (Some(username), Some(password)) if username.is_empty() && password.is_empty() => {}
             (Some(_), _) | (_, Some(_)) => {
                 tracing::error!(
                     "MQTT_USERNAME and MQTT_PASSWORD must both be set or both be empty"
