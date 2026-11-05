@@ -41,6 +41,14 @@ android {
         viewBinding = true
     }
 
+    sourceSets {
+        getByName("main") {
+            proto {
+                srcDir("../../backend/proto")
+            }
+        }
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"

@@ -33,7 +33,7 @@ This project is an enterprise-grade digital signage management and streaming pla
 | `frontend/src/lib/core/`, `frontend/src/lib/services/` | Shared gRPC/API helpers and browser-facing service clients. |
 | `frontend/src/lib/api/` | Generated protobuf/gRPC client stubs; do not hand-edit. |
 | `android/app/src/main/java/com/dkaapis/sigma/{presentation,domain,data,service,renderers}/` | Player UI/rendering, use cases/contracts, repositories/storage/networking, Android services, and zone renderers. |
-| `android/app/src/main/proto/` | Android mirror of `backend/proto/`; keep contracts in sync. |
+| `backend/proto/` | Sole source of protobuf contracts; Android Gradle reads these files directly. |
 | `iot/esp32_queue_button/` | ESP32 Wi-Fi/MQTT queue-button firmware and flashing/wiring guide. |
 | `iot/arduino_nano_queue_button/` | Arduino Nano USB-serial queue-button firmware and guide. |
 | `docs/` | DDL, player integration, and operational/planning documents. |
@@ -58,7 +58,7 @@ This project is an enterprise-grade digital signage management and streaming pla
   1. Modify or add `.proto` files in `backend/proto/`.
   2. Verify backend compiles (`build.rs` generates tonic code).
   3. Re-generate frontend stubs via `bun scripts/generate_grpc.ts` inside `frontend/`.
-  4. Keep the corresponding Android proto mirror in sync and regenerate generated clients; never hand-edit generated code.
+  4. Android compiles directly from `backend/proto/`; regenerate generated clients through the Android protobuf Gradle tasks. Never copy proto files into Android or hand-edit generated code.
 
 ### 2. Frontend-Backend Communication Rule
 - Frontend connects to Backend gRPC via Next.js Route Handlers (`src/app/(api)/api/grpc/.../route.ts`).

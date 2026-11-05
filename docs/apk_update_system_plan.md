@@ -56,7 +56,7 @@ graph TD
      - `CreateAppRelease(CreateAppReleaseRequest) returns (AppRelease)`
      - `DeleteAppRelease(DeleteAppReleaseRequest) returns (DeleteAppReleaseResponse)`
      - `CheckDeviceAppUpdate(CheckDeviceAppUpdateRequest) returns (CheckDeviceAppUpdateResponse)`
-   - Sinkronisasi protobuf ke frontend (`bun scripts/generate_grpc.ts`) dan mirror ke Android (`android/app/src/main/proto/`).
+   - Regenerasi protobuf frontend (`bun scripts/generate_grpc.ts`) dan Android melalui Gradle yang membaca langsung dari `backend/proto/` (tanpa salinan proto di Android).
 
 ---
 
