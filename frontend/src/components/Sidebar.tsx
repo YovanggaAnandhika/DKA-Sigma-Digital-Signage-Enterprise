@@ -40,18 +40,18 @@ const navGroups: NavGroup[] = [
   {
     heading: 'OPERASI & PERANGKAT',
     items: [
-      { name: 'Layar Retail', desc: 'Manajemen & Pairing Player', href: '/hardware/displays', icon: Tv },
-      { name: 'Grup Layar', desc: 'Pengelompokan Layar', href: '/hardware/groups', icon: MonitorPlay },
-      { name: 'Perangkat IoT', desc: 'Approval & Tombol IoT', href: '/hardware/iot', icon: Cpu },
+      { name: 'Player', desc: 'Manajemen & Pairing Player', href: '/hardware/displays', icon: Tv },
+      { name: 'Player Groups', desc: 'Pengelompokan Groups', href: '/hardware/groups', icon: MonitorPlay },
+      { name: 'Chip', desc: 'Internet Of Things', href: '/hardware/iot', icon: Cpu },
     ],
   },
   {
     heading: 'STUDIO & KONTEN',
     items: [
       { name: 'Penjadwalan', desc: 'Jadwal Putar & Prioritas', href: '/studio/schedules', icon: CalendarDays },
-      { name: 'Layout', desc: 'Tata Letak Multi-Zona', href: '/studio/layouts', icon: Palette },
+      { name: 'Tata Letak', desc: 'Tata Letak Multi-Zona', href: '/studio/layouts', icon: Palette },
       { name: 'Komponen', desc: 'Widget & Daftar Putar', href: '/studio/components', icon: Layers },
-      { name: 'Pustaka Media', desc: 'Aset Gambar & Video', href: '/studio/media', icon: FolderOpen },
+      { name: 'Pustaka', desc: 'Aset Gambar & Video', href: '/studio/media', icon: FolderOpen },
     ],
   },
   {
