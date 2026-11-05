@@ -1,8 +1,9 @@
 # Rencana Zero-Configuration IoT Queue Button
 
 Dokumen ini merencanakan onboarding ESP32 queue button untuk server signage yang
-masing-masing memiliki database dan backend sendiri. **Belum ada implementasi
-yang dilakukan berdasarkan dokumen ini.**
+masing-masing memiliki database dan backend sendiri. Bagian registry cloud
+lintas-server masih berupa rencana; implementasi lokal yang sudah tersedia
+dicatat pada bagian kondisi implementasi.
 
 ## Tujuan
 
@@ -104,9 +105,10 @@ tidak cocok untuk domain yang diminta. Karena itu:
    - Tahap discovery cloud berikutnya mengganti input endpoint manual dengan
      bootstrap domain umum dan menerima endpoint broker setelah admin melakukan
      accept.
-   - Untuk mengganti jaringan, tahan tombol BOOT lebih dari 15 detik. Ini
-     menghapus Wi-Fi tersimpan dan membuka setup lagi, tetapi tidak menghapus
-     ownership; perpindahan server tetap memerlukan unbind melalui dashboard.
+   - Reset pairing melalui dashboard atau tahan BOOT lebih dari 15 detik meminta
+     reset ke backend lokal. Backend menghapus record lokal dan mengirim ACK
+     sebelum firmware menghapus konfigurasi dan membuka setup. Registry cloud,
+     bila diterapkan, tetap menentukan pelepasan ownership lintas-server.
 
 2. **Discovery cloud**
    - ESP32 membuat identitas perangkat unik dan menghubungi domain bootstrap
@@ -239,12 +241,12 @@ mengembalikan endpoint broker milik server yang berhasil menerima klaim.
 - Pengguna dapat memilih SSID dan memasukkan Wi-Fi dari ponsel tanpa Arduino IDE.
 - Tahap awal meminta endpoint broker MQTT; setelah registry cloud diterapkan,
   endpoint harus didapat otomatis setelah accept.
-- Access point setup ditutup setelah Wi-Fi tersambung dan dapat dibuka lagi
-  dengan menahan BOOT lebih dari 15 detik; setup dimulai lagi tanpa menghapus
-  ownership perangkat.
+- Access point setup ditutup setelah Wi-Fi tersambung. Reset pairing melalui
+  dashboard atau BOOT >15 detik meminta konfirmasi backend, menghapus record
+  lokal, lalu membuka setup kembali.
 - Menahan BOOT kurang dari atau sama dengan 15 detik tidak mereset konfigurasi.
-- Unbind dashboard, bukan reset Wi-Fi/BOOT, adalah satu-satunya cara normal untuk
-  melepas ownership dan mengizinkan klaim oleh server lain.
+- Reset pairing melepas record server lokal setelah backend menerima permintaan
+  firmware; registry global tetap diperlukan untuk menjamin klaim lintas-server.
 - Perangkat pending terlihat pada dashboard dan baru tersambung ke broker pemilik
   setelah accept.
 - Dua server yang menerima perangkat bersamaan menghasilkan tepat satu pemilik.
@@ -276,8 +278,12 @@ mengembalikan endpoint broker milik server yang berhasil menerima klaim.
 
 - Firmware ESP32 memiliki captive portal setup terbuka untuk scan/pilih SSID,
   password Wi-Fi, endpoint/port broker, dan kredensial MQTT opsional. Access
-  point ditutup setelah Wi-Fi tersambung; tahan BOOT lebih dari 15 detik untuk
-  menghapus Wi-Fi tersimpan tanpa menghapus endpoint broker.
+  point ditutup setelah Wi-Fi tersambung. Reset dashboard dan BOOT >15 detik
+  memakai handshake MQTT; hanya setelah backend menghapus record lokal dan
+  mengirim ACK, firmware menghapus seluruh konfigurasi tersimpan dan membuka AP.
+- Reset pairing digate secara default. Backend memerlukan kredensial broker dan
+  operator harus mengonfirmasi ACL perangkat melalui `IOT_DEVICE_ACL_CONFIGURED`;
+  reset dashboard juga membutuhkan perangkat online dan ACK.
 - Firmware memakai koneksi MQTT TCP plaintext (`WiFiClient`); jangan mengekspos
   endpoint MQTT ini ke internet. TLS/validasi sertifikat belum diterapkan.
 - Firmware mengirim aksi/telemetri dengan topik `dka/iot/<device_uid>/...`.
@@ -285,8 +291,10 @@ mengembalikan endpoint broker milik server yang berhasil menerima klaim.
   dan memproses topic IoT tersebut.
 - Persetujuan IoT saat ini memperbarui `is_approved` pada database backend lokal;
   belum ada registry global, klaim lintas-server, atau OTA.
-- Aksi unbind dashboard belum memberi tahu firmware; unbind belum dapat
-  mengembalikan perangkat ke mode AP. Saat ini portal dibuka lagi dengan tahan
-  BOOT lebih dari 15 detik.
+- Reset dashboard dan BOOT telah terhubung ke handshake lokal, tetapi
+  dinonaktifkan sampai broker autentikasi/ACL dikonfigurasi. Tahan BOOT saat
+  perangkat offline tidak menghapus konfigurasi atau record server.
+- Registry ownership cloud belum ada; reset hanya menghapus perangkat pada
+  backend lokal yang terhubung ke broker.
 - Captive portal memakai HTTP lokal dan access point terbuka tanpa autentikasi;
   provisioning harus dilakukan di lokasi terkontrol.

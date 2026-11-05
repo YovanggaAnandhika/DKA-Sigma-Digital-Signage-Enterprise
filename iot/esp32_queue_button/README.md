@@ -87,17 +87,40 @@ di source code.
 > ESP32. Lakukan setup di lokasi terkontrol dan jangan biarkan perangkat dalam
 > mode setup tanpa pengawasan.
 >
-> Firmware saat ini juga menggunakan MQTT TCP tanpa TLS. Jangan arahkan ke broker
-> plaintext yang terbuka di internet; gunakan hanya pada jaringan tepercaya.
+> Firmware saat ini juga menggunakan MQTT TCP tanpa TLS. Jangan kirim kredensial
+> melalui broker yang terbuka di internet; gunakan hanya pada jaringan tepercaya
+> atau VPN sampai dukungan TLS tersedia.
 
-Saat ini aksi **unbind** di dashboard belum mengaktifkan access point setup.
-Untuk membuka portal kembali, gunakan tombol BOOT lebih dari 15 detik.
+### Reset pairing dan penghapusan perangkat
 
-Untuk mengganti Wi-Fi, saat ESP32 sedang menyala tahan tombol **BOOT lebih dari
-15 detik**. Ini menghapus SSID/password Wi-Fi tersimpan dan membuka portal lagi.
-Endpoint broker dan identitas perangkat tetap tersimpan; tekan BOOT singkat
-untuk aksi panggil berikutnya. Reset ini tidak melakukan unbind perangkat dari
-server.
+Hapus perangkat dari dashboard atau tahan tombol **BOOT lebih dari 15 detik**
+ketika ESP32 online. Keduanya meminta firmware mengirim konfirmasi reset ke
+backend. Setelah backend menghapus record perangkat, backend mengirim ACK;
+firmware kemudian menghapus Wi-Fi dan endpoint MQTT tersimpan lalu membuka AP
+setup. Bila perangkat offline, broker/ACL salah, atau ACK tidak diterima,
+konfigurasi lokal dipertahankan dan record server tidak dihapus oleh permintaan
+dashboard.
+
+Reset ini hanya melepas record pada server signage yang sedang dikonfigurasi.
+Registry kepemilikan lintas-server/cloud belum tersedia, sehingga ini belum
+menjamin lock global jika beberapa server terpisah memakai broker berbeda.
+
+Reset dashboard/BOOT dinonaktifkan secara default. Sebelum mengaktifkan, siapkan
+broker MQTT dengan autentikasi dan ACL per perangkat, lalu set environment
+backend `MQTT_USERNAME`, `MQTT_PASSWORD`, `IOT_PAIRING_RESET_ENABLED=true`, dan
+`IOT_DEVICE_ACL_CONFIGURED=true`. Kredensial backend harus berhak subscribe pada
+`dka/iot/+/action`, `dka/iot/+/telemetry`, `dka/iot/+/reset_request`, serta publish
+ke `dka/iot/+/command`, `dka/iot/+/ack`, dan `dka/iot/+/reset_ack`. Setiap perangkat harus dibatasi
+agar hanya dapat publish ke topic `action`, `telemetry`, `reset_request` miliknya
+dan subscribe ke `ack`, `command`, `reset_ack` miliknya. Gunakan kredensial MQTT
+unik per perangkat; variabel ACL adalah deklarasi konfigurasi operator, bukan
+pemeriksaan otomatis terhadap aturan broker. Backend juga perlu subscribe ke
+`dka/iot/+/reset_ack` untuk menerima konfirmasi reset dashboard.
+
+Pada Docker Compose, variabel tersebut dapat diisi melalui environment atau
+`.env`; reset tetap nonaktif sampai kredensial dan ACL disiapkan. MQTT saat ini
+tanpa TLS, jadi konfigurasi autentikasi/ACL ini belum melindungi password dari
+penyadapan pada jaringan yang tidak tepercaya.
 
 ---
 

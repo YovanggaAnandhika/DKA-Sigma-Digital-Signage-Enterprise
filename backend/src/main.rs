@@ -181,11 +181,23 @@ fn spawn_mqtt_worker(pool: sqlx::PgPool, stream_manager: StreamConnectionManager
         .ok()
         .and_then(|p| p.parse().ok())
         .unwrap_or(1883);
+    let mqtt_username = std::env::var("MQTT_USERNAME").ok();
+    let mqtt_password = std::env::var("MQTT_PASSWORD").ok();
+    let pairing_reset_enabled = grpc::iot::service::pairing_reset_enabled();
 
     tokio::spawn(async move {
         let mut mqttoptions = rumqttc::MqttOptions::new("dka-backend-worker", &mqtt_host, mqtt_port);
         mqttoptions.set_keep_alive(std::time::Duration::from_secs(15));
         mqttoptions.set_clean_session(true);
+        match (&mqtt_username, &mqtt_password) {
+            (Some(username), Some(password)) if !username.is_empty() && !password.is_empty() => {
+                mqttoptions.set_credentials(username, password);
+            }
+            (Some(_), _) | (_, Some(_)) => {
+                tracing::error!("MQTT_USERNAME and MQTT_PASSWORD must both be set or both be empty");
+            }
+            _ => {}
+        }
 
         loop {
             tracing::info!("Connecting to MQTT Broker at {}:{}...", mqtt_host, mqtt_port);
@@ -198,6 +210,21 @@ fn spawn_mqtt_worker(pool: sqlx::PgPool, stream_manager: StreamConnectionManager
                 continue;
             }
             let _ = client.subscribe("dka/iot/+/telemetry", rumqttc::QoS::AtMostOnce).await;
+            if pairing_reset_enabled {
+                if let Err(error) = client
+                    .subscribe("dka/iot/+/reset_request", rumqttc::QoS::AtLeastOnce)
+                    .await
+                {
+                    tracing::error!("Failed to subscribe to IoT reset requests: {error}");
+                    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                    continue;
+                }
+                tracing::info!("Authenticated IoT pairing reset protocol enabled");
+            } else {
+                tracing::warn!(
+                    "IoT pairing reset disabled; configure MQTT credentials and device ACLs, then set IOT_PAIRING_RESET_ENABLED=true and IOT_DEVICE_ACL_CONFIGURED=true"
+                );
+            }
             tracing::info!("Successfully connected & subscribed to MQTT topics for IoT Queue Devices");
 
             loop {
@@ -208,6 +235,76 @@ fn spawn_mqtt_worker(pool: sqlx::PgPool, stream_manager: StreamConnectionManager
                             Ok(s) => s,
                             Err(_) => continue,
                         };
+
+                        if topic.ends_with("/reset_request") {
+                            let parts: Vec<&str> = topic.split('/').collect();
+                            let device_uid = (parts.len() == 4
+                                && parts[0] == "dka"
+                                && parts[1] == "iot"
+                                && parts[3] == "reset_request")
+                                .then_some(parts[2])
+                                .filter(|uid| {
+                                    !uid.is_empty()
+                                        && uid.len() <= 64
+                                        && uid.chars().all(|c| {
+                                            c.is_ascii_alphanumeric() || c == '_' || c == '-'
+                                        })
+                                });
+                            let request_id = serde_json::from_str::<serde_json::Value>(payload_str)
+                                .ok()
+                                .and_then(|value| {
+                                    value
+                                        .get("request_id")
+                                        .and_then(|id| id.as_str())
+                                        .map(str::to_owned)
+                                })
+                                .filter(|id| {
+                                    !id.is_empty()
+                                        && id.len() <= 64
+                                        && id.chars().all(|c| {
+                                            c.is_ascii_alphanumeric() || c == '-'
+                                        })
+                                });
+                            let (Some(uid), Some(request_id)) = (device_uid, request_id) else {
+                                tracing::warn!("Ignoring malformed IoT reset request on {topic}");
+                                continue;
+                            };
+                            let status = match sqlx::query(
+                                "DELETE FROM iot_devices WHERE device_uid = $1",
+                            )
+                            .bind(uid)
+                            .execute(&pool)
+                            .await
+                            {
+                                Ok(_) => "OK",
+                                Err(error) => {
+                                    tracing::error!(
+                                        "Failed to remove IoT device {uid} after reset confirmation: {error}"
+                                    );
+                                    "ERROR"
+                                }
+                            };
+                            let ack_topic = format!("dka/iot/{uid}/reset_ack");
+                            let ack_payload = serde_json::json!({
+                                "request_id": request_id,
+                                "status": status,
+                            })
+                            .to_string();
+                            if let Err(error) = client
+                                .publish(
+                                    &ack_topic,
+                                    rumqttc::QoS::AtLeastOnce,
+                                    false,
+                                    ack_payload,
+                                )
+                                .await
+                            {
+                                tracing::error!(
+                                    "Failed to publish IoT reset confirmation for {uid}: {error}"
+                                );
+                            }
+                            continue;
+                        }
 
                         if topic.ends_with("/action") {
                             if let Ok(val) = serde_json::from_str::<serde_json::Value>(payload_str) {

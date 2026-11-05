@@ -1,6 +1,9 @@
 use std::collections::HashSet;
+use std::env;
 use std::str::FromStr;
+use std::time::Duration;
 
+use rumqttc::{AsyncClient, Event, MqttOptions, Packet, QoS};
 use sqlx::{FromRow, PgPool};
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
@@ -24,6 +27,117 @@ impl IotDeviceServiceImpl {
     pub fn new(pool: PgPool, stream_manager: StreamConnectionManager) -> Self {
         Self { pool, stream_manager }
     }
+}
+
+pub fn pairing_reset_enabled() -> bool {
+    env::var("IOT_PAIRING_RESET_ENABLED")
+        .is_ok_and(|enabled| enabled.eq_ignore_ascii_case("true"))
+        && env::var("IOT_DEVICE_ACL_CONFIGURED")
+            .is_ok_and(|configured| configured.eq_ignore_ascii_case("true"))
+        && env::var("MQTT_USERNAME").is_ok_and(|username| !username.is_empty())
+        && env::var("MQTT_PASSWORD").is_ok_and(|password| !password.is_empty())
+}
+
+async fn request_pairing_reset(device_uid: &str) -> Result<(), Status> {
+    if !pairing_reset_enabled() {
+        return Err(Status::failed_precondition(
+            "IoT pairing reset is disabled; configure MQTT credentials and per-device ACLs, then enable IOT_PAIRING_RESET_ENABLED and IOT_DEVICE_ACL_CONFIGURED",
+        ));
+    }
+
+    let host = env::var("MQTT_HOST").unwrap_or_else(|_| "dka-product-sigma-mqtt".into());
+    let port = env::var("MQTT_PORT")
+        .ok()
+        .and_then(|value| value.parse::<u16>().ok())
+        .unwrap_or(1883);
+    let username = env::var("MQTT_USERNAME").map_err(|_| {
+        Status::failed_precondition("MQTT_USERNAME is required for IoT pairing reset")
+    })?;
+    let password = env::var("MQTT_PASSWORD").map_err(|_| {
+        Status::failed_precondition("MQTT_PASSWORD is required for IoT pairing reset")
+    })?;
+    let request_id = Uuid::new_v4().to_string();
+    let reset_topic = format!("dka/iot/{device_uid}/reset_ack");
+    let command_topic = format!("dka/iot/{device_uid}/command");
+    let mut options = MqttOptions::new(
+        format!("dka-reset-{}", Uuid::new_v4()),
+        host,
+        port,
+    );
+    options.set_keep_alive(Duration::from_secs(10));
+    options.set_clean_session(true);
+    options.set_credentials(username, password);
+    let (client, mut eventloop) = AsyncClient::new(options, 10);
+    client
+        .subscribe(&reset_topic, QoS::AtLeastOnce)
+        .await
+        .map_err(|error| {
+            tracing::error!("Failed to subscribe for IoT reset confirmation: {error}");
+            Status::unavailable("Could not request reset confirmation from IoT device")
+        })?;
+
+    let expected_request_id = request_id.clone();
+    let result = tokio::time::timeout(Duration::from_secs(35), async {
+        let mut command_sent = false;
+        loop {
+            match eventloop.poll().await.map_err(|error| {
+                tracing::error!("MQTT connection failed during IoT reset: {error}");
+                Status::unavailable("Could not reach IoT device over MQTT")
+            })? {
+                Event::Incoming(Packet::SubAck(_)) if !command_sent => {
+                    let payload = serde_json::json!({
+                        "command": "RESET_PAIRING",
+                        "request_id": expected_request_id,
+                    })
+                    .to_string();
+                    client
+                        .publish(
+                            &command_topic,
+                            QoS::AtLeastOnce,
+                            false,
+                            payload.into_bytes(),
+                        )
+                        .await
+                        .map_err(|error| {
+                            tracing::error!("Failed to publish IoT reset command: {error}");
+                            Status::unavailable("Could not send reset command to IoT device")
+                        })?;
+                    command_sent = true;
+                }
+                Event::Incoming(Packet::Publish(packet))
+                    if command_sent && packet.topic == reset_topic =>
+                {
+                    let response: serde_json::Value =
+                        serde_json::from_slice(&packet.payload).map_err(|error| {
+                            tracing::warn!("Invalid IoT reset acknowledgement: {error}");
+                            Status::data_loss("IoT device sent an invalid reset acknowledgement")
+                        })?;
+                    if response.get("request_id").and_then(|value| value.as_str())
+                        != Some(expected_request_id.as_str())
+                    {
+                        continue;
+                    }
+                    return match response.get("status").and_then(|value| value.as_str()) {
+                        Some("OK") => Ok(()),
+                        Some(_) => Err(Status::failed_precondition(
+                            "IoT device rejected the pairing reset",
+                        )),
+                        None => Err(Status::data_loss(
+                            "IoT device reset acknowledgement has no status",
+                        )),
+                    };
+                }
+                _ => {}
+            }
+        }
+    })
+    .await
+    .map_err(|_| Status::deadline_exceeded("Timed out waiting for IoT reset confirmation"))?;
+
+    if let Err(error) = client.disconnect().await {
+        tracing::warn!("Failed to disconnect temporary MQTT reset client: {error}");
+    }
+    result
 }
 
 #[derive(FromRow)]
@@ -327,15 +441,23 @@ impl IotDeviceServiceTrait for IotDeviceServiceImpl {
         crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
         let id = Uuid::from_str(&request.into_inner().id)
             .map_err(|_| Status::invalid_argument("Invalid IoT device id"))?;
-        let result = sqlx::query("DELETE FROM iot_devices WHERE id = $1")
+        let device_uid = sqlx::query_scalar::<_, String>(
+            "SELECT device_uid FROM iot_devices WHERE id = $1",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(db_error)?
+        .ok_or_else(|| Status::not_found("IoT device not found"))?;
+
+        request_pairing_reset(&device_uid).await?;
+
+        sqlx::query("DELETE FROM iot_devices WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await
             .map_err(db_error)?;
 
-        if result.rows_affected() == 0 {
-            return Err(Status::not_found("IoT device not found"));
-        }
         Ok(Response::new(DeleteIotDeviceResponse { success: true }))
     }
 

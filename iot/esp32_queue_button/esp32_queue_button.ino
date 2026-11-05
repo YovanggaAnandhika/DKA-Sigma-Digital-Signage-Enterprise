@@ -85,6 +85,20 @@ char deviceUid[32];
 char topicAction[64];
 char topicAck[64];
 char topicTelemetry[64];
+char topicCommand[64];
+char topicResetRequest[64];
+char topicResetAck[64];
+String pendingResetRequestId;
+bool resetRequestPending = false;
+bool pairingResetConfirmed = false;
+unsigned long resetRequestStartedAt = 0;
+unsigned long resetLastPublishAt = 0;
+const unsigned long RESET_REQUEST_TIMEOUT_MS = 30000;
+const unsigned long RESET_REQUEST_RETRY_MS = 3000;
+
+void requestPairingReset(const String &serverRequestId = "");
+void finishPairingReset();
+bool publishPairingResetRequest();
 
 // Debounce arrays per pin
 int pinLastState[NUM_PINS];
@@ -155,23 +169,124 @@ void onMqttMessage(char *topic, byte *payload, unsigned int length) {
   Serial.print(" | Payload: ");
   Serial.println(message);
 
-  // Parsing respon ACK dari server
   StaticJsonDocument<256> doc;
   DeserializationError err = deserializeJson(doc, message);
-  if (!err) {
-    const char *status = doc["status"] | "OK";
-    const char *action = doc["action"] | "";
-    const char *msg = doc["message"] | "";
+  if (err)
+    return;
 
-    Serial.printf("[ACK] Status: %s, Aksi: %s, Pesan: %s\n", status, action,
-                  msg);
-
-    if (strcmp(status, "OK") == 0) {
-      blinkFeedback(true);
-    } else {
-      blinkFeedback(false);
+  if (strcmp(topic, topicCommand) == 0) {
+    const char *command = doc["command"] | "";
+    const char *requestId = doc["request_id"] | "";
+    if (strcmp(command, "RESET_PAIRING") == 0 && requestId[0] != '\0') {
+      requestPairingReset(String(requestId));
     }
+    return;
   }
+
+  if (strcmp(topic, topicResetAck) == 0 && resetRequestPending) {
+    const char *requestId = doc["request_id"] | "";
+    const char *status = doc["status"] | "";
+    if (pendingResetRequestId == requestId) {
+      resetRequestPending = false;
+      if (strcmp(status, "OK") == 0) {
+        pairingResetConfirmed = true;
+      } else {
+        Serial.println("[Reset] Server menolak reset; konfigurasi dipertahankan.");
+        blinkFeedback(false);
+      }
+    }
+    return;
+  }
+
+  const char *status = doc["status"] | "OK";
+  const char *action = doc["action"] | "";
+  const char *msg = doc["message"] | "";
+  Serial.printf("[ACK] Status: %s, Aksi: %s, Pesan: %s\n", status, action, msg);
+  blinkFeedback(strcmp(status, "OK") == 0);
+}
+
+void requestPairingReset(const String &serverRequestId) {
+  if (resetRequestPending || !mqttClient.connected()) {
+    Serial.println("[Reset] Tidak dapat meminta reset: MQTT belum siap.");
+    return;
+  }
+
+  if (serverRequestId.length() > 0) {
+    pendingResetRequestId = serverRequestId;
+  } else {
+    char requestId[40];
+    snprintf(requestId, sizeof(requestId), "%08lx-%08lx-%08lx",
+             static_cast<unsigned long>(esp_random()),
+             static_cast<unsigned long>(esp_random()),
+             static_cast<unsigned long>(millis()));
+    pendingResetRequestId = requestId;
+  }
+
+  resetRequestPending = true;
+  resetRequestStartedAt = millis();
+  resetLastPublishAt = 0;
+  if (!publishPairingResetRequest()) {
+    resetRequestPending = false;
+    pendingResetRequestId = "";
+    return;
+  }
+  Serial.println("[Reset] Menunggu konfirmasi penghapusan dari server...");
+}
+
+bool publishPairingResetRequest() {
+  StaticJsonDocument<128> doc;
+  doc["request_id"] = pendingResetRequestId;
+  char payload[128];
+  serializeJson(doc, payload);
+  if (!mqttClient.publish(topicResetRequest, payload)) {
+    resetLastPublishAt = millis();
+    Serial.println("[Reset] Gagal mengirim permintaan ke server.");
+    return false;
+  }
+  resetLastPublishAt = millis();
+  return true;
+}
+
+void finishPairingReset() {
+  if (!pairingResetConfirmed)
+    return;
+
+  pairingResetConfirmed = false;
+  resetRequestPending = false;
+  pendingResetRequestId = "";
+  mqttClient.disconnect();
+  WiFi.disconnect(false, false);
+  bool cleared = settingsReady && settings.clear();
+  if (!cleared) {
+    Serial.println("[Reset] Server sudah menghapus perangkat, tetapi NVS gagal dihapus.");
+    blinkFeedback(false);
+    return;
+  }
+
+  wifiSsid[0] = '\0';
+  wifiPassword[0] = '\0';
+  mqttServer[0] = '\0';
+  mqttUser[0] = '\0';
+  mqttPassword[0] = '\0';
+  mqttPort = 1883;
+  if (configPortalActive)
+    stopConfigPortal();
+  Serial.println("[Reset] Server mengonfirmasi. Pairing ulang dimulai.");
+  startConfigPortal();
+}
+
+void processPairingReset() {
+  if (resetRequestPending &&
+      millis() - resetRequestStartedAt > RESET_REQUEST_TIMEOUT_MS) {
+    resetRequestPending = false;
+    pendingResetRequestId = "";
+    Serial.println("[Reset] Server tidak mengonfirmasi; konfigurasi dipertahankan.");
+    blinkFeedback(false);
+  } else if (resetRequestPending && mqttClient.connected() &&
+             millis() - resetLastPublishAt > RESET_REQUEST_RETRY_MS) {
+    publishPairingResetRequest();
+  }
+  finishPairingReset();
 }
 
 // =========================================================================================
@@ -211,6 +326,11 @@ void initializeDeviceIdentity() {
   snprintf(topicAction, sizeof(topicAction), "dka/iot/%s/action", deviceUid);
   snprintf(topicAck, sizeof(topicAck), "dka/iot/%s/ack", deviceUid);
   snprintf(topicTelemetry, sizeof(topicTelemetry), "dka/iot/%s/telemetry",
+           deviceUid);
+  snprintf(topicCommand, sizeof(topicCommand), "dka/iot/%s/command", deviceUid);
+  snprintf(topicResetRequest, sizeof(topicResetRequest),
+           "dka/iot/%s/reset_request", deviceUid);
+  snprintf(topicResetAck, sizeof(topicResetAck), "dka/iot/%s/reset_ack",
            deviceUid);
 
   Serial.println("=================================================");
@@ -591,7 +711,10 @@ void reconnectMqtt() {
   digitalWrite(PIN_LED_STATUS, HIGH);
   mqttClient.subscribe(topicAck);
   Serial.printf("[MQTT Sub] Berlangganan: %s\n", topicAck);
-  sendTelemetry();
+  mqttClient.subscribe(topicCommand);
+  mqttClient.subscribe(topicResetAck);
+  if (!resetRequestPending)
+    sendTelemetry();
   resetButtonStates();
   Serial.println("[Siap] Tekan tombol BOOT singkat atau tombol GPIO untuk aksi.");
 }
@@ -656,21 +779,8 @@ void handleBootButton() {
   if (bootPressActive && !bootResetTriggered &&
       millis() - bootPressStartedAt > BOOT_RESET_HOLD_MS) {
     bootResetTriggered = true;
-    bool wifiSettingsRemoved =
-        settingsReady &&
-        ((!settings.isKey("ssid") || settings.remove("ssid")) &&
-         (!settings.isKey("wifi_pass") || settings.remove("wifi_pass")));
-    wifiSsid[0] = '\0';
-    wifiPassword[0] = '\0';
-    mqttClient.disconnect();
-    WiFi.disconnect(false, false);
-    if (configPortalActive) {
-      stopConfigPortal();
-    }
-    Serial.println(wifiSettingsRemoved
-                       ? "[Setup] Wi-Fi direset. Kepemilikan dan endpoint MQTT tetap."
-                       : "[Setup] Gagal mereset Wi-Fi dari NVS; periksa penyimpanan.");
-    startConfigPortal();
+    if (!configPortalActive)
+      requestPairingReset();
   }
 }
 
@@ -721,7 +831,8 @@ void loop() {
       mqttClient.loop();
     }
 
-    if (mqttClient.connected() &&
+    processPairingReset();
+    if (!resetRequestPending && !configPortalActive && mqttClient.connected() &&
         millis() - lastTelemetryTime > TELEMETRY_INTERVAL_MS) {
       lastTelemetryTime = millis();
       sendTelemetry();
@@ -729,6 +840,8 @@ void loop() {
   }
 
   if (configPortalActive)
+    return;
+  if (resetRequestPending)
     return;
 
   // Simulasi via Serial Monitor Arduino IDE (Tanpa kabel jumper!)
