@@ -261,7 +261,7 @@ export default function QueueCanvasGlobalInspector({ imageOptions }: QueueCanvas
             </span>
             <button
               type="button"
-              onClick={triggerChime}
+              onClick={() => triggerChime()}
               className="btn btn-secondary"
               style={{ padding: '3px 8px', fontSize: '0.6875rem', gap: '4px' }}
             >

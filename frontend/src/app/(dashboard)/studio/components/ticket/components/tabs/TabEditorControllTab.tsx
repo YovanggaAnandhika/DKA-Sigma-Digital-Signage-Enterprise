@@ -130,8 +130,7 @@ export default function TabEditorControllTab() {
 
               if (!duplicatePollAnnouncement) {
                 if (queue.audioChimeEnabled && (data.source === 'player_touch' || data.source === 'iot_mqtt')) {
-                  triggerChime();
-                  setTimeout(() => {
+                  triggerChime(() => {
                     speakQueueAnnouncement(
                       ticketNum,
                       counterNm || activeCounter.counterName,
@@ -141,7 +140,7 @@ export default function TabEditorControllTab() {
                       },
                       queue
                     );
-                  }, 1200);
+                  });
                 } else {
                   speakQueueAnnouncement(
                     ticketNum,
@@ -261,8 +260,7 @@ export default function TabEditorControllTab() {
             startInvertEffect();
 
             if (queue.audioChimeEnabled) {
-              triggerChime();
-              setTimeout(() => {
+              triggerChime(() => {
                 speakQueueAnnouncement(
                   dbTicket,
                   callerName,
@@ -270,7 +268,7 @@ export default function TabEditorControllTab() {
                   () => stopInvertEffect(),
                   queue
                 );
-              }, 1200);
+              });
             } else {
               speakQueueAnnouncement(
                 dbTicket,
@@ -414,8 +412,7 @@ export default function TabEditorControllTab() {
       });
 
       if (queue.audioChimeEnabled) {
-        triggerChime();
-        setTimeout(() => {
+        triggerChime(() => {
           speakQueueAnnouncement(
             nextNumber,
             activeCounter.counterName,
@@ -426,7 +423,7 @@ export default function TabEditorControllTab() {
             },
             queue
           );
-        }, 1200);
+        });
       } else {
         speakQueueAnnouncement(
           nextNumber,
@@ -465,8 +462,7 @@ export default function TabEditorControllTab() {
     });
 
     if (queue.audioChimeEnabled) {
-      triggerChime();
-      setTimeout(() => {
+      triggerChime(() => {
         speakQueueAnnouncement(
           curNumber,
           activeCounter.counterName,
@@ -477,7 +473,7 @@ export default function TabEditorControllTab() {
           },
           queue
         );
-      }, 1200);
+      });
     } else {
       speakQueueAnnouncement(
         curNumber,
@@ -543,8 +539,7 @@ export default function TabEditorControllTab() {
       });
 
       if (queue.audioChimeEnabled) {
-        triggerChime();
-        setTimeout(() => {
+        triggerChime(() => {
           speakQueueAnnouncement(
             prevNumber,
             activeCounter.counterName,
@@ -555,7 +550,7 @@ export default function TabEditorControllTab() {
             },
             queue
           );
-        }, 1200);
+        });
       } else {
         speakQueueAnnouncement(
           prevNumber,

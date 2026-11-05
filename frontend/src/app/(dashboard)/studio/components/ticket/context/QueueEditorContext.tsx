@@ -33,7 +33,7 @@ interface QueueEditorContextType {
   simulator: SimulatorState;
   setSimulator: React.Dispatch<React.SetStateAction<SimulatorState>>;
   callNextTicket: () => void;
-  triggerChime: () => void;
+  triggerChime: (onEnded?: () => void) => void;
   updateField: <K extends keyof QueueDisplayConfig>(field: K, value: QueueDisplayConfig[K]) => void;
   updateLayoutItem: (itemId: string, patch: Partial<QueueLayoutItem>) => void;
   addCounter: (data?: Partial<QueueCounter>) => void;
@@ -54,10 +54,20 @@ export function useQueueEditor() {
   return ctx;
 }
 
-function playDingDongChime() {
+function playDingDongChime(onEnded?: () => void) {
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    onEnded?.();
+  };
+
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContextClass) return;
+    if (!AudioContextClass) {
+      finish();
+      return;
+    }
     const ctx = new AudioContextClass();
 
     const osc1 = ctx.createOscillator();
@@ -81,8 +91,10 @@ function playDingDongChime() {
     gain2.connect(ctx.destination);
     osc2.start(ctx.currentTime + 0.4);
     osc2.stop(ctx.currentTime + 1.4);
+    osc2.onended = finish;
   } catch (e) {
     console.error('Audio chime error:', e);
+    finish();
   }
 }
 
@@ -454,26 +466,30 @@ export function QueueEditorProvider({
     }));
   }, []);
 
-  const triggerChime = useCallback(() => {
+  const triggerChime = useCallback((onEnded?: () => void) => {
     setSimulator((prev) => ({ ...prev, isChiming: true }));
+    const finish = () => {
+      setSimulator((prev) => ({ ...prev, isChiming: false }));
+      onEnded?.();
+    };
     const audioConf = queue.audios?.find((a) => a.isActive !== false && (a.fileUrl || a.mediaItemId)) || queue.audios?.[0];
     const audioUrl = audioConf?.fileUrl || (audioConf?.mediaItemId ? `/api/assets/${audioConf.mediaItemId}` : null);
     if (audioUrl) {
       const customAud = new Audio(audioUrl);
-      customAud.volume = (audioConf?.volumePercent || 80) / 100;
-      customAud.play().catch(() => playDingDongChime());
-      customAud.onended = () => {
-        setSimulator((prev) => ({ ...prev, isChiming: false }));
+      customAud.volume = Math.max(0, Math.min(1, (audioConf?.volumePercent ?? 80) / 100));
+      let fallbackStarted = false;
+      const fallbackToBell = () => {
+        if (fallbackStarted) return;
+        fallbackStarted = true;
+        customAud.pause();
+        playDingDongChime(finish);
       };
-      setTimeout(() => {
-        setSimulator((prev) => ({ ...prev, isChiming: false }));
-      }, 3500);
-    } else {
-      playDingDongChime();
-      setTimeout(() => {
-        setSimulator((prev) => ({ ...prev, isChiming: false }));
-      }, 1500);
+      customAud.onended = finish;
+      customAud.onerror = fallbackToBell;
+      customAud.play().catch(fallbackToBell);
+      return;
     }
+    playDingDongChime(finish);
   }, [queue.audios]);
 
   const callNextTicket = useCallback(() => {

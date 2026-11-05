@@ -55,10 +55,13 @@ export default function WebKioskPlayerPage() {
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
 
   // Web Audio 2-tone Chime (Ding-Dong fallback: C5 523.25Hz -> E5 659.25Hz)
-  const playChime = useCallback(() => {
+  const playChime = useCallback((onEnded?: () => void) => {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
+      if (!AudioCtx) {
+        onEnded?.();
+        return;
+      }
       const ctx = new AudioCtx();
       if (ctx.state === 'suspended') {
         ctx.resume();
@@ -87,8 +90,10 @@ export default function WebKioskPlayerPage() {
       gain2.connect(ctx.destination);
       osc2.start(now + 0.32);
       osc2.stop(now + 1.1);
+      osc2.onended = () => onEnded?.();
     } catch (e) {
       console.warn('AudioContext chime error:', e);
+      onEnded?.();
     }
   }, []);
 
@@ -211,28 +216,29 @@ export default function WebKioskPlayerPage() {
       try {
         const audio = new Audio(customAudioUrl);
         activeChimeAudioRef.current = audio;
+        let fallbackStarted = false;
+        const fallbackToBell = () => {
+          if (fallbackStarted) return;
+          fallbackStarted = true;
+          if (activeChimeAudioRef.current === audio) activeChimeAudioRef.current = null;
+          audio.pause();
+          playChime(triggerTTS);
+        };
         audio.onended = () => {
+          if (fallbackStarted) return;
           if (activeChimeAudioRef.current === audio) activeChimeAudioRef.current = null;
           triggerTTS();
         };
-        audio.onerror = () => {
-          if (activeChimeAudioRef.current === audio) activeChimeAudioRef.current = null;
-          playChime();
-          activeChimeTimerRef.current = setTimeout(triggerTTS, 1100);
-        };
+        audio.onerror = fallbackToBell;
         const playPromise = audio.play();
         if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            playChime();
-            activeChimeTimerRef.current = setTimeout(triggerTTS, 1100);
-          });
+          playPromise.catch(fallbackToBell);
         }
         return;
       } catch (_) {}
     }
 
-    playChime();
-    activeChimeTimerRef.current = setTimeout(triggerTTS, 1100);
+    playChime(triggerTTS);
   }, [playChime, queueState.counter, queueState.ticket, manifest]);
 
   const triggerQueueCallRef = useRef(triggerQueueCall);

@@ -1,7 +1,6 @@
 import { speakQueueAnnouncement, stopQueueAnnouncement } from '@/app/(dashboard)/studio/components/ticket/types';
 
 let activeCanvasAudio: HTMLAudioElement | null = null;
-let activeCanvasAudioTimer: any = null;
 
 export function playCanvasQueueAudio(
   audios: any[],
@@ -17,20 +16,19 @@ export function playCanvasQueueAudio(
     } catch (_) {}
     activeCanvasAudio = null;
   }
-  if (activeCanvasAudioTimer) {
-    clearTimeout(activeCanvasAudioTimer);
-    activeCanvasAudioTimer = null;
-  }
   stopQueueAnnouncement();
 
   const triggerTTS = () => {
     speakQueueAnnouncement(ticketNumber, counterName, isRecall, onFinished);
   };
 
-  const playSynthChime = () => {
+  const playSynthChime = (onEnded?: () => void) => {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
+      if (!AudioCtx) {
+        onEnded?.();
+        return;
+      }
       const ctx = new AudioCtx();
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
@@ -53,7 +51,10 @@ export function playCanvasQueueAudio(
       gain2.connect(ctx.destination);
       osc2.start(ctx.currentTime + 0.4);
       osc2.stop(ctx.currentTime + 1.4);
-    } catch (_) {}
+      osc2.onended = () => onEnded?.();
+    } catch (_) {
+      onEnded?.();
+    }
   };
 
   const activeConf = (audios || []).find((a: any) => a.isActive !== false && (a.fileUrl || a.mediaItemId));
@@ -66,27 +67,28 @@ export function playCanvasQueueAudio(
       const vol = (activeConf?.volumePercent ?? 100) / 100;
       audio.volume = Math.max(0, Math.min(1, vol));
 
+      let fallbackStarted = false;
+      const fallbackToBell = () => {
+        if (fallbackStarted) return;
+        fallbackStarted = true;
+        if (activeCanvasAudio === audio) activeCanvasAudio = null;
+        audio.pause();
+        playSynthChime(triggerTTS);
+      };
       audio.onended = () => {
+        if (fallbackStarted) return;
         if (activeCanvasAudio === audio) activeCanvasAudio = null;
         triggerTTS();
       };
-      audio.onerror = () => {
-        if (activeCanvasAudio === audio) activeCanvasAudio = null;
-        playSynthChime();
-        activeCanvasAudioTimer = setTimeout(triggerTTS, 1100);
-      };
+      audio.onerror = fallbackToBell;
 
       const p = audio.play();
       if (p !== undefined) {
-        p.catch(() => {
-          playSynthChime();
-          activeCanvasAudioTimer = setTimeout(triggerTTS, 1100);
-        });
+        p.catch(fallbackToBell);
       }
       return;
     } catch (_) {}
   }
 
-  playSynthChime();
-  activeCanvasAudioTimer = setTimeout(triggerTTS, 1100);
+  playSynthChime(triggerTTS);
 }

@@ -231,7 +231,7 @@ export default function TabAudioTab() {
 
               <button
                 type="button"
-                onClick={triggerChime}
+                onClick={() => triggerChime()}
                 disabled={simulator.isChiming}
                 className="btn btn-secondary"
                 style={{ padding: '6px 14px', fontSize: '0.75rem' }}

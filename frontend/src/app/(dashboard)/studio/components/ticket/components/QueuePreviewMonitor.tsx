@@ -56,7 +56,7 @@ export default function QueuePreviewMonitor() {
 
           <button
             type="button"
-            onClick={triggerChime}
+            onClick={() => triggerChime()}
             disabled={simulator.isChiming}
             className="btn btn-secondary"
             style={{ padding: '6px 12px', fontSize: '0.75rem' }}
