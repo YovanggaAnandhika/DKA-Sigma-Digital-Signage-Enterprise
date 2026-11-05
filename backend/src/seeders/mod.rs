@@ -90,7 +90,7 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Erro
     if UserRepository::find_by_email(pool, "superadmin@dkasigma.io").await?.is_none() {
         info!("Seeding default administrator user...");
         let _admin = UserService::create_user(pool, CreateUserDto {
-            email: "superadmin@dkasigma.io".to_string(),
+            email: "superaadmin@example.com".to_string(),
             password: "superadmin".to_string(),
             full_name: "Master Signage Admin".to_string(),
             role_ids: Some(vec![superadmin_id]),
