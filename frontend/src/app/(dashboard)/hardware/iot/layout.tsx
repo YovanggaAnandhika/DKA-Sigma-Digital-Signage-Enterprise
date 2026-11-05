@@ -1,13 +1,37 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { CheckCircle2, Cpu } from 'lucide-react';
+import { listIotDevices } from '@/lib/services/studio/iot.service';
 
 export default function IotLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isEditPage = pathname.includes('/edit');
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    const refreshPendingCount = async () => {
+      try {
+        const devices = await listIotDevices();
+        if (active) setPendingCount(devices.filter((device) => !device.isApproved).length);
+      } catch (error) {
+        console.error('Failed to refresh pending IoT device count:', error);
+      }
+    };
+
+    void refreshPendingCount();
+    const interval = window.setInterval(() => void refreshPendingCount(), 10_000);
+    window.addEventListener('focus', refreshPendingCount);
+
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refreshPendingCount);
+    };
+  }, []);
 
   if (isEditPage) return <>{children}</>;
 
@@ -75,6 +99,27 @@ export default function IotLayout({ children }: { children: React.ReactNode }) {
             >
               <Icon size={15} />
               {tab.label}
+              {tab.href === '/hardware/iot/approval' && pendingCount > 0 && (
+                <span
+                  aria-label={`${pendingCount} perangkat menunggu persetujuan`}
+                  style={{
+                    minWidth: '18px',
+                    height: '18px',
+                    padding: '0 5px',
+                    borderRadius: '999px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'var(--accent-rose)',
+                    color: '#fff',
+                    fontSize: '0.6875rem',
+                    fontWeight: 700,
+                    lineHeight: 1,
+                  }}
+                >
+                  {pendingCount > 99 ? '99+' : pendingCount}
+                </span>
+              )}
             </Link>
           );
         })}

@@ -115,12 +115,16 @@ impl IotDeviceServiceTrait for IotDeviceServiceImpl {
         crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
         let id = Uuid::from_str(&request.into_inner().id)
             .map_err(|_| Status::invalid_argument("Invalid IoT device id"))?;
+        let default_mappings = default_pin_mappings();
         let row = sqlx::query_as::<_, IotDeviceRow>(
-            "UPDATE iot_devices SET is_approved = true, is_active = true, updated_at = NOW() \
+            "UPDATE iot_devices SET is_approved = true, is_active = true, \
+             pin_mappings = CASE WHEN pin_mappings = '[]'::jsonb THEN $2 ELSE pin_mappings END, \
+             updated_at = NOW() \
              WHERE id = $1 RETURNING id, device_uid, name, device_role, pin_mappings, is_active, \
              is_approved, ip_address, firmware_version, last_seen_at, last_action, created_at, updated_at",
         )
         .bind(id)
+        .bind(default_mappings)
         .fetch_optional(&self.pool)
         .await
         .map_err(db_error)?
@@ -219,6 +223,16 @@ fn db_error(error: sqlx::Error) -> Status {
     Status::internal("Internal error")
 }
 
+fn default_pin_mappings() -> serde_json::Value {
+    serde_json::json!([
+        { "pin": 13, "action": "CALL_NEXT", "enabled": true, "label": "Panggil berikutnya" },
+        { "pin": 12, "action": "RECALL", "enabled": true, "label": "Panggil ulang" },
+        { "pin": 14, "action": "TOGGLE_BREAK", "enabled": true, "label": "Istirahat loket" },
+        { "pin": 27, "action": "TOGGLE_CLOSE", "enabled": true, "label": "Tutup loket" },
+        { "pin": 26, "action": "CALL_PREV", "enabled": true, "label": "Panggilan sebelumnya" }
+    ])
+}
+
 fn validate_mappings(mappings: &[IotPinMapping]) -> Result<(), Status> {
     let mut pins = HashSet::with_capacity(mappings.len());
     for mapping in mappings {
@@ -239,7 +253,7 @@ fn validate_mappings(mappings: &[IotPinMapping]) -> Result<(), Status> {
 
 #[cfg(test)]
 mod tests {
-    use super::validate_mappings;
+    use super::{default_pin_mappings, validate_mappings};
     use crate::grpc::proto::iot::v1::device::IotPinMapping;
 
     fn mapping(pin: i32, action: &str) -> IotPinMapping {
@@ -257,5 +271,26 @@ mod tests {
         assert!(validate_mappings(&[mapping(-1, "CALL_NEXT")]).is_err());
         assert!(validate_mappings(&[mapping(13, "CALL_NEXT"), mapping(13, "RECALL")]).is_err());
         assert!(validate_mappings(&[mapping(13, "UNKNOWN")]).is_err());
+    }
+
+    #[test]
+    fn approval_defaults_match_firmware_button_pins() {
+        let defaults = default_pin_mappings();
+        let mappings = defaults.as_array().unwrap();
+        let pins = mappings
+            .iter()
+            .map(|mapping| mapping["pin"].as_i64().unwrap() as i32)
+            .collect::<Vec<_>>();
+        let actions = mappings
+            .iter()
+            .map(|mapping| mapping["action"].as_str().unwrap())
+            .collect::<Vec<_>>();
+
+        assert_eq!(pins, [13, 12, 14, 27, 26]);
+        assert_eq!(
+            actions,
+            ["CALL_NEXT", "RECALL", "TOGGLE_BREAK", "TOGGLE_CLOSE", "CALL_PREV"]
+        );
+        assert!(mappings.iter().all(|mapping| mapping["enabled"] == true));
     }
 }

@@ -89,7 +89,7 @@ export default function EditIotDevicePage() {
   if (!device) return error ? <p role="alert" style={{ color: 'var(--accent-rose)' }}>{error}</p> : null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '900px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
         <Link href="/hardware/iot/devices" className="btn btn-outline"><ArrowLeft size={15} /> Kembali ke perangkat</Link>
         <button type="button" className="btn btn-outline" style={{ color: 'var(--accent-rose)' }} onClick={() => void remove()}>

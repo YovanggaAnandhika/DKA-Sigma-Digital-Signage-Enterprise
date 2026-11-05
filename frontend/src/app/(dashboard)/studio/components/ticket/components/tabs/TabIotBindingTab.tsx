@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Cpu, Link2, Unlink } from 'lucide-react';
 import { useQueueEditor } from '../../context/QueueEditorContext';
+import { QueueCounter } from '../../types';
+import { listCounters } from '@/lib/services/studio/queue.service';
 import {
   bindIotDevice,
   listQueueIotBindings,
@@ -13,6 +15,7 @@ import {
 export default function TabIotBindingTab() {
   const { queue, isNew } = useQueueEditor();
   const [devices, setDevices] = useState<QueueIotBinding[]>([]);
+  const [counters, setCounters] = useState<QueueCounter[]>([]);
   const [counterSelections, setCounterSelections] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -24,8 +27,12 @@ export default function TabIotBindingTab() {
     }
     setError('');
     try {
-      const items = await listQueueIotBindings(queue.id);
+      const [items, counterResponse] = await Promise.all([
+        listQueueIotBindings(queue.id),
+        listCounters(queue.id),
+      ]);
       setDevices(items);
+      setCounters(counterResponse.itemsList ?? []);
       setCounterSelections(Object.fromEntries(items.map((item) => [item.iotDeviceId, item.counterId])));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Gagal memuat binding IoT.');
@@ -86,7 +93,7 @@ export default function TabIotBindingTab() {
             onChange={(event) => setCounterSelections((selections) => ({ ...selections, [device.iotDeviceId]: event.target.value }))}
           >
             <option value="">Tanpa loket khusus</option>
-            {queue.counters.map((counter) => (
+            {counters.map((counter) => (
               <option key={counter.id} value={counter.id}>{counter.counterName}</option>
             ))}
           </select>
