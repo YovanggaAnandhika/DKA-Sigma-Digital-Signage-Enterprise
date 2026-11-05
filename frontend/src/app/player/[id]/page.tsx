@@ -98,7 +98,6 @@ export default function WebKioskPlayerPage() {
   }, []);
 
   const activeChimeAudioRef = useRef<HTMLAudioElement | null>(null);
-  const activeChimeTimerRef = useRef<any>(null);
 
   // Deteksi seluruh ID antrean yang terpasang pada layout aktif player ini
   const activeQueueIds = useMemo(() => {
@@ -146,10 +145,6 @@ export default function WebKioskPlayerPage() {
         activeChimeAudioRef.current.currentTime = 0;
       } catch (_) {}
       activeChimeAudioRef.current = null;
-    }
-    if (activeChimeTimerRef.current) {
-      clearTimeout(activeChimeTimerRef.current);
-      activeChimeTimerRef.current = null;
     }
     stopQueueAnnouncement();
 
