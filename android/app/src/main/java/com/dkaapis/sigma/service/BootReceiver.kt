@@ -17,7 +17,7 @@ class BootReceiver : BroadcastReceiver() {
             Log.d(TAG, "Autostart boot dilewati karena Mode Kiosk nonaktif.")
             return
         }
-        Log.i(TAG, "Menerima broadcast autostart perangkat: $action. Menyiapkan peluncuran DKASigma Player...")
+        Log.i(TAG, "Menerima broadcast autostart perangkat: $action. Menyiapkan peluncuran HNDSigma Player...")
 
         val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -53,7 +53,7 @@ class BootReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        private const val TAG = "DKABootReceiver"
+        private const val TAG = "HNDBootReceiver"
     }
 }
 

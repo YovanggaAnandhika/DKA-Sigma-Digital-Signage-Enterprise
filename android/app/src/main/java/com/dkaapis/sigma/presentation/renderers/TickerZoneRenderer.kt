@@ -68,7 +68,7 @@ class TickerZoneRenderer(
 
         container.addView(
             MarqueeTextView(context).apply {
-                text = payload.textMessage.ifBlank { "DKASigma Teks Berjalan" }
+                text = payload.textMessage.ifBlank { "HNDSigma Teks Berjalan" }
                 setTextColor(ColorParser.parseColor(payload.textColorHex, Color.WHITE))
                 setTextSize(TypedValue.COMPLEX_UNIT_PX, (if (payload.fontSize > 0f) payload.fontSize else 16f) * scale)
                 includeFontPadding = false

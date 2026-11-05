@@ -109,7 +109,7 @@ export default function ZoneWidgetRenderer({
               alignItems: 'center',
             }}
           >
-            {(activeBlock.widgetData?.messagesList || activeBlock.widgetData?.messages || ['DKASigma Teks Berjalan']).join('  ✦  ')}
+            {(activeBlock.widgetData?.messagesList || activeBlock.widgetData?.messages || ['HNDSigma Teks Berjalan']).join('  ✦  ')}
           </Marquee>
         </div>
       </div>

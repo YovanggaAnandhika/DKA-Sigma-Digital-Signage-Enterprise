@@ -1,5 +1,5 @@
 /**
- * DKASigma Enterprise API Client Barrel
+ * HNDSigma Enterprise API Client Barrel
  */
 
 // Core Protocol Exports

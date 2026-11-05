@@ -19,7 +19,7 @@ impl LayerBlockRepository {
         if let Some(tid) = dto.ticker_id {
             sqlx::query(
                 "INSERT INTO components_tickers (id, name, badge, messages, speed, theme, font_size)
-                 VALUES ($1, 'Pengumuman Promo Kasir & Diskon Member', 'PROMO HARI INI', ARRAY['Dapatkan diskon 20% untuk semua produk segar buah & sayur setiap hari Jumat hingga Minggu!', 'Gunakan kartu member DKASigma Point untuk mendapatkan poin ganda di seluruh kasir.'], 'normal', 'blue', 16)
+                 VALUES ($1, 'Pengumuman Promo Kasir & Diskon Member', 'PROMO HARI INI', ARRAY['Dapatkan diskon 20% untuk semua produk segar buah & sayur setiap hari Jumat hingga Minggu!', 'Gunakan kartu member HNDSigma Point untuk mendapatkan poin ganda di seluruh kasir.'], 'normal', 'blue', 16)
                  ON CONFLICT (id) DO NOTHING"
             )
             .bind(tid)

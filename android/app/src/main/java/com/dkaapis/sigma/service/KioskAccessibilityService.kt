@@ -20,7 +20,7 @@ class KioskAccessibilityService : AccessibilityService() {
             disableSelf()
             return
         }
-        Log.i(TAG, "KioskAccessibilityService aktif. Menjaga DKASigma aktif di Google TV.")
+        Log.i(TAG, "KioskAccessibilityService aktif. Menjaga HNDSigma aktif di Google TV.")
         launchPlayerIfNeeded()
     }
 
@@ -31,7 +31,7 @@ class KioskAccessibilityService : AccessibilityService() {
 
         // Periksa apakah layar beralih ke launcher Google TV / Android TV
         if (isStockLauncherPackage(pkgName)) {
-            Log.d(TAG, "Terdeteksi launcher sistem ($pkgName). Mengalihkan kembali ke DKASigma Player...")
+            Log.d(TAG, "Terdeteksi launcher sistem ($pkgName). Mengalihkan kembali ke HNDSigma Player...")
             launchPlayerIfNeeded()
         }
     }
@@ -52,7 +52,7 @@ class KioskAccessibilityService : AccessibilityService() {
     }
 
     companion object {
-        private const val TAG = "DKAKioskService"
+        private const val TAG = "HNDKioskService"
 
         private val STOCK_LAUNCHER_PACKAGES = setOf(
             "com.google.android.apps.tv.launcherx",    // Google TV launcher

@@ -4,7 +4,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { DialogProvider } from '@/components/ui/ModalDialog';
 
 export const metadata: Metadata = {
-  title: 'DKASigma | Modern Retail Digital Signage Platform',
+  title: 'HNDSigma | Modern Retail Digital Signage Platform',
   description: 'Enterprise Centralized Promotional Screen CMS & Player Engine',
 };
 

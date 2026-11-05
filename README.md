@@ -1,6 +1,6 @@
-# DKASigma Digital Signage Enterprise (SIGNAGE)
+# HNDSigma Digital Signage Enterprise (SIGNAGE)
 
-Welcome to the DKASigma Digital Signage Enterprise project repository. This project is a comprehensive, enterprise-grade digital signage management platform. It allows administrators to manage media assets, create multi-zone layouts, build playlists, and orchestrate content distribution to remote hardware devices (Android Players) in real-time.
+Welcome to the HNDSigma Digital Signage Enterprise project repository. This project is a comprehensive, enterprise-grade digital signage management platform. It allows administrators to manage media assets, create multi-zone layouts, build playlists, and orchestrate content distribution to remote hardware devices (Android Players) in real-time.
 
 ## System Architecture
 

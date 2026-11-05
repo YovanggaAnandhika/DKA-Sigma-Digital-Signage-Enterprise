@@ -1,4 +1,4 @@
-# Architectural Plan: DKASigma Remote Player (VNC / Web Remote Control)
+# Architectural Plan: HNDSigma Remote Player (VNC / Web Remote Control)
 
 ## 1. Executive Summary & Objective
 

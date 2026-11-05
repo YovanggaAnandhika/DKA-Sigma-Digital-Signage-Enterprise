@@ -1,5 +1,5 @@
 # Rencana Implementasi: Sistem Pembaruan APK OTA (Over-the-Air) & Kiosk Silent Update
-**DKASigma Digital Signage Enterprise**
+**HNDSigma Digital Signage Enterprise**
 
 ---
 

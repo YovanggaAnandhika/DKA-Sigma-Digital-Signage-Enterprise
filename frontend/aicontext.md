@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Frontend is the control plane (Studio CMS) for DKASigma Digital Signage Enterprise. It runs on Next.js 14 (App Router) using the Bun runtime, with gRPC-Node integration bridging server routes to the Rust backend.
+The Frontend is the control plane (Studio CMS) for HNDSigma Digital Signage Enterprise. It runs on Next.js 14 (App Router) using the Bun runtime, with gRPC-Node integration bridging server routes to the Rust backend.
 
 ---
 
@@ -60,7 +60,7 @@ frontend/
 
 ## gRPC Route Handler Pattern
 
-`getGrpcHost()` reads `DKA_GRPC_SERVER_HOST` (default `localhost:50051`); `getGrpcCredentials()` uses TLS only when `DKA_GRPC_SERVER_SECURE=true`. Auth is enforced client-side by `AuthGuard` reading `localStorage.dkasigma_session`, not by `middleware.ts` (which only logs API traffic).
+`getGrpcHost()` reads `HND_GRPC_SERVER_HOST` (default `localhost:50051`); `getGrpcCredentials()` uses TLS only when `HND_GRPC_SERVER_SECURE=true`. Auth is enforced client-side by `AuthGuard` reading `localStorage.dkasigma_session`, not by `middleware.ts` (which only logs API traffic).
 
 Every API route handler under `src/app/(api)/api/grpc/` follows this standard pattern:
 

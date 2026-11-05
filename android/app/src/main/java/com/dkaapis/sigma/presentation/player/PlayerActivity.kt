@@ -73,7 +73,7 @@ import java.util.Calendar
 import java.util.Locale
 
 /**
- * Aktivitas Utama Pemutar Signage DKASigma:
+ * Aktivitas Utama Pemutar Signage HNDSigma:
  * Mengorkestrasikan siklus hidup aplikasi, canvas rendering, telemetri,
  * aliran data realtime SSE, dan audio TTS.
  */
@@ -166,7 +166,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             // shortcut: SCREEN_BRIGHT_WAKE_LOCK deprecated in API 13, tapi tetap dibutuhkan pada firmware TV (Polytron/MediaTek/Realtek) yang mengabaikan FLAG_KEEP_SCREEN_ON saat idle lama
             screenWakeLock = pm.newWakeLock(
                 PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
-                "DKASigma:SignageScreenWakeLock"
+                "HNDSigma:SignageScreenWakeLock"
             ).apply {
                 setReferenceCounted(false)
                 acquire()
@@ -195,7 +195,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             val pm = getSystemService(POWER_SERVICE) as? PowerManager ?: return
             cpuPartialWakeLock = pm.newWakeLock(
                 PowerManager.PARTIAL_WAKE_LOCK,
-                "DKASigma:SignageCpuSleepWakeLock"
+                "HNDSigma:SignageCpuSleepWakeLock"
             ).apply {
                 setReferenceCounted(false)
                 acquire()
@@ -285,7 +285,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             setPadding(0, 0, 0, 16)
         }
         loadingText = TextView(this).apply {
-            text = "Memulai DKASigma Player..."
+            text = "Memulai HNDSigma Player..."
             setTextColor(Color.WHITE)
             textSize = 24f
             typeface = Typeface.DEFAULT_BOLD
@@ -876,7 +876,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                 backPressCount >= 4 -> {
                     backPressCount = 0
                     settingsDialog.dismiss()
-                    Toast.makeText(this, "Menutup DKASigma Player...", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Menutup HNDSigma Player...", Toast.LENGTH_SHORT).show()
                     exitApplicationCompletely()
                     return true
                 }

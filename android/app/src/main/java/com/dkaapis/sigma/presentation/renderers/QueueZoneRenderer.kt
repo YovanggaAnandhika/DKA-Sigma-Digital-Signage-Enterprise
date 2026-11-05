@@ -152,7 +152,7 @@ class QueueZoneRenderer(
                     "slow" -> 50f
                     else -> 95f
                 }
-                text = interpolate(meta.templateContent.ifBlank { "DKASigma Layanan Antrian" }, queueNumber, queueCounter)
+                text = interpolate(meta.templateContent.ifBlank { "HNDSigma Layanan Antrian" }, queueNumber, queueCounter)
             }
             else -> TextView(context).apply {
                 background = bgDrawable

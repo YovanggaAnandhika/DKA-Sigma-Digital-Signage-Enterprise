@@ -34,7 +34,7 @@
         android:hardwareAccelerated="true"
         android:largeHeap="true"
         android:networkSecurityConfig="@xml/network_security_config"
-        android:theme="@style/Theme.DKASigmaPlayer"
+        android:theme="@style/Theme.HNDSigmaPlayer"
         tools:targetApi="34">
 
         <!-- ══ Main Signage UI & Playback Engine ══ -->
@@ -43,7 +43,7 @@
             android:exported="true"
             android:launchMode="singleInstance"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
-            android:theme="@style/Theme.DKASigmaPlayer.Fullscreen">
+            android:theme="@style/Theme.HNDSigmaPlayer.Fullscreen">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -70,7 +70,7 @@
             android:exported="false"
             android:launchMode="singleTop"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
-            android:theme="@style/Theme.DKASigmaPlayer.Light" />
+            android:theme="@style/Theme.HNDSigmaPlayer.Light" />
 
         <!-- ══ Crash Diagnostic Report Activity (Isolated Process) ══ -->
         <activity
@@ -78,7 +78,7 @@
             android:exported="false"
             android:process=":crash"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
-            android:theme="@style/Theme.DKASigmaPlayer" />
+            android:theme="@style/Theme.HNDSigmaPlayer" />
 
         <!-- ══ App Restart Process Trampoline (Isolated Process) ══ -->
         <activity

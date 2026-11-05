@@ -32,7 +32,7 @@ export const DEFAULT_TICKERS: TickerConfig[] = [
     badge: 'PROMO HARI INI',
     messages: [
       'Dapatkan diskon 20% untuk semua produk segar buah & sayur setiap hari Jumat hingga Minggu!',
-      'Gunakan kartu member DKASigma Point untuk mendapatkan poin ganda di seluruh kasir.',
+      'Gunakan kartu member HNDSigma Point untuk mendapatkan poin ganda di seluruh kasir.',
     ],
     speed: 'normal',
     theme: 'blue',

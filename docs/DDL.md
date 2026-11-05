@@ -1,4 +1,4 @@
-# DDL & Alur Migrasi Database DKA Sigma Digital Signage Enterprise
+# DDL & Alur Migrasi Database HND Sigma Digital Signage Enterprise
 
 Dokumen ini memetakan seluruh struktur **Data Definition Language (DDL)**, arsitektur modul **Authentication & IAM (Identity and Access Management)**, relasi antartabel, serta **alur migrasi database** di backend Rust.
 

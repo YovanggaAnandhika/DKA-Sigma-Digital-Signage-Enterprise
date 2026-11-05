@@ -1,4 +1,4 @@
-# AGENTS.md — DKASigma Digital Signage Enterprise
+# AGENTS.md — HNDSigma Digital Signage Enterprise
 
 ## Core Agent Philosophy: Ponytail (Lazy Senior Dev Mode)
 

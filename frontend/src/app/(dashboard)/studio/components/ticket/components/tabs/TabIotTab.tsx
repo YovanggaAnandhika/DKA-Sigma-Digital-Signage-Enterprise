@@ -425,7 +425,7 @@ export default function TabIotTab() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: 'var(--primary-500)', fontWeight: 700 }}>
             <Terminal size={16} />
-            <span>Panduan Teknis NodeMCU ESP32 & MQTT (DKASigma)</span>
+            <span>Panduan Teknis NodeMCU ESP32 & MQTT (HNDSigma)</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
             <div style={{ backgroundColor: 'var(--bg-surface)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>

@@ -114,7 +114,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* DKA RADIUS Style Diagnostics / Smart Insight Banner */}
+      {/* HND RADIUS Style Diagnostics / Smart Insight Banner */}
       <InsightCard insights={insights} />
 
       {/* KPI Cards Grid */}

@@ -26,7 +26,7 @@ class PlayerForegroundService : Service() {
     private fun startForegroundNotificationSafe() {
         try {
             val notification: Notification = NotificationCompat.Builder(this, DkaSignageApp.CHANNEL_ID)
-                .setContentTitle("DKASigma Digital Signage")
+                .setContentTitle("HNDSigma Digital Signage")
                 .setContentText("Koneksi display streaming aktif")
                 .setSmallIcon(android.R.drawable.ic_media_play)
                 .setPriority(NotificationCompat.PRIORITY_LOW)

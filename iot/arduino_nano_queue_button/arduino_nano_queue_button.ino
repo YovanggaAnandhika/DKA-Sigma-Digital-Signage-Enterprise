@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * DKASigma Digital Signage Enterprise - Arduino Nano USB Queue Button
+ * HNDSigma Digital Signage Enterprise - Arduino Nano USB Queue Button
  * Modul: Arduino Nano (ATmega328P / CH340 / FT232R)
  * Komunikasi: USB Serial (Baudrate 115200 bps)
  * 
@@ -14,7 +14,7 @@
  * 1. Hubungkan Arduino Nano ke komputer loket via kabel USB.
  * 2. Saat tombol D2 ditekan ke GND, Arduino mendeteksi dan mengirim pesan "CALL_NEXT\n"
  *    melalui Serial USB.
- * 3. Konsol Loket DKASigma di browser (Chrome/Edge via Web Serial) otomatis memanggil antrean!
+ * 3. Konsol Loket HNDSigma di browser (Chrome/Edge via Web Serial) otomatis memanggil antrean!
  * 4. Komputer membalas "OK\n", dan LED Pin 13 berkedip 2x sebagai konfirmasi.
  * =========================================================================================
  */
@@ -75,7 +75,7 @@ void setup() {
     delay(70);
   }
 
-  Serial.println(F("[DKASigma] Arduino Nano USB Queue Button Siap (Baud: 115200)"));
+  Serial.println(F("[HNDSigma] Arduino Nano USB Queue Button Siap (Baud: 115200)"));
 }
 
 // =========================================================================================

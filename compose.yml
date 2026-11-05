@@ -1,66 +1,7 @@
+name: dka-product-sigma
 services:
-  nginx:
-    image: jc21/nginx-proxy-manager
-    pull_policy: always
-    container_name: dka-development-nginx
-    hostname: dka-development-nginx
-    logging:
-      driver: local
-      options:
-        max-size: 10m
-        max-file: 10
-    ports:
-      - target: 80
-        published: 80
-        protocol: tcp
-        host_ip: 0.0.0.0
-      - target: 443
-        published: 443
-        protocol: tcp
-        host_ip: 0.0.0.0
-      - target: 81
-        published: 81
-        protocol: tcp
-        host_ip: 0.0.0.0
-      - target: 1883
-        published: 1883
-        protocol: tcp
-        host_ip: 0.0.0.0
-      - target: 18083
-        published: 18083
-        protocol: tcp
-        host_ip: 0.0.0.0
-      - target: 8083
-        published: 8083
-        protocol: tcp
-        host_ip: 0.0.0.0
-      - target: 50051
-        published: 50051
-        protocol: tcp
-        host_ip: 0.0.0.0
-      - 51430-51600:51430-51600
-    deploy:
-      resources:
-        limits:
-          cpus: '0.4'
-          memory: 200M
-        reservations:
-          cpus: '0.10'
-          memory: 50M
-    restart: always
-    volumes:
-      - type: volume
-        source: dka-development-nginx-data
-        target: /data
-      - type: volume
-        source: dka-development-nginx-ssl
-        target: /etc/letsencrypt
-    networks:
-      - dka-local-development
-      - dka-product-sigma-network
-
   # Next.js Standalone Frontend UI (Bun)
-  frontend:
+  dka-product-sigma-frontend:
     image: yovanggaanandhika/node:latest
     container_name: dka-product-sigma-frontend
     hostname: dka-product-sigma-frontend
@@ -69,143 +10,47 @@ services:
       TZ: Asia/Makassar
       NODE_ENV: development
       PORT: 80
-      DKA_GRPC_SERVER_HOST: "dka-product-sigma-backend:50051"
-      DKA_GRPC_SERVER_SECURE: "false"
+      HND_GRPC_SERVER_HOST: "dka-product-sigma-backend:50051"
+      HND_GRPC_SERVER_SECURE: "false"
     volumes:
       - type: bind
         source: ./frontend
         target: /home/app
     command: bun run dev
     depends_on:
-      - backend
+      - dka-product-sigma-backend
     networks:
-      - dka-local-development
-      - dka-product-sigma-network
+      - dka-internal
 
   # Rust Backend Server (Tonic gRPC)
-  backend:
+  dka-product-sigma-backend:
     image: yovanggaanandhika/rust:latest
     container_name: dka-product-sigma-backend
     hostname: dka-product-sigma-backend
     restart: always
     environment:
       TZ: Asia/Makassar
-      DB_HOST: dka-product-sigma-db
+      DB_HOST: dka-development-postgres
       DB_PORT: 5432
-      DB_USERNAME: sigma
-      DB_PASSWORD: bZ9qL4vX7kM2pT8w
-      DB_DATABASE: sigma
+      DB_USERNAME: dka-sigma
+      DB_PASSWORD: '1q2w3e4r5t6y'
+      DB_DATABASE: dka-sigma
       #GRPC_PORT: 50051
       HOST: 0.0.0.0
       JWT_SECRET: super_secret_jwt_key_signage_123456789
       RUST_LOG: info,signage_backend=debug
-      DKA_HEALTHY_CHECK_HTTP: "false"
-      DKA_HEALTHY_CHECK_GRPC: "false"
-      DKA_RUST_CARGO_WATCH_SKIP: "false"
+      HND_HEALTHY_CHECK_HTTP: "false"
+      HND_HEALTHY_CHECK_GRPC: "false"
+      HND_RUST_CARGO_WATCH_SKIP: "false"
+      MQTT_HOST: dka-development-mqtt
     volumes:
       - type: bind
         source: ./backend
         target: /home/app
-    depends_on:
-      - db
     networks:
-      - dka-local-development
-      - dka-product-sigma-network
-
-  # PostgreSQL Database (Signage DB)
-  db:
-    image: yovanggaanandhika/postgresql:17.2
-    container_name: dka-product-sigma-db
-    hostname: dka-product-sigma-db
-    restart: always
-    environment:
-      TZ: Asia/Makassar
-      DKA_ROOT_PASSWORD: bZ9qL4vX7kM2pT8w
-      DKA_DB_NAME: sigma
-      DKA_DB_USERNAME: sigma
-      DKA_DB_PASSWORD: bZ9qL4vX7kM2pT8w
-      #DKA_DB_MAX_CONNECTION: 200
-      # ============================================================
-      # Cron & Backup Settings
-      # ============================================================
-      DKA_CRON_ENABLE: true
-      DKA_CRON_PRIODIC: "0 3 * * *"       # Jadwal cron backup (default: 03:00 setiap hari)
-      # ============================================================
-      # Auto Maintenance / Optimizer
-      # ============================================================
-      DKA_MAINTENANCE_ENABLE: true
-      DKA_MAINTENANCE_CRON: "0 4 * * *"    # Jadwal maintenance (default: 04:00 setiap hari)
-      DKA_MAINTENANCE_VACUUM_ENABLE: "true"
-      DKA_MAINTENANCE_ANALYZE_ENABLE: "true"
-      DKA_MAINTENANCE_REINDEX_ENABLE: "false"
-      DKA_MAINTENANCE_REINDEX_MODE: smart   # smart | always
-      DKA_MAINTENANCE_REINDEX_DEAD_RATIO_THRESHOLD: "0.20"
-      DKA_MAINTENANCE_REINDEX_MIN_DEAD_TUPLES: "100000"
-      DKA_MAINTENANCE_REINDEX_INDEX_SCAN_THRESHOLD: "50"
-      DKA_MAINTENANCE_REINDEX_INDEX_SIZE_THRESHOLD: "104857600"
-      DKA_MAINTENANCE_LOG: /var/log/postgresql/maintenance.log
-    volumes:
-      - type: volume
-        source: dka-product-sigma-db
-        target: /var/lib/postgresql
-      - type: volume
-        source: dka-product-sigma-backup
-        target: /backup
-    ports:
-      - "5432:5432"
-    networks:
-      - dka-product-sigma-network
-      - dka-local-development
-
-  # MQTT Broker (EMQX - NodeMCU ESP32 & IoT Devices)
-  # CATATAN PORT INTERNAL DOCKER:
-  #   - 1883  : MQTT TCP Protocol (untuk koneksi NodeMCU ESP32 via Nginx Stream Proxy)
-  #   - 18083 : EMQX Web Management Dashboard (di-reverse proxy via Nginx Proxy Host)
-  #   - 8083  : MQTT over WebSocket (opsional untuk monitoring realtime via web)
-  # CATATAN KEAMANAN:
-  #   - Port TIDAK diekspos langsung ke host di sini.
-  #   - Akses dashboard dan port MQTT diarahkan melalui container Nginx Proxy Manager (dka-development-nginx).
-  mqtt:
-    image: emqx/emqx:5.8.0
-    container_name: dka-product-sigma-mqtt
-    hostname: dka-product-sigma-mqtt
-    restart: always
-    environment:
-      - EMQX_DASHBOARD__DEFAULT_USERNAME=admin
-      - EMQX_DASHBOARD__DEFAULT_PASSWORD=bZ9qL4vX7kM2pT8w
-    volumes:
-      - type: volume
-        source: dka-product-sigma-mqtt-data
-        target: /opt/emqx/data
-      - type: volume
-        source: dka-product-sigma-mqtt-log
-        target: /opt/emqx/log
-    # ports:
-    #   - "1883:1883"
-    #   - "18083:18083"
-    networks:
-      - dka-local-development
-      - dka-product-sigma-network
-
-volumes:
-  dka-development-nginx-data:
-    name: dka-development-nginx-data
-    external: true
-  dka-development-nginx-ssl:
-    name: dka-development-nginx-ssl
-    external: true
-  dka-product-sigma-db:
-    name: dka-product-sigma-db
-  dka-product-sigma-backup:
-    name: dka-product-sigma-backup
-  dka-product-sigma-mqtt-data:
-    name: dka-product-sigma-mqtt-data
-  dka-product-sigma-mqtt-log:
-    name: dka-product-sigma-mqtt-log
+      - dka-internal
 
 networks:
-  dka-local-development:
-    name: dka-local-development
-    external: true
-  dka-product-sigma-network:
-    name: dka-product-sigma-network
+  dka-internal:
+    name: dka-internal
+    driver: bridge

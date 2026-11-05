@@ -20,7 +20,7 @@ class DkaSignageApp : Application() {
         }
         instance = this
         setupCrashHandler()
-        Log.i(TAG, "DKASigma Signage Player Initialized (PID: ${android.os.Process.myPid()})")
+        Log.i(TAG, "HNDSigma Signage Player Initialized (PID: ${android.os.Process.myPid()})")
         createNotificationChannel()
     }
 
@@ -61,7 +61,7 @@ class DkaSignageApp : Application() {
             try {
                 val channel = NotificationChannel(
                     CHANNEL_ID,
-                    "DKASigma Stream Daemon",
+                    "HNDSigma Stream Daemon",
                     NotificationManager.IMPORTANCE_LOW
                 ).apply {
                     description = "Menjaga koneksi gRPC DisplayStream tetap terhubung"
@@ -76,7 +76,7 @@ class DkaSignageApp : Application() {
     }
 
     companion object {
-        const val TAG = "DKASigma"
+        const val TAG = "HNDSigma"
         const val CHANNEL_ID = "dkasigma_stream_channel"
         lateinit var instance: DkaSignageApp
             private set

@@ -1,7 +1,7 @@
 <resources>
-    <string name="app_name">DKASigma Signage</string>
+    <string name="app_name">HNDSigma Signage</string>
     <string name="pairing_title">Hubungkan Perangkat Layar</string>
-    <string name="pairing_subtitle">Masukkan kode verifikasi berikut pada CMS DKASigma:</string>
+    <string name="pairing_subtitle">Masukkan kode verifikasi berikut pada CMS HNDSigma:</string>
     <string name="connecting">Menghubungkan ke Server…</string>
     <string name="syncing_manifest">Menyinkronkan Jadwal &amp; Konten…</string>
 
@@ -10,5 +10,5 @@
     <string name="server_port">50051</string>
     <string name="server_use_tls">false</string>
 
-    <string name="kiosk_accessibility_description">Layanan otomatisasi kiosk untuk menjaga DKASigma Player tetap aktif di layar utama Android TV / Google TV dan mencegah tertutup saat tombol Home ditekan.</string>
+    <string name="kiosk_accessibility_description">Layanan otomatisasi kiosk untuk menjaga HNDSigma Player tetap aktif di layar utama Android TV / Google TV dan mencegah tertutup saat tombol Home ditekan.</string>
 </resources>

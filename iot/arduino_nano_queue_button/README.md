@@ -1,4 +1,4 @@
-# Panduan Arduino Nano USB Queue Button (DKASigma)
+# Panduan Arduino Nano USB Queue Button (HNDSigma)
 
 Firmware ini digunakan untuk menjadikan **Arduino Nano (Classic ATmega328P)** sebagai tombol fisik pemanggil antrean (Next Call, Recall, Break) yang dihubungkan langsung melalui **kabel USB** ke komputer/laptop petugas loket.
 
@@ -35,7 +35,7 @@ Arduino Nano menggunakan resistor internal `INPUT_PULLUP`, sehingga **tidak meme
 
 ---
 
-## 3. Integrasi ke Dashboard Web DKASigma
+## 3. Integrasi ke Dashboard Web HNDSigma
 
 Di halaman **Konsol Pemanggil Loket** (`Studio` $\rightarrow$ `Antrean` $\rightarrow$ `Kontrol Pemanggil`):
 1. Klik tombol **"🔌 Hubungkan Tombol USB (Arduino Nano)"**.

@@ -1,6 +1,6 @@
 # Panduan Flashing & Wiring: NodeMCU ESP32 IoT Queue Controller
 
-Firmware ini digunakan untuk menghubungkan modul **NodeMCU ESP32 (ESP-WROOM-32)** sebagai tombol fisik antrean (Tombol Karcis Masuk atau Remote Pemanggil Loket) yang terhubung ke platform **DKASigma Digital Signage Enterprise** melalui protokol **MQTT**.
+Firmware ini digunakan untuk menghubungkan modul **NodeMCU ESP32 (ESP-WROOM-32)** sebagai tombol fisik antrean (Tombol Karcis Masuk atau Remote Pemanggil Loket) yang terhubung ke platform **HNDSigma Digital Signage Enterprise** melalui protokol **MQTT**.
 
 ---
 
@@ -50,7 +50,7 @@ Firmware ini menggunakan mode `INPUT_PULLUP` internal ESP32. Artinya:
 | **GPIO 4**  | Buzzer (Opsional) | Nada Konfirmasi | Buzzer piezo ke GND |
 
 > [!TIP]
-> Anda dapat menambah atau memetakan ulang tombol pin GPIO kapan saja secara dinamis langsung dari web dashboard DKASigma pada tab **"Perangkat IoT / Tombol"** tanpa perlu mengedit atau meng-upload ulang kode Arduino!
+> Anda dapat menambah atau memetakan ulang tombol pin GPIO kapan saja secara dinamis langsung dari web dashboard HNDSigma pada tab **"Perangkat IoT / Tombol"** tanpa perlu mengedit atau meng-upload ulang kode Arduino!
 
 ---
 
@@ -62,7 +62,7 @@ Firmware ini menggunakan mode `INPUT_PULLUP` internal ESP32. Artinya:
    const char* WIFI_SSID     = "NAMA_WIFI_ANDA";
    const char* WIFI_PASSWORD = "PASSWORD_WIFI_ANDA";
 
-   // IP Komputer / Server yang menjalankan Docker DKASigma
+   // IP Komputer / Server yang menjalankan Docker HNDSigma
    const char* MQTT_SERVER   = "192.168.1.100";
    const int   MQTT_PORT     = 1883;
    ```
@@ -78,12 +78,12 @@ Firmware ini menggunakan mode `INPUT_PULLUP` internal ESP32. Artinya:
 2. Saat ESP32 menyala, layar Serial Monitor akan mencetak informasi:
    ```
    =================================================
-      DKASigma Digital Signage - IoT Controller    
+      HNDSigma Digital Signage - IoT Controller    
       DEVICE UID : ESP32_3C61054A2B1C
       (Salin UID ini ke tab 'Perangkat IoT' di Web)
    =================================================
    ```
-3. Buka browser ke CMS DKASigma: Masuk ke menu antrean Anda, lalu klik tab baru **"Perangkat IoT / Tombol"**.
+3. Buka browser ke CMS HNDSigma: Masuk ke menu antrean Anda, lalu klik tab baru **"Perangkat IoT / Tombol"**.
 4. Klik **"+ Pasangkan NodeMCU ESP32"**:
    - Masukkan Device UID yang tampil di Serial Monitor (misal: `ESP32_3C61054A2B1C`).
    - Pilih peran: *Remote Loket* (pilih nomor loket sasaran) atau *Tombol Karcis*.

@@ -19,7 +19,7 @@ data class VideoPlaylistItem(
  * Payload konfigurasi untuk TickerZoneRenderer
  */
 data class TickerConfigPayload(
-    val textMessage: String = "DKASigma Teks Berjalan",
+    val textMessage: String = "HNDSigma Teks Berjalan",
     val badgeText: String = "",
     val fontSize: Float = 16f,
     val backgroundColorHex: String = "transparent",
@@ -39,7 +39,7 @@ data class TickerConfigPayload(
 
             val text = when {
                 msgs.isNotEmpty() -> msgs.joinToString("  ✦  ")
-                else -> json.optString("name", "DKASigma Teks Berjalan")
+                else -> json.optString("name", "HNDSigma Teks Berjalan")
             }
 
             return TickerConfigPayload(

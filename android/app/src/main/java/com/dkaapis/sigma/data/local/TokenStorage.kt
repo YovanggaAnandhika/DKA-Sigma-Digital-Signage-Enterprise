@@ -134,7 +134,7 @@ class TokenStorage(private val context: Context) {
         }
 
         val cleanBoard = android.os.Build.BOARD?.replace(" ", "") ?: "GENERIC"
-        val fingerprint = "DKA-${cleanBoard}-${rawId}".take(64).uppercase()
+        val fingerprint = "HND-${cleanBoard}-${rawId}".take(64).uppercase()
 
         try {
             prefs.edit().putString(KEY_HARDWARE_FINGERPRINT, fingerprint).apply()

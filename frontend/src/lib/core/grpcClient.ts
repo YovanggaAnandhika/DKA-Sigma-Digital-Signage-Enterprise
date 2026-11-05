@@ -1,14 +1,14 @@
 import * as grpc from '@grpc/grpc-js';
 
 export function getGrpcHost(): string {
-  return process.env.DKA_GRPC_SERVER_HOST || 'localhost:50051';
+  return process.env.HND_GRPC_SERVER_HOST || 'localhost:50051';
 }
 
 let cachedCredentials: grpc.ChannelCredentials | null = null;
 
 export function getGrpcCredentials(): grpc.ChannelCredentials {
   if (!cachedCredentials) {
-    const isSecure = process.env.DKA_GRPC_SERVER_SECURE === 'true';
+    const isSecure = process.env.HND_GRPC_SERVER_SECURE === 'true';
     cachedCredentials = isSecure ? grpc.credentials.createSsl() : grpc.credentials.createInsecure();
   }
   return cachedCredentials;

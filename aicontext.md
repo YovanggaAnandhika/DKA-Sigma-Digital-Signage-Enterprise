@@ -1,8 +1,8 @@
-# DKASigma Digital Signage Enterprise (SIGNAGE) - AI Context
+# HNDSigma Digital Signage Enterprise (SIGNAGE) - AI Context
 
 ## System Architecture
 
-DKASigma Digital Signage Enterprise is a broadcast and display management system for distributed Android hardware players managed via a Next.js Studio CMS and backed by a high-performance Rust gRPC server.
+HNDSigma Digital Signage Enterprise is a broadcast and display management system for distributed Android hardware players managed via a Next.js Studio CMS and backed by a high-performance Rust gRPC server.
 
 ```
 ┌─────────────────────────────────────────────────────────┐

@@ -38,7 +38,7 @@
                 android:layout_height="wrap_content"
                 android:fontFamily="monospace"
                 android:letterSpacing="0.15"
-                android:text="DKASIGMA // DISPLAY SYSTEM"
+                android:text="HNDSIGMA // DISPLAY SYSTEM"
                 android:textColor="@color/tag_text"
                 android:textSize="11sp"
                 android:textStyle="bold" />
@@ -49,7 +49,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:text="DKASigma Digital Signage"
+                android:text="HNDSigma Digital Signage"
                 android:textColor="@color/text_headline"
                 android:textSize="25sp"
                 android:textStyle="bold" />

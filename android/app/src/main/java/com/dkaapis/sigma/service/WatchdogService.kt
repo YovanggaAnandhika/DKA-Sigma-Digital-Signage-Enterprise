@@ -99,7 +99,7 @@ class WatchdogService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
-        private const val TAG = "DKAWatchdog"
+        private const val TAG = "HNDWatchdog"
         private const val CHECK_INTERVAL_MS = 10_000L
         private const val HEARTBEAT_TIMEOUT_MS = 60_000L
         const val EXTRA_PLAYER_PID = "extra_player_pid"

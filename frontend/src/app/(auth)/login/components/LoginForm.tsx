@@ -180,7 +180,7 @@ export default function LoginForm({ setIsExiting }: LoginFormProps) {
         </form>
 
         <p style={{ marginTop: '40px', textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8' }}>
-          © {new Date().getFullYear()} PT. DKA Research Center. All rights reserved.
+          © {new Date().getFullYear()} PT. HND Research Center. All rights reserved.
         </p>
       </div>
     </div>
