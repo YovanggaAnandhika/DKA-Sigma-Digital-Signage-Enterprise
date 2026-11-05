@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Sun, Moon, LogOut, Menu, X, ChevronDown, User, ShieldCheck } from 'lucide-react';
+import { Sun, Moon, LogOut, Menu, X, ChevronDown, ShieldCheck, Sparkles } from 'lucide-react';
 import { useSidebar } from './SidebarProvider';
 import { useTheme } from './ThemeProvider';
 import { getStoredSession, clearSession, UserSession } from '../lib/auth';
@@ -46,27 +46,29 @@ export function Navbar() {
   return (
     <header
       style={{
-        height: '64px',
-        borderBottom: '2px solid var(--border-subtle)',
+        height: '72px',
+        borderBottom: '1px solid var(--border-subtle)',
         backgroundColor: 'var(--bg-secondary)',
-        backdropFilter: 'blur(12px)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
         position: 'sticky',
         top: 0,
         zIndex: 30,
-        padding: '0 24px',
+        padding: '0 28px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)',
+        transition: 'all 0.3s ease',
       }}
     >
-      {/* Left: Sidebar Toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      {/* Left: Sidebar Toggle & System Status */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         <button
           onClick={toggle}
           style={{
-            padding: '8px',
-            borderRadius: '8px',
+            padding: '9px',
+            borderRadius: '10px',
             backgroundColor: 'var(--bg-surface-elevated)',
             color: 'var(--text-secondary)',
             border: '1px solid var(--border-subtle)',
@@ -74,36 +76,61 @@ export function Navbar() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            transition: 'all 0.2s ease',
+            boxShadow: '0 2px 5px rgba(0,0,0,0.02)',
           }}
           title={collapsed ? 'Perluas Sidebar' : 'Ciutkan Sidebar'}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.1)';
+            e.currentTarget.style.color = 'var(--primary-400)';
+            e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)';
+            e.currentTarget.style.color = 'var(--text-secondary)';
+            e.currentTarget.style.borderColor = 'var(--border-subtle)';
+          }}
         >
-          {collapsed ? <Menu size={16} /> : <X size={16} />}
+          {collapsed ? <Menu size={18} /> : <X size={18} />}
         </button>
 
-        <span
-          title="Status Sistem: Terhubung (Online)"
-          aria-label="Online"
+        <div
           style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--accent-emerald)',
-            boxShadow: '0 0 8px rgba(16, 185, 129, 0.6)',
-            display: 'inline-block',
-            marginLeft: '6px',
-            cursor: 'default',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '4px 10px',
+            borderRadius: '20px',
+            backgroundColor: 'rgba(16, 185, 129, 0.08)',
+            border: '1px solid rgba(16, 185, 129, 0.2)',
           }}
-        />
+        >
+          <span
+            title="Status Sistem: Terhubung (Online)"
+            aria-label="Online"
+            style={{
+              width: '7px',
+              height: '7px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--accent-emerald)',
+              boxShadow: '0 0 8px rgba(16, 185, 129, 0.8)',
+              display: 'inline-block',
+            }}
+          />
+          <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--accent-emerald)', letterSpacing: '0.02em' }}>
+            ONLINE
+          </span>
+        </div>
       </div>
 
       {/* Right Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
           style={{
-            padding: '8px',
-            borderRadius: '8px',
+            padding: '9px',
+            borderRadius: '10px',
             backgroundColor: 'var(--bg-surface-elevated)',
             color: 'var(--text-secondary)',
             border: '1px solid var(--border-subtle)',
@@ -111,10 +138,22 @@ export function Navbar() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            transition: 'all 0.2s ease',
+            boxShadow: '0 2px 5px rgba(0,0,0,0.02)',
           }}
           title="Ganti Tema"
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.1)';
+            e.currentTarget.style.color = 'var(--primary-400)';
+            e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)';
+            e.currentTarget.style.color = 'var(--text-secondary)';
+            e.currentTarget.style.borderColor = 'var(--border-subtle)';
+          }}
         >
-          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
         {/* User Profile Menu */}
@@ -124,69 +163,103 @@ export function Navbar() {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
-              padding: '6px 10px',
-              borderRadius: '12px',
-              backgroundColor: 'transparent',
-              border: 'none',
+              gap: '12px',
+              padding: '6px 12px 6px 6px',
+              borderRadius: '14px',
+              backgroundColor: profileOpen ? 'rgba(37, 99, 235, 0.08)' : 'transparent',
+              border: '1px solid',
+              borderColor: profileOpen ? 'rgba(59, 130, 246, 0.3)' : 'transparent',
               cursor: 'pointer',
               color: 'inherit',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              if (!profileOpen) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
+            }}
+            onMouseLeave={(e) => {
+              if (!profileOpen) e.currentTarget.style.backgroundColor = 'transparent';
             }}
           >
             <div
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                backgroundColor: 'rgba(37, 99, 235, 0.2)',
-                border: '2px solid rgba(59, 130, 246, 0.5)',
-                color: 'var(--primary-400)',
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, var(--primary-500), var(--primary-700))',
+                color: '#fff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '0.75rem',
+                fontSize: '0.8rem',
                 fontWeight: 700,
+                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)',
               }}
             >
               {initials}
             </div>
             <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.25 }}>
                 {session?.fullName || 'Superadmin'}
               </div>
-              <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                {session?.email || ''}
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                {session?.email || 'admin@hndgroup.id'}
               </div>
             </div>
-            <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />
+            <ChevronDown
+              size={14}
+              style={{
+                color: 'var(--text-muted)',
+                transform: profileOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease',
+                marginLeft: '2px',
+              }}
+            />
           </button>
 
+          {/* Dropdown Card */}
           {profileOpen && (
             <div
               style={{
                 position: 'absolute',
                 right: 0,
-                top: '100%',
-                marginTop: '8px',
-                width: '220px',
+                top: 'calc(100% + 8px)',
+                width: '240px',
                 backgroundColor: 'var(--bg-surface)',
                 border: '1px solid var(--border-subtle)',
-                borderRadius: '12px',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+                borderRadius: '16px',
+                boxShadow: '0 12px 32px rgba(0, 0, 0, 0.25)',
                 overflow: 'hidden',
                 zIndex: 50,
+                animation: 'fadeIn 0.15s ease-out',
               }}
             >
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
-                <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+              <div style={{ padding: '16px', borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'rgba(255, 255, 255, 0.02)' }}>
+                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                   {session?.fullName || 'Superadmin'}
                 </div>
-                <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  Role: Super Administrator
+                <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '2px', wordBreak: 'break-all' }}>
+                  {session?.email || 'admin@hndgroup.id'}
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    marginTop: '10px',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    width: 'fit-content',
+                  }}
+                >
+                  <ShieldCheck size={13} style={{ color: 'var(--primary-400)' }} />
+                  <span style={{ fontSize: '0.675rem', fontWeight: 600, color: 'var(--primary-400)' }}>
+                    Super Administrator
+                  </span>
                 </div>
               </div>
 
-              <div style={{ padding: '6px' }}>
+              <div style={{ padding: '8px' }}>
                 <button
                   onClick={handleLogout}
                   style={{
@@ -194,15 +267,22 @@ export function Navbar() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '10px',
-                    padding: '8px 12px',
+                    padding: '10px 12px',
                     fontSize: '0.8125rem',
                     color: 'var(--accent-rose)',
                     backgroundColor: 'transparent',
                     border: 'none',
-                    borderRadius: '8px',
+                    borderRadius: '10px',
                     cursor: 'pointer',
                     fontWeight: 600,
                     textAlign: 'left',
+                    transition: 'background-color 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(244, 63, 94, 0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
                   <LogOut size={16} />

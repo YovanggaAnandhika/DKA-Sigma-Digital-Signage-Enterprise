@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Cpu, Link2, Unlink } from 'lucide-react';
 import { useQueueEditor } from '../../context/QueueEditorContext';
 import { QueueCounter } from '../../types';
-import { listCounters } from '@/lib/services/studio/queue.service';
+import { addCounter, listCounters } from '@/lib/services/studio/queue.service';
 import {
   bindIotDevice,
   listQueueIotBindings,
@@ -13,7 +13,7 @@ import {
 } from '@/lib/services/studio/iot.service';
 
 export default function TabIotBindingTab() {
-  const { queue, isNew } = useQueueEditor();
+  const { queue, isNew, loading: queueLoading } = useQueueEditor();
   const [devices, setDevices] = useState<QueueIotBinding[]>([]);
   const [counters, setCounters] = useState<QueueCounter[]>([]);
   const [counterSelections, setCounterSelections] = useState<Record<string, string>>({});
@@ -21,6 +21,7 @@ export default function TabIotBindingTab() {
   const [error, setError] = useState('');
 
   const refresh = useCallback(async () => {
+    if (queueLoading) return;
     if (!queue.id || isNew) {
       setLoading(false);
       return;
@@ -31,15 +32,25 @@ export default function TabIotBindingTab() {
         listQueueIotBindings(queue.id),
         listCounters(queue.id),
       ]);
+      let availableCounters = counterResponse.itemsList ?? [];
+      if (
+        availableCounters.length === 0 &&
+        queue.counters.length === 1 &&
+        queue.counters[0].id === 'cnt-1'
+      ) {
+        const defaultCounter = queue.counters[0];
+        await addCounter(queue.id, defaultCounter.counterNumber, defaultCounter.counterName, defaultCounter.operatorName);
+        availableCounters = (await listCounters(queue.id)).itemsList ?? [];
+      }
       setDevices(items);
-      setCounters(counterResponse.itemsList ?? []);
+      setCounters(availableCounters);
       setCounterSelections(Object.fromEntries(items.map((item) => [item.iotDeviceId, item.counterId])));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Gagal memuat binding IoT.');
     } finally {
       setLoading(false);
     }
-  }, [queue.id, isNew]);
+  }, [queue, queueLoading, isNew]);
 
   useEffect(() => {
     void refresh();
