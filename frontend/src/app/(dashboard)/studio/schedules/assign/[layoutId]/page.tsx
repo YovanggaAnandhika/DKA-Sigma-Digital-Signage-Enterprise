@@ -154,7 +154,7 @@ export default function AssignSchedulePage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 1120, margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, width: '100%', maxWidth: 1120, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <Link href="/studio/layouts/data" className="btn btn-outline" style={{ padding: 9 }} aria-label="Kembali ke layout">
           <ArrowLeft size={17} />
