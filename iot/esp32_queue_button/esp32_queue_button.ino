@@ -57,7 +57,7 @@ bool bootResetTriggered = false;
 int bootLastReading = HIGH;
 int bootCurrentState = HIGH;
 unsigned long bootLastDebounceTime = 0;
-const unsigned long BOOT_RESET_HOLD_MS = 15000;
+const unsigned long BOOT_RESET_HOLD_MS = 8000;
 
 // =========================================================================================
 // 2. KONFIGURASI PIN HARDWARE
