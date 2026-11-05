@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package signage.iot.v1.device;
+
+import "iot/v1/device/device.common.proto";
+
+service IotDeviceService {
+  rpc ListDevices(ListIotDevicesRequest) returns (ListIotDevicesResponse);
+  rpc ApproveDevice(ApproveIotDeviceRequest) returns (IotDevice);
+  rpc UpdateDevice(UpdateIotDeviceRequest) returns (IotDevice);
+  rpc DeleteDevice(DeleteIotDeviceRequest) returns (DeleteIotDeviceResponse);
+  rpc TriggerAction(TriggerIotActionRequest) returns (TriggerIotActionResponse);
+}

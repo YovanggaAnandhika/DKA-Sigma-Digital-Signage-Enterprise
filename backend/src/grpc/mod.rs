@@ -109,9 +109,16 @@ pub mod proto {
                 pub mod sector {
                     tonic::include_proto!("signage.components.v1.queue.sector");
                 }
-                pub mod device {
-                    tonic::include_proto!("signage.components.v1.queue.device");
+                pub mod iot_binding {
+                    tonic::include_proto!("signage.components.v1.queue.iot_binding");
                 }
+            }
+        }
+    }
+    pub mod iot {
+        pub mod v1 {
+            pub mod device {
+                tonic::include_proto!("signage.iot.v1.device");
             }
         }
     }
@@ -135,6 +142,7 @@ pub mod iam;
 pub mod hardware;
 pub mod studio;
 pub mod components;
+pub mod iot;
 pub mod common;
 pub mod distribution;
 pub mod middleware;

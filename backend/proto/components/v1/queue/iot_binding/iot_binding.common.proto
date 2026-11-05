@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package signage.components.v1.queue.iot_binding;
+
+message QueueIotBinding {
+  string iot_device_id = 1;
+  string device_uid = 2;
+  string device_name = 3;
+  string device_role = 4;
+  string counter_id = 5;
+  string counter_name = 6;
+  bool is_active = 7;
+  bool is_bound = 8;
+}
+
+message ListQueueIotBindingsRequest {
+  string queue_display_id = 1;
+}
+
+message ListQueueIotBindingsResponse {
+  repeated QueueIotBinding items = 1;
+}
+
+message BindIotDeviceRequest {
+  string queue_display_id = 1;
+  string iot_device_id = 2;
+  optional string counter_id = 3;
+}
+
+message UnbindIotDeviceRequest {
+  string queue_display_id = 1;
+  string iot_device_id = 2;
+}
+
+message UnbindIotDeviceResponse {
+  bool success = 1;
+}

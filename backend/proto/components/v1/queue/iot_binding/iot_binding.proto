@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package signage.components.v1.queue.iot_binding;
+
+import "components/v1/queue/iot_binding/iot_binding.common.proto";
+
+service QueueIotBindingService {
+  rpc ListBindings(ListQueueIotBindingsRequest) returns (ListQueueIotBindingsResponse);
+  rpc BindDevice(BindIotDeviceRequest) returns (QueueIotBinding);
+  rpc UnbindDevice(UnbindIotDeviceRequest) returns (UnbindIotDeviceResponse);
+}

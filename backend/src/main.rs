@@ -164,6 +164,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let router = crate::register_iam_services!(router, pool, config);
     let router = crate::register_studio_services!(router, pool);
     let router = crate::register_components_services!(router, pool, stream_manager.clone());
+    let router = crate::register_iot_services!(router, pool, stream_manager.clone());
     let router = crate::register_distribution_services!(router, pool, stream_manager.clone());
     let router = crate::register_common_services!(router, pool);
     
@@ -209,31 +210,39 @@ fn spawn_mqtt_worker(pool: sqlx::PgPool, stream_manager: StreamConnectionManager
 
                         if topic.ends_with("/action") {
                             if let Ok(val) = serde_json::from_str::<serde_json::Value>(payload_str) {
-                                let device_uid = val.get("device_uid")
-                                    .and_then(|u| u.as_str())
-                                    .or_else(|| {
-                                        let parts: Vec<&str> = topic.split('/').collect();
-                                        if parts.len() >= 3 { Some(parts[2]) } else { None }
-                                    });
+                                let parts: Vec<&str> = topic.split('/').collect();
+                                let device_uid = (parts.len() == 4
+                                    && parts[0] == "dka"
+                                    && parts[1] == "iot"
+                                    && parts[3] == "action")
+                                    .then_some(parts[2])
+                                    .filter(|uid| !uid.is_empty());
+                                let pin = val
+                                    .get("pin")
+                                    .and_then(|value| value.as_i64())
+                                    .and_then(|value| i32::try_from(value).ok());
 
-                                let pin = val.get("pin").and_then(|p| p.as_i64()).unwrap_or(13) as i32;
-
-                                if let Some(uid) = device_uid {
+                                if let (Some(uid), Some(pin)) = (device_uid, pin) {
+                                    if let Err(error) = sqlx::query(
+                                        "INSERT INTO iot_devices (device_uid, name, last_seen_at) \
+                                         VALUES ($1, 'IoT ' || $1, NOW()) \
+                                         ON CONFLICT (device_uid) DO UPDATE SET last_seen_at = NOW()",
+                                    )
+                                    .bind(uid)
+                                    .execute(&pool)
+                                    .await
+                                    {
+                                        tracing::error!("Failed to register discovered IoT device {uid}: {error}");
+                                        continue;
+                                    }
                                     let queue_svc = crate::grpc::components::queue::service::QueueServiceImpl::with_stream_manager(pool.clone(), stream_manager.clone());
-                                    use crate::grpc::proto::components::v1::queue::device::queue_device_service_server::QueueDeviceService;
-                                    use crate::grpc::proto::components::v1::queue::device::TriggerDeviceActionRequest;
 
-                                    let res = queue_svc.trigger_action(tonic::Request::new(TriggerDeviceActionRequest {
-                                        queue_display_id: String::new(),
-                                        device_uid: uid.to_string(),
-                                        pin,
-                                    })).await;
+                                    let res = queue_svc.trigger_iot_action(uid, pin).await;
 
                                     let ack_topic = format!("dka/iot/{}/ack", uid);
                                     let (status, msg, action) = match res {
                                         Ok(r) => {
-                                            let inner = r.into_inner();
-                                            (if inner.success { "OK" } else { "IGNORED" }, inner.message, inner.action)
+                                            (if r.success { "OK" } else { "IGNORED" }, r.message, r.action)
                                         }
                                         Err(e) => ("ERROR", e.message().to_string(), "NONE".to_string()),
                                     };
@@ -248,16 +257,8 @@ fn spawn_mqtt_worker(pool: sqlx::PgPool, stream_manager: StreamConnectionManager
 
                                     let _ = client.publish(&ack_topic, rumqttc::QoS::AtLeastOnce, false, ack_payload.into_bytes()).await;
 
-                                    let _ = sqlx::query(
-                                        r#"
-                                        INSERT INTO components_queue_iot_discoveries (device_uid, last_seen_at)
-                                        VALUES ($1, NOW())
-                                        ON CONFLICT (device_uid) DO UPDATE SET last_seen_at = NOW()
-                                        "#
-                                    )
-                                    .bind(uid)
-                                    .execute(&pool)
-                                    .await;
+                                } else {
+                                    tracing::warn!("Ignoring malformed IoT action message on topic {topic}");
                                 }
                             }
                         } else if topic.ends_with("/telemetry") {
@@ -268,13 +269,15 @@ fn spawn_mqtt_worker(pool: sqlx::PgPool, stream_manager: StreamConnectionManager
                                     let ip = val.get("ip").and_then(|i| i.as_str());
                                     let fw = val.get("fw").and_then(|f| f.as_str());
 
-                                    let _ = sqlx::query(
+                                    if let Err(error) = sqlx::query(
                                         r#"
-                                        INSERT INTO components_queue_iot_discoveries (device_uid, ip_address, firmware_version, last_seen_at)
-                                        VALUES ($1, $2, $3, NOW())
+                                        INSERT INTO iot_devices (
+                                            device_uid, name, ip_address, firmware_version, last_seen_at
+                                        )
+                                        VALUES ($1, 'IoT ' || $1, $2, $3, NOW())
                                         ON CONFLICT (device_uid) DO UPDATE
-                                        SET ip_address = COALESCE(EXCLUDED.ip_address, components_queue_iot_discoveries.ip_address),
-                                            firmware_version = COALESCE(EXCLUDED.firmware_version, components_queue_iot_discoveries.firmware_version),
+                                        SET ip_address = COALESCE(EXCLUDED.ip_address, iot_devices.ip_address),
+                                            firmware_version = COALESCE(EXCLUDED.firmware_version, iot_devices.firmware_version),
                                             last_seen_at = NOW()
                                         "#
                                     )
@@ -282,22 +285,9 @@ fn spawn_mqtt_worker(pool: sqlx::PgPool, stream_manager: StreamConnectionManager
                                     .bind(ip)
                                     .bind(fw)
                                     .execute(&pool)
-                                    .await;
-
-                                    let _ = sqlx::query(
-                                        r#"
-                                        UPDATE components_queue_iot_devices
-                                        SET last_seen_at = NOW(),
-                                            ip_address = COALESCE($2, ip_address),
-                                            firmware_version = COALESCE($3, firmware_version)
-                                        WHERE device_uid = $1
-                                        "#
-                                    )
-                                    .bind(uid)
-                                    .bind(ip)
-                                    .bind(fw)
-                                    .execute(&pool)
-                                    .await;
+                                    .await {
+                                        tracing::error!("Failed to update discovered IoT device {uid}: {error}");
+                                    }
                                 }
                             }
                         }
