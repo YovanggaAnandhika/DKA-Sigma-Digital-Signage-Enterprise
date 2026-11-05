@@ -46,8 +46,6 @@ services:
       MQTT_PORT: ${MQTT_PORT:-1883}
       MQTT_USERNAME: ${MQTT_USERNAME:-}
       MQTT_PASSWORD: ${MQTT_PASSWORD:-}
-      IOT_PAIRING_RESET_ENABLED: ${IOT_PAIRING_RESET_ENABLED:-false}
-      IOT_DEVICE_ACL_CONFIGURED: ${IOT_DEVICE_ACL_CONFIGURED:-false}
     volumes:
       - type: bind
         source: ./backend

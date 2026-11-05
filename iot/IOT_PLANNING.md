@@ -286,9 +286,8 @@ mengembalikan endpoint broker milik server yang berhasil menerima klaim.
 - Penghapusan dari dashboard tetap memerlukan ACK backend; jika perangkat/server
   tidak merespons, record dan konfigurasi lokal dipertahankan. Record sisa dari
   reset fisik offline dapat dihapus admin secara manual setelah server hidup.
-- Reset pairing digate secara default. Backend memerlukan kredensial broker dan
-  operator harus mengonfirmasi ACL perangkat melalui `IOT_DEVICE_ACL_CONFIGURED`;
-  reset dashboard juga membutuhkan perangkat online dan ACK.
+- Reset pairing selalu aktif; kredensial MQTT opsional dan backend dapat
+  tersambung ke broker anonymous.
 - Firmware memakai koneksi MQTT TCP plaintext (`WiFiClient`); jangan mengekspos
   endpoint MQTT ini ke internet. TLS/validasi sertifikat belum diterapkan.
 - Firmware mengirim aksi/telemetri dengan topik `dka/iot/<device_uid>/...`.
@@ -296,10 +295,9 @@ mengembalikan endpoint broker milik server yang berhasil menerima klaim.
   dan memproses topic IoT tersebut.
 - Persetujuan IoT saat ini memperbarui `is_approved` pada database backend lokal;
   belum ada registry global, klaim lintas-server, atau OTA.
-- Reset dashboard dan BOOT telah terhubung ke handshake lokal, tetapi
-  dinonaktifkan sampai broker autentikasi/ACL dikonfigurasi. BOOT tetap
-  menghapus konfigurasi lokal setelah 30 detik tanpa ACK; record server mungkin
-  tertinggal untuk dihapus manual.
+- Reset dashboard dan BOOT telah terhubung ke handshake lokal. BOOT tetap menghapus konfigurasi
+  lokal setelah 30 detik tanpa ACK; record server mungkin tertinggal untuk
+  dihapus manual.
 - Registry ownership cloud belum ada; reset hanya menghapus perangkat pada
   backend lokal yang terhubung ke broker.
 - Captive portal memakai HTTP lokal dan access point terbuka tanpa autentikasi;

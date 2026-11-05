@@ -110,22 +110,8 @@ Reset ini hanya melepas record pada server signage yang sedang dikonfigurasi.
 Registry kepemilikan lintas-server/cloud belum tersedia, sehingga ini belum
 menjamin lock global jika beberapa server terpisah memakai broker berbeda.
 
-Reset dashboard/BOOT dinonaktifkan secara default. Sebelum mengaktifkan, siapkan
-broker MQTT dengan autentikasi dan ACL per perangkat, lalu set environment
-backend `MQTT_USERNAME`, `MQTT_PASSWORD`, `IOT_PAIRING_RESET_ENABLED=true`, dan
-`IOT_DEVICE_ACL_CONFIGURED=true`. Kredensial backend harus berhak subscribe pada
-`dka/iot/+/action`, `dka/iot/+/telemetry`, `dka/iot/+/reset_request`, serta publish
-ke `dka/iot/+/command`, `dka/iot/+/ack`, dan `dka/iot/+/reset_ack`. Setiap perangkat harus dibatasi
-agar hanya dapat publish ke topic `action`, `telemetry`, `reset_request` miliknya
-dan subscribe ke `ack`, `command`, `reset_ack` miliknya. Gunakan kredensial MQTT
-unik per perangkat; variabel ACL adalah deklarasi konfigurasi operator, bukan
-pemeriksaan otomatis terhadap aturan broker. Backend juga perlu subscribe ke
-`dka/iot/+/reset_ack` untuk menerima konfirmasi reset dashboard.
-
-Pada Docker Compose, variabel tersebut dapat diisi melalui environment atau
-`.env`; reset tetap nonaktif sampai kredensial dan ACL disiapkan. MQTT saat ini
-tanpa TLS, jadi konfigurasi autentikasi/ACL ini belum melindungi password dari
-penyadapan pada jaringan yang tidak tepercaya.
+Reset pairing aktif setiap saat. MQTT username/password opsional; jika
+dikonfigurasi backend menggunakannya, jika tidak koneksi memakai broker anonymous.
 
 ---
 

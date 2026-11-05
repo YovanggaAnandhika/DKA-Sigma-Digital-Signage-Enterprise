@@ -11,8 +11,6 @@ pub fn spawn_mqtt_worker(pool: PgPool, stream_manager: StreamConnectionManager) 
         .unwrap_or(1883);
     let mqtt_username = std::env::var("MQTT_USERNAME").ok();
     let mqtt_password = std::env::var("MQTT_PASSWORD").ok();
-    let pairing_reset_enabled = super::service::pairing_reset_enabled();
-
     tokio::spawn(async move {
         let mut mqttoptions =
             rumqttc::MqttOptions::new("dka-backend-worker", &mqtt_host, mqtt_port);
@@ -52,20 +50,13 @@ pub fn spawn_mqtt_worker(pool: PgPool, stream_manager: StreamConnectionManager) 
             let _ = client
                 .subscribe("dka/iot/+/telemetry", rumqttc::QoS::AtMostOnce)
                 .await;
-            if pairing_reset_enabled {
-                if let Err(error) = client
-                    .subscribe("dka/iot/+/reset_request", rumqttc::QoS::AtLeastOnce)
-                    .await
-                {
-                    tracing::error!("Failed to subscribe to IoT reset requests: {error}");
-                    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-                    continue;
-                }
-                tracing::info!("Authenticated IoT pairing reset protocol enabled");
-            } else {
-                tracing::warn!(
-                    "IoT pairing reset disabled; configure MQTT credentials and device ACLs, then set IOT_PAIRING_RESET_ENABLED=true and IOT_DEVICE_ACL_CONFIGURED=true"
-                );
+            if let Err(error) = client
+                .subscribe("dka/iot/+/reset_request", rumqttc::QoS::AtLeastOnce)
+                .await
+            {
+                tracing::error!("Failed to subscribe to IoT reset requests: {error}");
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                continue;
             }
             tracing::info!(
                 "Successfully connected & subscribed to MQTT topics for IoT Queue Devices"

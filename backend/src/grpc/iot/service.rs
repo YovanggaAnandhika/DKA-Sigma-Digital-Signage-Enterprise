@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use std::env;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -29,33 +28,13 @@ impl IotDeviceServiceImpl {
     }
 }
 
-pub fn pairing_reset_enabled() -> bool {
-    env::var("IOT_PAIRING_RESET_ENABLED")
-        .is_ok_and(|enabled| enabled.eq_ignore_ascii_case("true"))
-        && env::var("IOT_DEVICE_ACL_CONFIGURED")
-            .is_ok_and(|configured| configured.eq_ignore_ascii_case("true"))
-        && env::var("MQTT_USERNAME").is_ok_and(|username| !username.is_empty())
-        && env::var("MQTT_PASSWORD").is_ok_and(|password| !password.is_empty())
-}
-
 async fn request_pairing_reset(device_uid: &str) -> Result<(), Status> {
-    if !pairing_reset_enabled() {
-        return Err(Status::failed_precondition(
-            "IoT pairing reset is disabled; configure MQTT credentials and per-device ACLs, then enable IOT_PAIRING_RESET_ENABLED and IOT_DEVICE_ACL_CONFIGURED",
-        ));
-    }
-
-    let host = env::var("MQTT_HOST").unwrap_or_else(|_| "dka-product-sigma-mqtt".into());
-    let port = env::var("MQTT_PORT")
+    let host =
+        std::env::var("MQTT_HOST").unwrap_or_else(|_| "dka-product-sigma-mqtt".into());
+    let port = std::env::var("MQTT_PORT")
         .ok()
         .and_then(|value| value.parse::<u16>().ok())
         .unwrap_or(1883);
-    let username = env::var("MQTT_USERNAME").map_err(|_| {
-        Status::failed_precondition("MQTT_USERNAME is required for IoT pairing reset")
-    })?;
-    let password = env::var("MQTT_PASSWORD").map_err(|_| {
-        Status::failed_precondition("MQTT_PASSWORD is required for IoT pairing reset")
-    })?;
     let request_id = Uuid::new_v4().to_string();
     let reset_topic = format!("dka/iot/{device_uid}/reset_ack");
     let command_topic = format!("dka/iot/{device_uid}/command");
@@ -66,7 +45,14 @@ async fn request_pairing_reset(device_uid: &str) -> Result<(), Status> {
     );
     options.set_keep_alive(Duration::from_secs(10));
     options.set_clean_session(true);
-    options.set_credentials(username, password);
+    if let (Ok(username), Ok(password)) = (
+        std::env::var("MQTT_USERNAME"),
+        std::env::var("MQTT_PASSWORD"),
+    ) {
+        if !username.is_empty() && !password.is_empty() {
+            options.set_credentials(username, password);
+        }
+    }
     let (client, mut eventloop) = AsyncClient::new(options, 10);
     client
         .subscribe(&reset_topic, QoS::AtLeastOnce)
