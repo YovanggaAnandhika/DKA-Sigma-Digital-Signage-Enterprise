@@ -9,8 +9,8 @@
  * - Otomatis mendeteksi MAC Address sebagai Device UID (tanpa perlu setting
  * manual)
  * - Anti-bouncing presisi berbasis millis() (50ms debouncing)
- * - Penanganan ACK visual LED: Kedip 2x jika aksi berhasil, kedip lambat jika
- * dinonaktifkan
+ * - Indikator GPIO 2 untuk status Wi-Fi, MQTT, reset, pairing, dan heartbeat
+ *   lembut; ACK aksi tetap ditandai dengan kedipan
  * - Telemetri periodik (Wi-Fi RSSI, IP address, uptime) tiap 30 detik
  * =========================================================================================
  */
@@ -21,6 +21,7 @@
 #include <Preferences.h>
 #include <WiFi.h>
 #include <WebServer.h>
+#include <math.h>
 
 // =========================================================================================
 // 1. WI-FI SETUP & MQTT CONFIGURATION
@@ -64,6 +65,8 @@ const unsigned long BOOT_RESET_HOLD_MS = 5000;
 // =========================================================================================
 // Pin LED Indikator Onboard (Umumnya GPIO 2 pada modul NodeMCU ESP32)
 const int PIN_LED_STATUS = 2;
+const uint8_t STATUS_LED_HEARTBEAT_BRIGHTNESS = 24; // 0-255; redup = lebih soft
+const unsigned long STATUS_LED_HEARTBEAT_PERIOD_MS = 1800;
 
 // Pin Buzzer Piezo Pasif / Aktif (Opsional, hubungkan ke GND dan GPIO 4, set -1
 // jika tidak ada)
@@ -97,10 +100,66 @@ unsigned long resetRequestStartedAt = 0;
 unsigned long resetLastPublishAt = 0;
 const unsigned long RESET_REQUEST_TIMEOUT_MS = 10000;
 const unsigned long RESET_REQUEST_RETRY_MS = 1000;
+bool resetSuccessFeedback = false;
+unsigned long resetSuccessStartedAt = 0;
 
 void requestPairingReset(const String &serverRequestId = "");
 void finishPairingReset();
 bool publishPairingResetRequest();
+
+uint8_t statusPulseTrain(unsigned long elapsed, unsigned long period,
+                         uint8_t count, unsigned long pulseMs,
+                         unsigned long gapMs) {
+  const unsigned long phase = elapsed % period;
+  const unsigned long pulseCycle = pulseMs + gapMs;
+  return phase < count * pulseCycle && phase % pulseCycle < pulseMs ? 255 : 0;
+}
+
+void writeStatusLed(uint8_t brightness) {
+  analogWrite(PIN_LED_STATUS, brightness);
+}
+
+void updateStatusLed() {
+  const unsigned long now = millis();
+  uint8_t brightness = 0;
+  bool showingResetFeedback = false;
+
+  if (resetSuccessFeedback) {
+    if (now - resetSuccessStartedAt < 2000) {
+      brightness = statusPulseTrain(now - resetSuccessStartedAt, 1200, 3, 90, 110);
+      showingResetFeedback = true;
+    } else {
+      resetSuccessFeedback = false;
+    }
+  }
+
+  if (!showingResetFeedback) {
+    if ((!configPortalActive && bootResetTriggered) || resetRequestPending) {
+      brightness = statusPulseTrain(now, 900, 3, 65, 120);
+    } else if (configPortalActive && settingsReady && wifiSsid[0] == '\0') {
+      brightness = statusPulseTrain(now, 1400, 2, 65, 180);
+    } else if (WiFi.status() != WL_CONNECTED) {
+      brightness = statusPulseTrain(now, 300, 1, 75, 0);
+    } else if (!mqttClient.connected()) {
+      brightness = statusPulseTrain(now, 1200, 1, 90, 0);
+    } else {
+      const unsigned long phase = now % STATUS_LED_HEARTBEAT_PERIOD_MS;
+      const unsigned long firstPulseMs = 300;
+      const unsigned long secondPulseStartMs = 430;
+      const unsigned long secondPulseMs = 420;
+      float pulse = 0.0f;
+      if (phase < firstPulseMs) {
+        pulse = sinf(PI * phase / firstPulseMs);
+      } else if (phase >= secondPulseStartMs &&
+                 phase < secondPulseStartMs + secondPulseMs) {
+        pulse = sinf(PI * (phase - secondPulseStartMs) / secondPulseMs);
+      }
+      brightness = static_cast<uint8_t>(STATUS_LED_HEARTBEAT_BRIGHTNESS * pulse);
+    }
+  }
+
+  writeStatusLed(brightness);
+}
 
 // Debounce arrays per pin
 int pinLastState[NUM_PINS];
@@ -140,18 +199,17 @@ void blinkFeedback(bool success) {
   if (success) {
     // Kedip 2x cepat (Sukses diterima server)
     for (int i = 0; i < 2; i++) {
-      digitalWrite(PIN_LED_STATUS, HIGH);
+      writeStatusLed(255);
       delay(80);
-      digitalWrite(PIN_LED_STATUS, LOW);
+      writeStatusLed(0);
       delay(80);
     }
-    digitalWrite(PIN_LED_STATUS, HIGH); // Kembalikan ke solid ON
     triggerBuzzer(100, 2400);
   } else {
     // Kedip 1x panjang (Diabaikan / Dinonaktifkan di Dashboard)
-    digitalWrite(PIN_LED_STATUS, LOW);
+    writeStatusLed(0);
     delay(400);
-    digitalWrite(PIN_LED_STATUS, HIGH);
+    writeStatusLed(255);
     triggerBuzzer(300, 800);
   }
 }
@@ -292,6 +350,8 @@ void finishPairingReset() {
                      ? "[Reset] Server mengonfirmasi penghapusan. Pairing ulang dimulai."
                      : "[Reset] Pairing lokal direset; record server mungkin masih ada.");
   resetServerConfirmed = false;
+  resetSuccessFeedback = true;
+  resetSuccessStartedAt = millis();
   startConfigPortal();
 }
 
@@ -669,7 +729,6 @@ void savePendingConfiguration() {
   initializeDeviceIdentity();
   Serial.println("[Setup] Wi-Fi dan endpoint MQTT tersimpan.");
   stopConfigPortal();
-  digitalWrite(PIN_LED_STATUS, HIGH);
   resetButtonStates();
 }
 
@@ -720,8 +779,8 @@ void setupWifi() {
   unsigned long startedAt = millis();
   while (WiFi.status() != WL_CONNECTED &&
          millis() - startedAt < WIFI_CONNECT_TIMEOUT_MS) {
-    digitalWrite(PIN_LED_STATUS, !digitalRead(PIN_LED_STATUS));
-    delay(250);
+    updateStatusLed();
+    delay(20);
   }
 
   if (WiFi.status() != WL_CONNECTED) {
@@ -730,7 +789,6 @@ void setupWifi() {
     return;
   }
 
-  digitalWrite(PIN_LED_STATUS, HIGH);
   Serial.print("[Wi-Fi] Terhubung, IP ESP32: ");
   Serial.println(WiFi.localIP());
   initializeDeviceIdentity();
@@ -751,12 +809,10 @@ void reconnectMqtt() {
                        : mqttClient.connect(deviceUid);
   if (!connected) {
     Serial.printf("GAGAL, rc=%d. Mencoba lagi.\n", mqttClient.state());
-    digitalWrite(PIN_LED_STATUS, LOW);
     return;
   }
 
   Serial.println("BERHASIL!");
-  digitalWrite(PIN_LED_STATUS, HIGH);
   mqttClient.subscribe(topicAck);
   Serial.printf("[MQTT Sub] Berlangganan: %s\n", topicAck);
   mqttClient.subscribe(topicCommand);
@@ -838,7 +894,7 @@ void setup() {
 
   // Inisialisasi LED status
   pinMode(PIN_LED_STATUS, OUTPUT);
-  digitalWrite(PIN_LED_STATUS, LOW);
+  writeStatusLed(0);
 
   // Inisialisasi buzzer jika ada
   if (PIN_BUZZER >= 0) {
@@ -887,9 +943,8 @@ void loop() {
     }
   }
 
-  if (configPortalActive)
-    return;
-  if (resetRequestPending)
+  updateStatusLed();
+  if (configPortalActive || resetRequestPending)
     return;
 
   // Simulasi via Serial Monitor Arduino IDE (Tanpa kabel jumper!)

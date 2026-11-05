@@ -52,6 +52,20 @@ Firmware ini menggunakan mode `INPUT_PULLUP` internal ESP32. Artinya:
 > [!TIP]
 > Anda dapat memetakan ulang tombol GPIO dari menu **Perangkat IoT** tanpa perlu mengedit atau meng-upload ulang kode Arduino.
 
+### Indikator LED GPIO 2
+
+| Pola | Status |
+|---|---|
+| Kedip cepat | Wi-Fi belum tersambung |
+| Satu kedip lambat | Wi-Fi tersambung, MQTT belum tersambung |
+| Tiga kedip cepat berulang | BOOT ditahan untuk reset atau reset menunggu respons |
+| Tiga kedip berulang sekitar 2 detik, lalu kedip ganda lambat | Reset selesai; perangkat masuk mode pairing |
+| Kedip ganda lambat | Mode pairing/setup aktif |
+| Heartbeat redup | Wi-Fi dan MQTT tersambung |
+
+Heartbeat memakai PWM agar cahaya lebih lembut. Atur `STATUS_LED_HEARTBEAT_BRIGHTNESS`
+(0–255) untuk kecerahan dan `STATUS_LED_HEARTBEAT_PERIOD_MS` untuk tempo.
+
 ---
 
 ## 3. Upload Firmware
@@ -93,18 +107,18 @@ di source code.
 
 ### Reset pairing dan penghapusan perangkat
 
-Hapus perangkat dari dashboard atau tahan tombol **BOOT lebih dari 15 detik**.
+Hapus perangkat dari dashboard atau tahan tombol **BOOT selama 5 detik**.
 Keduanya mencoba handshake dengan backend. Jika BOOT ditekan, firmware menunggu
-ACK hingga 30 detik; setelah itu reset lokal tetap dilanjutkan walaupun server
+ACK hingga 10 detik; setelah itu reset lokal tetap dilanjutkan walaupun server
 offline atau gagal menghapus record. Firmware menghapus Wi-Fi dan endpoint MQTT
 tersimpan lalu membuka AP setup. Dalam kondisi tersebut record server tetap ada
 dan perlu Anda hapus manual dari dashboard IoT nanti.
 
 Penghapusan dari dashboard tetap menunggu konfirmasi backend sebelum menghapus
 record. Jika perangkat/server tidak merespons, penghapusan dashboard gagal dan
-konfigurasi perangkat tidak diubah. Untuk server yang sedang mati, tekan BOOT
-lebih dari 15 detik secara fisik; setelah server pulih, hapus record yang
-tertinggal secara manual.
+konfigurasi perangkat tidak diubah. Untuk server yang sedang mati, tahan BOOT
+selama 5 detik secara fisik; setelah server pulih, hapus record yang tertinggal
+secara manual.
 
 Reset ini hanya melepas record pada server signage yang sedang dikonfigurasi.
 Registry kepemilikan lintas-server/cloud belum tersedia, sehingga ini belum
