@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { Plus, Search, Edit3, Trash2, Volume2, Users } from 'lucide-react';
 import { useQueueManagement } from '../../context/QueueManagementContext';
 import { Pagination } from '@/components/ui/Pagination';
+import { TableDataValue } from '@/components/ui/TableDataValue';
+import { Ticket } from 'lucide-react';
 
 export default function TabDataTab() {
   const {
@@ -115,11 +117,9 @@ export default function TabDataTab() {
                         {startIndex + idx + 1}
                       </td>
                       <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                          <span style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-primary)' }}>
-                            {q.name}
-                          </span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <TableDataValue icon={Ticket} detail={`${q.canvasWidth} × ${q.canvasHeight} px`}>
+                          <span style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{q.name}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
                             <span
                               style={{
                                 fontSize: '0.6875rem',
@@ -133,11 +133,8 @@ export default function TabDataTab() {
                             >
                               {sectorName}
                             </span>
-                            <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                              {q.canvasWidth} × {q.canvasHeight} px
-                            </span>
                           </div>
-                        </div>
+                        </TableDataValue>
                       </td>
                       <td>
                         <span

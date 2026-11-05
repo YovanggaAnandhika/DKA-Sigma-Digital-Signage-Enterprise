@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { History, Trash2, Search, ArrowRight, RotateCcw, Volume2, Clock } from 'lucide-react';
+import { TableDataValue } from '@/components/ui/TableDataValue';
+import { Ticket, Users } from 'lucide-react';
 import { useQueueManagement } from '../../context/QueueManagementContext';
 
 export default function TabRiwayatTab() {
@@ -146,12 +148,9 @@ export default function TabRiwayatTab() {
                       <td style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
                         {idx + 1}
                       </td>
+                      <td><TableDataValue icon={Clock} tone="amber">{item.calledAt || (item.timestamp ? new Date(item.timestamp).toLocaleTimeString('id-ID') : '-')}</TableDataValue></td>
                       <td>
-                        <span style={{ fontFamily: 'monospace', fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                          {item.calledAt || (item.timestamp ? new Date(item.timestamp).toLocaleTimeString('id-ID') : '-')}
-                        </span>
-                      </td>
-                      <td>
+                        <TableDataValue icon={Ticket} tone="violet">
                         <span
                           style={{
                             fontWeight: 800,
@@ -163,12 +162,9 @@ export default function TabRiwayatTab() {
                         >
                           {item.ticketNumber}
                         </span>
+                        </TableDataValue>
                       </td>
-                      <td>
-                        <span style={{ fontWeight: 600, fontSize: '0.8125rem', color: 'var(--text-primary)' }}>
-                          {item.counterName}
-                        </span>
-                      </td>
+                      <td><TableDataValue icon={Users}>{item.counterName}</TableDataValue></td>
                       <td>{callTypeBadge}</td>
                       <td style={{ textAlign: 'right' }}>
                         <span

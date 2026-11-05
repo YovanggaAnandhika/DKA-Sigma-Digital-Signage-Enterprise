@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { useQueueEditor } from '../../context/QueueEditorContext';
 import { modal } from '@/components/ui/ModalDialog';
+import { TableDataValue, TableStatus } from '@/components/ui/TableDataValue';
+import { CircleCheck, CircleX, Hash, UserRound } from 'lucide-react';
 
 export default function TabCountersTab() {
   const { queue, removeCounter, isNew } = useQueueEditor();
@@ -47,13 +49,13 @@ export default function TabCountersTab() {
         <tbody>
           {queue.counters.map((c) => (
             <tr key={c.id}>
-              <td>{c.counterNumber}</td>
-              <td style={{ fontWeight: 600 }}>{c.counterName}</td>
-              <td>{c.operatorName || '-'}</td>
+              <td><TableDataValue icon={Hash} tone="violet">{c.counterNumber}</TableDataValue></td>
+              <td><TableDataValue icon={Hash}>{c.counterName}</TableDataValue></td>
+              <td>{c.operatorName ? <TableDataValue icon={UserRound} tone="cyan">{c.operatorName}</TableDataValue> : '-'}</td>
               <td>
-                <span style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '2px 8px', borderRadius: '9999px', backgroundColor: c.isActive ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.15)', color: c.isActive ? 'var(--accent-emerald)' : 'var(--text-muted)' }}>
+                <TableStatus icon={c.isActive ? CircleCheck : CircleX} tone={c.isActive ? 'emerald' : 'rose'}>
                   {c.isActive ? 'Aktif' : 'Nonaktif'}
-                </span>
+                </TableStatus>
               </td>
               <td style={{ textAlign: 'right' }}>
                 <div style={{ display: 'inline-flex', gap: '6px' }}>

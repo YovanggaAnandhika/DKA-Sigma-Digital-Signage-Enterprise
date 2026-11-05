@@ -18,7 +18,7 @@ export function TableDataValue({
     <span className={`table-data-value table-tone-${tone}`}>
       <span className="table-data-icon"><Icon size={16} strokeWidth={2} /></span>
       <span className="table-data-copy">
-        <span className="table-data-primary">{children}</span>
+        <div className="table-data-primary">{children}</div>
         {detail != null && <span className="table-data-detail">{detail}</span>}
       </span>
     </span>

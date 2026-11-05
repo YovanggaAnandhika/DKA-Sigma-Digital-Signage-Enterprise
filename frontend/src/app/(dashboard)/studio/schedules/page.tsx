@@ -7,6 +7,7 @@ import type { Schedule } from '@/lib/services/studio/schedule.types';
 import { Pagination } from '@/components/ui/Pagination';
 import { CalendarDays, Search, RefreshCw, Trash2, Trash, Eye, Clock, Layers, ArrowRight, ShieldAlert } from 'lucide-react';
 import EmergencyBroadcastModal from '@/components/ui/EmergencyBroadcastModal';
+import { TableDataValue } from '@/components/ui/TableDataValue';
 
 export default function SchedulesPage() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -308,15 +309,12 @@ export default function SchedulesPage() {
                           style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-500)' }}
                         />
                       </td>
-                      <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <td>
+                        <TableDataValue icon={CalendarDays} detail={s.description || undefined}>
                         <Link href={`/studio/schedules/${s.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                          <div>{s.name}</div>
+                          {s.name}
                         </Link>
-                        {s.description && (
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                            {s.description}
-                          </div>
-                        )}
+                        </TableDataValue>
                       </td>
                       <td>
                         {firstEvent ? (
@@ -347,9 +345,7 @@ export default function SchedulesPage() {
                           <span style={{ color: 'var(--text-muted)' }}>-</span>
                         )}
                       </td>
-                      <td style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                        {firstEvent ? formatDays(firstEvent.daysOfWeek) : '-'}
-                      </td>
+                      <td>{firstEvent ? <TableDataValue icon={CalendarDays} tone="cyan">{formatDays(firstEvent.daysOfWeek)}</TableDataValue> : '-'}</td>
                       <td>
                         <span
                           style={{
@@ -365,9 +361,7 @@ export default function SchedulesPage() {
                           P: {firstEvent?.priority ?? 0}
                         </span>
                       </td>
-                      <td style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                        {createdDate ? new Date(createdDate).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '-'}
-                      </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{createdDate ? <TableDataValue icon={Clock} tone="amber">{new Date(createdDate).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</TableDataValue> : '-'}</td>
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                           <Link href={`/studio/schedules/${s.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Lihat Detail Jadwal">

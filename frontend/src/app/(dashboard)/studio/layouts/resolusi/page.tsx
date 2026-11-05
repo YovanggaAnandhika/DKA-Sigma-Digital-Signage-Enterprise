@@ -4,6 +4,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { api, Resolution } from '@/lib/services';
 import { Plus, Search, RefreshCw, Edit, Trash2, Monitor } from 'lucide-react';
+import { TableDataValue } from '@/components/ui/TableDataValue';
+import { CalendarDays, MoveHorizontal, MoveVertical, Scan } from 'lucide-react';
 
 export default function ResolusiPage() {
   const [resolutions, setResolutions] = useState<Resolution[]>([]);
@@ -101,23 +103,11 @@ export default function ResolusiPage() {
               ) : (
                 filteredResolutions.map((r) => (
                   <tr key={r.id} style={{ borderBottom: '1px solid var(--border-subtle)', transition: 'background-color 0.15s ease' }}>
-                    <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {r.name}
-                    </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>
-                      {r.width} px
-                    </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>
-                      {r.height} px
-                    </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>
-                      <span style={{ padding: '3px 8px', borderRadius: '4px', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary-400)', fontSize: '0.75rem', fontWeight: 600 }}>
-                        {r.aspectRatio || '16:9'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
-                      {r.createdAt ? new Date(r.createdAt).toLocaleDateString('id-ID', { dateStyle: 'medium' }) : '-'}
-                    </td>
+                    <td style={{ padding: '12px 16px' }}><TableDataValue icon={Monitor}>{r.name}</TableDataValue></td>
+                    <td style={{ padding: '12px 16px' }}><TableDataValue icon={MoveHorizontal} tone="cyan">{r.width} px</TableDataValue></td>
+                    <td style={{ padding: '12px 16px' }}><TableDataValue icon={MoveVertical} tone="violet">{r.height} px</TableDataValue></td>
+                    <td style={{ padding: '12px 16px' }}><TableDataValue icon={Scan} tone="emerald">{r.aspectRatio || '16:9'}</TableDataValue></td>
+                    <td style={{ padding: '12px 16px' }}>{r.createdAt ? <TableDataValue icon={CalendarDays} tone="amber">{new Date(r.createdAt).toLocaleDateString('id-ID', { dateStyle: 'medium' })}</TableDataValue> : '-'}</td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '6px' }}>
                         <Link href={`/studio/layouts/resolusi/${r.id}/edit`} className="btn btn-secondary dashboard-icon-action" style={{ padding: '5px 8px' }} title="Edit Resolusi">
