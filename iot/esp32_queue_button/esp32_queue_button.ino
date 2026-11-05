@@ -95,8 +95,8 @@ bool pairingResetFromBoot = false;
 bool resetServerConfirmed = false;
 unsigned long resetRequestStartedAt = 0;
 unsigned long resetLastPublishAt = 0;
-const unsigned long RESET_REQUEST_TIMEOUT_MS = 30000;
-const unsigned long RESET_REQUEST_RETRY_MS = 3000;
+const unsigned long RESET_REQUEST_TIMEOUT_MS = 10000;
+const unsigned long RESET_REQUEST_RETRY_MS = 1000;
 
 void requestPairingReset(const String &serverRequestId = "");
 void finishPairingReset();
