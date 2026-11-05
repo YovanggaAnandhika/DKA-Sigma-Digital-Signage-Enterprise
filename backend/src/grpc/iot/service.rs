@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use std::collections::HashSet;
+use std::str::FromStr;
 
 use sqlx::{FromRow, PgPool};
 use tonic::{Request, Response, Status};
@@ -51,7 +51,7 @@ impl IotDeviceRow {
             .flatten()
             .filter_map(|mapping| {
                 Some(IotPinMapping {
-                    pin: mapping.get("pin")?.as_i64()? as i32,
+                    pin: i32::try_from(mapping.get("pin")?.as_i64()?).ok()?,
                     action: mapping.get("action")?.as_str()?.to_string(),
                     enabled: mapping
                         .get("enabled")
@@ -142,20 +142,7 @@ impl IotDeviceServiceTrait for IotDeviceServiceImpl {
         if req.name.trim().is_empty() {
             return Err(Status::invalid_argument("Device name cannot be empty"));
         }
-        let mut pins = HashSet::with_capacity(req.pin_mappings.len());
-        for mapping in &req.pin_mappings {
-            if mapping.pin < 0 || !pins.insert(mapping.pin) {
-                return Err(Status::invalid_argument(
-                    "Pin numbers must be non-negative and unique",
-                ));
-            }
-            if !matches!(
-                mapping.action.as_str(),
-                "CALL_NEXT" | "RECALL" | "CALL_PREV" | "TOGGLE_BREAK" | "TOGGLE_CLOSE" | "ISSUE_TICKET"
-            ) {
-                return Err(Status::invalid_argument("Unsupported IoT pin action"));
-            }
-        }
+        validate_mappings(&req.pin_mappings)?;
         let pin_mappings = serde_json::to_value(
             req.pin_mappings
                 .iter()
@@ -186,6 +173,47 @@ impl IotDeviceServiceTrait for IotDeviceServiceImpl {
         .ok_or_else(|| Status::not_found("IoT device not found"))?;
 
         Ok(Response::new(row.into_proto()))
+    }
+
+    fn validate_mappings(mappings: &[IotPinMapping]) -> Result<(), Status> {
+        let mut pins = HashSet::with_capacity(mappings.len());
+        for mapping in mappings {
+            if mapping.pin < 0 || !pins.insert(mapping.pin) {
+                return Err(Status::invalid_argument(
+                    "Pin numbers must be non-negative and unique",
+                ));
+            }
+            if !matches!(
+                mapping.action.as_str(),
+                "CALL_NEXT" | "RECALL" | "CALL_PREV" | "TOGGLE_BREAK" | "TOGGLE_CLOSE" | "ISSUE_TICKET"
+            ) {
+                return Err(Status::invalid_argument("Unsupported IoT pin action"));
+            }
+        }
+        Ok(())
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::validate_mappings;
+        use crate::grpc::proto::iot::v1::device::IotPinMapping;
+
+        fn mapping(pin: i32, action: &str) -> IotPinMapping {
+            IotPinMapping {
+                pin,
+                action: action.to_string(),
+                enabled: true,
+                label: String::new(),
+            }
+        }
+
+        #[test]
+        fn pin_mappings_require_supported_unique_nonnegative_pins() {
+            assert!(validate_mappings(&[mapping(13, "CALL_NEXT"), mapping(14, "TOGGLE_BREAK")]).is_ok());
+            assert!(validate_mappings(&[mapping(-1, "CALL_NEXT")]).is_err());
+            assert!(validate_mappings(&[mapping(13, "CALL_NEXT"), mapping(13, "RECALL")]).is_err());
+            assert!(validate_mappings(&[mapping(13, "UNKNOWN")]).is_err());
+        }
     }
 
     async fn delete_device(

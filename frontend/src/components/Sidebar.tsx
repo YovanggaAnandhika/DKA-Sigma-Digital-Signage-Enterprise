@@ -15,6 +15,7 @@ import {
   MonitorPlay,
   CalendarDays,
   Layers,
+  Cpu,
 } from 'lucide-react';
 import { useSidebar } from './SidebarProvider';
 
@@ -43,6 +44,7 @@ const navGroups: NavGroup[] = [
     items: [
       { name: 'Layar Retail', desc: 'Manajemen & Pairing Player', href: '/hardware/displays', icon: Tv },
       { name: 'Grup Layar', desc: 'Pengelompokan Layar', href: '/hardware/groups', icon: MonitorPlay },
+      { name: 'Perangkat IoT', desc: 'Approval & Konfigurasi Tombol IoT', href: '/hardware/iot', icon: Cpu },
     ],
   },
   {

@@ -54,9 +54,9 @@ const TabEditorControllTab = dynamic(() => import('./tabs/TabEditorControllTab')
   loading: () => <TabLoadingSkeleton label="Memuat konsol pemanggil antrian..." />,
 });
 
-const TabIotTab = dynamic(() => import('./tabs/TabIotTab'), {
+const TabIotBindingTab = dynamic(() => import('./tabs/TabIotBindingTab'), {
   ssr: false,
-  loading: () => <TabLoadingSkeleton label="Memuat integrasi perangkat IoT & tombol antrean..." />,
+  loading: () => <TabLoadingSkeleton label="Memuat binding perangkat IoT..." />,
 });
 
 export default function QueueEditorShell({ activeTab, children }: { activeTab: string; children?: React.ReactNode }) {
@@ -153,7 +153,7 @@ export default function QueueEditorShell({ activeTab, children }: { activeTab: s
     { id: 'marquee', label: 'Running Text', icon: MessageSquare },
     { id: 'counters', label: `Daftar ${counterLabel}`, icon: Users },
     { id: 'audio', label: 'Audio & TTS', icon: Volume2 },
-    { id: 'iot', label: 'Perangkat IoT / Tombol', icon: Cpu },
+    { id: 'binding', label: 'IoT Binding', icon: Cpu },
   ];
 
   if (loading) {
@@ -449,8 +449,8 @@ export default function QueueEditorShell({ activeTab, children }: { activeTab: s
             {activeTab === 'marquee' && <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}><TabMarqueeTab /></div>}
             {activeTab === 'counters' && <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}><TabCountersTab /></div>}
             {activeTab === 'audio' && <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}><TabAudioTab /></div>}
-            {activeTab === 'iot' && <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}><TabIotTab /></div>}
-            {!['controll', 'layout', 'marquee', 'counters', 'audio', 'iot'].includes(activeTab) && <div style={{ flex: 1, width: '100%', height: '100%', minHeight: 0, display: 'flex' }}><TabEditorControllTab /></div>}
+            {activeTab === 'binding' && <div style={{ flex: 1, padding: '24px 28px', width: '100%' }}><TabIotBindingTab /></div>}
+            {!['controll', 'layout', 'marquee', 'counters', 'audio', 'binding'].includes(activeTab) && <div style={{ flex: 1, width: '100%', height: '100%', minHeight: 0, display: 'flex' }}><TabEditorControllTab /></div>}
           </>
         )}
       </div>

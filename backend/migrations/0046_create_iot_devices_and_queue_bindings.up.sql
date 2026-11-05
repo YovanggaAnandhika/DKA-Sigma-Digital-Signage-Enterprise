@@ -39,7 +39,7 @@ INSERT INTO iot_devices (
     device_uid, name, device_role, is_active, is_approved,
     ip_address, firmware_version, last_seen_at, created_at
 )
-SELECT discovery.device_uid, 'IoT ' || discovery.device_uid, 'COUNTER_REMOTE', false, false,
+SELECT discovery.device_uid, LEFT('IoT ' || discovery.device_uid, 100), 'COUNTER_REMOTE', false, false,
        discovery.ip_address, discovery.firmware_version, discovery.last_seen_at, discovery.created_at
 FROM components_queue_iot_discoveries AS discovery
 ON CONFLICT (device_uid) DO NOTHING;

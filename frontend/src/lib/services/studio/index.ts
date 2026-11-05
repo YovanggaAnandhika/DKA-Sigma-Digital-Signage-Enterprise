@@ -6,3 +6,4 @@ export * from './playlist.service';
 export * from './media.service';
 export * from './transition.service';
 export * from './visual_filter.service';
+export * from './iot.service';
