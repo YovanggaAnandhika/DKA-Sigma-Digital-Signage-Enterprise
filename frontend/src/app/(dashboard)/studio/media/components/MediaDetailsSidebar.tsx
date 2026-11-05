@@ -10,12 +10,14 @@ interface MediaDetailsSidebarProps {
   selectedMedia: MediaItem;
   setSelectedMedia: (item: MediaItem | null) => void;
   handleDelete: (id: string, name: string) => void;
+  width: number;
 }
 
 export default function MediaDetailsSidebar({
   selectedMedia,
   setSelectedMedia,
   handleDelete,
+  width,
 }: MediaDetailsSidebarProps) {
   const getMediaTypeBadge = (type: number) => {
     if (type === 2) {
@@ -40,7 +42,7 @@ export default function MediaDetailsSidebar({
   };
 
   return (
-    <div className="card-elevated" style={{ width: '320px', flexShrink: 0, position: 'sticky', top: '24px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div className="card-elevated media-details-sidebar" style={{ width: `${width}px`, flexShrink: 0, position: 'sticky', top: '24px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-surface-elevated)' }}>
         <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Detail File</h3>
         <button onClick={() => setSelectedMedia(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }} title="Tutup Panel"><X size={15} /></button>
@@ -53,15 +55,14 @@ export default function MediaDetailsSidebar({
             <video 
               ref={(el) => {
                 if (el) {
-                  el.defaultMuted = true;
-                  el.muted = true;
+                  el.volume = 0.5;
+                  el.muted = false;
                   el.play().catch(() => {});
                 }
               }}
               src={displayUrl} 
               autoPlay 
               loop 
-              muted 
               playsInline 
               controls 
               style={{ width: '100%', height: '100%', objectFit: 'contain' }} 

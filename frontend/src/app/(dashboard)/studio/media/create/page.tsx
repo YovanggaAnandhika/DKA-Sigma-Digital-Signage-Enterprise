@@ -176,7 +176,7 @@ export default function CreateMediaPage() {
         finalFilePath = uploadResult.filePath;
       }
 
-      const res = await api.createMedia({
+      await api.createMedia({
         name: formData.name,
         originalFilename: savedFilename,
         filePath: finalFilePath,
@@ -191,11 +191,7 @@ export default function CreateMediaPage() {
       });
 
       alert('Media berhasil diunggah dan disimpan!');
-      if (res && res.id) {
-        router.push(`/studio/media/${res.id}`);
-      } else {
-        router.push('/studio/media');
-      }
+      router.push('/studio/media');
     } catch (err: any) {
       if (err.message?.includes('dibatalkan')) {
         alert('Upload dibatalkan.');

@@ -637,6 +637,38 @@ main table td:last-child .btn {
   animation: page-skeleton-shimmer 1.5s ease-in-out infinite;
 }
 
+.media-panel-resizer {
+  position: relative;
+  z-index: 1;
+  width: 12px;
+  min-width: 12px;
+  align-self: stretch;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.media-panel-resizer::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 5px;
+  width: 2px;
+  border-radius: var(--radius-full);
+  background: transparent;
+  content: '';
+  transition: background-color 0.15s ease;
+}
+
+.media-panel-resizer:hover::after,
+.media-panel-resizer:focus-visible::after,
+.media-panel-resizer:active::after {
+  background: var(--primary-500);
+}
+
+.media-panel-resizer:focus-visible {
+  outline: none;
+}
+
 .page-skeleton-heading {
   display: flex;
   align-items: center;
@@ -802,6 +834,19 @@ main table td:last-child .btn {
 }
 
 @media (max-width: 760px) {
+  .media-split-layout {
+    flex-direction: column;
+  }
+
+  .media-panel-resizer {
+    display: none;
+  }
+
+  .media-details-sidebar {
+    width: 100% !important;
+    position: static !important;
+  }
+
   .page-skeleton-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

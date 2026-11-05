@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { api, MediaItem } from '@/lib/services';
 import { Pagination } from '@/components/ui/Pagination';
@@ -17,6 +17,15 @@ export default function MediaPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
+  const [detailsWidth, setDetailsWidth] = useState(320);
+  const splitLayoutRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const containerWidth = splitLayoutRef.current?.clientWidth;
+    if (containerWidth) {
+      setDetailsWidth(Math.max(240, Math.min(560, Math.round(containerWidth * 0.3))));
+    }
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -85,10 +94,10 @@ export default function MediaPage() {
       <MediaFilterBar search={search} setSearch={setSearch} setPage={setPage} />
 
       {/* Main Content Area: Grid Gallery + Sidebar */}
-      <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+      <div ref={splitLayoutRef} className="media-split-layout" style={{ display: 'flex', gap: '12px', alignItems: 'stretch' }}>
         
         {/* Gallery Grid */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div className="media-split-gallery" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <MediaGalleryGrid
             mediaItems={mediaItems}
             loading={loading}
@@ -110,11 +119,44 @@ export default function MediaPage() {
 
         {/* Right Sidebar (Details Panel) */}
         {selectedMedia && (
-          <MediaDetailsSidebar
-            selectedMedia={selectedMedia}
-            setSelectedMedia={setSelectedMedia}
-            handleDelete={handleDelete}
-          />
+          <>
+            <div
+              className="media-panel-resizer"
+              role="separator"
+              aria-label="Sesuaikan lebar panel detail media"
+              aria-orientation="vertical"
+              aria-valuemin={240}
+              aria-valuemax={560}
+              aria-valuenow={detailsWidth}
+              tabIndex={0}
+              onPointerDown={(event) => {
+                event.currentTarget.setPointerCapture(event.pointerId);
+              }}
+              onPointerMove={(event) => {
+                if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+                const container = event.currentTarget.parentElement;
+                if (!container) return;
+                const maxWidth = Math.max(240, Math.min(560, container.clientWidth - 304));
+                setDetailsWidth(Math.max(240, Math.min(maxWidth, container.getBoundingClientRect().right - event.clientX - 12)));
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'ArrowLeft') {
+                  event.preventDefault();
+                  setDetailsWidth((width) => Math.min(560, width + 16));
+                }
+                if (event.key === 'ArrowRight') {
+                  event.preventDefault();
+                  setDetailsWidth((width) => Math.max(240, width - 16));
+                }
+              }}
+            />
+            <MediaDetailsSidebar
+              selectedMedia={selectedMedia}
+              setSelectedMedia={setSelectedMedia}
+              handleDelete={handleDelete}
+              width={detailsWidth}
+            />
+          </>
         )}
       </div>
     </div>
