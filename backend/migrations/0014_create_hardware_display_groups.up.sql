@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS hardware_display_groups (
     description TEXT,
     default_layout_id UUID REFERENCES studio_layouts(id) ON DELETE SET NULL,
     schedule_id UUID REFERENCES studio_schedules(id) ON DELETE SET NULL,
+    schedule_assigned_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

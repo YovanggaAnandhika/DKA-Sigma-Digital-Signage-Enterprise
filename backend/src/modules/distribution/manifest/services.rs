@@ -1,22 +1,43 @@
 use super::model::{
-    CompiledManifestDto, DevicePowerScheduleDto, ManifestAssetDto, ManifestSyncResponseDto};
-use crate::modules::studio::layer::layer::model::LayerWithBlocksDto;
+    CompiledManifestDto, DevicePowerScheduleDto, ManifestAssetDto, ManifestSyncResponseDto,
+};
 use super::repositories::ManifestRepository;
 use crate::common::AppError;
 use crate::db::DbPool;
 use crate::modules::distribution::canary::services::CanaryService;
 use crate::modules::hardware::device::repositories::DeviceRepository;
+use crate::modules::hardware::display_group::repositories::DisplayGroupRepository;
+use crate::modules::studio::layer::layer::model::LayerWithBlocksDto;
 use crate::modules::studio::layout::repositories::LayoutRepository;
+use crate::modules::studio::media::repositories::MediaRepository;
 use crate::modules::studio::playlist::services::PlaylistService;
+use crate::modules::studio::schedule::repositories::ScheduleRepository;
 use chrono::{Datelike, Utc};
+use chrono_tz::Tz;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
-use uuid::Uuid;
-use crate::modules::hardware::display_group::repositories::DisplayGroupRepository;
-use crate::modules::studio::schedule::repositories::ScheduleRepository;
-use crate::modules::studio::media::repositories::MediaRepository;
-use chrono_tz::Tz;
 use std::str::FromStr;
+use uuid::Uuid;
+
+fn latest_assigned_schedule(
+    device_schedule_id: Option<Uuid>,
+    device_assigned_at: Option<chrono::DateTime<Utc>>,
+    group_schedule_id: Option<Uuid>,
+    group_assigned_at: Option<chrono::DateTime<Utc>>,
+) -> Option<Uuid> {
+    match (device_schedule_id, group_schedule_id) {
+        (Some(device_id), Some(group_id)) => {
+            if group_assigned_at > device_assigned_at {
+                Some(group_id)
+            } else {
+                Some(device_id)
+            }
+        }
+        (Some(device_id), None) => Some(device_id),
+        (None, Some(group_id)) => Some(group_id),
+        (None, None) => None,
+    }
+}
 
 pub struct ManifestService;
 
@@ -40,22 +61,28 @@ impl ManifestService {
                 if active_layout_id.is_none() {
                     active_layout_id = group.default_layout_id;
                 }
-                if active_schedule_id.is_none() {
-                    active_schedule_id = group.schedule_id;
-                }
+                active_schedule_id = latest_assigned_schedule(
+                    device.schedule_id,
+                    device.schedule_assigned_at,
+                    group.schedule_id,
+                    group.schedule_assigned_at,
+                );
             }
         }
 
         // Schedule Evaluation (Priority first, then latest recency)
         if let Some(schedule_id) = active_schedule_id {
-            if let Ok(Some(schedule_with_events)) = ScheduleRepository::find_by_id(pool, schedule_id).await {
+            if let Ok(Some(schedule_with_events)) =
+                ScheduleRepository::find_by_id(pool, schedule_id).await
+            {
                 let tz: Tz = device.timezone.parse().unwrap_or(chrono_tz::UTC);
                 let now_local = Utc::now().with_timezone(&tz);
                 let now_date = now_local.date_naive();
                 let current_time = now_local.time();
                 let current_day = now_local.weekday().number_from_monday().to_string(); // 1 = Monday, 7 = Sunday
 
-                let mut best_match: Option<(i32, chrono::DateTime<Utc>, Uuid, Option<String>)> = None;
+                let mut best_match: Option<(i32, chrono::DateTime<Utc>, Uuid, Option<String>)> =
+                    None;
 
                 for event in schedule_with_events.events {
                     let is_date_match = match (event.start_date, event.end_date) {
@@ -79,11 +106,17 @@ impl ManifestService {
                                 None => true,
                                 Some((best_priority, best_created, _, _)) => {
                                     event.priority > *best_priority
-                                        || (event.priority == *best_priority && event.created_at > *best_created)
+                                        || (event.priority == *best_priority
+                                            && event.created_at > *best_created)
                                 }
                             };
                             if is_better {
-                                best_match = Some((event.priority, event.created_at, event.layout_id, event.version_hash));
+                                best_match = Some((
+                                    event.priority,
+                                    event.created_at,
+                                    event.layout_id,
+                                    event.version_hash,
+                                ));
                             }
                         }
                     }
@@ -120,13 +153,9 @@ impl ManifestService {
         };
 
         // Evaluate Canary gradual rollout
-        let canary_res = CanaryService::evaluate_canary(
-            pool,
-            device.id,
-            device.canary_group_id,
-            base_layout_id,
-        )
-        .await?;
+        let canary_res =
+            CanaryService::evaluate_canary(pool, device.id, device.canary_group_id, base_layout_id)
+                .await?;
 
         let effective_layout_id = canary_res.effective_layout_id;
 
@@ -147,10 +176,17 @@ impl ManifestService {
                     if let Ok(pl) = PlaylistService::get_playlist_by_id(pool, pl_id).await {
                         for item in &pl.items {
                             if !required_assets_map.contains_key(&item.media_item_id) {
-                                let (sha256, size_bytes, orig_name) = match MediaRepository::find_by_id(pool, item.media_item_id).await {
-                                    Ok(Some(media)) => (media.sha256_hash, media.file_size_bytes, media.original_filename),
-                                    _ => ("".to_string(), 0, item.media_name.clone()),
-                                };
+                                let (sha256, size_bytes, orig_name) =
+                                    match MediaRepository::find_by_id(pool, item.media_item_id)
+                                        .await
+                                    {
+                                        Ok(Some(media)) => (
+                                            media.sha256_hash,
+                                            media.file_size_bytes,
+                                            media.original_filename,
+                                        ),
+                                        _ => ("".to_string(), 0, item.media_name.clone()),
+                                    };
                                 required_assets_map.insert(
                                     item.media_item_id,
                                     ManifestAssetDto {
@@ -159,17 +195,22 @@ impl ManifestService {
                                         url: item.media_url.clone(),
                                         sha256_hash: sha256,
                                         file_size_bytes: size_bytes,
-                                        local_filename: format!("{}_{}", item.media_item_id, orig_name),
+                                        local_filename: format!(
+                                            "{}_{}",
+                                            item.media_item_id, orig_name
+                                        ),
                                         media_type: item.media_type.clone(),
                                     },
                                 );
                             }
                         }
-                        mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto {
-                            block: block.block.clone(),
-                            item_overrides: block.item_overrides.clone(),
-                            playlist: Some(pl),
-                        });
+                        mapped_blocks.push(
+                            crate::modules::studio::layer::layer::model::LayerBlockDto {
+                                block: block.block.clone(),
+                                item_overrides: block.item_overrides.clone(),
+                                playlist: Some(pl),
+                            },
+                        );
                     }
                 } else if let Some(media_id) = block.block.media_item_id {
                     if let Ok(Some(media)) = MediaRepository::find_by_id(pool, media_id).await {
@@ -182,16 +223,21 @@ impl ManifestService {
                                     url: media.public_url.clone(),
                                     sha256_hash: media.sha256_hash.clone(),
                                     file_size_bytes: media.file_size_bytes,
-                                    local_filename: format!("{}_{}", media.id, media.original_filename),
+                                    local_filename: format!(
+                                        "{}_{}",
+                                        media.id, media.original_filename
+                                    ),
                                     media_type: media.media_type.clone(),
                                 },
                             );
                         }
-                        mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto {
-                            block: block.block.clone(),
-                            item_overrides: block.item_overrides.clone(),
-                            playlist: None,
-                        });
+                        mapped_blocks.push(
+                            crate::modules::studio::layer::layer::model::LayerBlockDto {
+                                block: block.block.clone(),
+                                item_overrides: block.item_overrides.clone(),
+                                playlist: None,
+                            },
+                        );
                     }
                 } else if let Some(album_id) = block.block.album_id {
                     // Enrich album photo assets for offline-first player caching
@@ -221,11 +267,13 @@ impl ManifestService {
                             }
                         }
                     }
-                    mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto {
-                        block: block.block.clone(),
-                        item_overrides: block.item_overrides.clone(),
-                        playlist: None,
-                    });
+                    mapped_blocks.push(
+                        crate::modules::studio::layer::layer::model::LayerBlockDto {
+                            block: block.block.clone(),
+                            item_overrides: block.item_overrides.clone(),
+                            playlist: None,
+                        },
+                    );
                 } else if let Some(queue_id) = block.block.queue_id {
                     // Enrich custom chime audio assets from components_queue_audios for offline-first player caching
                     if let Ok(audios) = sqlx::query_as::<_, (Option<Uuid>,)>(
@@ -255,65 +303,98 @@ impl ManifestService {
                             }
                         }
                     }
-                    mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto {
-                        block: block.block.clone(),
-                        item_overrides: block.item_overrides.clone(),
-                        playlist: None,
-                    });
+                    mapped_blocks.push(
+                        crate::modules::studio::layer::layer::model::LayerBlockDto {
+                            block: block.block.clone(),
+                            item_overrides: block.item_overrides.clone(),
+                            playlist: None,
+                        },
+                    );
                 } else {
                     // Studio Component Widgets (Clock, Ticker, WebView)
-                    mapped_blocks.push(crate::modules::studio::layer::layer::model::LayerBlockDto {
-                        block: block.block.clone(),
-                        item_overrides: block.item_overrides.clone(),
-                        playlist: None,
-                    });
+                    mapped_blocks.push(
+                        crate::modules::studio::layer::layer::model::LayerBlockDto {
+                            block: block.block.clone(),
+                            item_overrides: block.item_overrides.clone(),
+                            playlist: None,
+                        },
+                    );
                 }
             }
 
-            enriched_zones.push(LayerWithBlocksDto { layer: dto_zone.layer.clone(), blocks: mapped_blocks });
+            enriched_zones.push(LayerWithBlocksDto {
+                layer: dto_zone.layer.clone(),
+                blocks: mapped_blocks,
+            });
         }
 
-        let total_size: i64 = required_assets_map.values().map(|a| a.file_size_bytes).sum();
+        let total_size: i64 = required_assets_map
+            .values()
+            .map(|a| a.file_size_bytes)
+            .sum();
         let mut assets_vec: Vec<ManifestAssetDto> = required_assets_map.into_values().collect();
         // Deterministic asset ordering by media_id to guarantee identical version_hash
         assets_vec.sort_by(|a, b| a.media_id.cmp(&b.media_id));
 
         // Compute checksum of the entire manifest structure (visuals, layers, blocks, and assets)
         let mut hasher = Sha256::new();
-        hasher.update(format!(
-            "{}:{}:{:?}:{}:{}:{}",
-            effective_layout_id,
-            layout.background_color,
-            layout.background_image_url,
-            layout.canvas_width,
-            layout.canvas_height,
-            enriched_zones.len()
-        ).as_bytes());
+        hasher.update(
+            format!(
+                "{}:{}:{:?}:{}:{}:{}",
+                effective_layout_id,
+                layout.background_color,
+                layout.background_image_url,
+                layout.canvas_width,
+                layout.canvas_height,
+                enriched_zones.len()
+            )
+            .as_bytes(),
+        );
 
         for z in &enriched_zones {
-            hasher.update(format!("{}:{}:{}:{}:{}:{}", z.layer.id, z.layer.x, z.layer.y, z.layer.width, z.layer.height, z.layer.z_index).as_bytes());
+            hasher.update(
+                format!(
+                    "{}:{}:{}:{}:{}:{}",
+                    z.layer.id,
+                    z.layer.x,
+                    z.layer.y,
+                    z.layer.width,
+                    z.layer.height,
+                    z.layer.z_index
+                )
+                .as_bytes(),
+            );
             for b in &z.blocks {
-                hasher.update(format!(
-                    "{}:{}:{:?}:{:?}:{:?}:{:?}:{:?}:{:?}:{:?}:{}:{}:{}",
-                    b.block.id,
-                    b.block.duration_seconds,
-                    b.block.media_item_id,
-                    b.block.playlist_id,
-                    b.block.queue_id,
-                    b.block.ticker_id,
-                    b.block.clock_id,
-                    b.block.webview_id,
-                    b.block.album_id,
-                    b.block.order_index,
-                    b.block.is_muted,
-                    b.block.volume_level
-                ).as_bytes());
+                hasher.update(
+                    format!(
+                        "{}:{}:{:?}:{:?}:{:?}:{:?}:{:?}:{:?}:{:?}:{}:{}:{}",
+                        b.block.id,
+                        b.block.duration_seconds,
+                        b.block.media_item_id,
+                        b.block.playlist_id,
+                        b.block.queue_id,
+                        b.block.ticker_id,
+                        b.block.clock_id,
+                        b.block.webview_id,
+                        b.block.album_id,
+                        b.block.order_index,
+                        b.block.is_muted,
+                        b.block.volume_level
+                    )
+                    .as_bytes(),
+                );
             }
         }
         for a in &assets_vec {
             hasher.update(format!("{}:{}", a.media_id, a.sha256_hash).as_bytes());
         }
-        hasher.update(format!("{}:{:?}:{:?}", device.power_schedule_enabled, device.sleep_time, device.wake_time).as_bytes());
+        hasher.update(
+            format!(
+                "{}:{:?}:{:?}",
+                device.power_schedule_enabled, device.sleep_time, device.wake_time
+            )
+            .as_bytes(),
+        );
 
         let version_hash = if let Some(sh) = &scheduled_version_hash {
             sh.clone()
@@ -376,5 +457,33 @@ impl ManifestService {
     ) -> Result<(), AppError> {
         ManifestRepository::assign_layout_to_device(pool, device_id, layout_id).await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::latest_assigned_schedule;
+    use chrono::{TimeZone, Utc};
+    use uuid::Uuid;
+
+    #[test]
+    fn latest_assignment_wins_and_device_wins_ties() {
+        let device_id = Uuid::new_v4();
+        let group_id = Uuid::new_v4();
+        let earlier = Utc.timestamp_opt(1_000, 0).unwrap();
+        let later = Utc.timestamp_opt(2_000, 0).unwrap();
+
+        assert_eq!(
+            latest_assigned_schedule(Some(device_id), Some(earlier), Some(group_id), Some(later)),
+            Some(group_id)
+        );
+        assert_eq!(
+            latest_assigned_schedule(Some(device_id), Some(later), Some(group_id), Some(earlier)),
+            Some(device_id)
+        );
+        assert_eq!(
+            latest_assigned_schedule(Some(device_id), Some(later), Some(group_id), Some(later)),
+            Some(device_id)
+        );
     }
 }

@@ -11,8 +11,10 @@ impl DisplayGroupRepository {
     ) -> Result<DisplayGroupEntity, sqlx::Error> {
         let group = sqlx::query_as::<_, DisplayGroupEntity>(
             r#"
-            INSERT INTO hardware_display_groups (name, description, default_layout_id, schedule_id)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO hardware_display_groups (
+                name, description, default_layout_id, schedule_id, schedule_assigned_at
+            )
+            VALUES ($1, $2, $3, $4, CASE WHEN $4 IS NOT NULL THEN NOW() END)
             RETURNING *
             "#,
         )
@@ -30,10 +32,12 @@ impl DisplayGroupRepository {
         pool: &DbPool,
         id: Uuid,
     ) -> Result<Option<DisplayGroupEntity>, sqlx::Error> {
-        let group = sqlx::query_as::<_, DisplayGroupEntity>("SELECT * FROM hardware_display_groups WHERE id = $1")
-            .bind(id)
-            .fetch_optional(pool)
-            .await?;
+        let group = sqlx::query_as::<_, DisplayGroupEntity>(
+            "SELECT * FROM hardware_display_groups WHERE id = $1",
+        )
+        .bind(id)
+        .fetch_optional(pool)
+        .await?;
 
         Ok(group)
     }
@@ -60,6 +64,11 @@ impl DisplayGroupRepository {
                 name = COALESCE($2, name),
                 description = COALESCE($3, description),
                 default_layout_id = COALESCE($4, default_layout_id),
+                schedule_assigned_at = CASE
+                    WHEN $5 IS NOT NULL AND $5 IS DISTINCT FROM schedule_id THEN NOW()
+                    WHEN $5 IS NOT NULL AND schedule_assigned_at IS NULL THEN NOW()
+                    ELSE schedule_assigned_at
+                END,
                 schedule_id = COALESCE($5, schedule_id),
                 updated_at = NOW()
             WHERE id = $1

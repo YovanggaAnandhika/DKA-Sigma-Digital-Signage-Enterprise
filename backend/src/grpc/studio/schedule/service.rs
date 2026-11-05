@@ -416,7 +416,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
                 ));
             }
             affected += sqlx::query(
-                "UPDATE hardware_devices SET schedule_id = $1, updated_at = NOW() WHERE id = $2",
+                "UPDATE hardware_devices SET schedule_assigned_at = CASE WHEN schedule_id IS DISTINCT FROM $1 OR schedule_assigned_at IS NULL THEN NOW() ELSE schedule_assigned_at END, schedule_id = $1, updated_at = NOW() WHERE id = $2",
             )
             .bind(schedule_id)
             .bind(dev_id)
@@ -443,7 +443,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
                     "Display group is already assigned to a different rundown",
                 ));
             }
-            sqlx::query("UPDATE hardware_display_groups SET schedule_id = $1, updated_at = NOW() WHERE id = $2")
+            sqlx::query("UPDATE hardware_display_groups SET schedule_assigned_at = CASE WHEN schedule_id IS DISTINCT FROM $1 OR schedule_assigned_at IS NULL THEN NOW() ELSE schedule_assigned_at END, schedule_id = $1, updated_at = NOW() WHERE id = $2")
                 .bind(schedule_id)
                 .bind(grp_id)
                 .execute(&mut *tx)

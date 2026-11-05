@@ -10,7 +10,7 @@ impl DeviceRepository {
         fingerprint: &str,
     ) -> Result<Option<DeviceEntity>, sqlx::Error> {
         let device = sqlx::query_as::<_, DeviceEntity>(
-            "SELECT * FROM hardware_devices WHERE hardware_fingerprint = $1"
+            "SELECT * FROM hardware_devices WHERE hardware_fingerprint = $1",
         )
         .bind(fingerprint)
         .fetch_optional(pool)
@@ -30,7 +30,7 @@ impl DeviceRepository {
         if let Some(fingerprint) = &dto.hardware_fingerprint {
             if !fingerprint.trim().is_empty() {
                 let existing = sqlx::query_as::<_, DeviceEntity>(
-                    "SELECT * FROM hardware_devices WHERE hardware_fingerprint = $1"
+                    "SELECT * FROM hardware_devices WHERE hardware_fingerprint = $1",
                 )
                 .bind(fingerprint)
                 .fetch_optional(&mut *tx)
@@ -145,10 +145,11 @@ impl DeviceRepository {
     }
 
     pub async fn find_by_id(pool: &DbPool, id: Uuid) -> Result<Option<DeviceEntity>, sqlx::Error> {
-        let device = sqlx::query_as::<_, DeviceEntity>("SELECT * FROM hardware_devices WHERE id = $1")
-            .bind(id)
-            .fetch_optional(pool)
-            .await?;
+        let device =
+            sqlx::query_as::<_, DeviceEntity>("SELECT * FROM hardware_devices WHERE id = $1")
+                .bind(id)
+                .fetch_optional(pool)
+                .await?;
 
         Ok(device)
     }
@@ -233,14 +234,18 @@ impl DeviceRepository {
         device_id: Uuid,
     ) -> Result<Option<(Uuid, String, Option<String>)>, sqlx::Error> {
         let dev = sqlx::query_as::<_, (Uuid, bool)>(
-            "SELECT id, is_paired FROM hardware_devices WHERE id = $1"
+            "SELECT id, is_paired FROM hardware_devices WHERE id = $1",
         )
         .bind(device_id)
         .fetch_optional(pool)
         .await?;
 
         if let Some((id, is_paired)) = dev {
-            let status = if is_paired { "paired".to_string() } else { "pending".to_string() };
+            let status = if is_paired {
+                "paired".to_string()
+            } else {
+                "pending".to_string()
+            };
             let token = if is_paired {
                 sqlx::query_scalar::<_, Option<String>>(
                     r#"
@@ -284,10 +289,7 @@ impl DeviceRepository {
         Ok(record)
     }
 
-    pub async fn update_heartbeat(
-        pool: &DbPool,
-        dto: &HeartbeatDto,
-    ) -> Result<(), sqlx::Error> {
+    pub async fn update_heartbeat(pool: &DbPool, dto: &HeartbeatDto) -> Result<(), sqlx::Error> {
         let mut tx = pool.begin().await?;
 
         sqlx::query(
@@ -369,6 +371,11 @@ impl DeviceRepository {
                 current_layout_id = COALESCE($6, current_layout_id),
                 canary_group_id = COALESCE($7, canary_group_id),
                 display_group_id = COALESCE($8, display_group_id),
+                schedule_assigned_at = CASE
+                    WHEN $9 IS NOT NULL AND $9 IS DISTINCT FROM schedule_id THEN NOW()
+                    WHEN $9 IS NOT NULL AND schedule_assigned_at IS NULL THEN NOW()
+                    ELSE schedule_assigned_at
+                END,
                 schedule_id = COALESCE($9, schedule_id),
                 timezone = COALESCE($10, timezone),
                 sleep_time = COALESCE($11, sleep_time),

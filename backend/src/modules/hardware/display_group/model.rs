@@ -10,6 +10,7 @@ pub struct DisplayGroupEntity {
     pub description: Option<String>,
     pub default_layout_id: Option<Uuid>,
     pub schedule_id: Option<Uuid>,
+    pub schedule_assigned_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

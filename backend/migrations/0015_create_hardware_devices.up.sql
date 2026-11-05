@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS hardware_devices (
     canary_group_id UUID REFERENCES distribution_canary_groups(id) ON DELETE SET NULL,
     display_group_id UUID REFERENCES hardware_display_groups(id) ON DELETE SET NULL,
     schedule_id UUID REFERENCES studio_schedules(id) ON DELETE SET NULL,
+    schedule_assigned_at TIMESTAMPTZ,
     timezone VARCHAR(100) NOT NULL DEFAULT 'UTC',
     is_online BOOLEAN NOT NULL DEFAULT FALSE,
     last_heartbeat_at TIMESTAMPTZ,

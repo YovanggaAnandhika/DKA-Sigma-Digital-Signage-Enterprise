@@ -26,6 +26,7 @@ pub struct DeviceEntity {
     pub current_layout_id: Option<Uuid>,
     pub display_group_id: Option<Uuid>,
     pub schedule_id: Option<Uuid>,
+    pub schedule_assigned_at: Option<DateTime<Utc>>,
     pub canary_group_id: Option<Uuid>,
     pub is_online: bool,
     pub last_heartbeat_at: Option<DateTime<Utc>>,
