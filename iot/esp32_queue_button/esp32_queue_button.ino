@@ -90,7 +90,9 @@ char topicResetRequest[64];
 char topicResetAck[64];
 String pendingResetRequestId;
 bool resetRequestPending = false;
-bool pairingResetConfirmed = false;
+bool pairingResetReady = false;
+bool pairingResetFromBoot = false;
+bool resetServerConfirmed = false;
 unsigned long resetRequestStartedAt = 0;
 unsigned long resetLastPublishAt = 0;
 const unsigned long RESET_REQUEST_TIMEOUT_MS = 30000;
@@ -189,7 +191,11 @@ void onMqttMessage(char *topic, byte *payload, unsigned int length) {
     if (pendingResetRequestId == requestId) {
       resetRequestPending = false;
       if (strcmp(status, "OK") == 0) {
-        pairingResetConfirmed = true;
+        resetServerConfirmed = true;
+        pairingResetReady = true;
+      } else if (pairingResetFromBoot) {
+        Serial.println("[Reset] Server gagal menghapus perangkat; melanjutkan reset lokal.");
+        pairingResetReady = true;
       } else {
         Serial.println("[Reset] Server menolak reset; konfigurasi dipertahankan.");
         blinkFeedback(false);
@@ -206,7 +212,13 @@ void onMqttMessage(char *topic, byte *payload, unsigned int length) {
 }
 
 void requestPairingReset(const String &serverRequestId) {
-  if (resetRequestPending || !mqttClient.connected()) {
+  if (resetRequestPending) {
+    Serial.println("[Reset] Tidak dapat meminta reset: MQTT belum siap.");
+    return;
+  }
+
+  pairingResetFromBoot = serverRequestId.length() == 0;
+  if (!mqttClient.connected() && !pairingResetFromBoot) {
     Serial.println("[Reset] Tidak dapat meminta reset: MQTT belum siap.");
     return;
   }
@@ -225,12 +237,16 @@ void requestPairingReset(const String &serverRequestId) {
   resetRequestPending = true;
   resetRequestStartedAt = millis();
   resetLastPublishAt = 0;
-  if (!publishPairingResetRequest()) {
+  if (mqttClient.connected() && !publishPairingResetRequest() &&
+      !pairingResetFromBoot) {
     resetRequestPending = false;
     pendingResetRequestId = "";
+    pairingResetFromBoot = false;
     return;
   }
-  Serial.println("[Reset] Menunggu konfirmasi penghapusan dari server...");
+  Serial.println(mqttClient.connected()
+                     ? "[Reset] Menunggu konfirmasi penghapusan dari server..."
+                     : "[Reset] Server tidak terjangkau; menunggu sebelum reset lokal.");
 }
 
 bool publishPairingResetRequest() {
@@ -248,10 +264,10 @@ bool publishPairingResetRequest() {
 }
 
 void finishPairingReset() {
-  if (!pairingResetConfirmed)
+  if (!pairingResetReady)
     return;
 
-  pairingResetConfirmed = false;
+  pairingResetReady = false;
   resetRequestPending = false;
   pendingResetRequestId = "";
   mqttClient.disconnect();
@@ -269,9 +285,13 @@ void finishPairingReset() {
   mqttUser[0] = '\0';
   mqttPassword[0] = '\0';
   mqttPort = 1883;
+  pairingResetFromBoot = false;
   if (configPortalActive)
     stopConfigPortal();
-  Serial.println("[Reset] Server mengonfirmasi. Pairing ulang dimulai.");
+  Serial.println(resetServerConfirmed
+                     ? "[Reset] Server mengonfirmasi penghapusan. Pairing ulang dimulai."
+                     : "[Reset] Pairing lokal direset; record server mungkin masih ada.");
+  resetServerConfirmed = false;
   startConfigPortal();
 }
 
@@ -280,8 +300,14 @@ void processPairingReset() {
       millis() - resetRequestStartedAt > RESET_REQUEST_TIMEOUT_MS) {
     resetRequestPending = false;
     pendingResetRequestId = "";
-    Serial.println("[Reset] Server tidak mengonfirmasi; konfigurasi dipertahankan.");
-    blinkFeedback(false);
+    if (pairingResetFromBoot) {
+      Serial.println("[Reset] Server tidak mengonfirmasi; melanjutkan reset lokal.");
+      pairingResetReady = true;
+    } else {
+      pairingResetFromBoot = false;
+      Serial.println("[Reset] Server tidak mengonfirmasi; konfigurasi dipertahankan.");
+      blinkFeedback(false);
+    }
   } else if (resetRequestPending && mqttClient.connected() &&
              millis() - resetLastPublishAt > RESET_REQUEST_RETRY_MS) {
     publishPairingResetRequest();

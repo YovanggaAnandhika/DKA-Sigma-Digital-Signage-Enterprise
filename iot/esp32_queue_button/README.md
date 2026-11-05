@@ -93,13 +93,18 @@ di source code.
 
 ### Reset pairing dan penghapusan perangkat
 
-Hapus perangkat dari dashboard atau tahan tombol **BOOT lebih dari 15 detik**
-ketika ESP32 online. Keduanya meminta firmware mengirim konfirmasi reset ke
-backend. Setelah backend menghapus record perangkat, backend mengirim ACK;
-firmware kemudian menghapus Wi-Fi dan endpoint MQTT tersimpan lalu membuka AP
-setup. Bila perangkat offline, broker/ACL salah, atau ACK tidak diterima,
-konfigurasi lokal dipertahankan dan record server tidak dihapus oleh permintaan
-dashboard.
+Hapus perangkat dari dashboard atau tahan tombol **BOOT lebih dari 15 detik**.
+Keduanya mencoba handshake dengan backend. Jika BOOT ditekan, firmware menunggu
+ACK hingga 30 detik; setelah itu reset lokal tetap dilanjutkan walaupun server
+offline atau gagal menghapus record. Firmware menghapus Wi-Fi dan endpoint MQTT
+tersimpan lalu membuka AP setup. Dalam kondisi tersebut record server tetap ada
+dan perlu Anda hapus manual dari dashboard IoT nanti.
+
+Penghapusan dari dashboard tetap menunggu konfirmasi backend sebelum menghapus
+record. Jika perangkat/server tidak merespons, penghapusan dashboard gagal dan
+konfigurasi perangkat tidak diubah. Untuk server yang sedang mati, tekan BOOT
+lebih dari 15 detik secara fisik; setelah server pulih, hapus record yang
+tertinggal secara manual.
 
 Reset ini hanya melepas record pada server signage yang sedang dikonfigurasi.
 Registry kepemilikan lintas-server/cloud belum tersedia, sehingga ini belum

@@ -241,12 +241,14 @@ mengembalikan endpoint broker milik server yang berhasil menerima klaim.
 - Pengguna dapat memilih SSID dan memasukkan Wi-Fi dari ponsel tanpa Arduino IDE.
 - Tahap awal meminta endpoint broker MQTT; setelah registry cloud diterapkan,
   endpoint harus didapat otomatis setelah accept.
-- Access point setup ditutup setelah Wi-Fi tersambung. Reset pairing melalui
-  dashboard atau BOOT >15 detik meminta konfirmasi backend, menghapus record
-  lokal, lalu membuka setup kembali.
+- Access point setup ditutup setelah Wi-Fi tersambung. BOOT >15 detik mencoba
+  menghapus record melalui backend; jika ACK gagal/tidak datang dalam 30 detik,
+  firmware tetap reset lokal dan record yang tertinggal bisa dihapus admin nanti.
+- Penghapusan dashboard menunggu ACK backend; jika server/perangkat tidak
+  merespons, record tidak dihapus dan konfigurasi lokal tidak berubah.
 - Menahan BOOT kurang dari atau sama dengan 15 detik tidak mereset konfigurasi.
-- Reset pairing melepas record server lokal setelah backend menerima permintaan
-  firmware; registry global tetap diperlukan untuk menjamin klaim lintas-server.
+- Reset BOOT berusaha melepas record server lokal tetapi tidak bergantung pada
+  keberhasilan server; registry global tetap diperlukan untuk klaim lintas-server.
 - Perangkat pending terlihat pada dashboard dan baru tersambung ke broker pemilik
   setelah accept.
 - Dua server yang menerima perangkat bersamaan menghasilkan tepat satu pemilik.
@@ -278,9 +280,12 @@ mengembalikan endpoint broker milik server yang berhasil menerima klaim.
 
 - Firmware ESP32 memiliki captive portal setup terbuka untuk scan/pilih SSID,
   password Wi-Fi, endpoint/port broker, dan kredensial MQTT opsional. Access
-  point ditutup setelah Wi-Fi tersambung. Reset dashboard dan BOOT >15 detik
-  memakai handshake MQTT; hanya setelah backend menghapus record lokal dan
-  mengirim ACK, firmware menghapus seluruh konfigurasi tersimpan dan membuka AP.
+  point ditutup setelah Wi-Fi tersambung. Reset BOOT >15 detik mencoba handshake
+  MQTT selama 30 detik; setelah itu firmware tetap menghapus konfigurasi lokal
+  dan membuka AP, meski server gagal menghapus record.
+- Penghapusan dari dashboard tetap memerlukan ACK backend; jika perangkat/server
+  tidak merespons, record dan konfigurasi lokal dipertahankan. Record sisa dari
+  reset fisik offline dapat dihapus admin secara manual setelah server hidup.
 - Reset pairing digate secara default. Backend memerlukan kredensial broker dan
   operator harus mengonfirmasi ACL perangkat melalui `IOT_DEVICE_ACL_CONFIGURED`;
   reset dashboard juga membutuhkan perangkat online dan ACK.
@@ -292,8 +297,9 @@ mengembalikan endpoint broker milik server yang berhasil menerima klaim.
 - Persetujuan IoT saat ini memperbarui `is_approved` pada database backend lokal;
   belum ada registry global, klaim lintas-server, atau OTA.
 - Reset dashboard dan BOOT telah terhubung ke handshake lokal, tetapi
-  dinonaktifkan sampai broker autentikasi/ACL dikonfigurasi. Tahan BOOT saat
-  perangkat offline tidak menghapus konfigurasi atau record server.
+  dinonaktifkan sampai broker autentikasi/ACL dikonfigurasi. BOOT tetap
+  menghapus konfigurasi lokal setelah 30 detik tanpa ACK; record server mungkin
+  tertinggal untuk dihapus manual.
 - Registry ownership cloud belum ada; reset hanya menghapus perangkat pada
   backend lokal yang terhubung ke broker.
 - Captive portal memakai HTTP lokal dan access point terbuka tanpa autentikasi;
