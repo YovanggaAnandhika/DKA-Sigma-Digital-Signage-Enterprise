@@ -9,6 +9,7 @@
  * - Otomatis mendeteksi MAC Address sebagai Device UID (tanpa perlu setting
  * manual)
  * - Anti-bouncing presisi berbasis millis() (50ms debouncing)
+ * - Tombol BOOT mendukung aksi 1-4 klik cepat dan tahan 5 detik untuk pairing reset
  * - Indikator GPIO 2 untuk status Wi-Fi, MQTT, reset, pairing, dan heartbeat
  *   lembut; ACK aksi tetap ditandai dengan kedipan
  * - Telemetri periodik (Wi-Fi RSSI, IP address, uptime) tiap 30 detik
@@ -59,6 +60,10 @@ int bootLastReading = HIGH;
 int bootCurrentState = HIGH;
 unsigned long bootLastDebounceTime = 0;
 const unsigned long BOOT_RESET_HOLD_MS = 5000;
+const unsigned long BOOT_MULTI_CLICK_WINDOW_MS = 450;
+uint8_t bootClickCount = 0;
+unsigned long bootLastClickAt = 0;
+bool bootPressContinuesClickSequence = false;
 
 // =========================================================================================
 // 2. KONFIGURASI PIN HARDWARE
@@ -855,6 +860,28 @@ void sendButtonPress(int pin) {
 // =========================================================================================
 // 7. SETUP & LOOP
 // =========================================================================================
+void dispatchBootClicks(uint8_t clickCount) {
+  int pin = -1;
+  switch (clickCount) {
+  case 1:
+    pin = 13;
+    break;
+  case 2:
+    pin = 27;
+    break;
+  case 3:
+    pin = 14;
+    break;
+  case 4:
+    pin = 26;
+    break;
+  default:
+    Serial.printf("[BOOT] Kombinasi %u klik belum dipetakan.\n", clickCount);
+    return;
+  }
+  sendButtonPress(pin);
+}
+
 void handleBootButton() {
   int reading = digitalRead(0);
   if (reading != bootLastReading) {
@@ -869,22 +896,45 @@ void handleBootButton() {
       bootPressStartedAt = millis();
       bootPressActive = true;
       bootResetTriggered = false;
+      bootPressContinuesClickSequence =
+          bootClickCount > 0 &&
+          millis() - bootLastClickAt <= BOOT_MULTI_CLICK_WINDOW_MS;
+      if (bootClickCount > 0 && !bootPressContinuesClickSequence) {
+        dispatchBootClicks(bootClickCount);
+        bootClickCount = 0;
+      }
     } else if (bootPressActive) {
       unsigned long heldFor = millis() - bootPressStartedAt;
       if (!bootResetTriggered && heldFor < BOOT_RESET_HOLD_MS &&
           !configPortalActive) {
-        sendButtonPress(13);
+        if (!bootPressContinuesClickSequence)
+          bootClickCount = 0;
+        bootClickCount++;
+        bootLastClickAt = millis();
+        if (bootClickCount == 4) {
+          dispatchBootClicks(bootClickCount);
+          bootClickCount = 0;
+        }
       }
       bootPressActive = false;
       bootResetTriggered = false;
+      bootPressContinuesClickSequence = false;
     }
   }
 
   if (bootPressActive && !bootResetTriggered &&
       millis() - bootPressStartedAt > BOOT_RESET_HOLD_MS) {
     bootResetTriggered = true;
+    bootClickCount = 0;
+    bootPressContinuesClickSequence = false;
     if (!configPortalActive)
       requestPairingReset();
+  }
+
+  if (!bootPressActive && bootClickCount > 0 &&
+      millis() - bootLastClickAt > BOOT_MULTI_CLICK_WINDOW_MS) {
+    dispatchBootClicks(bootClickCount);
+    bootClickCount = 0;
   }
 }
 

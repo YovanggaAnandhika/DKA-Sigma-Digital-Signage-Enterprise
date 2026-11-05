@@ -107,8 +107,19 @@ di source code.
 
 ### Reset pairing dan penghapusan perangkat
 
-Hapus perangkat dari dashboard atau tahan tombol **BOOT selama 5 detik**.
-Keduanya mencoba handshake dengan backend. Jika BOOT ditekan, firmware menunggu
+Tombol **BOOT** mendukung aksi klik cepat berikut (aksi mengikuti mapping pin di
+dashboard):
+
+| Klik BOOT | Pin yang dikirim | Aksi default |
+|---|---:|---|
+| 1 kali | GPIO 13 | Panggil berikutnya |
+| 2 kali | GPIO 27 | Toggle tutup loket |
+| 3 kali | GPIO 14 | Toggle istirahat |
+| 4 kali | GPIO 26 | Panggilan sebelumnya |
+
+Klik berikutnya harus dimulai dalam 450 ms; aksi dijalankan setelah rangkaian
+klik selesai. Tahan tombol **BOOT selama 5 detik** untuk reset pairing. Reset
+pairing mencoba handshake dengan backend. Jika BOOT ditekan, firmware menunggu
 ACK hingga 10 detik; setelah itu reset lokal tetap dilanjutkan walaupun server
 offline atau gagal menghapus record. Firmware menghapus Wi-Fi dan endpoint MQTT
 tersimpan lalu membuka AP setup. Dalam kondisi tersebut record server tetap ada
