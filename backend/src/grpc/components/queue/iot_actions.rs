@@ -9,6 +9,11 @@ use crate::grpc::proto::components::v1::queue::{
 };
 use crate::grpc::proto::iot::v1::device::TriggerIotActionResponse;
 
+fn db_error(error: sqlx::Error) -> Status {
+    tracing::error!("IoT action database operation failed: {error}");
+    Status::internal("Internal error")
+}
+
 #[derive(FromRow)]
 struct IotQueueTarget {
     queue_display_id: Uuid,
@@ -31,7 +36,7 @@ impl QueueServiceImpl {
         .bind(device_uid)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|error| Status::internal(error.to_string()))?;
+        .map_err(db_error)?;
 
         let Some((device_id, is_approved, is_active, pin_mappings)) = device else {
             return Ok(TriggerIotActionResponse {
@@ -92,7 +97,7 @@ impl QueueServiceImpl {
         .bind(device_id)
         .fetch_all(&self.pool)
         .await
-        .map_err(|error| Status::internal(error.to_string()))?;
+        .map_err(db_error)?;
 
         if targets.is_empty() {
             return Ok(TriggerIotActionResponse {
@@ -123,10 +128,10 @@ impl QueueServiceImpl {
             "UPDATE iot_devices SET last_seen_at = NOW(), last_action = $2, updated_at = NOW() WHERE id = $1",
         )
         .bind(device_id)
-        .bind(format!("{action}: {message}"))
+        .bind(&action)
         .execute(&self.pool)
         .await
-        .map_err(|error| Status::internal(error.to_string()))?;
+        .map_err(db_error)?;
 
         Ok(TriggerIotActionResponse {
             success: failed.is_empty(),
@@ -199,7 +204,7 @@ impl QueueServiceImpl {
                 .bind(counter_id)
                 .fetch_optional(&self.pool)
                 .await
-                .map_err(|error| Status::internal(error.to_string()))?
+                .map_err(db_error)?
                 .ok_or_else(|| Status::not_found("Counter not found"))?;
                 let number = row.0.unwrap_or_default();
                 if number.is_empty() {
@@ -211,7 +216,7 @@ impl QueueServiceImpl {
                 .bind(counter_id)
                 .execute(&self.pool)
                 .await
-                .map_err(|error| Status::internal(error.to_string()))?;
+                .map_err(db_error)?;
                 self.broadcast_queue_call(target.queue_display_id, &number, &row.1, "recall")
                     .await;
                 Ok(format!("Panggilan ulang: {number}"))
@@ -224,7 +229,7 @@ impl QueueServiceImpl {
                 .bind(counter_id)
                 .fetch_optional(&self.pool)
                 .await
-                .map_err(|error| Status::internal(error.to_string()))?
+                .map_err(db_error)?
                 .ok_or_else(|| Status::not_found("Counter not found"))?;
                 let is_break = matches!(action, "TOGGLE_BREAK");
                 let next_status = if is_break {

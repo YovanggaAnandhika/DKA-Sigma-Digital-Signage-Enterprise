@@ -40,6 +40,7 @@ You are a lazy senior developer. The best code is the code never written. Solve 
 - Schema changes **MUST** be committed as a sequential pair in `backend/migrations/`:
   - `XXXX_<action>.up.sql`
   - `XXXX_<action>.down.sql`
+- Each pair must alter exactly one table; keep that table's change and rollback in the matching `.up.sql` and `.down.sql` files.
 - Always use parameterized queries (`$1`, `$2`, etc.) via `sqlx::query` or `sqlx::query_as`. Never format or concatenate strings into SQL queries.
 - Multi-step operations (e.g. saving a layout and its items) **MUST** run inside an explicit database transaction (`pool.begin().await`).
 

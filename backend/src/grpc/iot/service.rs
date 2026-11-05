@@ -87,11 +87,6 @@ impl IotDeviceRow {
     }
 }
 
-const DEVICE_COLUMNS: &str = "
-    id, device_uid, name, device_role, pin_mappings, is_active, is_approved,
-    ip_address, firmware_version, last_seen_at, last_action, created_at, updated_at
-";
-
 #[tonic::async_trait]
 impl IotDeviceServiceTrait for IotDeviceServiceImpl {
     async fn list_devices(
@@ -99,12 +94,14 @@ impl IotDeviceServiceTrait for IotDeviceServiceImpl {
         request: Request<ListIotDevicesRequest>,
     ) -> Result<Response<ListIotDevicesResponse>, Status> {
         crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
-        let rows = sqlx::query_as::<_, IotDeviceRow>(&format!(
-            "SELECT {DEVICE_COLUMNS} FROM iot_devices ORDER BY is_approved, last_seen_at DESC NULLS LAST"
-        ))
+        let rows = sqlx::query_as::<_, IotDeviceRow>(
+            "SELECT id, device_uid, name, device_role, pin_mappings, is_active, is_approved, \
+             ip_address, firmware_version, last_seen_at, last_action, created_at, updated_at \
+             FROM iot_devices ORDER BY is_approved, last_seen_at DESC NULLS LAST",
+        )
         .fetch_all(&self.pool)
         .await
-        .map_err(|error| Status::internal(error.to_string()))?;
+        .map_err(db_error)?;
 
         Ok(Response::new(ListIotDevicesResponse {
             items: rows.into_iter().map(IotDeviceRow::into_proto).collect(),
@@ -118,14 +115,15 @@ impl IotDeviceServiceTrait for IotDeviceServiceImpl {
         crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
         let id = Uuid::from_str(&request.into_inner().id)
             .map_err(|_| Status::invalid_argument("Invalid IoT device id"))?;
-        let row = sqlx::query_as::<_, IotDeviceRow>(&format!(
+        let row = sqlx::query_as::<_, IotDeviceRow>(
             "UPDATE iot_devices SET is_approved = true, is_active = true, updated_at = NOW() \
-             WHERE id = $1 RETURNING {DEVICE_COLUMNS}"
-        ))
+             WHERE id = $1 RETURNING id, device_uid, name, device_role, pin_mappings, is_active, \
+             is_approved, ip_address, firmware_version, last_seen_at, last_action, created_at, updated_at",
+        )
         .bind(id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|error| Status::internal(error.to_string()))?
+        .map_err(db_error)?
         .ok_or_else(|| Status::not_found("IoT device not found"))?;
 
         Ok(Response::new(row.into_proto()))
@@ -156,12 +154,17 @@ impl IotDeviceServiceTrait for IotDeviceServiceImpl {
                 })
                 .collect::<Vec<_>>(),
         )
-        .map_err(|error| Status::internal(error.to_string()))?;
+        .map_err(|error| {
+            tracing::error!("Failed to serialize IoT pin mappings: {error}");
+            Status::internal("Internal error")
+        })?;
 
-        let row = sqlx::query_as::<_, IotDeviceRow>(&format!(
+        let row = sqlx::query_as::<_, IotDeviceRow>(
             "UPDATE iot_devices SET name = $2, device_role = $3, pin_mappings = $4, \
-             is_active = $5, updated_at = NOW() WHERE id = $1 RETURNING {DEVICE_COLUMNS}"
-        ))
+             is_active = $5, updated_at = NOW() WHERE id = $1 RETURNING id, device_uid, name, \
+             device_role, pin_mappings, is_active, is_approved, ip_address, firmware_version, \
+             last_seen_at, last_action, created_at, updated_at",
+        )
         .bind(id)
         .bind(req.name.trim())
         .bind(req.device_role)
@@ -169,51 +172,10 @@ impl IotDeviceServiceTrait for IotDeviceServiceImpl {
         .bind(req.is_active)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|error| Status::internal(error.to_string()))?
+        .map_err(db_error)?
         .ok_or_else(|| Status::not_found("IoT device not found"))?;
 
         Ok(Response::new(row.into_proto()))
-    }
-
-    fn validate_mappings(mappings: &[IotPinMapping]) -> Result<(), Status> {
-        let mut pins = HashSet::with_capacity(mappings.len());
-        for mapping in mappings {
-            if mapping.pin < 0 || !pins.insert(mapping.pin) {
-                return Err(Status::invalid_argument(
-                    "Pin numbers must be non-negative and unique",
-                ));
-            }
-            if !matches!(
-                mapping.action.as_str(),
-                "CALL_NEXT" | "RECALL" | "CALL_PREV" | "TOGGLE_BREAK" | "TOGGLE_CLOSE" | "ISSUE_TICKET"
-            ) {
-                return Err(Status::invalid_argument("Unsupported IoT pin action"));
-            }
-        }
-        Ok(())
-    }
-
-    #[cfg(test)]
-    mod tests {
-        use super::validate_mappings;
-        use crate::grpc::proto::iot::v1::device::IotPinMapping;
-
-        fn mapping(pin: i32, action: &str) -> IotPinMapping {
-            IotPinMapping {
-                pin,
-                action: action.to_string(),
-                enabled: true,
-                label: String::new(),
-            }
-        }
-
-        #[test]
-        fn pin_mappings_require_supported_unique_nonnegative_pins() {
-            assert!(validate_mappings(&[mapping(13, "CALL_NEXT"), mapping(14, "TOGGLE_BREAK")]).is_ok());
-            assert!(validate_mappings(&[mapping(-1, "CALL_NEXT")]).is_err());
-            assert!(validate_mappings(&[mapping(13, "CALL_NEXT"), mapping(13, "RECALL")]).is_err());
-            assert!(validate_mappings(&[mapping(13, "UNKNOWN")]).is_err());
-        }
     }
 
     async fn delete_device(
@@ -227,7 +189,7 @@ impl IotDeviceServiceTrait for IotDeviceServiceImpl {
             .bind(id)
             .execute(&self.pool)
             .await
-            .map_err(|error| Status::internal(error.to_string()))?;
+            .map_err(db_error)?;
 
         if result.rows_affected() == 0 {
             return Err(Status::not_found("IoT device not found"));
@@ -249,5 +211,51 @@ impl IotDeviceServiceTrait for IotDeviceServiceImpl {
             .trigger_iot_action(&req.device_uid, req.pin)
             .await?;
         Ok(Response::new(response))
+    }
+}
+
+fn db_error(error: sqlx::Error) -> Status {
+    tracing::error!("IoT device database operation failed: {error}");
+    Status::internal("Internal error")
+}
+
+fn validate_mappings(mappings: &[IotPinMapping]) -> Result<(), Status> {
+    let mut pins = HashSet::with_capacity(mappings.len());
+    for mapping in mappings {
+        if mapping.pin < 0 || !pins.insert(mapping.pin) {
+            return Err(Status::invalid_argument(
+                "Pin numbers must be non-negative and unique",
+            ));
+        }
+        if !matches!(
+            mapping.action.as_str(),
+            "CALL_NEXT" | "RECALL" | "CALL_PREV" | "TOGGLE_BREAK" | "TOGGLE_CLOSE" | "ISSUE_TICKET"
+        ) {
+            return Err(Status::invalid_argument("Unsupported IoT pin action"));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_mappings;
+    use crate::grpc::proto::iot::v1::device::IotPinMapping;
+
+    fn mapping(pin: i32, action: &str) -> IotPinMapping {
+        IotPinMapping {
+            pin,
+            action: action.to_string(),
+            enabled: true,
+            label: String::new(),
+        }
+    }
+
+    #[test]
+    fn pin_mappings_require_supported_unique_nonnegative_pins() {
+        assert!(validate_mappings(&[mapping(13, "CALL_NEXT"), mapping(14, "TOGGLE_BREAK")]).is_ok());
+        assert!(validate_mappings(&[mapping(-1, "CALL_NEXT")]).is_err());
+        assert!(validate_mappings(&[mapping(13, "CALL_NEXT"), mapping(13, "RECALL")]).is_err());
+        assert!(validate_mappings(&[mapping(13, "UNKNOWN")]).is_err());
     }
 }

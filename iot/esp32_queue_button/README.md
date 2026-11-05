@@ -50,7 +50,7 @@ Firmware ini menggunakan mode `INPUT_PULLUP` internal ESP32. Artinya:
 | **GPIO 4**  | Buzzer (Opsional) | Nada Konfirmasi | Buzzer piezo ke GND |
 
 > [!TIP]
-> Anda dapat menambah atau memetakan ulang tombol pin GPIO kapan saja secara dinamis langsung dari web dashboard HNDSigma pada tab **"Perangkat IoT / Tombol"** tanpa perlu mengedit atau meng-upload ulang kode Arduino!
+> Anda dapat memetakan ulang tombol GPIO dari menu **Perangkat IoT** tanpa perlu mengedit atau meng-upload ulang kode Arduino.
 
 ---
 
@@ -72,7 +72,7 @@ Firmware ini menggunakan mode `INPUT_PULLUP` internal ESP32. Artinya:
 
 ---
 
-## 4. Cara Pairing ke Antrean di Web Dashboard
+## 4. Persetujuan Perangkat dan Binding Queue
 
 1. Buka **Serial Monitor** di Arduino IDE dengan baud rate `115200`.
 2. Saat ESP32 menyala, layar Serial Monitor akan mencetak informasi:
@@ -80,15 +80,12 @@ Firmware ini menggunakan mode `INPUT_PULLUP` internal ESP32. Artinya:
    =================================================
       HNDSigma Digital Signage - IoT Controller    
       DEVICE UID : ESP32_3C61054A2B1C
-      (Salin UID ini ke tab 'Perangkat IoT' di Web)
+      (Salin UID untuk membantu mengidentifikasi perangkat di menu Perangkat IoT)
    =================================================
    ```
-3. Buka browser ke CMS HNDSigma: Masuk ke menu antrean Anda, lalu klik tab baru **"Perangkat IoT / Tombol"**.
-4. Klik **"+ Pasangkan NodeMCU ESP32"**:
-   - Masukkan Device UID yang tampil di Serial Monitor (misal: `ESP32_3C61054A2B1C`).
-   - Pilih peran: *Remote Loket* (pilih nomor loket sasaran) atau *Tombol Karcis*.
-   - Sesuaikan konfigurasi tombol pin GPIO (atau gunakan tombol preset cepat).
-   - Klik **Simpan Perangkat**.
-5. Tekan tombol fisik pada ESP32:
+3. Hubungkan ESP32 ke MQTT broker. Perangkat yang ditemukan akan muncul di menu **Perangkat IoT** dengan status menunggu persetujuan.
+4. Setujui perangkat tersebut, lalu atur nama dan mapping pin GPIO beserta aksinya di menu **Perangkat IoT**.
+5. Buka editor queue yang dituju, pilih tab **IoT Binding**, lalu ikat perangkat ke queue. Pilih loket jika mapping pin menggunakan aksi loket.
+6. Tekan tombol fisik pada ESP32:
    - LED onboard akan berkedip 2x sebagai tanda aksi berhasil diterima server.
-   - Layar antrean dan loket pemanggil akan langsung ter-update secara realtime!
+   - Aksi dijalankan untuk setiap queue yang terikat ke perangkat.

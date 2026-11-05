@@ -81,6 +81,7 @@ This project is an enterprise-grade digital signage management and streaming pla
 
 ### 4. Database & Migration Rule
 - All schema alterations require an explicit SQLx migration pair in `backend/migrations/` (`XXXX_name.up.sql` and `XXXX_name.down.sql`).
+- Each migration pair must alter exactly one table; keep that table's change and rollback in the matching `.up.sql` and `.down.sql` files.
 - Never run manual DDL in production containers without migration tracking.
 
 ### 5. Player Streaming & Offline-First Invariants

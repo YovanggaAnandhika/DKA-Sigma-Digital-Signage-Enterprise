@@ -10,6 +10,11 @@ use crate::grpc::proto::components::v1::queue::iot_binding::{
     QueueIotBinding, UnbindIotDeviceRequest, UnbindIotDeviceResponse,
 };
 
+fn db_error(error: sqlx::Error) -> Status {
+    tracing::error!("Queue IoT binding database operation failed: {error}");
+    Status::internal("Internal error")
+}
+
 pub struct QueueIotBindingServiceImpl {
     pool: PgPool,
 }
@@ -72,7 +77,7 @@ impl QueueIotBindingServiceTrait for QueueIotBindingServiceImpl {
         .bind(queue_id)
         .fetch_all(&self.pool)
         .await
-        .map_err(|error| Status::internal(error.to_string()))?;
+        .map_err(db_error)?;
 
         Ok(Response::new(ListQueueIotBindingsResponse {
             items: rows.into_iter().map(BindingRow::into_proto).collect(),
@@ -100,14 +105,14 @@ impl QueueIotBindingServiceTrait for QueueIotBindingServiceImpl {
             .pool
             .begin()
             .await
-            .map_err(|error| Status::internal(error.to_string()))?;
+            .map_err(db_error)?;
         let queue_exists = sqlx::query_scalar::<_, bool>(
             "SELECT EXISTS(SELECT 1 FROM components_queue_displays WHERE id = $1)",
         )
         .bind(queue_id)
         .fetch_one(&mut *transaction)
         .await
-        .map_err(|error| Status::internal(error.to_string()))?;
+        .map_err(db_error)?;
         if !queue_exists {
             return Err(Status::not_found("Queue not found"));
         }
@@ -117,7 +122,7 @@ impl QueueIotBindingServiceTrait for QueueIotBindingServiceImpl {
         .bind(device_id)
         .fetch_optional(&mut *transaction)
         .await
-        .map_err(|error| Status::internal(error.to_string()))?
+        .map_err(db_error)?
         .ok_or_else(|| Status::not_found("IoT device not found"))?;
         if !approved {
             return Err(Status::failed_precondition("IoT device must be approved before binding"));
@@ -131,7 +136,7 @@ impl QueueIotBindingServiceTrait for QueueIotBindingServiceImpl {
             .bind(queue_id)
             .fetch_one(&mut *transaction)
             .await
-            .map_err(|error| Status::internal(error.to_string()))?;
+            .map_err(db_error)?;
             if !belongs_to_queue {
                 return Err(Status::invalid_argument("Counter does not belong to this queue"));
             }
@@ -150,11 +155,11 @@ impl QueueIotBindingServiceTrait for QueueIotBindingServiceImpl {
         .bind(counter_id)
         .execute(&mut *transaction)
         .await
-        .map_err(|error| Status::internal(error.to_string()))?;
+        .map_err(db_error)?;
         transaction
             .commit()
             .await
-            .map_err(|error| Status::internal(error.to_string()))?;
+            .map_err(db_error)?;
 
         let row = sqlx::query_as::<_, BindingRow>(
             r#"
@@ -171,7 +176,7 @@ impl QueueIotBindingServiceTrait for QueueIotBindingServiceImpl {
         .bind(queue_id)
         .fetch_one(&self.pool)
         .await
-        .map_err(|error| Status::internal(error.to_string()))?;
+        .map_err(db_error)?;
         Ok(Response::new(row.into_proto()))
     }
 
@@ -192,7 +197,7 @@ impl QueueIotBindingServiceTrait for QueueIotBindingServiceImpl {
         .bind(queue_id)
         .execute(&self.pool)
         .await
-        .map_err(|error| Status::internal(error.to_string()))?;
+        .map_err(db_error)?;
 
         Ok(Response::new(UnbindIotDeviceResponse {
             success: result.rows_affected() > 0,

@@ -225,7 +225,7 @@ fn spawn_mqtt_worker(pool: sqlx::PgPool, stream_manager: StreamConnectionManager
                                 if let (Some(uid), Some(pin)) = (device_uid, pin) {
                                     if let Err(error) = sqlx::query(
                                         "INSERT INTO iot_devices (device_uid, name, last_seen_at) \
-                                         VALUES ($1, 'IoT ' || $1, NOW()) \
+                                         VALUES ($1, LEFT('IoT ' || $1, 100), NOW()) \
                                          ON CONFLICT (device_uid) DO UPDATE SET last_seen_at = NOW()",
                                     )
                                     .bind(uid)
@@ -274,7 +274,7 @@ fn spawn_mqtt_worker(pool: sqlx::PgPool, stream_manager: StreamConnectionManager
                                         INSERT INTO iot_devices (
                                             device_uid, name, ip_address, firmware_version, last_seen_at
                                         )
-                                        VALUES ($1, 'IoT ' || $1, $2, $3, NOW())
+                                        VALUES ($1, LEFT('IoT ' || $1, 100), $2, $3, NOW())
                                         ON CONFLICT (device_uid) DO UPDATE
                                         SET ip_address = COALESCE(EXCLUDED.ip_address, iot_devices.ip_address),
                                             firmware_version = COALESCE(EXCLUDED.firmware_version, iot_devices.firmware_version),
