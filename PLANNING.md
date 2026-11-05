@@ -13,7 +13,7 @@
 | Backend gRPC | 🟡 Source present | Last known `cargo check` was green; not rerun for this update |
 | Frontend CMS | 🟡 Source present | Graph includes auth and route handlers; session enforcement still needs review |
 | Android Player | ⚪ Behavior unaudited | Player and offline-manifest code/docs are in the graph; runtime/retry behavior not checked |
-| DB Migrations | 🔴 Drift | Docs claim 48 migrations, actual latest is 0045 (45 up migrations) |
+| DB Migrations | 🔴 Drift | Docs claim 47 migrations, actual latest is 0044 (44 up migrations) |
 | IoT/MQTT Worker | ⚪ Not rechecked | Previously observed running; current runtime status not verified |
 | Compose Orchestration | 🟡 Partial | External Postgres/MQTT containers and external `dka-internal` network; floating image tags and no healthchecks |
 
