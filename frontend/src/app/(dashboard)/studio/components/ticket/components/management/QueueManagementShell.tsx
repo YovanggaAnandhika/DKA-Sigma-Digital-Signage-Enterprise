@@ -57,19 +57,7 @@ export default function QueueManagementShell({ activeTab }: QueueManagementShell
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
-      {/* Sleek Segmented Route Tabs Bar */}
-      <div
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '4px',
-          backgroundColor: 'var(--bg-surface-elevated)',
-          padding: '4px',
-          borderRadius: '10px',
-          border: '1px solid var(--border-subtle)',
-          alignSelf: 'flex-start',
-        }}
-      >
+    <nav className="dashboard-tabs" aria-label="Navigasi manajemen antrean">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -78,29 +66,16 @@ export default function QueueManagementShell({ activeTab }: QueueManagementShell
             <Link
               key={tab.id}
               href={tab.href}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '7px 16px',
-                borderRadius: '7px',
-                fontSize: '0.8125rem',
-                fontWeight: isActive ? 700 : 500,
-                color: isActive ? '#ffffff' : 'var(--text-secondary)',
-                backgroundColor: isActive ? 'var(--primary-600)' : 'transparent',
-                border: '1px solid transparent',
-                textDecoration: 'none',
-                transition: 'all 0.15s ease',
-              }}
+              className="dashboard-tab"
+              aria-current={isActive ? 'page' : undefined}
             >
-              <Icon size={15} />
+              <Icon size={19} strokeWidth={2.2} />
               <span>{tab.label}</span>
             </Link>
           );
         })}
-      </div>
+      </nav>
 
-      {/* Dynamic Tab Body */}
       <div style={{ width: '100%' }}>
         {activeTab === 'data' && <TabDataTab />}
         {activeTab === 'riwayat' && <TabRiwayatTab />}

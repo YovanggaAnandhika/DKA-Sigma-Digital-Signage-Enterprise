@@ -291,14 +291,10 @@ export default function ComponentPickerModal() {
 
         {/* Component Tabs */}
         <div
-          style={{
-            display: 'flex',
-            gap: '8px',
-            padding: '12px 20px',
-            borderBottom: '1px solid var(--border-subtle)',
-            backgroundColor: 'var(--bg-base)',
-            overflowX: 'auto',
-          }}
+          className="dashboard-tabs"
+          role="group"
+          aria-label="Jenis komponen"
+          style={{ margin: '12px 20px', background: 'var(--bg-base)' }}
         >
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -307,22 +303,10 @@ export default function ComponentPickerModal() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as any)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px 14px',
-                  borderRadius: '8px',
-                  fontSize: '0.8125rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  border: isActive ? '1px solid var(--primary-500)' : '1px solid transparent',
-                  backgroundColor: isActive ? 'var(--primary-50)' : 'transparent',
-                  color: isActive ? 'var(--primary-600)' : 'var(--text-secondary)',
-                  whiteSpace: 'nowrap',
-                }}
+                className="dashboard-tab"
+                aria-pressed={isActive}
               >
-                <Icon size={15} />
+                <Icon size={19} strokeWidth={2.2} />
                 <span>{tab.label}</span>
                 <span
                   style={{

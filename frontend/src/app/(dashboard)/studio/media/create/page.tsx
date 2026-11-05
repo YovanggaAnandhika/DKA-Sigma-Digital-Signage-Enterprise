@@ -234,49 +234,23 @@ export default function CreateMediaPage() {
       </div>
 
       {/* Mode Switch Tabs */}
-      <div style={{ display: 'flex', gap: '8px', backgroundColor: 'var(--bg-surface-elevated)', padding: '4px', borderRadius: '8px', width: 'fit-content', border: '1px solid var(--border-subtle)' }}>
+      <div className="dashboard-tabs" role="group" aria-label="Metode menambahkan media">
         <button
           type="button"
           onClick={() => setMode('upload')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '8px 16px',
-            borderRadius: '6px',
-            border: 'none',
-            fontSize: '0.8125rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            backgroundColor: mode === 'upload' ? 'var(--bg-base)' : 'transparent',
-            color: mode === 'upload' ? 'var(--primary-600)' : 'var(--text-secondary)',
-            boxShadow: mode === 'upload' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-            transition: 'all 0.15s ease'
-          }}
+          className="dashboard-tab"
+          aria-pressed={mode === 'upload'}
         >
-          <UploadCloud size={16} />
+          <UploadCloud size={19} strokeWidth={2.2} />
           <span>Unggah Berkas</span>
         </button>
         <button
           type="button"
           onClick={() => setMode('url')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '8px 16px',
-            borderRadius: '6px',
-            border: 'none',
-            fontSize: '0.8125rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            backgroundColor: mode === 'url' ? 'var(--bg-base)' : 'transparent',
-            color: mode === 'url' ? 'var(--primary-600)' : 'var(--text-secondary)',
-            boxShadow: mode === 'url' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-            transition: 'all 0.15s ease'
-          }}
+          className="dashboard-tab"
+          aria-pressed={mode === 'url'}
         >
-          <Globe size={16} />
+          <Globe size={19} strokeWidth={2.2} />
           <span>Tautan URL / Halaman Web</span>
         </button>
       </div>

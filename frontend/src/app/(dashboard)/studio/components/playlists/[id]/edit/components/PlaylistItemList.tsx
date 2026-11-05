@@ -166,7 +166,7 @@ export default function PlaylistItemList({
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(item.id!)}
-                        className="btn btn-danger"
+                        className="btn btn-danger dashboard-icon-action dashboard-icon-action-danger"
                         style={{ padding: '6px 8px' }}
                         title="Hapus dari playlist"
                       >

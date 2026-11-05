@@ -119,61 +119,27 @@ function ScheduleDetailView() {
 
       {/* 2-Tab Navigation Bar (HDR Vanilla CSS) */}
       <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          borderBottom: '1px solid var(--border-subtle)',
-          paddingBottom: '2px',
-        }}
+        className="dashboard-tabs"
+        role="group"
+        aria-label="Bagian jadwal"
       >
         <button
           type="button"
           onClick={() => setActiveTab('data')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 18px',
-            fontSize: '0.875rem',
-            fontWeight: activeTab === 'data' ? 600 : 500,
-            color: activeTab === 'data' ? 'var(--text-primary)' : 'var(--text-secondary)',
-            backgroundColor: activeTab === 'data' ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-            borderBottom: activeTab === 'data' ? '2px solid var(--primary-500)' : '2px solid transparent',
-            borderTop: 'none',
-            borderLeft: 'none',
-            borderRight: 'none',
-            borderRadius: '8px 8px 0 0',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
+          className="dashboard-tab"
+          aria-pressed={activeTab === 'data'}
         >
-          <LayoutGrid size={16} style={{ color: activeTab === 'data' ? 'var(--primary-400)' : 'var(--text-muted)' }} />
+          <LayoutGrid size={19} strokeWidth={2.2} />
           <span>Data Jadwal</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('rollout')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 18px',
-            fontSize: '0.875rem',
-            fontWeight: activeTab === 'rollout' ? 600 : 500,
-            color: activeTab === 'rollout' ? 'var(--text-primary)' : 'var(--text-secondary)',
-            backgroundColor: activeTab === 'rollout' ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-            borderBottom: activeTab === 'rollout' ? '2px solid var(--primary-500)' : '2px solid transparent',
-            borderTop: 'none',
-            borderLeft: 'none',
-            borderRight: 'none',
-            borderRadius: '8px 8px 0 0',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
+          className="dashboard-tab"
+          aria-pressed={activeTab === 'rollout'}
         >
-          <Rocket size={16} style={{ color: activeTab === 'rollout' ? 'var(--primary-400)' : 'var(--text-muted)' }} />
+          <Rocket size={19} strokeWidth={2.2} />
           <span>Rollout & Upload Media</span>
           {layoutMediaItems.length > 0 && (
             <span

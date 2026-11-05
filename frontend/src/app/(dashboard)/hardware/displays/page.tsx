@@ -301,11 +301,10 @@ export default function DisplaysPage() {
                             onClick={() => handleAccept(d)}
                             disabled={pairingId === d.id}
                             className="btn btn-primary"
-                            style={{ padding: '4px 10px', fontSize: '0.75rem', gap: '4px' }}
                             title="Setujui dan Aktifkan Layar Android"
+                            aria-label={`Setujui dan aktifkan layar ${d.name}`}
                           >
                             <CheckCircle2 size={13} />
-                            <span>{pairingId === d.id ? 'Memproses...' : 'Setujui'}</span>
                           </button>
                         )}
                         <Link href={`/hardware/displays/${d.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Lihat Detail">

@@ -111,10 +111,10 @@ export default function OrientasiPage() {
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '6px' }}>
-                        <Link href={`/studio/layouts/orientasi/${o.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit Orientasi">
+                        <Link href={`/studio/layouts/orientasi/${o.id}/edit`} className="btn btn-secondary dashboard-icon-action" style={{ padding: '5px 8px' }} title="Edit Orientasi">
                           <Edit size={14} />
                         </Link>
-                        <button onClick={() => handleDelete(o.id, o.name)} className="btn btn-outline" style={{ padding: '5px 8px', color: 'var(--accent-rose)' }} title="Hapus Orientasi">
+                        <button onClick={() => handleDelete(o.id, o.name)} className="btn btn-outline dashboard-icon-action dashboard-icon-action-danger" style={{ padding: '5px 8px' }} title="Hapus Orientasi">
                           <Trash2 size={14} />
                         </button>
                       </div>

@@ -57,14 +57,14 @@ export default function TabCountersTab() {
               </td>
               <td style={{ textAlign: 'right' }}>
                 <div style={{ display: 'inline-flex', gap: '6px' }}>
-                  <Link href={`${basePath}/${c.id}`} className="btn btn-outline" style={{ padding: '6px' }} title={`Edit ${counterLabel.toLowerCase()}`} aria-label={`Edit ${counterLabel.toLowerCase()}`}>
+                  <Link href={`${basePath}/${c.id}`} className="btn btn-outline dashboard-icon-action" style={{ padding: '6px' }} title={`Edit ${counterLabel.toLowerCase()}`} aria-label={`Edit ${counterLabel.toLowerCase()}`}>
                     <Edit size={14} />
                   </Link>
                   <button
                     type="button"
                     onClick={() => handleConfirmDelete(c.id, c.counterName)}
                     disabled={queue.counters.length <= 1}
-                    className="btn btn-outline"
+                    className="btn btn-outline dashboard-icon-action dashboard-icon-action-danger"
                     style={{ padding: '6px', color: 'var(--accent-rose)', opacity: queue.counters.length <= 1 ? 0.4 : 1 }}
                     title={queue.counters.length <= 1 ? `Minimal harus ada 1 ${counterLabel.toLowerCase()}` : `Hapus ${counterLabel.toLowerCase()}`}
                     aria-label={`Hapus ${counterLabel.toLowerCase()}`}

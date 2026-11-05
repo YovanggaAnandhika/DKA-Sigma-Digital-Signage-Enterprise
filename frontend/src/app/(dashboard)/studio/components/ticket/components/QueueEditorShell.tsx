@@ -382,7 +382,7 @@ export default function QueueEditorShell({ activeTab, children }: { activeTab: s
         >
           <div
             ref={tabScrollRef}
-            className="no-scrollbar"
+            className="dashboard-tabs no-scrollbar"
             onWheel={(e) => {
               if (e.deltaY && tabScrollRef.current) {
                 tabScrollRef.current.scrollLeft += e.deltaY;
@@ -411,24 +411,11 @@ export default function QueueEditorShell({ activeTab, children }: { activeTab: s
                 <Link
                   key={t.id}
                   href={`${basePath}/${t.id}`}
+                  className="dashboard-tab"
+                  aria-current={isActive ? 'page' : undefined}
                   data-tab-active={isActive ? 'true' : 'false'}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '10px 4px 12px 4px',
-                    fontSize: '0.84rem',
-                    fontWeight: isActive ? 600 : 500,
-                    color: isActive ? 'var(--primary-400)' : 'var(--text-muted)',
-                    borderBottom: isActive ? '2px solid var(--primary-500)' : '2px solid transparent',
-                    textDecoration: 'none',
-                    transition: 'all 0.15s ease',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                    userSelect: 'none',
-                  }}
                 >
-                  <Icon size={15} style={{ color: isActive ? 'var(--primary-400)' : 'var(--text-muted)' }} />
+                  <Icon size={19} strokeWidth={2.2} />
                   <span>{t.label}</span>
                 </Link>
               );

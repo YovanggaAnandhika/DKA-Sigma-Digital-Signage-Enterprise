@@ -120,10 +120,10 @@ export default function ResolusiPage() {
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '6px' }}>
-                        <Link href={`/studio/layouts/resolusi/${r.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit Resolusi">
+                        <Link href={`/studio/layouts/resolusi/${r.id}/edit`} className="btn btn-secondary dashboard-icon-action" style={{ padding: '5px 8px' }} title="Edit Resolusi">
                           <Edit size={14} />
                         </Link>
-                        <button onClick={() => handleDelete(r.id, r.name)} className="btn btn-outline" style={{ padding: '5px 8px', color: 'var(--accent-rose)' }} title="Hapus Resolusi">
+                        <button onClick={() => handleDelete(r.id, r.name)} className="btn btn-outline dashboard-icon-action dashboard-icon-action-danger" style={{ padding: '5px 8px' }} title="Hapus Resolusi">
                           <Trash2 size={14} />
                         </button>
                       </div>

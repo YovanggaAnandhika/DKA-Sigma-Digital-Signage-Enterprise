@@ -84,15 +84,7 @@ export default function LayoutsLayout({ children }: LayoutsLayoutProps) {
       </div>
 
       {/* Tabs Navigation Bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          borderBottom: '1px solid var(--border-subtle)',
-          paddingBottom: '2px',
-        }}
-      >
+      <nav className="dashboard-tabs" aria-label="Navigasi layout">
         {tabs.map((tab) => {
           const isActive = normalizedPath === tab.href;
           const Icon = tab.icon;
@@ -101,31 +93,18 @@ export default function LayoutsLayout({ children }: LayoutsLayoutProps) {
             <Link
               key={tab.id}
               href={tab.href}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '10px 18px',
-                fontSize: '0.875rem',
-                fontWeight: isActive ? 600 : 500,
-                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                backgroundColor: isActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                borderBottom: isActive ? '2px solid var(--primary-500)' : '2px solid transparent',
-                borderRadius: '8px 8px 0 0',
-                textDecoration: 'none',
-                transition: 'all 0.15s ease',
-              }}
+              className="dashboard-tab"
+              aria-current={isActive ? 'page' : undefined}
             >
-              <Icon size={16} style={{ color: isActive ? 'var(--primary-400)' : 'var(--text-muted)' }} />
+              <Icon size={19} strokeWidth={2.2} />
               <span>{tab.label}</span>
             </Link>
           );
         })}
-      </div>
+      </nav>
 
       {/* Content for Active Tab */}
       <div>{children}</div>
     </div>
   );
 }
-
