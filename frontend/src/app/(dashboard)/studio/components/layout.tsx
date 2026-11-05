@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  ArrowLeft,
   Layers,
   ListMusic,
   Globe,
@@ -25,11 +26,50 @@ const TABS = [
 export default function ComponentsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isCreateOrEdit = pathname.includes('/create') || pathname.includes('/edit');
+  const isTicketManagement =
+    pathname.startsWith('/studio/components/ticket/data') ||
+    pathname.startsWith('/studio/components/ticket/riwayat');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', ...(isCreateOrEdit ? { flex: 1, minHeight: 0 } : {}) }}>
       {/* Top Header & Tab Navigation Bar on List Pages */}
-      {!isCreateOrEdit && (
+      {isTicketManagement ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+          <Link
+            href="/studio/components"
+            className="btn btn-outline"
+            style={{ width: '42px', minWidth: '42px', height: '42px', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}
+            aria-label="Kembali ke Komponen"
+            title="Kembali ke Komponen"
+          >
+            <ArrowLeft size={20} />
+          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              style={{
+                padding: '10px',
+                borderRadius: '12px',
+                backgroundColor: 'var(--bg-surface-elevated)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ticket size={22} />
+            </div>
+            <div>
+              <h1 style={{ fontSize: '1.375rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+                Nomor Antrian
+              </h1>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                Kelola data antrean dan riwayat panggilan.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : !isCreateOrEdit && (
         <>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

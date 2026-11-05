@@ -77,6 +77,7 @@ This project is an enterprise-grade digital signage management and streaming pla
   - Borders: `var(--border-subtle)`, `var(--border-strong)`, `var(--border-focus)`
   - Typography: `var(--text-primary)`, `var(--text-secondary)`, `var(--text-muted)`
   - Shadows & Accents: `var(--card-shadow)`, `var(--card-shadow-hover)`, `var(--primary-500)`, `var(--accent-emerald)`, etc.
+- For back navigation from nested pages, use a **circular icon-only back button** (circular icon button pattern) rather than a text button; keep it visually aligned with the page's main icon and provide an `aria-label` and `title` describing its destination.
 - Support both themes: CSS base tokens are dark (`:root`), `[data-theme="light"]` overrides them. The app currently boots in light mode (`RootLayout` + `ThemeProvider`) and persists the choice in `localStorage` (`dkasigma_theme`).
 
 ### 4. Database & Migration Rule
