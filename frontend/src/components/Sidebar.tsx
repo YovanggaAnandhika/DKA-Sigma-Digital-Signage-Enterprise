@@ -10,8 +10,6 @@ import {
   FolderOpen,
   ShieldCheck,
   Zap,
-  ChevronRight,
-  ChevronDown,
   MonitorPlay,
   CalendarDays,
   Layers,
@@ -44,22 +42,22 @@ const navGroups: NavGroup[] = [
     items: [
       { name: 'Layar Retail', desc: 'Manajemen & Pairing Player', href: '/hardware/displays', icon: Tv },
       { name: 'Grup Layar', desc: 'Pengelompokan Layar', href: '/hardware/groups', icon: MonitorPlay },
-      { name: 'Perangkat IoT', desc: 'Approval & Konfigurasi Tombol IoT', href: '/hardware/iot', icon: Cpu },
+      { name: 'Perangkat IoT', desc: 'Approval & Tombol IoT', href: '/hardware/iot', icon: Cpu },
     ],
   },
   {
     heading: 'STUDIO & KONTEN',
     items: [
       { name: 'Penjadwalan', desc: 'Jadwal Putar & Prioritas', href: '/studio/schedules', icon: CalendarDays },
-      { name: 'Layout', desc: 'Tata Letak Multi-Zona Layar', href: '/studio/layouts', icon: Palette },
-      { name: 'Komponen', desc: 'Widget, Daftar Putar & Konten Layar', href: '/studio/components', icon: Layers },
-      { name: 'Pustaka Media', desc: 'Aset Gambar & Video Promosi', href: '/studio/media', icon: FolderOpen },
+      { name: 'Layout', desc: 'Tata Letak Multi-Zona', href: '/studio/layouts', icon: Palette },
+      { name: 'Komponen', desc: 'Widget & Daftar Putar', href: '/studio/components', icon: Layers },
+      { name: 'Pustaka Media', desc: 'Aset Gambar & Video', href: '/studio/media', icon: FolderOpen },
     ],
   },
   {
     heading: 'SISTEM & AKSES',
     items: [
-      { name: 'Hak Akses & Peran', desc: 'Pengaturan Akun & Akses Pengguna', href: '/iam/roles', icon: ShieldCheck },
+      { name: 'Hak Akses & Peran', desc: 'Pengaturan Akun & Peran', href: '/iam/roles', icon: ShieldCheck },
     ],
   },
 ];
@@ -71,9 +69,9 @@ export function Sidebar() {
   return (
     <aside
       style={{
-        width: collapsed ? '68px' : '260px',
+        width: collapsed ? '76px' : '280px',
         backgroundColor: 'var(--bg-secondary)',
-        borderRight: '2px solid var(--border-subtle)',
+        borderRight: '1px solid var(--border-subtle)',
         display: 'flex',
         flexDirection: 'column',
         height: '100vh',
@@ -82,44 +80,45 @@ export function Sidebar() {
         left: 0,
         zIndex: 40,
         flexShrink: 0,
-        transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-        boxShadow: '2px 0 12px rgba(0,0,0,0.06)',
+        transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        boxShadow: '4px 0 24px rgba(0, 0, 0, 0.04)',
       }}
     >
       {/* Brand Header */}
       <div
         style={{
-          height: '64px',
+          height: '72px',
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
-          padding: collapsed ? '0 14px' : '0 20px',
-          borderBottom: '2px solid var(--border-subtle)',
+          gap: '14px',
+          padding: collapsed ? '0 18px' : '0 24px',
+          borderBottom: '1px solid var(--border-subtle)',
           justifyContent: collapsed ? 'center' : 'flex-start',
         }}
       >
         <div
           style={{
-            width: '36px',
-            height: '36px',
+            width: '40px',
+            height: '40px',
             borderRadius: '12px',
-            backgroundColor: 'var(--primary-600)',
+            background: 'linear-gradient(135deg, var(--primary-500), var(--primary-700))',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: '#fff',
-            boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)',
+            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.35)',
             flexShrink: 0,
+            transition: 'transform 0.2s ease',
           }}
         >
-          <Zap size={20} />
+          <Zap size={22} />
         </div>
         {!collapsed && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-            <span style={{ fontWeight: 700, fontSize: '0.95rem', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+            <span style={{ fontWeight: 800, fontSize: '1.05rem', letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
               HNDSigma
             </span>
-            <span style={{ fontSize: '0.625rem', fontWeight: 600, padding: '1px 5px', borderRadius: '4px', backgroundColor: 'rgba(37, 99, 235, 0.12)', color: 'var(--primary-400)' }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 6px', borderRadius: '6px', backgroundColor: 'rgba(37, 99, 235, 0.15)', color: 'var(--primary-400)', letterSpacing: '0.05em' }}>
               PRO
             </span>
           </div>
@@ -132,30 +131,30 @@ export function Sidebar() {
           flex: 1,
           overflowY: 'auto',
           overflowX: 'hidden',
-          padding: '16px 8px',
+          padding: '20px 12px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '16px',
+          gap: '20px',
         }}
       >
         {navGroups.map((group) => (
-          <div key={group.heading} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <div key={group.heading} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             {!collapsed ? (
               <div
                 style={{
-                  fontSize: '0.65rem',
+                  fontSize: '0.675rem',
                   fontWeight: 700,
                   textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
+                  letterSpacing: '0.1em',
                   color: 'var(--text-muted)',
-                  padding: '4px 12px 6px 12px',
+                  padding: '4px 12px 8px 12px',
                   whiteSpace: 'nowrap',
                 }}
               >
                 {group.heading}
               </div>
             ) : (
-              <div style={{ borderTop: '1px solid var(--border-subtle)', margin: '4px 0 8px 0' }} />
+              <div style={{ borderTop: '1px solid var(--border-subtle)', margin: '8px 4px' }} />
             )}
 
             {group.items.map((item) => {
@@ -166,35 +165,77 @@ export function Sidebar() {
                 <Link
                   key={item.name}
                   href={item.href}
-                  title={collapsed ? item.name : undefined}
+                  title={collapsed ? `${item.name} - ${item.desc || ''}` : undefined}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
-                    padding: collapsed ? '10px' : '9px 12px',
-                    borderRadius: '10px',
-                    fontSize: '0.8125rem',
-                    fontWeight: isActive ? 600 : 500,
+                    padding: collapsed ? '12px' : '10px 14px',
+                    borderRadius: '12px',
                     textDecoration: 'none',
                     justifyContent: collapsed ? 'center' : 'flex-start',
                     backgroundColor: isActive ? 'rgba(37, 99, 235, 0.12)' : 'transparent',
-                    color: isActive ? 'var(--primary-400)' : 'var(--text-secondary)',
-                    border: isActive ? '1px solid rgba(59, 130, 246, 0.35)' : '1px solid transparent',
-                    transition: 'all 0.15s ease',
+                    border: isActive ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid transparent',
+                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                    position: 'relative',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
                   }}
                 >
-                  <Icon size={18} style={{ flexShrink: 0, color: isActive ? 'var(--primary-500)' : 'inherit' }} />
+                  <Icon
+                    size={20}
+                    style={{
+                      flexShrink: 0,
+                      color: isActive ? 'var(--primary-400)' : 'var(--text-secondary)',
+                      transition: 'transform 0.2s ease, color 0.2s ease',
+                    }}
+                  />
+
                   {!collapsed && (
-                    <div style={{ display: 'flex', alignItems: 'center', flex: 1, overflow: 'hidden' }}>
-                      <span style={{ whiteSpace: 'nowrap', lineHeight: 1.2 }}>{item.name}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', gap: '2px' }}>
+                      <span
+                        style={{
+                          fontSize: '0.85rem',
+                          fontWeight: isActive ? 600 : 500,
+                          whiteSpace: 'nowrap',
+                          lineHeight: 1.25,
+                          color: isActive ? 'var(--primary-300)' : 'var(--text-primary)',
+                        }}
+                      >
+                        {item.name}
+                      </span>
+                      {item.desc && (
+                        <span
+                          style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 400,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            color: 'var(--text-muted)',
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          {item.desc}
+                        </span>
+                      )}
                     </div>
                   )}
+
                   {!collapsed && item.badge && (
                     <span
                       style={{
                         marginLeft: 'auto',
                         fontSize: '0.625rem',
-                        padding: '1px 6px',
+                        padding: '2px 6px',
                         borderRadius: '9999px',
                         fontWeight: 700,
                         backgroundColor: 'rgba(16, 185, 129, 0.15)',
