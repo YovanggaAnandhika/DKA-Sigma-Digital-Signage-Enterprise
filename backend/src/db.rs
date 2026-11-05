@@ -69,8 +69,7 @@ pub async fn revert_migration(pool: &DbPool) -> Result<(), Box<dyn std::error::E
         "SELECT version FROM _sqlx_migrations WHERE success = true ORDER BY version ASC",
     )
     .fetch_all(pool)
-    .await
-    .unwrap_or_default();
+    .await?;
 
     if rows.is_empty() {
         info!("No applied migrations found in _sqlx_migrations to revert.");
