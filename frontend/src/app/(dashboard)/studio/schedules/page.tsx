@@ -1,13 +1,31 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/services';
 import type { Schedule } from '@/lib/services/studio/schedule.types';
 import { Pagination } from '@/components/ui/Pagination';
-import { CalendarDays, Search, RefreshCw, Trash2, Trash, Eye, Clock, Layers, ArrowRight, ShieldAlert } from 'lucide-react';
+import { CalendarDays, Search, RefreshCw, Trash2, Trash, Eye, Clock, Layers, ArrowRight, ShieldAlert, ChevronLeft, ChevronRight, Monitor, Users } from 'lucide-react';
 import EmergencyBroadcastModal from '@/components/ui/EmergencyBroadcastModal';
 import { TableDataValue } from '@/components/ui/TableDataValue';
+import type { Device, DisplayGroup } from '@/lib/services';
+
+const calendarWeekdays = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+
+function localDateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function scheduleEventOccursOnDate(event: Schedule['eventsList'][number], date: Date) {
+  const dateKey = localDateKey(date);
+  if (event.startDate && dateKey < event.startDate.slice(0, 10)) return false;
+  if (event.endDate && dateKey > event.endDate.slice(0, 10)) return false;
+  const weekday = date.getDay() === 0 ? 7 : date.getDay();
+  return (event.daysOfWeek || '1,2,3,4,5,6,7')
+    .split(',')
+    .map((day) => day.trim())
+    .includes(String(weekday));
+}
 
 export default function SchedulesPage() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -19,19 +37,60 @@ export default function SchedulesPage() {
   const [emergencyOpen, setEmergencyOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deleting, setDeleting] = useState(false);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [displayGroups, setDisplayGroups] = useState<DisplayGroup[]>([]);
+  const [loadError, setLoadError] = useState('');
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+
+  const calendarDates = useMemo(() => {
+    const first = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
+    const mondayOffset = (first.getDay() + 6) % 7;
+    return Array.from({ length: 42 }, (_, index) =>
+      new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), index - mondayOffset + 1)
+    );
+  }, [calendarMonth]);
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.getSchedules({ search, page, limit });
-      setSchedules(res.data);
-      setTotal(res.total);
+      setLoadError('');
+      const [scheduleRes, deviceRes, groupRes] = await Promise.all([
+        api.getSchedules({ search, page, limit }),
+        api.getDevices({ limit: 1000 }),
+        api.getDisplayGroups({ limit: 1000 }),
+      ]);
+      setSchedules(scheduleRes.data);
+      setTotal(scheduleRes.total);
+      setDevices(deviceRes.data);
+      setDisplayGroups(groupRes.data);
     } catch (err) {
-      console.error('Failed to load schedules:', err);
+      console.error('Failed to load rundown calendar:', err);
+      setLoadError(err instanceof Error ? err.message : 'Gagal memuat rundown operasional.');
     } finally {
       setLoading(false);
     }
   }, [search, page, limit]);
+
+  const scheduleTargets = useMemo(() => {
+    const targets = new Map<string, { displays: string[]; groups: string[] }>();
+    for (const device of devices) {
+      if (!device.scheduleId) continue;
+      const current = targets.get(device.scheduleId) || { displays: [], groups: [] };
+      current.displays.push(device.name);
+      targets.set(device.scheduleId, current);
+    }
+    for (const group of displayGroups) {
+      const scheduleId = group.scheduleId || group.schedule_id;
+      if (!scheduleId) continue;
+      const current = targets.get(scheduleId) || { displays: [], groups: [] };
+      current.groups.push(group.name);
+      targets.set(scheduleId, current);
+    }
+    return targets;
+  }, [devices, displayGroups]);
 
   useEffect(() => {
     loadData();
@@ -133,10 +192,10 @@ export default function SchedulesPage() {
           </div>
           <div>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-              Penjadwalan
+              Rundown Operasional
             </h1>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Daftar jadwal tayang aktif. Jadwal baru dipublikasikan langsung dari menu <strong>Layouts</strong> (Aksi Push Jadwal).
+              Kalender jadwal tayang player dan kelompok display.
             </p>
           </div>
         </div>
@@ -178,6 +237,87 @@ export default function SchedulesPage() {
           </Link>
         </div>
       </div>
+
+      {loadError && (
+        <div role="alert" className="card-elevated" style={{ padding: 14, color: 'var(--accent-rose)', fontSize: '0.85rem' }}>
+          Gagal memuat kalender rundown: {loadError}
+        </div>
+      )}
+
+      <section className="card-elevated" style={{ padding: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button type="button" className="btn btn-outline" style={{ padding: 7 }} aria-label="Bulan sebelumnya" onClick={() => setCalendarMonth((month) => new Date(month.getFullYear(), month.getMonth() - 1, 1))}>
+              <ChevronLeft size={16} />
+            </button>
+            <h2 style={{ minWidth: 180, textAlign: 'center', margin: 0, color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 700 }}>
+              {calendarMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+            </h2>
+            <button type="button" className="btn btn-outline" style={{ padding: 7 }} aria-label="Bulan berikutnya" onClick={() => setCalendarMonth((month) => new Date(month.getFullYear(), month.getMonth() + 1, 1))}>
+              <ChevronRight size={16} />
+            </button>
+            <button type="button" className="btn btn-outline" style={{ padding: '6px 10px', fontSize: '0.75rem' }} onClick={() => {
+              const now = new Date();
+              setCalendarMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+            }}>Hari ini</button>
+          </div>
+          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+            Jadwal berulang ditampilkan sebagai blok di setiap tanggal yang cocok.
+          </p>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <div style={{ minWidth: 720 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', borderTop: '1px solid var(--border-subtle)', borderLeft: '1px solid var(--border-subtle)' }}>
+              {calendarWeekdays.map((weekday) => (
+                <div key={weekday} style={{ padding: '8px 10px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 700, borderRight: '1px solid var(--border-subtle)', borderBottom: '1px solid var(--border-subtle)' }}>
+                  {weekday}
+                </div>
+              ))}
+              {calendarDates.map((date) => {
+                const inMonth = date.getMonth() === calendarMonth.getMonth();
+                const dayEvents = schedules.flatMap((schedule) =>
+                  (schedule.eventsList || [])
+                    .filter((event) => scheduleEventOccursOnDate(event, date))
+                    .map((event) => ({ schedule, event }))
+                );
+                const today = localDateKey(date) === localDateKey(new Date());
+                return (
+                  <div key={localDateKey(date)} style={{ minHeight: 128, padding: 7, borderRight: '1px solid var(--border-subtle)', borderBottom: '1px solid var(--border-subtle)', background: today ? 'rgba(59,130,246,.055)' : 'var(--bg-surface)', opacity: inMonth ? 1 : 0.48 }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 5 }}>
+                      <span style={{ width: 23, height: 23, borderRadius: 999, display: 'grid', placeItems: 'center', background: today ? 'var(--primary-500)' : 'transparent', color: today ? '#fff' : 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: today ? 700 : 500 }}>
+                        {date.getDate()}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {dayEvents.slice(0, 3).map(({ schedule, event }) => {
+                        const targets = scheduleTargets.get(schedule.id);
+                        const targetLabels = [
+                          ...(targets?.displays || []).map((name) => ({ label: name, icon: Monitor })),
+                          ...(targets?.groups || []).map((name) => ({ label: name, icon: Users })),
+                        ];
+                        return (
+                          <Link key={`${schedule.id}-${event.id}`} href={`/studio/schedules/${schedule.id}`} title={`${schedule.name} · ${event.layoutName} · ${event.startTime}–${event.endTime}`} style={{ display: 'block', padding: '5px 6px', borderRadius: 6, borderLeft: '3px solid var(--primary-500)', background: 'rgba(59,130,246,.12)', color: 'var(--text-primary)', textDecoration: 'none', overflow: 'hidden' }}>
+                            <span style={{ display: 'block', fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.layoutName || schedule.name}</span>
+                            <span style={{ display: 'block', marginTop: 2, color: 'var(--text-secondary)', fontSize: '0.63rem' }}>{event.startTime.slice(0, 5)}–{event.endTime.slice(0, 5)}</span>
+                            {targetLabels.slice(0, 2).map(({ label, icon: TargetIcon }) => (
+                              <span key={label} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, maxWidth: '100%', marginTop: 3, marginRight: 4, padding: '2px 4px', borderRadius: 4, background: 'var(--bg-surface-elevated)', color: 'var(--text-muted)', fontSize: '0.58rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <TargetIcon size={9} />{label}
+                              </span>
+                            ))}
+                            {targetLabels.length > 2 && <span style={{ color: 'var(--text-muted)', fontSize: '0.58rem' }}>+{targetLabels.length - 2} target</span>}
+                          </Link>
+                        );
+                      })}
+                      {dayEvents.length > 3 && <span style={{ paddingLeft: 4, color: 'var(--text-muted)', fontSize: '0.65rem' }}>+{dayEvents.length - 3} rundown</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Filter & Search Bar */}
       <div className="card-elevated" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>

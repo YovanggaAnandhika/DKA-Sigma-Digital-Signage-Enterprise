@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import { api, Layout } from '@/lib/services';
 import { Pagination } from '@/components/ui/Pagination';
 import {
@@ -14,10 +13,6 @@ import {
   Send,
 } from 'lucide-react';
 
-const PushToScheduleModal = dynamic(() => import('./components/PushToScheduleModal'), {
-  ssr: false,
-});
-
 export default function LayoutsDataPage() {
   const router = useRouter();
   const [layouts, setLayouts] = useState<Layout[]>([]);
@@ -26,10 +21,6 @@ export default function LayoutsDataPage() {
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-
-  // Push to Schedule modal state
-  const [pushModalOpen, setPushModalOpen] = useState(false);
-  const [selectedLayoutForPush, setSelectedLayoutForPush] = useState<Layout | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -58,9 +49,8 @@ export default function LayoutsDataPage() {
     }
   };
 
-  const handleOpenPushModal = (layout: Layout) => {
-    setSelectedLayoutForPush(layout);
-    setPushModalOpen(true);
+  const handleOpenScheduleAssignment = (layout: Layout) => {
+    router.push(`/studio/schedules/assign/${layout.id}`);
   };
 
   return (
@@ -158,23 +148,21 @@ export default function LayoutsDataPage() {
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div style={{ display: 'inline-flex', gap: '6px' }}>
-                        {!l.isScheduleSynced && (
-                          <button
-                            onClick={() => handleOpenPushModal(l)}
-                            className="btn btn-primary"
-                            style={{
-                              padding: '5px 10px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px',
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                            }}
-                            title="Push ke Penjadwalan Layar"
-                          >
-                            <Send size={13} />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleOpenScheduleAssignment(l)}
+                          className="btn btn-primary"
+                          style={{
+                            padding: '5px 10px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                          }}
+                          title="Tambahkan ke Rundown Operasional"
+                        >
+                          <Send size={13} />
+                        </button>
                         <button
                           onClick={() => handleDelete(l.id, l.name)}
                           className="btn btn-outline"
@@ -208,15 +196,6 @@ export default function LayoutsDataPage() {
         )}
       </div>
 
-      {/* Push to Schedule Modal */}
-      {pushModalOpen && selectedLayoutForPush && (
-        <PushToScheduleModal
-          layout={selectedLayoutForPush}
-          isOpen={pushModalOpen}
-          onClose={() => setPushModalOpen(false)}
-          onSuccess={loadData}
-        />
-      )}
     </div>
   );
 }

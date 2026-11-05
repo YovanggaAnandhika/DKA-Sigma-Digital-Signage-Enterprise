@@ -35,6 +35,7 @@ const navGroups: NavGroup[] = [
     heading: 'UTAMA',
     items: [
       { name: 'Ringkasan', desc: 'Ikhtisar & Metrik Layar', href: '/', icon: LayoutDashboard },
+      { name: 'Rundown Operasional', desc: 'Kalender Tayang Layar', href: '/studio/schedules', icon: CalendarDays },
     ],
   },
   {
@@ -48,7 +49,6 @@ const navGroups: NavGroup[] = [
   {
     heading: 'STUDIO & KONTEN',
     items: [
-      { name: 'Penjadwalan', desc: 'Jadwal Putar & Prioritas', href: '/studio/schedules', icon: CalendarDays },
       { name: 'Tata Letak', desc: 'Tata Letak Multi-Zona', href: '/studio/layouts', icon: Palette },
       { name: 'Komponen', desc: 'Widget & Daftar Putar', href: '/studio/components', icon: Layers },
       { name: 'Pustaka', desc: 'Aset Gambar & Video', href: '/studio/media', icon: FolderOpen },

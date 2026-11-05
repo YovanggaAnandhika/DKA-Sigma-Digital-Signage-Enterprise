@@ -2,7 +2,7 @@
 
 ## Current Status
 - **Environment**: Docker Compose dev mode, Bun HMR, Rust gRPC backend
-- **Rechecked**: 2026-11-05 — Graphify snapshot plus targeted source checks; runtime and full test suites not run for this audit
+- **Rechecked**: 2026-11-06 — Rundown Operasional source, frontend typecheck, and backend unit tests verified; browser and database integration not run
 - **Graphify snapshot**: report generated 2026-10-20; 4,156 nodes, 9,538 edges, 405 communities. Structural evidence only, not a behavior or runtime audit.
 - **Stack**: Rust/Tonic gRPC (`backend/`), Next.js 14 CMS (`frontend/`), Kotlin Media3 player (`android/`), ESP32/Arduino firmware (`iot/`)
 
@@ -19,6 +19,7 @@
 
 ## Recently Completed (Source-Verified)
 
+- **Rundown Operasional calendar and assignment** — Calendar is directly below Ringkasan; layout assignment uses a dedicated page with individual player/group targets, date/time range, and optional weekly recurrence blocks. Existing schedule events append instead of replacing prior entries, and targets already on a different rundown are rejected. Reuses date/group fields in migrations `0014`, `0015`, and `0033`; no new migration or checksum-changing edit was needed. `tsc --noEmit` and backend unit tests pass; browser/database integration was not run.
 - **Dashboard navigation and tables** — shared table styling and contextual cell presentation are in place; child pages with their own tabs hide parent navigation and retain a circular, accessible back button.
 - **Dashboard route loading** — all 69 dashboard `page.tsx` routes have a `loading.tsx` using shared responsive shimmer variants. Route coverage and `bun tsc --noEmit` were checked; browser rendering was not.
 - **IoT heartbeat status** — approved-device list polls every 5 seconds and marks devices offline when telemetry is older than 60 seconds; telemetry detail uses the same threshold. This is timeout-based, not immediate broker disconnect detection.
@@ -77,10 +78,12 @@
 ## Work Order
 
 1. [x] Recheck plan against graph and source; update this document.
-2. [ ] Add regression tests and run `cargo check` for migration revert edge cases (guard is already present).
-3. [ ] Reject invalid schedule times; run targeted backend checks.
-4. [ ] Add service-layer handling for transition and visual-filter modules; validate permission and transaction boundaries.
-5. [ ] Verify media Range behavior and Android offline playback.
-6. [ ] Make Compose startup reproducible with explicit dependencies, healthchecks, and pinned image tags.
-7. [ ] Reconcile migration documentation and route/protobuf coverage.
-8. [ ] Complete the remaining security, Android, and firmware audit checklist.
+2. [x] Implement Rundown Operasional calendar under Ringkasan, with dedicated schedule assignment, player/group tags, custom date/time range, weekly recurrence blocks, and existing-migration reuse.
+3. [ ] Verify Rundown Operasional assignment and recurrence against a running database and browser; confirm multiple target precedence.
+4. [ ] Add regression tests and run `cargo check` for migration revert edge cases (guard is already present).
+5. [ ] Reject invalid schedule times; run targeted backend checks.
+6. [ ] Add service-layer handling for transition and visual-filter modules; validate permission and transaction boundaries.
+7. [ ] Verify media Range behavior and Android offline playback.
+8. [ ] Make Compose startup reproducible with explicit dependencies, healthchecks, and pinned image tags.
+9. [ ] Reconcile migration documentation and route/protobuf coverage.
+10. [ ] Complete the remaining security, Android, and firmware audit checklist.

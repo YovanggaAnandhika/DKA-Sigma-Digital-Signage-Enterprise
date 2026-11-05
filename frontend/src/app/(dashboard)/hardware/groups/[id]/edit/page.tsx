@@ -44,7 +44,7 @@ export default function EditDisplayGroupPage() {
           name: found.name,
           description: found.description || '',
           defaultLayoutId: found.default_layout_id || '',
-          schedule_id: found.schedule_id || '',
+          schedule_id: found.scheduleId || found.schedule_id || '',
         });
       } catch (err: any) {
         alert(err.message || 'Gagal memuat display group');

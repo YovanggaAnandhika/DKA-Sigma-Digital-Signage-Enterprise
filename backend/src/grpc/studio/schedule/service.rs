@@ -1,22 +1,46 @@
-use tonic::{Request, Response, Status};
-use uuid::Uuid;
 use crate::db::DbPool;
+use crate::grpc::proto::studio::v1::schedule::event::{
+    schedule_event_service_server::ScheduleEventService as ScheduleEventServiceTrait,
+    AddScheduleEventRequest, RemoveScheduleEventRequest, RemoveScheduleEventResponse,
+    ScheduleEvent,
+};
+use crate::grpc::proto::studio::v1::schedule::schedule::{
+    schedule_service_server::ScheduleService as ScheduleServiceTrait, CreateScheduleRequest,
+    DeleteScheduleRequest, DeleteScheduleResponse, GetScheduleRequest, ListSchedulesRequest,
+    ListSchedulesResponse, PushLayoutToScheduleRequest, PushLayoutToScheduleResponse, Schedule,
+    UpdateScheduleRequest,
+};
 use crate::modules::studio::schedule::model::{
     AddScheduleEventDto, CreateScheduleDto, ScheduleEntity, ScheduleEventEntity,
     ScheduleWithEventsDto, UpdateScheduleDto,
 };
 use crate::modules::studio::schedule::services::ScheduleService;
-use crate::grpc::proto::studio::v1::schedule::schedule::{
-    schedule_service_server::ScheduleService as ScheduleServiceTrait,
-    CreateScheduleRequest, DeleteScheduleRequest, DeleteScheduleResponse,
-    GetScheduleRequest, ListSchedulesRequest, ListSchedulesResponse, Schedule,
-    UpdateScheduleRequest, PushLayoutToScheduleRequest, PushLayoutToScheduleResponse,
-};
-use crate::grpc::proto::studio::v1::schedule::event::{
-    schedule_event_service_server::ScheduleEventService as ScheduleEventServiceTrait,
-    ScheduleEvent, AddScheduleEventRequest, RemoveScheduleEventRequest,
-    RemoveScheduleEventResponse,
-};
+use tonic::{Request, Response, Status};
+use uuid::Uuid;
+
+fn parse_schedule_date_range(
+    start: Option<&str>,
+    end: Option<&str>,
+) -> Result<(Option<chrono::NaiveDate>, Option<chrono::NaiveDate>), Status> {
+    let parse = |value: Option<&str>, field: &str| {
+        value
+            .filter(|value| !value.is_empty())
+            .map(|value| {
+                chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d").map_err(|_| {
+                    Status::invalid_argument(format!("Invalid {field}; expected YYYY-MM-DD"))
+                })
+            })
+            .transpose()
+    };
+    let start = parse(start, "start_date")?;
+    let end = parse(end, "end_date")?;
+    if matches!((start, end), (Some(start), Some(end)) if end < start) {
+        return Err(Status::invalid_argument(
+            "end_date must be on or after start_date",
+        ));
+    }
+    Ok((start, end))
+}
 
 #[derive(sqlx::FromRow)]
 struct ScheduleEventWithLayoutRow {
@@ -123,11 +147,16 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         &self,
         request: Request<CreateScheduleRequest>,
     ) -> Result<Response<Schedule>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
+        let _claims =
+            crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
         let req = request.into_inner();
         let dto = CreateScheduleDto {
             name: req.name,
-            description: if req.description.is_empty() { None } else { Some(req.description) },
+            description: if req.description.is_empty() {
+                None
+            } else {
+                Some(req.description)
+            },
         };
 
         let schedule = ScheduleService::create_schedule(&self.pool, dto)
@@ -143,8 +172,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
     ) -> Result<Response<Schedule>, Status> {
         let _claims = crate::grpc::middleware::require_permission(&request, "can_view_schedules")?;
         let req = request.into_inner();
-        let id = Uuid::parse_str(&req.id)
-            .map_err(|_| Status::invalid_argument("Invalid ID"))?;
+        let id = Uuid::parse_str(&req.id).map_err(|_| Status::invalid_argument("Invalid ID"))?;
 
         let schedule_with_events = ScheduleService::get_schedule_by_id(&self.pool, id)
             .await
@@ -183,14 +211,22 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         &self,
         request: Request<UpdateScheduleRequest>,
     ) -> Result<Response<Schedule>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
+        let _claims =
+            crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
         let req = request.into_inner();
-        let id = Uuid::parse_str(&req.id)
-            .map_err(|_| Status::invalid_argument("Invalid ID"))?;
+        let id = Uuid::parse_str(&req.id).map_err(|_| Status::invalid_argument("Invalid ID"))?;
 
         let dto = UpdateScheduleDto {
-            name: if req.name.is_empty() { None } else { Some(req.name) },
-            description: if req.description.is_empty() { None } else { Some(req.description) },
+            name: if req.name.is_empty() {
+                None
+            } else {
+                Some(req.name)
+            },
+            description: if req.description.is_empty() {
+                None
+            } else {
+                Some(req.description)
+            },
         };
 
         let schedule = ScheduleService::update_schedule(&self.pool, id, dto)
@@ -204,10 +240,10 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         &self,
         request: Request<DeleteScheduleRequest>,
     ) -> Result<Response<DeleteScheduleResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
+        let _claims =
+            crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
         let req = request.into_inner();
-        let id = Uuid::parse_str(&req.id)
-            .map_err(|_| Status::invalid_argument("Invalid ID"))?;
+        let id = Uuid::parse_str(&req.id).map_err(|_| Status::invalid_argument("Invalid ID"))?;
 
         let success = ScheduleService::delete_schedule(&self.pool, id)
             .await
@@ -220,12 +256,16 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         &self,
         request: Request<PushLayoutToScheduleRequest>,
     ) -> Result<Response<PushLayoutToScheduleResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
+        let _claims =
+            crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
         let req = request.into_inner();
         let layout_id = Uuid::parse_str(&req.layout_id)
             .map_err(|_| Status::invalid_argument("Invalid layout_id"))?;
 
-        let mut tx = self.pool.begin().await
+        let mut tx = self
+            .pool
+            .begin()
+            .await
             .map_err(|e| Status::internal(format!("Database error: {}", e)))?;
 
         // 1. Resolve or Create schedule
@@ -235,31 +275,31 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
             req.schedule_name.trim().to_string()
         };
 
-        let schedule_id = if let Some(ref sid_str) = req.schedule_id.as_ref().filter(|s| !s.trim().is_empty()) {
-            if let Ok(existing_id) = Uuid::parse_str(sid_str) {
-                let _ = sqlx::query("DELETE FROM studio_schedule_events WHERE schedule_id = $1")
+        let schedule_id = if let Some(schedule_id) = req
+            .schedule_id
+            .as_deref()
+            .filter(|id| !id.trim().is_empty())
+        {
+            let existing_id = Uuid::parse_str(schedule_id)
+                .map_err(|_| Status::invalid_argument("Invalid schedule_id"))?;
+            let exists: bool =
+                sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM studio_schedules WHERE id = $1)")
                     .bind(existing_id)
-                    .execute(&mut *tx)
-                    .await;
-                let _ = sqlx::query("UPDATE studio_schedules SET updated_at = NOW() WHERE id = $1")
-                    .bind(existing_id)
-                    .execute(&mut *tx)
-                    .await;
-                existing_id
-            } else {
-                sqlx::query_scalar::<_, Uuid>(
-                    r#"
-                    INSERT INTO studio_schedules (name, description, created_at, updated_at)
-                    VALUES ($1, $2, NOW(), NOW())
-                    RETURNING id
-                    "#,
-                )
-                .bind(&schedule_name)
-                .bind(format!("Dipush dari template layout {}", layout_id))
-                .fetch_one(&mut *tx)
-                .await
-                .map_err(|e| Status::internal(format!("Failed to create schedule: {}", e)))?
+                    .fetch_one(&mut *tx)
+                    .await
+                    .map_err(|e| {
+                        Status::internal(format!("Database error checking schedule: {e}"))
+                    })?;
+            if !exists {
+                return Err(Status::not_found("Schedule not found"));
             }
+            sqlx::query("UPDATE studio_schedules SET name = $2, updated_at = NOW() WHERE id = $1")
+                .bind(existing_id)
+                .bind(&schedule_name)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| Status::internal(format!("Failed to update schedule: {e}")))?;
+            existing_id
         } else {
             sqlx::query_scalar::<_, Uuid>(
                 r#"
@@ -311,14 +351,30 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         // 3. Add schedule_event with version_hash
         let start_time = chrono::NaiveTime::parse_from_str(&req.start_time, "%H:%M:%S")
             .or_else(|_| chrono::NaiveTime::parse_from_str(&req.start_time, "%H:%M"))
-            .unwrap_or_else(|_| chrono::NaiveTime::from_hms_opt(8, 0, 0).unwrap());
+            .map_err(|_| Status::invalid_argument("Invalid start_time"))?;
 
         let end_time = chrono::NaiveTime::parse_from_str(&req.end_time, "%H:%M:%S")
             .or_else(|_| chrono::NaiveTime::parse_from_str(&req.end_time, "%H:%M"))
-            .unwrap_or_else(|_| chrono::NaiveTime::from_hms_opt(22, 0, 0).unwrap());
+            .map_err(|_| Status::invalid_argument("Invalid end_time"))?;
 
-        let start_date = req.start_date.as_deref().and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok());
-        let end_date = req.end_date.as_deref().and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok());
+        let (start_date, end_date) =
+            parse_schedule_date_range(req.start_date.as_deref(), req.end_date.as_deref())?;
+
+        let days_of_week = if req.days_of_week.trim().is_empty() {
+            "1,2,3,4,5,6,7".to_string()
+        } else {
+            let days: Vec<&str> = req.days_of_week.split(',').map(str::trim).collect();
+            if days
+                .iter()
+                .any(|day| !matches!(*day, "1" | "2" | "3" | "4" | "5" | "6" | "7"))
+                || days.iter().collect::<std::collections::HashSet<_>>().len() != days.len()
+            {
+                return Err(Status::invalid_argument(
+                    "days_of_week must contain unique values from 1 to 7",
+                ));
+            }
+            days.join(",")
+        };
 
         sqlx::query(
             r#"
@@ -332,7 +388,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         .bind(layout_id)
         .bind(start_time)
         .bind(end_time)
-        .bind(if req.days_of_week.is_empty() { "1,2,3,4,5,6,7" } else { &req.days_of_week })
+        .bind(days_of_week)
         .bind(req.priority)
         .bind(start_date)
         .bind(end_date)
@@ -344,30 +400,59 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         // 3. Assign schedule_id to selected devices
         let mut affected = 0i32;
         for dev_str in &req.device_ids {
-            if let Ok(dev_id) = Uuid::parse_str(dev_str) {
-                let res = sqlx::query("UPDATE hardware_devices SET schedule_id = $1, updated_at = NOW() WHERE id = $2")
-                    .bind(schedule_id)
-                    .bind(dev_id)
-                    .execute(&mut *tx)
-                    .await;
-                if let Ok(r) = res {
-                    affected += r.rows_affected() as i32;
-                }
+            let dev_id = Uuid::parse_str(dev_str)
+                .map_err(|_| Status::invalid_argument("Invalid device_id"))?;
+            let current_schedule: Option<Uuid> = sqlx::query_scalar(
+                "SELECT schedule_id FROM hardware_devices WHERE id = $1 FOR UPDATE",
+            )
+            .bind(dev_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(format!("Failed to check player schedule: {e}")))?
+            .ok_or_else(|| Status::not_found("Player not found"))?;
+            if current_schedule.is_some_and(|current| current != schedule_id) {
+                return Err(Status::failed_precondition(
+                    "Player is already assigned to a different rundown",
+                ));
             }
+            affected += sqlx::query(
+                "UPDATE hardware_devices SET schedule_id = $1, updated_at = NOW() WHERE id = $2",
+            )
+            .bind(schedule_id)
+            .bind(dev_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(format!("Failed to assign rundown to player: {e}")))?
+            .rows_affected() as i32;
         }
 
         // 4. Assign schedule_id to selected display groups
         for grp_str in &req.display_group_ids {
-            if let Ok(grp_id) = Uuid::parse_str(grp_str) {
-                let _ = sqlx::query("UPDATE hardware_display_groups SET schedule_id = $1, updated_at = NOW() WHERE id = $2")
-                    .bind(schedule_id)
-                    .bind(grp_id)
-                    .execute(&mut *tx)
-                    .await;
+            let grp_id = Uuid::parse_str(grp_str)
+                .map_err(|_| Status::invalid_argument("Invalid display_group_id"))?;
+            let current_schedule: Option<Uuid> = sqlx::query_scalar(
+                "SELECT schedule_id FROM hardware_display_groups WHERE id = $1 FOR UPDATE",
+            )
+            .bind(grp_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(format!("Failed to check display group schedule: {e}")))?
+            .ok_or_else(|| Status::not_found("Display group not found"))?;
+            if current_schedule.is_some_and(|current| current != schedule_id) {
+                return Err(Status::failed_precondition(
+                    "Display group is already assigned to a different rundown",
+                ));
             }
+            sqlx::query("UPDATE hardware_display_groups SET schedule_id = $1, updated_at = NOW() WHERE id = $2")
+                .bind(schedule_id)
+                .bind(grp_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| Status::internal(format!("Failed to assign rundown to display group: {e}")))?;
         }
 
-        tx.commit().await
+        tx.commit()
+            .await
             .map_err(|e| Status::internal(format!("Commit failed: {}", e)))?;
 
         Ok(Response::new(PushLayoutToScheduleResponse {
@@ -379,14 +464,14 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
     }
 }
 
-
 #[tonic::async_trait]
 impl ScheduleEventServiceTrait for ScheduleEventServiceImpl {
     async fn add_schedule_event(
         &self,
         request: Request<AddScheduleEventRequest>,
     ) -> Result<Response<ScheduleEvent>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
+        let _claims =
+            crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
         let req = request.into_inner();
         let schedule_id = Uuid::parse_str(&req.schedule_id)
             .map_err(|_| Status::invalid_argument("Invalid schedule ID"))?;
@@ -415,10 +500,11 @@ impl ScheduleEventServiceTrait for ScheduleEventServiceImpl {
         &self,
         request: Request<RemoveScheduleEventRequest>,
     ) -> Result<Response<RemoveScheduleEventResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
+        let _claims =
+            crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
         let req = request.into_inner();
-        let id = Uuid::parse_str(&req.id)
-            .map_err(|_| Status::invalid_argument("Invalid event ID"))?;
+        let id =
+            Uuid::parse_str(&req.id).map_err(|_| Status::invalid_argument("Invalid event ID"))?;
         let schedule_id = Uuid::parse_str(&req.schedule_id)
             .map_err(|_| Status::invalid_argument("Invalid schedule ID"))?;
 
@@ -428,5 +514,16 @@ impl ScheduleEventServiceTrait for ScheduleEventServiceImpl {
 
         Ok(Response::new(RemoveScheduleEventResponse { success }))
     }
+}
 
+#[cfg(test)]
+mod tests {
+    use super::parse_schedule_date_range;
+
+    #[test]
+    fn schedule_date_range_requires_valid_order_and_format() {
+        assert!(parse_schedule_date_range(Some("2026-11-06"), Some("2026-11-07")).is_ok());
+        assert!(parse_schedule_date_range(Some("2026-11-07"), Some("2026-11-06")).is_err());
+        assert!(parse_schedule_date_range(Some("06-11-2026"), None).is_err());
+    }
 }

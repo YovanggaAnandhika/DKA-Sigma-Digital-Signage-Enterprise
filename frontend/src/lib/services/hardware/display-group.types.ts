@@ -3,6 +3,7 @@ export interface DisplayGroup {
   name: string;
   description?: string;
   default_layout_id?: string;
+  scheduleId?: string;
   default_layout_name?: string;
   schedule_id?: string;
   schedule_name?: string;
