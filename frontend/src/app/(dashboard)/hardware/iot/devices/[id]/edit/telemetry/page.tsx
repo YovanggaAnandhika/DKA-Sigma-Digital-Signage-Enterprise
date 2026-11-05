@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Activity, Clock3, Cpu, Radio, RefreshCw, Wifi } from 'lucide-react';
-import { getIotDeviceTelemetry, IotDeviceTelemetry } from '@/lib/services/studio/iot.service';
+import { getIotDeviceTelemetry, IotDeviceTelemetry, isIotDeviceOnline } from '@/lib/services/studio/iot.service';
 
 function formatTime(value: string) {
   if (!value) return 'Belum tersedia';
@@ -59,8 +59,7 @@ export default function IotDeviceTelemetryPage() {
     return <p role="alert" style={{ color: 'var(--accent-rose)' }}>{error || 'Data telemetry tidak tersedia.'}</p>;
   }
 
-  const lastSeen = new Date(telemetry.lastSeenAt).getTime();
-  const online = Boolean(telemetry.lastSeenAt) && lastSeen <= Date.now() && Date.now() - lastSeen <= 60_000;
+  const online = isIotDeviceOnline(telemetry.lastSeenAt);
   const metrics = [
     { icon: <Wifi size={16} />, label: 'Alamat IP', value: telemetry.ipAddress || 'Belum tersedia' },
     { icon: <Radio size={16} />, label: 'Sinyal Wi-Fi', value: telemetry.hasRssi ? `${telemetry.rssi} dBm` : 'Belum tersedia' },

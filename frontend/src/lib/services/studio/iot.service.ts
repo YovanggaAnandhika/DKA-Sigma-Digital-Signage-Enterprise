@@ -1,5 +1,12 @@
 import { invokeApi } from '@/lib/core/invokeApi';
 
+export const IOT_DEVICE_ONLINE_TIMEOUT_MS = 60_000;
+
+export function isIotDeviceOnline(lastSeenAt: string, now = Date.now()): boolean {
+  const lastSeen = Date.parse(lastSeenAt);
+  return Number.isFinite(lastSeen) && lastSeen <= now && now - lastSeen <= IOT_DEVICE_ONLINE_TIMEOUT_MS;
+}
+
 export interface IotPinMapping {
   pin: number;
   action: string;
