@@ -30,6 +30,10 @@ export default function TabEditorControllTab() {
   const { queue, setQueue, simulator, setSimulator, triggerChime } = useQueueEditor();
   const [calling, setCalling] = useState(false);
   const callingRef = useRef(false);
+  const lastCallAnnouncementRef = useRef<{
+    ticketNumber: string;
+    source: 'sse' | 'poll' | 'local';
+  } | null>(null);
   const [counterMenuOpen, setCounterMenuOpen] = useState(false);
 
   // Efek invert visual pemanggilan (100% konsisten dengan Android player: aktif selama audio TTS berbicara)
@@ -113,12 +117,32 @@ export default function TabEditorControllTab() {
             const ticketNum = data.ticketNumber;
             const counterNm = data.counterName;
             if (ticketNum) {
+              const previousAnnouncement = lastCallAnnouncementRef.current;
+              const duplicatePollAnnouncement =
+                previousAnnouncement !== null &&
+                previousAnnouncement.ticketNumber === ticketNum &&
+                previousAnnouncement.source === 'poll';
+              lastCallAnnouncementRef.current = duplicatePollAnnouncement
+                ? null
+                : { ticketNumber: ticketNum, source: 'sse' };
               lastSyncedTicketRef.current = ticketNum;
               startInvertEffect();
 
-              if (queue.audioChimeEnabled && (data.source === 'player_touch' || data.source === 'iot_mqtt')) {
-                triggerChime();
-                setTimeout(() => {
+              if (!duplicatePollAnnouncement) {
+                if (queue.audioChimeEnabled && (data.source === 'player_touch' || data.source === 'iot_mqtt')) {
+                  triggerChime();
+                  setTimeout(() => {
+                    speakQueueAnnouncement(
+                      ticketNum,
+                      counterNm || activeCounter.counterName,
+                      data.callType === 'recall',
+                      () => {
+                        stopInvertEffect();
+                      },
+                      queue
+                    );
+                  }, 1200);
+                } else {
                   speakQueueAnnouncement(
                     ticketNum,
                     counterNm || activeCounter.counterName,
@@ -128,17 +152,7 @@ export default function TabEditorControllTab() {
                     },
                     queue
                   );
-                }, 1200);
-              } else {
-                speakQueueAnnouncement(
-                  ticketNum,
-                  counterNm || activeCounter.counterName,
-                  data.callType === 'recall',
-                  () => {
-                    stopInvertEffect();
-                  },
-                  queue
-                );
+                }
               }
 
               setQueue((prev) => ({
@@ -232,13 +246,32 @@ export default function TabEditorControllTab() {
           lastSyncedCalledAtRef.current = callerCalledAt;
         }
 
+        const previousAnnouncement = lastCallAnnouncementRef.current;
+        const duplicateSseAnnouncement =
+          (isNewTicket || isRecallSameTicket) &&
+          previousAnnouncement !== null &&
+          previousAnnouncement.ticketNumber === dbTicket &&
+          (previousAnnouncement.source === 'sse' || previousAnnouncement.source === 'local');
         if (isNewTicket || isRecallSameTicket) {
           lastSyncedTicketRef.current = dbTicket;
-          startInvertEffect();
+          if (duplicateSseAnnouncement) {
+            lastCallAnnouncementRef.current = null;
+          } else {
+            lastCallAnnouncementRef.current = { ticketNumber: dbTicket, source: 'poll' };
+            startInvertEffect();
 
-          if (queue.audioChimeEnabled) {
-            triggerChime();
-            setTimeout(() => {
+            if (queue.audioChimeEnabled) {
+              triggerChime();
+              setTimeout(() => {
+                speakQueueAnnouncement(
+                  dbTicket,
+                  callerName,
+                  Boolean(isRecallSameTicket),
+                  () => stopInvertEffect(),
+                  queue
+                );
+              }, 1200);
+            } else {
               speakQueueAnnouncement(
                 dbTicket,
                 callerName,
@@ -246,15 +279,7 @@ export default function TabEditorControllTab() {
                 () => stopInvertEffect(),
                 queue
               );
-            }, 1200);
-          } else {
-            speakQueueAnnouncement(
-              dbTicket,
-              callerName,
-              Boolean(isRecallSameTicket),
-              () => stopInvertEffect(),
-              queue
-            );
+            }
           }
 
           setQueue((prev) => ({
@@ -274,7 +299,9 @@ export default function TabEditorControllTab() {
             currentSeq: parseInt(dbTicket.replace(/[^0-9]/g, ''), 10) || prev.currentSeq,
           }));
 
-          recordCallHistory(dbTicket, callerName, isRecallSameTicket ? 'recall' : 'next');
+          if (!duplicateSseAnnouncement) {
+            recordCallHistory(dbTicket, callerName, isRecallSameTicket ? 'recall' : 'next');
+          }
         } else if (dbCounters.length > 0) {
           // Sinkronkan status loket (BREAK / LOCKED / ACTIVE) jika berubah dari tombol IoT
           setQueue((prev) => {
@@ -358,6 +385,7 @@ export default function TabEditorControllTab() {
       }
 
       lastSyncedTicketRef.current = nextNumber;
+      lastCallAnnouncementRef.current = { ticketNumber: nextNumber, source: 'local' };
       setQueue((prev) => ({
         ...prev,
         currentNumber: nextNumber,
@@ -498,6 +526,8 @@ export default function TabEditorControllTab() {
         currentSeq: parseInt(prevNumber.replace(/[^0-9]/g, ''), 10) || 0,
       }));
 
+      lastSyncedTicketRef.current = prevNumber;
+      lastCallAnnouncementRef.current = { ticketNumber: prevNumber, source: 'local' };
       recordCallHistory(prevNumber, activeCounter.counterName, 'back');
 
       broadcastToAndroid({

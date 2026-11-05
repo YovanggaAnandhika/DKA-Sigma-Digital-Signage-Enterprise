@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * HNDSigma Digital Signage Enterprise - IoT Queue Controller Firmware
+ * DKASigma Digital Signage Enterprise - IoT Queue Controller Firmware
  * Modul: NodeMCU ESP32 (ESP-WROOM-32 / ESP32 Dev Module)
  * Protokol: MQTT (PubSubClient) + JSON (ArduinoJson)
  *
@@ -22,13 +22,13 @@
 // =========================================================================================
 // 1. KONFIGURASI WI-FI & MQTT BROKER
 // =========================================================================================
-const char *WIFI_SSID = "HND HOME";
-const char *WIFI_PASSWORD = "Cyberhack2010";
+const char *WIFI_SSID = "BTS";
+const char *WIFI_PASSWORD = "ARMY 2026";
 
-// Alamat IP atau Hostname MQTT Broker (Server HNDSigma / Nginx Proxy)
+// Alamat IP atau Hostname MQTT Broker (Server DKASigma / Nginx Proxy)
 // Contoh jika di jaringan lokal: "192.168.1.100" atau
 // "mqtt.local.sigma.dkaapis.com"
-const char *MQTT_SERVER = "10.71.246.3";
+const char *MQTT_SERVER = "192.168.1.28";
 const int MQTT_PORT = 1883;
 
 // Autentikasi MQTT (Kosongkan jika broker disetel mode anonymous)
@@ -185,7 +185,7 @@ void setupWifi() {
            deviceUid);
 
   Serial.println("=================================================");
-  Serial.println("   HNDSigma Digital Signage - IoT Controller    ");
+  Serial.println("   DKASigma Digital Signage - IoT Controller    ");
   Serial.print("   DEVICE UID : ");
   Serial.println(deviceUid);
   Serial.println("   (Salin UID ini atau klik 'Setujui' di Web)   ");
