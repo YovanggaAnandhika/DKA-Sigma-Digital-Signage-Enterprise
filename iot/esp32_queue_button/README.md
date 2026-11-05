@@ -54,36 +54,65 @@ Firmware ini menggunakan mode `INPUT_PULLUP` internal ESP32. Artinya:
 
 ---
 
-## 3. Langkah Konfigurasi & Upload
+## 3. Upload Firmware
 
 1. Buka file `esp32_queue_button.ino` di Arduino IDE.
-2. Ubah variabel Wi-Fi dan MQTT di bagian atas:
-   ```cpp
-   const char* WIFI_SSID     = "NAMA_WIFI_ANDA";
-   const char* WIFI_PASSWORD = "PASSWORD_WIFI_ANDA";
+2. Hubungkan ESP32 ke komputer via kabel Micro USB / Type-C.
+3. Pilih port COM yang sesuai di **Tools > Port**.
+4. Klik tombol **Upload** (panah kanan).
 
-   // IP Komputer / Server yang menjalankan Docker HNDSigma
-   const char* MQTT_SERVER   = "192.168.1.100";
-   const int   MQTT_PORT     = 1883;
-   ```
-3. Hubungkan ESP32 ke komputer via kabel Micro USB / Type-C.
-4. Pilih port COM yang sesuai di **Tools > Port**.
-5. Klik tombol **Upload** (panah kanan).
+Tidak perlu mengubah atau mengompilasi SSID, password Wi-Fi, atau alamat broker
+di source code.
 
 ---
 
-## 4. Persetujuan Perangkat dan Binding Queue
+## 4. Setup Wi-Fi dan Broker dari Ponsel
+
+1. Nyalakan ESP32 yang belum dikonfigurasi. Perangkat membuat Wi-Fi setup
+   terbuka dengan nama `DKASigma-Setup-<6 karakter MAC terakhir>`.
+2. Sambungkan ponsel ke Wi-Fi tersebut. Jika halaman captive portal tidak muncul,
+   buka `http://192.168.4.1/`.
+3. Tekan **Pindai**, pilih SSID Wi-Fi (hanya jaringan 2.4 GHz), lalu masukkan
+   password Wi-Fi.
+4. Isi hostname/IP broker MQTT dan port. Isi username/password MQTT jika broker
+   memerlukannya. Endpoint broker masih dikonfigurasi manual pada tahap ini;
+   discovery cloud akan dikerjakan terpisah.
+5. Tekan **Simpan dan sambungkan**. Jika Wi-Fi berhasil tersambung, access point
+   setup langsung mati. ESP32 menyimpan konfigurasi dan mulai mencoba koneksi
+   MQTT. Jika koneksi Wi-Fi gagal, portal tetap tersedia untuk mencoba kembali.
+
+> **Peringatan keamanan:** Wi-Fi setup sengaja terbuka sesuai pilihan deployment.
+> Siapa pun di dekat perangkat dapat bergabung dan mengubah konfigurasi. Form
+> lokal memakai HTTP, sehingga password Wi-Fi tidak dienkripsi saat dikirim ke
+> ESP32. Lakukan setup di lokasi terkontrol dan jangan biarkan perangkat dalam
+> mode setup tanpa pengawasan.
+>
+> Firmware saat ini juga menggunakan MQTT TCP tanpa TLS. Jangan arahkan ke broker
+> plaintext yang terbuka di internet; gunakan hanya pada jaringan tepercaya.
+
+Saat ini aksi **unbind** di dashboard belum mengaktifkan access point setup.
+Untuk membuka portal kembali, gunakan tombol BOOT lebih dari 15 detik.
+
+Untuk mengganti Wi-Fi, saat ESP32 sedang menyala tahan tombol **BOOT lebih dari
+15 detik**. Ini menghapus SSID/password Wi-Fi tersimpan dan membuka portal lagi.
+Endpoint broker dan identitas perangkat tetap tersimpan; tekan BOOT singkat
+untuk aksi panggil berikutnya. Reset ini tidak melakukan unbind perangkat dari
+server.
+
+---
+
+## 5. Persetujuan Perangkat dan Binding Queue
 
 1. Buka **Serial Monitor** di Arduino IDE dengan baud rate `115200`.
-2. Saat ESP32 menyala, layar Serial Monitor akan mencetak informasi:
+2. Setelah Wi-Fi tersambung, layar Serial Monitor akan mencetak informasi:
    ```
    =================================================
       HNDSigma Digital Signage - IoT Controller    
       DEVICE UID : ESP32_3C61054A2B1C
-      (Salin UID untuk membantu mengidentifikasi perangkat di menu Perangkat IoT)
    =================================================
    ```
-3. Hubungkan ESP32 ke MQTT broker. Perangkat yang ditemukan akan muncul di menu **Perangkat IoT** dengan status menunggu persetujuan.
+3. Perangkat yang mengirim pesan MQTT akan muncul di menu **Perangkat IoT**
+   dengan status menunggu persetujuan.
 4. Setujui perangkat tersebut, lalu atur nama dan mapping pin GPIO beserta aksinya di menu **Perangkat IoT**.
 5. Buka editor queue yang dituju, pilih tab **IoT Binding**, lalu ikat perangkat ke queue. Pilih loket jika mapping pin menggunakan aksi loket.
 6. Tekan tombol fisik pada ESP32:

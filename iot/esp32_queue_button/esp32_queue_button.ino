@@ -16,24 +16,48 @@
  */
 
 #include <ArduinoJson.h>
+#include <DNSServer.h>
 #include <PubSubClient.h>
+#include <Preferences.h>
 #include <WiFi.h>
+#include <WebServer.h>
 
 // =========================================================================================
-// 1. KONFIGURASI WI-FI & MQTT BROKER
+// 1. WI-FI SETUP & MQTT CONFIGURATION
 // =========================================================================================
-const char *WIFI_SSID = "BTS";
-const char *WIFI_PASSWORD = "ARMY 2026";
+char wifiSsid[33] = "";
+char wifiPassword[65] = "";
+char mqttServer[128] = "";
+char mqttUser[64] = "";
+char mqttPassword[64] = "";
+uint16_t mqttPort = 1883;
 
-// Alamat IP atau Hostname MQTT Broker (Server DKASigma / Nginx Proxy)
-// Contoh jika di jaringan lokal: "192.168.1.100" atau
-// "mqtt.local.sigma.dkaapis.com"
-const char *MQTT_SERVER = "192.168.1.28";
-const int MQTT_PORT = 1883;
-
-// Autentikasi MQTT (Kosongkan jika broker disetel mode anonymous)
-const char *MQTT_USER = "";
-const char *MQTT_PASSWORD = "";
+Preferences settings;
+bool settingsReady = false;
+WebServer configServer(80);
+DNSServer dnsServer;
+bool configPortalActive = false;
+bool configPending = false;
+bool configFailed = false;
+bool configStorageFailed = false;
+bool configRoutesRegistered = false;
+String pendingSsid;
+String pendingWifiPassword;
+String pendingMqttServer;
+String pendingMqttUser;
+String pendingMqttPassword;
+uint16_t pendingMqttPort = 1883;
+unsigned long configAttemptStartedAt = 0;
+const unsigned long WIFI_CONNECT_TIMEOUT_MS = 20000;
+unsigned long lastMqttAttempt = 0;
+unsigned long lastWifiRetry = 0;
+unsigned long bootPressStartedAt = 0;
+bool bootPressActive = false;
+bool bootResetTriggered = false;
+int bootLastReading = HIGH;
+int bootCurrentState = HIGH;
+unsigned long bootLastDebounceTime = 0;
+const unsigned long BOOT_RESET_HOLD_MS = 15000;
 
 // =========================================================================================
 // 2. KONFIGURASI PIN HARDWARE
@@ -153,32 +177,37 @@ void onMqttMessage(char *topic, byte *payload, unsigned int length) {
 // =========================================================================================
 // 6. KONEKSI WI-FI & MQTT
 // =========================================================================================
-void setupWifi() {
-  delay(10);
-  Serial.println();
-  Serial.print("Menghubungkan ke Wi-Fi: ");
-  Serial.println(WIFI_SSID);
-
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    digitalWrite(PIN_LED_STATUS, !digitalRead(PIN_LED_STATUS));
-    delay(250);
-    Serial.print(".");
+String escapeHtml(const String &value) {
+  String escaped;
+  escaped.reserve(value.length());
+  for (size_t i = 0; i < value.length(); i++) {
+    switch (value[i]) {
+    case '&':
+      escaped += F("&amp;");
+      break;
+    case '<':
+      escaped += F("&lt;");
+      break;
+    case '>':
+      escaped += F("&gt;");
+      break;
+    case '"':
+      escaped += F("&quot;");
+      break;
+    case '\'':
+      escaped += F("&#39;");
+      break;
+    default:
+      escaped += value[i];
+    }
   }
+  return escaped;
+}
 
-  digitalWrite(PIN_LED_STATUS, HIGH);
-  Serial.println("\n[Wi-Fi] Terhubung!");
-  Serial.print("[Wi-Fi] Alamat IP ESP32: ");
-  Serial.println(WiFi.localIP());
-
-  // Dapatkan MAC address setelah Wi-Fi aktif dan bentuk Device UID
+void initializeDeviceIdentity() {
   String mac = WiFi.macAddress();
   mac.replace(":", "");
   snprintf(deviceUid, sizeof(deviceUid), "ESP32_%s", mac.c_str());
-
-  // Siapkan topik MQTT
   snprintf(topicAction, sizeof(topicAction), "dka/iot/%s/action", deviceUid);
   snprintf(topicAck, sizeof(topicAck), "dka/iot/%s/ack", deviceUid);
   snprintf(topicTelemetry, sizeof(topicTelemetry), "dka/iot/%s/telemetry",
@@ -188,47 +217,342 @@ void setupWifi() {
   Serial.println("   DKASigma Digital Signage - IoT Controller    ");
   Serial.print("   DEVICE UID : ");
   Serial.println(deviceUid);
-  Serial.println("   (Salin UID ini atau klik 'Setujui' di Web)   ");
   Serial.println("=================================================");
 }
 
-void reconnectMqtt() {
-  while (!mqttClient.connected()) {
-    Serial.print("Menghubungkan ke MQTT Broker (");
-    Serial.print(MQTT_SERVER);
-    Serial.print(")... ");
+String configPage() {
+  String page = F(
+      "<!doctype html><html lang='id'><meta name='viewport' "
+      "content='width=device-width,initial-scale=1'><title>Setup IoT</title>"
+      "<style>body{font:16px system-ui;max-width:520px;margin:32px auto;"
+      "padding:0 16px;color:#172033}label{display:block;margin:14px 0 5px}"
+      "input,select,button{box-sizing:border-box;width:100%;padding:11px;"
+      "font:inherit}button{margin-top:12px;cursor:pointer}.hint{color:#596579}"
+      "</style><h1>Setup IoT Queue Button</h1><p>Pilih Wi-Fi dan isi endpoint "
+      "MQTT server signage.</p><p><strong>Setup Wi-Fi terbuka dan tidak "
+      "terenkripsi. Lakukan di lokasi terkontrol.</strong></p><p>MQTT saat ini "
+      "tanpa TLS; jangan gunakan broker plaintext di internet.</p><form id='setup'>"
+      "<label>Nama Wi-Fi (SSID)</label><div style='display:flex;gap:8px'>"
+      "<select id='networks'><option value=''>Pilih hasil pemindaian</option>"
+      "</select><button type='button' id='scan' style='width:auto'>Pindai</button>"
+      "</div><input name='ssid' id='ssid' maxlength='32' required "
+      "placeholder='SSID Wi-Fi'>"
+      "<label>Password Wi-Fi</label><input name='wifi_password' type='password' "
+      "maxlength='64' autocomplete='new-password'>"
+      "<label>Endpoint broker MQTT (hostname/IP)</label><input "
+      "name='mqtt_server' maxlength='127' required value='");
+  page += escapeHtml(String(mqttServer));
+  page += F("' placeholder='mqtt.example.com'>"
+            "<label>Port MQTT (TCP tanpa TLS)</label><input name='mqtt_port' type='number' "
+            "min='1' max='65535' required value='");
+  page += String(mqttPort);
+  page += F("'><label>Username MQTT (opsional)</label><input name='mqtt_user' "
+            "maxlength='63' autocomplete='username'>"
+            "<label>Password MQTT (opsional)</label><input name='mqtt_password' "
+            "type='password' maxlength='63' autocomplete='new-password'>"
+            "<button type='submit'>Simpan dan sambungkan</button></form>"
+            "<p class='hint' id='status'>Access point setup akan mati setelah "
+            "Wi-Fi berhasil tersambung.</p>"
+            "<script>const s=document.querySelector('#status'),n=document."
+            "querySelector('#networks'),ssid=document.querySelector('#ssid');"
+            "document.querySelector('#scan').onclick=async()=>{s.textContent="
+            "'Memindai Wi-Fi...';try{let r=await fetch('/scan'),a=await r.json();"
+            "n.innerHTML='<option value=\"\">Pilih hasil pemindaian</option>';"
+            "a.forEach(x=>{let o=document.createElement('option');o.value=x.ssid;"
+            "o.textContent=x.ssid+' ('+x.rssi+' dBm)';n.append(o)});"
+            "s.textContent=a.length?'Pilih jaringan atau masukkan SSID manual.':"
+            "'Tidak ada jaringan ditemukan.'}catch(e){s.textContent='Gagal "
+            "memindai Wi-Fi.'}};n.onchange=()=>{if(n.value)ssid.value=n.value};"
+            "document.querySelector('#setup').onsubmit=async e=>{e.preventDefault();"
+            "s.textContent='Mencoba menghubungkan ke Wi-Fi...';try{let r=await "
+            "fetch('/save',{method:'POST',body:new URLSearchParams(new "
+            "FormData(e.target))});let d=await r.json();s.textContent=d.message;"
+            "if(d.state==='connecting'){let t=setInterval(async()=>{try{let x="
+            "await(await fetch('/status')).json();if(x.state==='failed'){"
+            "clearInterval(t);s.textContent=x.message}}catch(_){clearInterval(t);"
+            "s.textContent='ESP32 tersambung; access point setup ditutup.'}},"
+            "1000)}}catch(_){s.textContent='Koneksi dimulai. Jika Wi-Fi berhasil,"
+            " access point setup akan ditutup.'}};</script></html>");
+  return page;
+}
 
-    bool connected = false;
-    if (strlen(MQTT_USER) > 0) {
-      connected = mqttClient.connect(deviceUid, MQTT_USER, MQTT_PASSWORD);
-    } else {
-      connected = mqttClient.connect(deviceUid);
-    }
+void startConfigPortal() {
+  if (configPortalActive)
+    return;
 
-    if (connected) {
-      Serial.println("BERHASIL!");
-      digitalWrite(PIN_LED_STATUS, HIGH);
-
-      // Subscribe ke topik ACK konfirmasi
-      mqttClient.subscribe(topicAck);
-      Serial.printf("[MQTT Sub] Berlangganan: %s\n", topicAck);
-
-      // Kirim telemetri awal saat online
-      sendTelemetry();
-
-      // Sinkronkan status awal semua pin & bersihkan buffer Serial agar tekan
-      // RST tidak memicu panggilan palsu
-      resetButtonStates();
-      Serial.println("[Siap] Tekan tombol fisik BOOT (GPIO 0) di board atau "
-                     "ketik 'n' di Serial Monitor untuk panggil antrean.");
-    } else {
-      Serial.print("GAGAL, rc=");
-      Serial.print(mqttClient.state());
-      Serial.println(". Mencoba lagi dalam 5 detik...");
-      digitalWrite(PIN_LED_STATUS, LOW);
-      delay(5000);
-    }
+  WiFi.disconnect(false, false);
+  WiFi.mode(WIFI_AP_STA);
+  if (!WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1),
+                         IPAddress(255, 255, 255, 0))) {
+    Serial.println("[Setup] Gagal mengatur alamat access point.");
+    return;
   }
+  String mac = WiFi.macAddress();
+  mac.replace(":", "");
+  String apName = "DKASigma-Setup-" + mac.substring(mac.length() - 6);
+  if (!WiFi.softAP(apName.c_str())) {
+    Serial.println("[Setup] Gagal membuat access point konfigurasi.");
+    WiFi.mode(WIFI_STA);
+    return;
+  }
+
+  if (!dnsServer.start(53, "*", IPAddress(192, 168, 4, 1))) {
+    Serial.println("[Setup] Gagal menjalankan DNS captive portal.");
+    WiFi.softAPdisconnect(true);
+    WiFi.mode(WIFI_STA);
+    return;
+  }
+  if (!configRoutesRegistered) {
+    configServer.on("/", HTTP_GET, []() {
+      configServer.send(200, "text/html; charset=utf-8", configPage());
+    });
+    configServer.on("/scan", HTTP_GET, []() {
+      int count = WiFi.scanNetworks();
+      DynamicJsonDocument doc(4096);
+      JsonArray networks = doc.to<JsonArray>();
+      for (int i = 0; i < count; i++) {
+        if (WiFi.SSID(i).length() == 0)
+          continue;
+        JsonObject network = networks.createNestedObject();
+        network["ssid"] = WiFi.SSID(i);
+        network["rssi"] = WiFi.RSSI(i);
+      }
+      String response;
+      serializeJson(doc, response);
+      WiFi.scanDelete();
+      configServer.send(200, "application/json", response);
+    });
+    configServer.on("/save", HTTP_POST, []() {
+      if (configPending) {
+        configServer.send(409, "application/json",
+                          "{\"state\":\"connecting\",\"message\":\"Koneksi "
+                          "Wi-Fi sedang dicoba.\"}");
+        return;
+      }
+      String ssid = configServer.arg("ssid");
+      String host = configServer.arg("mqtt_server");
+      String portValue = configServer.arg("mqtt_port");
+      String wifiPass = configServer.arg("wifi_password");
+      String user = configServer.arg("mqtt_user");
+      String pass = configServer.arg("mqtt_password");
+      if (!settingsReady) {
+        configServer.send(503, "application/json",
+                          "{\"state\":\"failed\",\"message\":\"Penyimpanan "
+                          "perangkat tidak tersedia.\"}");
+        return;
+      }
+      bool validPort = portValue.length() > 0;
+      for (size_t i = 0; i < portValue.length(); i++) {
+        validPort = validPort && isDigit(portValue[i]);
+      }
+      unsigned long port =
+          validPort ? strtoul(portValue.c_str(), nullptr, 10) : 0;
+      bool validHost = host.length() > 0 && host.length() < sizeof(mqttServer);
+      for (size_t i = 0; i < host.length(); i++) {
+        char c = host[i];
+        validHost = validHost &&
+                    ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                     (c >= '0' && c <= '9') || c == '.' || c == '-');
+      }
+      if (ssid.length() == 0 || ssid.length() > 32 ||
+          wifiPass.length() > 64 || !validHost ||
+          user.length() >= sizeof(mqttUser) ||
+          pass.length() >= sizeof(mqttPassword) || port < 1 || port > 65535) {
+        configServer.send(400, "application/json",
+                          "{\"state\":\"failed\",\"message\":\"SSID, "
+                          "endpoint, password, atau port tidak valid.\"}");
+        return;
+      }
+
+      pendingSsid = ssid;
+      pendingWifiPassword = wifiPass;
+      pendingMqttServer = host;
+      pendingMqttUser = user;
+      pendingMqttPassword = pass;
+      pendingMqttPort = static_cast<uint16_t>(port);
+      configPending = true;
+      configFailed = false;
+      configStorageFailed = false;
+      configAttemptStartedAt = millis();
+      WiFi.mode(WIFI_AP_STA);
+      WiFi.begin(pendingSsid.c_str(), pendingWifiPassword.c_str());
+      configServer.send(200, "application/json",
+                        "{\"state\":\"connecting\",\"message\":\"Mencoba "
+                        "tersambung ke Wi-Fi...\"}");
+    });
+    configServer.on("/status", HTTP_GET, []() {
+      if (configPending) {
+        configServer.send(200, "application/json",
+                          "{\"state\":\"connecting\",\"message\":\"Mencoba "
+                          "tersambung ke Wi-Fi...\"}");
+      } else if (configFailed) {
+        configServer.send(
+            200, "application/json",
+            configStorageFailed
+                ? "{\"state\":\"failed\",\"message\":\"Gagal menyimpan "
+                  "konfigurasi. Periksa penyimpanan perangkat.\"}"
+                : "{\"state\":\"failed\",\"message\":\"Wi-Fi gagal "
+                  "tersambung. Periksa password dan coba lagi.\"}");
+      } else {
+        configServer.send(200, "application/json",
+                          "{\"state\":\"setup\",\"message\":\"Masukkan "
+                          "konfigurasi perangkat.\"}");
+      }
+    });
+    auto redirectToPortal = []() {
+      configServer.sendHeader("Location", "http://192.168.4.1/", true);
+      configServer.send(302, "text/plain", "");
+    };
+    configServer.on("/generate_204", HTTP_GET, redirectToPortal);
+    configServer.on("/gen_204", HTTP_GET, redirectToPortal);
+    configServer.on("/hotspot-detect.html", HTTP_GET, redirectToPortal);
+    configServer.on("/connecttest.txt", HTTP_GET, redirectToPortal);
+    configServer.on("/ncsi.txt", HTTP_GET, redirectToPortal);
+    configServer.onNotFound(redirectToPortal);
+    configRoutesRegistered = true;
+  }
+  configServer.begin();
+  configPortalActive = true;
+  Serial.printf("[Setup] Wi-Fi: %s (terbuka), buka http://192.168.4.1/\n",
+                apName.c_str());
+}
+
+void stopConfigPortal() {
+  dnsServer.stop();
+  configServer.stop();
+  WiFi.softAPdisconnect(true);
+  WiFi.mode(WIFI_STA);
+  configPortalActive = false;
+  configPending = false;
+}
+
+bool storeSettingString(const char *key, const String &value) {
+  settings.putString(key, value);
+  return settings.getString(key, "\x01") == value;
+}
+
+void savePendingConfiguration() {
+  bool saved = settings.putBool("configured", false) &&
+               storeSettingString("ssid", pendingSsid) &&
+               storeSettingString("wifi_pass", pendingWifiPassword) &&
+               storeSettingString("mqtt_host", pendingMqttServer) &&
+               settings.putUShort("mqtt_port", pendingMqttPort) > 0 &&
+               storeSettingString("mqtt_user", pendingMqttUser) &&
+               storeSettingString("mqtt_pass", pendingMqttPassword) &&
+               settings.putBool("configured", true);
+  if (!saved) {
+    Serial.println("[Setup] Gagal menyimpan konfigurasi ke NVS.");
+    configPending = false;
+    configFailed = true;
+    configStorageFailed = true;
+    WiFi.disconnect(false, false);
+    WiFi.mode(WIFI_AP_STA);
+    return;
+  }
+
+  strlcpy(wifiSsid, pendingSsid.c_str(), sizeof(wifiSsid));
+  strlcpy(wifiPassword, pendingWifiPassword.c_str(), sizeof(wifiPassword));
+  strlcpy(mqttServer, pendingMqttServer.c_str(), sizeof(mqttServer));
+  strlcpy(mqttUser, pendingMqttUser.c_str(), sizeof(mqttUser));
+  strlcpy(mqttPassword, pendingMqttPassword.c_str(), sizeof(mqttPassword));
+  mqttPort = pendingMqttPort;
+  mqttClient.setServer(mqttServer, mqttPort);
+  initializeDeviceIdentity();
+  Serial.println("[Setup] Wi-Fi dan endpoint MQTT tersimpan.");
+  stopConfigPortal();
+  digitalWrite(PIN_LED_STATUS, HIGH);
+  resetButtonStates();
+}
+
+void processConfigPortal() {
+  if (!configPortalActive)
+    return;
+  dnsServer.processNextRequest();
+  configServer.handleClient();
+  if (!configPending)
+    return;
+  if (WiFi.status() == WL_CONNECTED) {
+    savePendingConfiguration();
+  } else if (millis() - configAttemptStartedAt > WIFI_CONNECT_TIMEOUT_MS) {
+    WiFi.disconnect(false, false);
+    WiFi.mode(WIFI_AP_STA);
+    configPending = false;
+    configFailed = true;
+  }
+}
+
+void setupWifi() {
+  settingsReady = settings.begin("dka-iot", false);
+  if (!settingsReady) {
+    Serial.println("[Setup] Gagal membuka penyimpanan konfigurasi NVS.");
+    startConfigPortal();
+    return;
+  }
+  strlcpy(wifiSsid, settings.getString("ssid", "").c_str(), sizeof(wifiSsid));
+  strlcpy(wifiPassword, settings.getString("wifi_pass", "").c_str(),
+          sizeof(wifiPassword));
+  strlcpy(mqttServer, settings.getString("mqtt_host", "").c_str(),
+          sizeof(mqttServer));
+  mqttPort = settings.getUShort("mqtt_port", 1883);
+  strlcpy(mqttUser, settings.getString("mqtt_user", "").c_str(),
+          sizeof(mqttUser));
+  strlcpy(mqttPassword, settings.getString("mqtt_pass", "").c_str(),
+          sizeof(mqttPassword));
+
+  if (!settings.getBool("configured", false) || wifiSsid[0] == '\0' ||
+      mqttServer[0] == '\0') {
+    startConfigPortal();
+    return;
+  }
+
+  Serial.printf("[Wi-Fi] Menghubungkan ke %s...\n", wifiSsid);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(wifiSsid, wifiPassword);
+  unsigned long startedAt = millis();
+  while (WiFi.status() != WL_CONNECTED &&
+         millis() - startedAt < WIFI_CONNECT_TIMEOUT_MS) {
+    digitalWrite(PIN_LED_STATUS, !digitalRead(PIN_LED_STATUS));
+    delay(250);
+  }
+
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("[Wi-Fi] Gagal tersambung; membuka setup.");
+    startConfigPortal();
+    return;
+  }
+
+  digitalWrite(PIN_LED_STATUS, HIGH);
+  Serial.print("[Wi-Fi] Terhubung, IP ESP32: ");
+  Serial.println(WiFi.localIP());
+  initializeDeviceIdentity();
+}
+
+void sendTelemetry();
+
+void reconnectMqtt() {
+  if (mqttServer[0] == '\0' || WiFi.status() != WL_CONNECTED ||
+      millis() - lastMqttAttempt < 5000) {
+    return;
+  }
+  lastMqttAttempt = millis();
+  Serial.printf("[MQTT] Menghubungkan ke %s:%u... ", mqttServer, mqttPort);
+
+  bool connected = strlen(mqttUser) > 0
+                       ? mqttClient.connect(deviceUid, mqttUser, mqttPassword)
+                       : mqttClient.connect(deviceUid);
+  if (!connected) {
+    Serial.printf("GAGAL, rc=%d. Mencoba lagi.\n", mqttClient.state());
+    digitalWrite(PIN_LED_STATUS, LOW);
+    return;
+  }
+
+  Serial.println("BERHASIL!");
+  digitalWrite(PIN_LED_STATUS, HIGH);
+  mqttClient.subscribe(topicAck);
+  Serial.printf("[MQTT Sub] Berlangganan: %s\n", topicAck);
+  sendTelemetry();
+  resetButtonStates();
+  Serial.println("[Siap] Tekan tombol BOOT singkat atau tombol GPIO untuk aksi.");
 }
 
 void sendTelemetry() {
@@ -236,7 +560,7 @@ void sendTelemetry() {
   doc["device_uid"] = deviceUid;
   doc["ip"] = WiFi.localIP().toString();
   doc["rssi"] = WiFi.RSSI();
-  doc["fw"] = "1.0.0";
+  doc["fw"] = "1.1.0";
   doc["uptime_ms"] = millis();
 
   char buffer[200];
@@ -263,8 +587,55 @@ void sendButtonPress(int pin) {
 // =========================================================================================
 // 7. SETUP & LOOP
 // =========================================================================================
+void handleBootButton() {
+  int reading = digitalRead(0);
+  if (reading != bootLastReading) {
+    bootLastDebounceTime = millis();
+    bootLastReading = reading;
+  }
+
+  if (millis() - bootLastDebounceTime > DEBOUNCE_DELAY_MS &&
+      reading != bootCurrentState) {
+    bootCurrentState = reading;
+    if (bootCurrentState == LOW) {
+      bootPressStartedAt = millis();
+      bootPressActive = true;
+      bootResetTriggered = false;
+    } else if (bootPressActive) {
+      unsigned long heldFor = millis() - bootPressStartedAt;
+      if (!bootResetTriggered && heldFor < BOOT_RESET_HOLD_MS &&
+          !configPortalActive) {
+        sendButtonPress(13);
+      }
+      bootPressActive = false;
+      bootResetTriggered = false;
+    }
+  }
+
+  if (bootPressActive && !bootResetTriggered &&
+      millis() - bootPressStartedAt > BOOT_RESET_HOLD_MS) {
+    bootResetTriggered = true;
+    bool wifiSettingsRemoved =
+        settingsReady &&
+        ((!settings.isKey("ssid") || settings.remove("ssid")) &&
+         (!settings.isKey("wifi_pass") || settings.remove("wifi_pass")));
+    wifiSsid[0] = '\0';
+    wifiPassword[0] = '\0';
+    mqttClient.disconnect();
+    WiFi.disconnect(false, false);
+    if (configPortalActive) {
+      stopConfigPortal();
+    }
+    Serial.println(wifiSettingsRemoved
+                       ? "[Setup] Wi-Fi direset. Kepemilikan dan endpoint MQTT tetap."
+                       : "[Setup] Gagal mereset Wi-Fi dari NVS; periksa penyimpanan.");
+    startConfigPortal();
+  }
+}
+
 void setup() {
   Serial.begin(115200);
+  WiFi.persistent(false);
 
   // Inisialisasi LED status
   pinMode(PIN_LED_STATUS, OUTPUT);
@@ -287,25 +658,37 @@ void setup() {
   setupWifi();
   resetButtonStates();
 
-  mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
+  mqttClient.setServer(mqttServer, mqttPort);
+  mqttClient.setSocketTimeout(3);
   mqttClient.setCallback(onMqttMessage);
 }
 
 void loop() {
-  if (WiFi.status() != WL_CONNECTED) {
-    setupWifi();
+  handleBootButton();
+  processConfigPortal();
+
+  if (!configPortalActive) {
+    if (WiFi.status() != WL_CONNECTED &&
+        millis() - lastWifiRetry > 5000) {
+      lastWifiRetry = millis();
+      WiFi.reconnect();
+    }
+
+    if (!mqttClient.connected()) {
+      reconnectMqtt();
+    } else {
+      mqttClient.loop();
+    }
+
+    if (mqttClient.connected() &&
+        millis() - lastTelemetryTime > TELEMETRY_INTERVAL_MS) {
+      lastTelemetryTime = millis();
+      sendTelemetry();
+    }
   }
 
-  if (!mqttClient.connected()) {
-    reconnectMqtt();
-  }
-  mqttClient.loop();
-
-  // Kirim telemetri periodik tiap 30 detik
-  if (millis() - lastTelemetryTime > TELEMETRY_INTERVAL_MS) {
-    lastTelemetryTime = millis();
-    sendTelemetry();
-  }
+  if (configPortalActive)
+    return;
 
   // Simulasi via Serial Monitor Arduino IDE (Tanpa kabel jumper!)
   // Ketik angka pin (misal: 13, 12, 14) atau huruf:
@@ -347,6 +730,8 @@ void loop() {
   // Deteksi penekanan tombol fisik (Active LOW dengan internal pullup)
   for (int i = 0; i < NUM_PINS; i++) {
     int pin = MONITORED_PINS[i];
+    if (pin == 0)
+      continue;
     int reading = digitalRead(pin);
 
     if (reading != pinLastState[i]) {
@@ -357,11 +742,8 @@ void loop() {
       if (reading != pinCurrentState[i]) {
         pinCurrentState[i] = reading;
 
-        // Tombol baru saja ditekan (transisi dari HIGH ke LOW)
         if (pinCurrentState[i] == LOW) {
-          // Tombol BOOT onboard (GPIO 0) otomatis memicu GPIO 13 (CALL_NEXT)
-          // agar bisa dites tanpa kabel
-          sendButtonPress(pin == 0 ? 13 : pin);
+          sendButtonPress(pin);
         }
       }
     }
