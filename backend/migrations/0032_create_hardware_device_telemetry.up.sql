@@ -12,4 +12,6 @@ CREATE TABLE IF NOT EXISTS hardware_device_telemetry (
 );
 
 CREATE INDEX IF NOT EXISTS idx_telemetry_device ON hardware_device_telemetry(device_id);
-CREATE INDEX IF NOT EXISTS idx_telemetry_created_at ON hardware_device_telemetry(created_at);
+-- Add composite index for fast latest telemetry & pending command lookup per device
+CREATE INDEX IF NOT EXISTS idx_telemetry_device_created_desc
+    ON hardware_device_telemetry (device_id, created_at DESC);
