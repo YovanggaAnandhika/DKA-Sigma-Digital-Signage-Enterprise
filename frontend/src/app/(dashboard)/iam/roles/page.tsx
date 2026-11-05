@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { api, Role } from '@/lib/services';
 import { Pagination } from '@/components/ui/Pagination';
 import { ShieldCheck, Plus, Search, RefreshCw, Edit, Trash2, Eye, Key } from 'lucide-react';
+import { TableDataValue, TableStatus } from '@/components/ui/TableDataValue';
+import { CalendarDays, FileText } from 'lucide-react';
 
 export default function RolesPage() {
   const [roles, setRoles] = useState<Role[]>([]);
@@ -119,12 +121,15 @@ export default function RolesPage() {
               ) : (
                 roles.map((r) => (
                   <tr key={r.id}>
-                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                    <td>
+                      <TableDataValue icon={ShieldCheck}>
                       <Link href={`/iam/roles/${r.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                         {r.name}
                       </Link>
+                      </TableDataValue>
                     </td>
-                    <td style={{ fontFamily: 'monospace' }}>
+                    <td>
+                      <TableDataValue icon={Key} tone="violet">
                       <span
                         style={{
                           padding: '2px 8px',
@@ -136,28 +141,15 @@ export default function RolesPage() {
                       >
                         {r.slug}
                       </span>
+                      </TableDataValue>
                     </td>
-                    <td style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                      {r.description || '-'}
-                    </td>
+                    <td>{r.description ? <TableDataValue icon={FileText} tone="cyan">{r.description}</TableDataValue> : '-'}</td>
                     <td>
-                      <span
-                        style={{
-                          padding: '2px 8px',
-                          borderRadius: '9999px',
-                          fontSize: '0.6875rem',
-                          fontWeight: 700,
-                          backgroundColor: 'rgba(37, 99, 235, 0.12)',
-                          color: 'var(--primary-400)',
-                          border: '1px solid rgba(59, 130, 246, 0.3)',
-                        }}
-                      >
+                      <TableStatus icon={Key} tone="primary">
                         {r.permissionsList?.length || 0} Permissions
-                      </span>
+                      </TableStatus>
                     </td>
-                    <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {r.createdAt ? new Date(r.createdAt).toLocaleDateString('id-ID') : '-'}
-                    </td>
+                    <td>{r.createdAt ? <TableDataValue icon={CalendarDays} tone="amber">{new Date(r.createdAt).toLocaleDateString('id-ID')}</TableDataValue> : '-'}</td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                         <Link href={`/iam/roles/${r.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Detail Role">

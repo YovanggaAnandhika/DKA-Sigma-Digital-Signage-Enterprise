@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { api, Device } from '@/lib/services';
 import { Pagination } from '@/components/ui/Pagination';
 import { Tv, Search, RefreshCw, Edit, Trash2, Eye, CheckCircle2 } from 'lucide-react';
+import { TableDataValue, TableStatus } from '@/components/ui/TableDataValue';
+import { CircleCheck, CircleX, Clock3, Fingerprint, Layers3, MonitorCheck, Network } from 'lucide-react';
 
 export default function DisplaysPage() {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -227,12 +229,15 @@ export default function DisplaysPage() {
               ) : (
                 devices.map((d) => (
                   <tr key={d.id}>
-                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                    <td>
+                      <TableDataValue icon={Tv} detail={d.isPaired ? 'Player terdaftar' : 'Menunggu aktivasi'}>
                       <Link href={`/hardware/displays/${d.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                         {d.name}
                       </Link>
+                      </TableDataValue>
                     </td>
-                    <td style={{ fontFamily: 'monospace' }}>
+                    <td>
+                      <TableDataValue icon={Fingerprint} tone="violet">
                       <span
                         style={{
                           padding: '2px 8px',
@@ -245,25 +250,12 @@ export default function DisplaysPage() {
                       >
                         {d.pairingCode || d.hardwareFingerprint?.substring(0, 10) || d.id.substring(0, 8).toUpperCase()}
                       </span>
+                      </TableDataValue>
                     </td>
-                    <td style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                      {d.displayGroupId ? 'Tergabung' : '-'}
-                    </td>
+                    <td>{d.displayGroupId ? <TableDataValue icon={Layers3}>{'Tergabung'}</TableDataValue> : '-'}</td>
                     <td>
                       {!d.isPaired ? (
-                        <span
-                          style={{
-                            padding: '3px 8px',
-                            borderRadius: '9999px',
-                            fontSize: '0.6875rem',
-                            fontWeight: 700,
-                            backgroundColor: 'rgba(245, 158, 11, 0.12)',
-                            color: 'var(--accent-amber)',
-                            border: '1px solid rgba(245, 158, 11, 0.3)',
-                          }}
-                        >
-                          MENUNGGU PERSETUJUAN
-                        </span>
+                        <TableStatus icon={Clock3} tone="amber">Menunggu persetujuan</TableStatus>
                       ) : (() => {
                         const isTrulyOnline = Boolean(
                           d.isOnline &&
@@ -271,29 +263,17 @@ export default function DisplaysPage() {
                           (Date.now() - new Date(d.lastHeartbeatAt).getTime() <= 10000)
                         );
                         return (
-                          <div
-                            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                            title={isTrulyOnline ? 'Online' : 'Offline'}
-                            aria-label={isTrulyOnline ? 'Online' : 'Offline'}
+                          <TableStatus
+                            icon={isTrulyOnline ? CircleCheck : CircleX}
+                            tone={isTrulyOnline ? 'emerald' : 'rose'}
                           >
-                            <span
-                              style={{
-                                width: '8px',
-                                height: '8px',
-                                borderRadius: '50%',
-                                backgroundColor: isTrulyOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
-                                boxShadow: isTrulyOnline ? '0 0 6px rgba(16, 185, 129, 0.5)' : 'none',
-                                display: 'inline-block',
-                              }}
-                            />
-                          </div>
+                            {isTrulyOnline ? 'Online' : 'Offline'}
+                          </TableStatus>
                         );
                       })()}
                     </td>
-                    <td>
-                      {d.screenWidth + "x" + d.screenHeight} ({d.orientation})
-                    </td>
-                    <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{d.ipAddress || '127.0.0.1'}</td>
+                    <td><TableDataValue icon={MonitorCheck} tone="cyan" detail={d.orientation}>{d.screenWidth} × {d.screenHeight}</TableDataValue></td>
+                    <td><TableDataValue icon={Network} tone="cyan">{d.ipAddress || '127.0.0.1'}</TableDataValue></td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                         {!d.isPaired && (

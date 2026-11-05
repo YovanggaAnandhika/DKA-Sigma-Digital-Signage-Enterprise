@@ -4,6 +4,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { RefreshCw, Settings2 } from 'lucide-react';
 import { IotDevice, listIotDevices } from '@/lib/services/studio/iot.service';
+import { TableDataValue, TableStatus } from '@/components/ui/TableDataValue';
+import { CircleCheck, CircleX, Cpu, Fingerprint, Wifi } from 'lucide-react';
 
 export default function IotDevicesPage() {
   const [devices, setDevices] = useState<IotDevice[]>([]);
@@ -60,10 +62,14 @@ export default function IotDevicesPage() {
                 <tr><td colSpan={5} style={{ padding: '36px', textAlign: 'center', color: 'var(--text-muted)' }}>Belum ada perangkat yang disetujui.</td></tr>
               ) : devices.map((device) => (
                 <tr key={device.id}>
-                  <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{device.name}</td>
-                  <td>{device.deviceUid}</td>
-                  <td>{device.ipAddress || '-'}</td>
-                  <td>{device.isActive ? 'Aktif' : 'Nonaktif'}</td>
+                  <td><TableDataValue icon={Cpu}>{device.name}</TableDataValue></td>
+                  <td><TableDataValue icon={Fingerprint} tone="violet">{device.deviceUid}</TableDataValue></td>
+                  <td>{device.ipAddress ? <TableDataValue icon={Wifi} tone="cyan">{device.ipAddress}</TableDataValue> : '-'}</td>
+                  <td>
+                    <TableStatus icon={device.isActive ? CircleCheck : CircleX} tone={device.isActive ? 'emerald' : 'rose'}>
+                      {device.isActive ? 'Aktif' : 'Nonaktif'}
+                    </TableStatus>
+                  </td>
                   <td style={{ textAlign: 'right' }}>
                     <Link
                       href={`/hardware/iot/devices/${device.id}/edit`}

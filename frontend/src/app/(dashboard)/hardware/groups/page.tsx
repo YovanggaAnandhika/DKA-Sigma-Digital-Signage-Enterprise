@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { api } from '@/lib/services';
 import type { DisplayGroup } from '@/lib/services/hardware/display-group.types';
 import { Pagination } from '@/components/ui/Pagination';
-import { MonitorPlay, Plus, Search, RefreshCw, Trash2, Edit } from 'lucide-react';
+import { MonitorPlay, Plus, Search, RefreshCw, Trash2, Edit, FileText, PanelsTopLeft, CalendarDays } from 'lucide-react';
+import { TableDataValue } from '@/components/ui/TableDataValue';
 
 export default function DisplayGroupsPage() {
   const [groups, setGroups] = useState<DisplayGroup[]>([]);
@@ -120,12 +121,10 @@ export default function DisplayGroupsPage() {
               ) : (
                 groups.map((g) => (
                   <tr key={g.id}>
-                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {g.name}
-                    </td>
-                    <td>{g.description || '-'}</td>
-                    <td>{g.default_layout_name || '-'}</td>
-                    <td>{g.schedule_name || '-'}</td>
+                    <td><TableDataValue icon={MonitorPlay}>{g.name}</TableDataValue></td>
+                    <td>{g.description ? <TableDataValue icon={FileText} tone="violet">{g.description}</TableDataValue> : '-'}</td>
+                    <td>{g.default_layout_name ? <TableDataValue icon={PanelsTopLeft}>{g.default_layout_name}</TableDataValue> : '-'}</td>
+                    <td>{g.schedule_name ? <TableDataValue icon={CalendarDays} tone="cyan">{g.schedule_name}</TableDataValue> : '-'}</td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                         <Link href={`/hardware/groups/${g.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit">
