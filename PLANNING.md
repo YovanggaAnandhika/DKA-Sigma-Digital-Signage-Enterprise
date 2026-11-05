@@ -2,77 +2,78 @@
 
 ## Current Status
 - **Environment**: Docker Compose dev mode, Bun HMR, Rust gRPC backend
-- **Last audited**: read-only inspection + `cargo check` baseline (green)
+- **Rechecked**: 2026-11-05 — Graphify snapshot plus targeted source checks; no build or tests run
+- **Graphify snapshot**: report generated 2026-10-20; 4,156 nodes, 9,538 edges, 405 communities. Structural evidence only, not a behavior or runtime audit.
 - **Stack**: Rust/Tonic gRPC (`backend/`), Next.js 14 CMS (`frontend/`), Kotlin Media3 player (`android/`), ESP32/Arduino firmware (`iot/`)
 
 ## Health Matrix
 
 | Area | Status | Notes |
 |---|---|---|
-| Backend gRPC (14 registered services) | 🟡 Running | `cargo check` green |
-| Frontend CMS | 🟡 Running | Auth client-side only |
-| Android Player | ⚪ Not audited | Needs separate review |
-| DB Migrations | 🔴 Drift | Docs claim 48 pairs, actual 45 |
-| IoT/MQTT Worker | 🟢 Running | `dka-development-mqtt` (emqx 5.8.0) up |
-| Compose Orchestration | 🟡 Partial | MQTT + Postgres live, but `compose.yml` not self-contained |
+| Backend gRPC | 🟡 Source present | Last known `cargo check` was green; not rerun for this update |
+| Frontend CMS | 🟡 Source present | Graph includes auth and route handlers; session enforcement still needs review |
+| Android Player | ⚪ Behavior unaudited | Player and offline-manifest code/docs are in the graph; runtime/retry behavior not checked |
+| DB Migrations | 🔴 Drift | Docs claim 48 migrations, actual latest is 0045 (45 up migrations) |
+| IoT/MQTT Worker | ⚪ Not rechecked | Previously observed running; current runtime status not verified |
+| Compose Orchestration | 🟡 Partial | External Postgres/MQTT containers and external `dka-internal` network; floating image tags and no healthchecks |
 
-## Verified Defects (priority top to bottom)
+## Resolved / Corrected Findings
+
+- **`--migrate:revert` empty/single-migration panic** — `backend/src/db.rs` now returns when no migrations are applied and uses target `0` for a single migration. Add and run regression tests for 0, 1, and 2 applied migrations before closing validation.
+- **`.DS_Store` tracking claim** — `backend/src/grpc/studio/.DS_Store` is not tracked by Git in the current checkout; removed from open findings.
+
+## Open Findings (priority top to bottom)
 
 ### P0 — Feature-killing
 
-1. **`--migrate:revert` panics on empty DB** — `backend/src/db.rs`:
-   ```rust
-   let last_version = rows.last().unwrap().0;
-   let target = rows[rows.len() - 2].0;
-   ```
-   Panics when DB has 0 or 1 applied migration. Fix: guard `rows.len()` and return `AppError`.
+1. **`compose.yml` is not self-contained** — It depends on external Postgres/MQTT containers and an external `dka-internal` network. Images use floating `latest` tags and services have no healthchecks. Verify the README port discrepancy before changing ports.
 
-2. **`compose.yml` not self-contained** — `DB_HOST: dka-development-postgres` and `MQTT_HOST: dka-development-mqtt` are external containers; network `dka-internal` declared `external: true`. `docker compose up` on a clean machine fails. Also: `DB_PORT: 5432` vs README `54321` mismatch; images `yovanggaanandhika/node:latest` / `rust:latest` unpinned; no `healthcheck` + `depends_on: condition: service_healthy`.
+2. **Schedule time validation silently falls back** — `backend/src/grpc/studio/schedule/service.rs` and `backend/src/modules/studio/schedule/repositories.rs` replace invalid input with default times. Reject malformed times with `Status::invalid_argument` / `AppError::Validation`.
 
-3. **Schedule time validation silently swallowed** — `backend/src/grpc/studio/schedule/service.rs`:
-   ```rust
-   .unwrap_or_else(|_| chrono::NaiveTime::from_hms_opt(8, 0, 0).unwrap());
-   .unwrap_or_else(|_| chrono::NaiveTime::from_hms_opt(22, 0, 0).unwrap());
-   ```
-   Same pattern in `backend/src/modules/studio/schedule/repositories.rs` (00:00 / 23:59:59). Input `25:99` is accepted and the schedule shifts silently. Trust boundary -> must return `Status::invalid_argument` / `AppError::Validation`.
+3. **Transition and visual-filter service layer is absent** — `backend/src/modules/studio/transition/` and `.../visual_filter/` have model/repository modules but no `services.rs`, while gRPC service implementations exist. Check permission and transaction boundaries against `backend/aicontext.md`.
 
-4. **`services.rs` layer bypassed** — `backend/src/modules/studio/transition/` and `.../visual_filter/` contain only `mod.rs`, `model.rs`, `repositories.rs` (no `services.rs`), while `backend/src/grpc/studio/transition/service.rs` and `visual_filter/service.rs` exist. Violates the Layer Rule in `backend/aicontext.md`; permission checks and transaction boundaries risk being skipped.
+### P1 — Data integrity / contract
 
-### P1 — Data corruption / contract drift
+4. **Endpoints outside the protobuf contract** — `frontend/src/app/(api)/api/tts/route.ts` and `frontend/src/app/(api)/api/assets/` need contract/security review; the TTS route is outside `/api/grpc/`.
 
-5. **Endpoints outside Protobuf Contract Rule** — `frontend/src/app/(api)/api/grpc/tts/route.ts` (ad-hoc payload, no `.proto`) and `frontend/src/app/(api)/api/assets/` (direct filesystem serving).
+5. **HTTP Range behavior is an unverified risk, not a confirmed defect** — Verify media routes return `206 Partial Content` and `Accept-Ranges: bytes` for a range request. The Android offline flow depends on reliable asset retrieval and hash verification.
 
-6. **HTTP Range risk for offline-first player** — `StreamMediaFile` route and `api/assets/` must return `206 Partial Content` with `Accept-Ranges: bytes`. Verify: `curl -H Range:bytes=0-1023 -sD- <url>` expect `206`. Failure: resume dead, `sha256_hash` mismatch, manifest never activates -> black screen.
+6. **Crate-wide dead-code allowances** — `backend/src/main.rs` still allows `dead_code`, `unused_imports`, and `unused_variables`, which can hide regressions.
 
-7. **Crate-wide dead-code allow** — `#![allow(dead_code, unused_imports, unused_variables)]` at root of `backend/src/main.rs` hides dead code across the crate.
+### P2 — Cleanup / documentation drift
 
-### P2 — Cleanup / doc drift
+7. **Migration documentation drift** — `backend/aicontext.md` claims migrations through `0048`; the current latest migration is `0045_optimize_telemetry_device_index`.
 
-8. **Migration drift** — `backend/aicontext.md` claims `0001-0048`; actual last is `0045_optimize_telemetry_device_index`.
+8. **Route naming inconsistency** — Reconcile backend `grpc/components/*` with frontend `api/grpc/studio/*`, and `layer_block` / `layer_override` with proto `layer/block` / `layer/item_override`.
 
-9. **`.DS_Store` committed** — `backend/src/grpc/studio/.DS_Store`.
+## Graphify Cross-Check
 
-10. **Route naming inconsistency** — backend `grpc/components/*` maps to frontend `api/grpc/studio/*`; `layer_block` / `layer_override` vs proto `layer/block` / `layer/item_override`.
+- The graph has **no detected import cycles**, but reports **226 isolated symbol nodes** and **302 thin communities**. Treat these as candidate missing links/docs, not confirmed code defects.
+- The highest-degree shared nodes are `getGrpcHost()`, `getGrpcCredentials()`, `getTokenFromRequest()`, and `getGrpcMetadata()`; `AppError` is also highly connected. Add focused checks for shared gRPC credential/metadata behavior and error-to-status mapping because regressions there can affect many features.
+- Graph communities show Android/offline-manifest documentation and player code, plus frontend permission and display-group routes. This confirms those areas exist, not that every RPC has a route or that the offline flow works end-to-end.
+- The report is dated 2026-10-20; rebuild/update it before relying on it for changes made after that snapshot.
 
 ## Audit Checklist (not yet verified)
 
-- [ ] `backend/proto/**` vs `android/app/src/main/proto/**` — field/tag drift?
-- [ ] Every `backend/src/grpc/*/service.rs` calls `require_permission`?
-- [ ] `frontend/src/middleware.ts` logging-only — can `(api)/api/grpc/**` be called without a session?
-- [ ] `AuthGuard` client-side — open dashboard URL directly without session
-- [ ] Android `DownloadAndVerifyMediaUseCase`: retry, hash mismatch, disk-full
-- [ ] `DisplayStream` reconnect/backoff across backend restart
-- [ ] Missing frontend routes for `iam/role_group`, `iam/permission`, `distribution/*`
-- [ ] `iot/*` firmware topics match `dka/iot/+/action` and `dka/iot/+/telemetry`
-- [ ] `--migrate:fresh --seed` then `--migrate:revert`
+- [ ] Compare `backend/proto/**` with `android/app/src/main/proto/**` for field/tag drift.
+- [ ] Check `require_permission` coverage in every `backend/src/grpc/*/service.rs`.
+- [ ] Verify whether `(api)/api/grpc/**` rejects requests without a session; inspect `frontend/src/middleware.ts`.
+- [ ] Test direct dashboard access without a session; inspect `AuthGuard`.
+- [ ] Android `DownloadAndVerifyMediaUseCase`: retry, hash mismatch, disk-full; also verify manifest activation.
+- [ ] Test `DisplayStream` reconnect/backoff after backend restart.
+- [ ] Compare protobuf RPCs against frontend route handlers. `ListPermissions` and `CreateDisplayGroup` routes exist; completeness for `iam/role_group` and `distribution/*` remains unverified.
+- [ ] Verify `iot/*` firmware topics against `dka/iot/+/action` and `dka/iot/+/telemetry`.
+- [ ] Test `--migrate:fresh --seed` and `--migrate:revert`, including empty, one-migration, and multiple-migration cases.
+- [ ] Verify HTTP Range support on media routes with `Range: bytes=0-1023`.
+- [ ] Review graph-isolated symbols and low-cohesion communities for important undocumented or missing relationships; prioritize by user-facing impact.
 
-## Work Order (in progress)
+## Work Order
 
-1. [x] Baseline `cargo check` green
-2. [ ] Fix PLANNING.md (MQTT already up) — commit
-3. [ ] Guard `--migrate:revert` in `db.rs` — `cargo check` — commit
-4. [ ] Schedule time validation (reject invalid) — `cargo check` — commit
-5. [ ] Extract `services.rs` for transition + visual_filter — `cargo check` — commit
-6. [ ] Verify `206` + `Accept-Ranges` on media routes
-7. [ ] Add healthchecks + pinned image tags to `compose.yml`
-8. [ ] Reconcile migration drift
+1. [x] Recheck plan against graph and source; update this document.
+2. [ ] Add regression tests and run `cargo check` for migration revert edge cases (guard is already present).
+3. [ ] Reject invalid schedule times; run targeted backend checks.
+4. [ ] Add service-layer handling for transition and visual-filter modules; validate permission and transaction boundaries.
+5. [ ] Verify media Range behavior and Android offline playback.
+6. [ ] Make Compose startup reproducible with explicit dependencies, healthchecks, and pinned image tags.
+7. [ ] Reconcile migration documentation and route/protobuf coverage.
+8. [ ] Complete the remaining security, Android, and firmware audit checklist.

@@ -20,27 +20,45 @@ You are a lazy senior developer. The best code is the code never written. You so
 
 This project is an enterprise-grade digital signage management and streaming platform:
 
-| Directory | Tech Stack | Responsibility |
-|---|---|---|
-| `backend/` | Rust (Tonic gRPC, Tokio, SQLx, PostgreSQL) | Core business logic, gRPC services, database migrations, media storage, player telemetry streaming. |
-| `frontend/` | Next.js 14 (App Router, Bun, React 18, TypeScript) | Studio CMS, layout/queue editor canvas (`react-rnd`), IAM console, hardware management, Node gRPC route-handler bridge. |
-| `android/` | Kotlin (gRPC Java/Kotlin, Media3 ExoPlayer, DataStore/SharedPreferences) | Android TV/tablet player: pairing, offline SHA-256 asset cache, multi-zone rendering, telemetry stream. |
-| `backend/proto/` | Protocol Buffers v3 | Single source of truth for all API contracts between backend, frontend, and players. Android mirrors this tree under `android/app/src/main/proto/`. |
-| `docs/` | Markdown | DDL database schemas, Android player hardware & streaming protocol guides. |
-| `graphify-out/` | GraphRAG / Knowledge Graph | Architectural dependency graph, god nodes, and community analysis report (`GRAPH_REPORT.md`). |
-| `compose.yml` | Docker Compose | Local & production orchestration (`frontend` on port 80, `backend` on 50051, `db` on 54321/5432). |
+| Path | Responsibility |
+|---|---|
+| `backend/src/grpc/<domain>/` | Tonic transport handlers; convert protobuf requests/responses and enforce auth/permission checks. |
+| `backend/src/modules/<domain>/<feature>/` | Rust domain models, repositories, and services. |
+| `backend/src/common/`, `backend/src/grpc/middleware/` | Shared errors, status mapping, and authentication middleware. |
+| `backend/proto/<domain>/v1/` | Source of truth for RPC and message contracts. |
+| `backend/migrations/`, `backend/src/seeders/` | Reversible SQLx schema changes and seed data. |
+| `frontend/src/app/(auth)/` | Public authentication pages. |
+| `frontend/src/app/(dashboard)/` | Authenticated CMS pages and studio editors. |
+| `frontend/src/app/(api)/api/grpc/<domain>/<RPC>/` | Next.js gRPC bridge route handlers. |
+| `frontend/src/lib/core/`, `frontend/src/lib/services/` | Shared gRPC/API helpers and browser-facing service clients. |
+| `frontend/src/lib/api/` | Generated protobuf/gRPC client stubs; do not hand-edit. |
+| `android/app/src/main/java/com/dkaapis/sigma/{presentation,domain,data,service,renderers}/` | Player UI/rendering, use cases/contracts, repositories/storage/networking, Android services, and zone renderers. |
+| `android/app/src/main/proto/` | Android mirror of `backend/proto/`; keep contracts in sync. |
+| `iot/esp32_queue_button/` | ESP32 Wi-Fi/MQTT queue-button firmware and flashing/wiring guide. |
+| `iot/arduino_nano_queue_button/` | Arduino Nano USB-serial queue-button firmware and guide. |
+| `docs/` | DDL, player integration, and operational/planning documents. |
+| `compose.yml` | Development container orchestration for frontend and backend; database/MQTT may be external. |
+| `graphify-out/` | Generated knowledge graph and reports; derived analysis, not a source of truth. |
+
+### Instruction File Hierarchy
+
+- This root `AGENTS.md` applies across the repository.
+- `backend/AGENTS.md` and `frontend/AGENTS.md` add narrower rules for their respective trees; follow both root and nearest subtree guidance.
+- `android/AGENTS.md` and `iot/AGENTS.md` define platform-specific patterns. Add a closer `AGENTS.md` only when a nested area needs genuinely different rules.
+- When instructions conflict, follow the most specific applicable file, while preserving root security, data-integrity, and API-contract requirements.
 
 ---
 
 ## Non-Negotiable Project Rules
 
 ### 1. Protobuf Contract Rule (Single Source of Truth)
-- All API and data exchange contracts **MUST** be defined in `backend/proto/`.
-- Never invent ad-hoc HTTP endpoints or custom payload formats that diverge from protobuf specs.
+- Define backend gRPC contracts and cross-platform API messages in `backend/proto/`.
+- Do not add a new custom HTTP contract that duplicates a protobuf RPC. Existing non-gRPC routes are exceptions to review and document, not a pattern to extend silently.
 - Workflow for API changes:
   1. Modify or add `.proto` files in `backend/proto/`.
   2. Verify backend compiles (`build.rs` generates tonic code).
   3. Re-generate frontend stubs via `bun scripts/generate_grpc.ts` inside `frontend/`.
+  4. Keep the corresponding Android proto mirror in sync and regenerate generated clients; never hand-edit generated code.
 
 ### 2. Frontend-Backend Communication Rule
 - Frontend connects to Backend gRPC via Next.js Route Handlers (`src/app/(api)/api/grpc/.../route.ts`).
@@ -68,9 +86,13 @@ This project is an enterprise-grade digital signage management and streaming pla
 ### 5. Player Streaming & Offline-First Invariants
 - Android players operate offline-first: media must be downloaded and verified against `sha256_hash` before manifest playback transitions.
 - Real-time player commands and telemetry rely on the bidirectional HTTP/2 gRPC stream (`DisplayStream`).
+- Preserve atomic manifest/playback transitions: do not activate a new manifest until its required assets have passed integrity checks.
 
-### 6. Larangan Eksekusi Build Frontend (`bun run build`)
+### 6. Secrets and Configuration
+- Never commit real passwords, tokens, signing keys, Wi-Fi credentials, or broker credentials.
+- Read deployment-specific values from configuration/environment or device provisioning; use clearly fake placeholders in examples and docs.
+
+### 7. Larangan Eksekusi Build Frontend (`bun run build`)
 - **DILARANG KERAS menjalankan `bun run build` atau `next build`.**
 - Lingkungan kerja sudah berjalan fleksibel menggunakan Docker Compose (`compose.yml`) dalam mode dev dengan live HMR (Hot Module Replacement) / auto-reload.
 - Cukup ubah berkas kode langsung, Next.js dev server di container akan me-reload otomatis tanpa perlu kompilasi produksi manual.
-
