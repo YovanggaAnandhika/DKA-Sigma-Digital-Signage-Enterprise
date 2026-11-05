@@ -2,7 +2,7 @@
 
 ## Current Status
 - **Environment**: Docker Compose dev mode, Bun HMR, Rust gRPC backend
-- **Rechecked**: 2026-11-05 — Graphify snapshot plus targeted source checks; no build or tests run
+- **Rechecked**: 2026-11-05 — Graphify snapshot plus targeted source checks; runtime and full test suites not run for this audit
 - **Graphify snapshot**: report generated 2026-10-20; 4,156 nodes, 9,538 edges, 405 communities. Structural evidence only, not a behavior or runtime audit.
 - **Stack**: Rust/Tonic gRPC (`backend/`), Next.js 14 CMS (`frontend/`), Kotlin Media3 player (`android/`), ESP32/Arduino firmware (`iot/`)
 
@@ -13,9 +13,16 @@
 | Backend gRPC | 🟡 Source present | Last known `cargo check` was green; not rerun for this update |
 | Frontend CMS | 🟡 Source present | Graph includes auth and route handlers; session enforcement still needs review |
 | Android Player | ⚪ Behavior unaudited | Player and offline-manifest code/docs are in the graph; runtime/retry behavior not checked |
-| DB Migrations | 🔴 Drift | Docs claim 47 migrations, actual latest is 0044 (44 up migrations) |
-| IoT/MQTT Worker | ⚪ Not rechecked | Previously observed running; current runtime status not verified |
+| DB Migrations | 🔴 Drift | Repository has 45 up/down pairs (0001–0045); `docs/DDL.md` and `backend/aicontext.md` still document 48 |
+| IoT/MQTT Worker | 🟡 Source checked | MQTT telemetry updates `last_seen_at`; UI derives online for 60s and refreshes the list every 5s. Broker/device runtime not verified |
 | Compose Orchestration | 🟡 Partial | External Postgres/MQTT containers and external `dka-internal` network; floating image tags and no healthchecks |
+
+## Recently Completed (Source-Verified)
+
+- **Dashboard navigation and tables** — shared table styling and contextual cell presentation are in place; child pages with their own tabs hide parent navigation and retain a circular, accessible back button.
+- **Dashboard route loading** — all 69 dashboard `page.tsx` routes have a `loading.tsx` using shared responsive shimmer variants. Route coverage and `bun tsc --noEmit` were checked; browser rendering was not.
+- **IoT heartbeat status** — approved-device list polls every 5 seconds and marks devices offline when telemetry is older than 60 seconds; telemetry detail uses the same threshold. This is timeout-based, not immediate broker disconnect detection.
+- **Media library UX** — detail panel is draggable and defaults to 30% of the content width (bounded to 240–560px); successful upload returns to the media list; preview video volume is set to 50%. Browser interaction/autoplay was not verified.
 
 ## Resolved / Corrected Findings
 
@@ -42,7 +49,7 @@
 
 ### P2 — Cleanup / documentation drift
 
-7. **Migration documentation drift** — `backend/aicontext.md` claims migrations through `0048`; the current latest migration is `0045_optimize_telemetry_device_index`.
+7. **Migration documentation drift** — `backend/aicontext.md` and `docs/DDL.md` claim migrations through `0048`; the repository currently has 45 complete pairs, `0001`–`0045`, with no sequence gaps. The actual latest migration is `0045_add_iot_device_telemetry`.
 
 8. **Route naming inconsistency** — Reconcile backend `grpc/components/*` with frontend `api/grpc/studio/*`, and `layer_block` / `layer_override` with proto `layer/block` / `layer/item_override`.
 

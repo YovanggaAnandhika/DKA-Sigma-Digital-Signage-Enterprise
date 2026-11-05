@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getStoredSession, UserSession } from '../lib/auth';
-import { Loader2 } from 'lucide-react';
+import DashboardLoadingOverlay from './DashboardLoadingOverlay';
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<UserSession | null>(null);
@@ -21,23 +21,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   if (isCheckingAuth || !session) {
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'var(--bg-primary)',
-          color: 'var(--text-secondary)',
-          fontSize: '0.875rem',
-          gap: '10px',
-        }}
-      >
-        <Loader2 size={20} className="animate-spin" style={{ color: 'var(--primary-500)' }} />
-        <span>Memvalidasi sesi pengguna...</span>
-      </div>
-    );
+    return <DashboardLoadingOverlay />;
   }
 
   return <>{children}</>;
