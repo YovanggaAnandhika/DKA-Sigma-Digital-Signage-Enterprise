@@ -1,3 +1,4 @@
+pub mod mqtt;
 pub mod service;
 
 #[macro_export]

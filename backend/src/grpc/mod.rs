@@ -138,11 +138,24 @@ pub mod proto {
 }
 
 // Subfolder domains mirroring proto & modules:
-pub mod iam;
-pub mod hardware;
-pub mod studio;
-pub mod components;
-pub mod iot;
 pub mod common;
+pub mod components;
 pub mod distribution;
+pub mod hardware;
+pub mod iam;
+pub mod iot;
 pub mod middleware;
+pub mod studio;
+
+#[macro_export]
+macro_rules! register_grpc_services {
+    ($router:expr, $pool:expr, $config:expr, $stream_manager:expr) => {{
+        let router = crate::register_hardware_services!($router, $pool);
+        let router = crate::register_iam_services!(router, $pool, $config);
+        let router = crate::register_studio_services!(router, $pool);
+        let router = crate::register_components_services!(router, $pool, $stream_manager);
+        let router = crate::register_iot_services!(router, $pool, $stream_manager);
+        let router = crate::register_distribution_services!(router, $pool, $stream_manager);
+        crate::register_common_services!(router, $pool)
+    }};
+}
