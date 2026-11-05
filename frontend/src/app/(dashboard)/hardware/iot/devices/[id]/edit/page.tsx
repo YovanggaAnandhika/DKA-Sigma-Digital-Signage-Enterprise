@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { Activity, ArrowLeft, Cpu, Plus, Radio, Save, Trash2, Wifi } from 'lucide-react';
+import { Activity, ArrowLeft, Cpu, LoaderCircle, Plus, Radio, Save, Trash2, Wifi } from 'lucide-react';
+import SearchSelect from '@/components/ui/SearchSelect';
 import {
   deleteIotDevice,
   IotDevice,
@@ -217,71 +218,113 @@ export default function EditIotDevicePage() {
           <div style={{ padding: '28px 16px', textAlign: 'center', border: '1px dashed var(--border-strong)', borderRadius: 'var(--radius-lg)', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
             Belum ada mapping. Tambahkan pin untuk mengatur aksi tombol.
           </div>
-        ) : mappings.map((mapping, index) => {
-          const pinOptions = SUPPORTED_PINS.includes(mapping.pin) ? SUPPORTED_PINS : [mapping.pin, ...SUPPORTED_PINS];
-          return (
-            <article key={`${device.id}-${index}`} style={{ padding: '16px', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', background: 'var(--bg-surface)', transition: 'border-color 180ms ease, transform 180ms ease' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(165px, 1fr))', gap: '12px', alignItems: 'end' }}>
-                <label style={{ color: 'var(--text-secondary)', fontSize: '0.74rem', fontWeight: 600 }}>
-                  PIN GPIO
-                  <select
-                    className="form-input"
-                    value={mapping.pin}
-                    onChange={(event) => updateMapping(index, { pin: Number(event.target.value) })}
-                    style={{ marginTop: '6px' }}
-                    aria-label={`Pilih pin mapping ${index + 1}`}
-                  >
-                    {pinOptions.map((pin) => (
-                      <option key={pin} value={pin} disabled={pin !== mapping.pin && usedPins.has(pin)}>
-                        GPIO {pin}{PIN_METADATA[pin] ? ` · ${PIN_METADATA[pin]}` : ' · tidak dikenal firmware saat ini'}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label style={{ color: 'var(--text-secondary)', fontSize: '0.74rem', fontWeight: 600 }}>
-                  AKSI
-                  <select
-                    className="form-input"
-                    value={mapping.action}
-                    onChange={(event) => updateMapping(index, { action: event.target.value })}
-                    style={{ marginTop: '6px' }}
-                    aria-label={`Aksi pin ${mapping.pin}`}
-                  >
-                    {ACTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                  </select>
-                </label>
-                <label style={{ color: 'var(--text-secondary)', fontSize: '0.74rem', fontWeight: 600 }}>
-                  LABEL TOMBOL
-                  <input className="form-input" placeholder="Contoh: Tombol loket 1" value={mapping.label} onChange={(event) => updateMapping(index, { label: event.target.value })} style={{ marginTop: '6px' }} />
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingBottom: '1px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '7px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                    <input type="checkbox" checked={mapping.enabled} onChange={(event) => updateMapping(index, { enabled: event.target.checked })} />
-                    Aktif
-                  </label>
-                  <div style={{ display: 'flex', gap: '7px' }}>
-                    <button
-                      type="button"
-                      className="btn btn-outline"
-                      disabled={!mapping.enabled || testingPin === mapping.pin}
-                      onClick={() => void testMapping(mapping.pin, mapping.action)}
-                      aria-label={`Uji aksi pin ${mapping.pin}`}
-                      title="Menjalankan aksi nyata pada queue yang terikat"
-                    >
-                      <Activity size={14} /> {testingPin === mapping.pin ? 'Menjalankan...' : 'Uji aksi'}
-                    </button>
-                    <button type="button" className="btn btn-outline" onClick={() => setMappings((items) => items.filter((_, current) => current !== index))} aria-label={`Hapus mapping pin ${mapping.pin}`}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <p style={{ margin: '10px 0 0', paddingTop: '9px', borderTop: '1px solid var(--border-subtle)', color: 'var(--text-muted)', fontSize: '0.74rem' }}>
-                GPIO {mapping.pin} · {PIN_METADATA[mapping.pin] || 'Pin tidak dikenali firmware saat ini'} · {ACTIONS.find(([value]) => value === mapping.action)?.[1] || mapping.action}
-              </p>
-            </article>
-          );
-        })}
+        ) : (
+          <div style={{ width: '100%', overflowX: 'auto', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)' }}>
+            <table style={{ width: '100%', minWidth: '850px', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+              <thead>
+                <tr style={{ background: 'var(--bg-surface)' }}>
+                  {[
+                    ['Pin GPIO', '23%'],
+                    ['Aksi', '22%'],
+                    ['Label tombol', '25%'],
+                    ['Status', '14%'],
+                    ['Kontrol', '16%'],
+                  ].map(([label, width], index) => (
+                    <th key={`${label}-${index}`} style={{ width, padding: '11px 12px', borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)', textAlign: index > 2 ? 'center' : 'left', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                      {label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {mappings.map((mapping, index) => {
+                  const pinOptions = [...SUPPORTED_PINS, ...(!SUPPORTED_PINS.includes(mapping.pin) ? [mapping.pin] : [])]
+                    .filter((pin) => pin === mapping.pin || !usedPins.has(pin))
+                    .map((pin) => ({
+                      value: String(pin),
+                      label: `GPIO ${pin} · ${PIN_METADATA[pin] || 'Tidak dikenal firmware saat ini'}`,
+                      hint: pin === 13 ? 'BOOT onboard' : undefined,
+                    }));
+                  const isTesting = testingPin === mapping.pin;
+                  return (
+                    <tr key={`${device.id}-${index}`} style={{ background: 'var(--bg-surface)', transition: 'background-color 160ms ease' }}>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)', verticalAlign: 'middle' }}>
+                        <SearchSelect
+                          value={String(mapping.pin)}
+                          options={pinOptions}
+                          onChange={(value) => updateMapping(index, { pin: Number(value) })}
+                          placeholder="Cari GPIO..."
+                        />
+                        <span style={{ display: 'block', marginTop: '5px', color: 'var(--text-muted)', fontSize: '0.68rem', lineHeight: 1.4 }}>
+                          {PIN_METADATA[mapping.pin] || 'Pin tidak dikenal firmware saat ini'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)', verticalAlign: 'middle' }}>
+                        <select
+                          className="form-input"
+                          value={mapping.action}
+                          onChange={(event) => updateMapping(index, { action: event.target.value })}
+                          aria-label={`Aksi pin ${mapping.pin}`}
+                        >
+                          {ACTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                        </select>
+                      </td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)', verticalAlign: 'middle' }}>
+                        <input
+                          className="form-input"
+                          placeholder="Contoh: Tombol loket 1"
+                          value={mapping.label}
+                          onChange={(event) => updateMapping(index, { label: event.target.value })}
+                          aria-label={`Label tombol pin ${mapping.pin}`}
+                        />
+                      </td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)', textAlign: 'center', verticalAlign: 'middle' }}>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={mapping.enabled}
+                          aria-label={`${mapping.enabled ? 'Nonaktifkan' : 'Aktifkan'} mapping GPIO ${mapping.pin}`}
+                          onClick={() => updateMapping(index, { enabled: !mapping.enabled })}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px 0', border: 0, background: 'transparent', color: mapping.enabled ? 'var(--accent-emerald)' : 'var(--text-muted)', cursor: 'pointer', font: 'inherit', fontSize: '0.75rem', fontWeight: 600 }}
+                        >
+                          <span style={{ display: 'inline-flex', alignItems: 'center', width: '34px', height: '19px', padding: '2px', borderRadius: 'var(--radius-full)', background: mapping.enabled ? 'var(--accent-emerald)' : 'var(--bg-surface-elevated)', border: `1px solid ${mapping.enabled ? 'var(--accent-emerald)' : 'var(--border-strong)'}`, transition: 'background-color 180ms ease, border-color 180ms ease' }}>
+                            <span style={{ width: '13px', height: '13px', borderRadius: '50%', background: 'var(--bg-primary)', boxShadow: 'var(--card-shadow)', transform: mapping.enabled ? 'translateX(15px)' : 'translateX(0)', transition: 'transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1)' }} />
+                          </span>
+                          {mapping.enabled ? 'Aktif' : 'Nonaktif'}
+                        </button>
+                      </td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)', textAlign: 'center', verticalAlign: 'middle' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                          <button
+                            type="button"
+                            className="btn btn-outline"
+                            style={{ width: '34px', height: '34px', padding: 0, justifyContent: 'center' }}
+                            disabled={!mapping.enabled || isTesting}
+                            onClick={() => void testMapping(mapping.pin, mapping.action)}
+                            aria-label={`Uji aksi pin ${mapping.pin}`}
+                            title="Uji aksi nyata"
+                          >
+                            {isTesting ? <LoaderCircle size={15} className="animate-spin" /> : <Activity size={15} />}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-outline"
+                            style={{ width: '34px', height: '34px', padding: 0, justifyContent: 'center', color: 'var(--accent-rose)' }}
+                            onClick={() => setMappings((items) => items.filter((_, current) => current !== index))}
+                            aria-label={`Hapus mapping pin ${mapping.pin}`}
+                            title="Hapus mapping"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {testMessage && <p role="status" style={{ margin: 0, padding: '10px 12px', borderRadius: 'var(--radius-md)', color: 'var(--text-secondary)', background: 'var(--bg-surface-elevated)', fontSize: '0.82rem' }}>{testMessage}</p>}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', paddingTop: '4px' }}>
