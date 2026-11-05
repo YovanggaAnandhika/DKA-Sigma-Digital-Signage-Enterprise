@@ -37,7 +37,7 @@ export default function MediaMetadataForm({
       </h2>
 
       {mode === 'upload' ? (
-        /* Mode Upload: Nama media dapat diedit, sisanya (tipe, durasi, resolusi) terdeteksi otomatis */
+        /* Mode Upload: Nama media dapat diedit, metadata terdeteksi otomatis */
         <div>
           <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
             Nama Aset Media <span style={{ color: 'var(--accent-rose)' }}>*</span>

@@ -34,6 +34,7 @@ impl MediaServiceImpl {
             "image" => crate::grpc::proto::studio::v1::media::MediaType::Image as i32,
             "video" => crate::grpc::proto::studio::v1::media::MediaType::Video as i32,
             "web" => crate::grpc::proto::studio::v1::media::MediaType::Web as i32,
+            "audio" => crate::grpc::proto::studio::v1::media::MediaType::Audio as i32,
             _ => crate::grpc::proto::studio::v1::media::MediaType::Unspecified as i32,
         };
 
@@ -103,6 +104,7 @@ impl MediaServiceTrait for MediaServiceImpl {
             crate::grpc::proto::studio::v1::media::MediaType::Image => "image".to_string(),
             crate::grpc::proto::studio::v1::media::MediaType::Video => "video".to_string(),
             crate::grpc::proto::studio::v1::media::MediaType::Web => "web".to_string(),
+            crate::grpc::proto::studio::v1::media::MediaType::Audio => "audio".to_string(),
             _ => "image".to_string(),
         };
 
@@ -361,6 +363,11 @@ impl MediaServiceTrait for MediaServiceImpl {
             "svg" => "image/svg+xml",
             "mp4" => "video/mp4",
             "webm" => "video/webm",
+            "mp3" => "audio/mpeg",
+            "wav" => "audio/wav",
+            "ogg" => "audio/ogg",
+            "m4a" => "audio/mp4",
+            "aac" => "audio/aac",
             _ => "application/octet-stream",
         }.to_string();
 
@@ -405,6 +412,11 @@ impl MediaServiceTrait for MediaServiceImpl {
             "svg" => "image/svg+xml",
             "mp4" => "video/mp4",
             "webm" => "video/webm",
+            "mp3" => "audio/mpeg",
+            "wav" => "audio/wav",
+            "ogg" => "audio/ogg",
+            "m4a" => "audio/mp4",
+            "aac" => "audio/aac",
             _ => "application/octet-stream",
         }.to_string();
 
@@ -477,5 +489,4 @@ impl MediaServiceTrait for MediaServiceImpl {
         Ok(Response::new(ReceiverStream::new(rx)))
     }
 }
-
 

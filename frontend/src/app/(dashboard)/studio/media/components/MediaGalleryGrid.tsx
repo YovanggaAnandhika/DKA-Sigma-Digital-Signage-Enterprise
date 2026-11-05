@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Film, Image as ImageIcon, Globe } from 'lucide-react';
+import { Film, Image as ImageIcon, Globe, Music } from 'lucide-react';
 import { MediaItem } from '@/lib/services';
-import { getMediaDisplayUrl } from '@/lib/services/studio/media.service';
+import { getMediaDisplayUrl, isAudioMedia } from '@/lib/services/studio/media.service';
 
 interface MediaGalleryGridProps {
   mediaItems: MediaItem[];
@@ -27,6 +27,7 @@ export default function MediaGalleryGrid({
       ) : (
         mediaItems.map((m) => {
           const isSelected = selectedMedia?.id === m.id;
+          const isAudio = isAudioMedia(m);
           return (
             <div
               key={m.id}
@@ -45,7 +46,9 @@ export default function MediaGalleryGrid({
               <div style={{ height: '140px', backgroundColor: 'var(--bg-surface-elevated)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {(() => {
                   const displayUrl = getMediaDisplayUrl(m);
-                  return m.mediaType === 2 && displayUrl ? (
+                  return isAudio ? (
+                    <Music size={32} color="var(--primary-500)" />
+                  ) : m.mediaType === 2 && displayUrl ? (
                     <video
                       ref={(el) => {
                         if (el) {
@@ -79,12 +82,12 @@ export default function MediaGalleryGrid({
                 
                 {/* Badge Tipe */}
                 <div style={{ position: 'absolute', top: '8px', left: '8px', backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', padding: '4px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', color: '#fff', fontSize: '0.6875rem', fontWeight: 600 }}>
-                  {m.mediaType === 2 ? <Film size={12} color="#22d3ee" /> : m.mediaType === 3 ? <Globe size={12} color="#fbbf24" /> : <ImageIcon size={12} color="#34d399" />}
-                  {m.mediaType === 2 ? 'Video' : m.mediaType === 3 ? 'Web' : 'Gambar'}
+                  {isAudio ? <Music size={12} color="#c084fc" /> : m.mediaType === 2 ? <Film size={12} color="#22d3ee" /> : m.mediaType === 3 ? <Globe size={12} color="#fbbf24" /> : <ImageIcon size={12} color="#34d399" />}
+                  {isAudio ? 'Audio' : m.mediaType === 2 ? 'Video' : m.mediaType === 3 ? 'Web' : 'Gambar'}
                 </div>
                 
                 {/* Badge Durasi (Video Only) */}
-                {m.mediaType === 2 && m.durationSeconds > 0 && (
+                {(m.mediaType === 2 || isAudio) && m.durationSeconds > 0 && (
                   <div style={{ position: 'absolute', bottom: '8px', right: '8px', backgroundColor: 'rgba(0,0,0,0.7)', padding: '2px 6px', borderRadius: '4px', color: '#fff', fontSize: '0.6875rem', fontFamily: 'monospace' }}>
                     {m.durationSeconds}s
                   </div>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, X, Check, Volume2, Music, FolderOpen, Play, Pause } from 'lucide-react';
 import { api, MediaItem } from '@/lib/services';
+import { isAudioMedia } from '@/lib/services/studio/media.service';
 
 interface QueueAudioPickerModalProps {
   isOpen: boolean;
@@ -36,14 +37,7 @@ export default function QueueAudioPickerModal({ isOpen, onClose, onSelectAudio }
       try {
         setLoading(true);
         const res = await api.getMedia({ limit: 100 });
-        // Include audio items (or files with audio extensions / mime types)
-        const audiosOnly = (res.data || []).filter(
-          (m: MediaItem) =>
-            m.mediaType === 3 || // AUDIO enum
-            String(m.mediaType) === 'AUDIO' ||
-            m.mimeType?.startsWith('audio/') ||
-            /\.(mp3|wav|ogg|m4a|aac)$/i.test(m.originalFilename || '')
-        );
+        const audiosOnly = (res.data || []).filter(isAudioMedia);
         setMediaList(audiosOnly);
       } catch (err) {
         console.error('Failed to load media for audio picker:', err);

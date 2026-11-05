@@ -30,6 +30,12 @@ export function getMediaDisplayUrl(item: MediaItem): string {
   return '';
 }
 
+export function isAudioMedia(item: MediaItem): boolean {
+  return item.mediaType === 4 ||
+    item.mimeType?.startsWith('audio/') === true ||
+    /\.(mp3|wav|ogg|m4a|aac)$/i.test(item.originalFilename || '');
+}
+
 export async function getMedia(params?: { search?: string; page?: number; limit?: number }): Promise<{ data: MediaItem[]; total: number }> {
   const payload = {
     search: params?.search,
@@ -265,4 +271,3 @@ export async function getMediaFile(filename: string): Promise<{ success: boolean
     file_data: bytes,
   };
 }
-

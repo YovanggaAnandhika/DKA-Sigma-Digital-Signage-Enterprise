@@ -368,6 +368,7 @@ impl ManifestServiceImpl {
                 "image" => crate::grpc::proto::studio::v1::media::MediaType::Image as i32,
                 "video" => crate::grpc::proto::studio::v1::media::MediaType::Video as i32,
                 "web" => crate::grpc::proto::studio::v1::media::MediaType::Web as i32,
+                "audio" => crate::grpc::proto::studio::v1::media::MediaType::Audio as i32,
                 _ => crate::grpc::proto::studio::v1::media::MediaType::Unspecified as i32,
             };
             ManifestAsset {

@@ -28,7 +28,7 @@ export default function CreateMediaPage() {
     name: '',
     originalFilename: '',
     publicUrl: '',
-    mediaType: 1, // 1: Image, 2: Video, 3: Web
+    mediaType: 1, // 1: Image, 2: Video, 3: Web, 4: Audio
     mimeType: 'image/jpeg',
     fileSizeBytes: 0,
     width: 1920,
@@ -37,42 +37,63 @@ export default function CreateMediaPage() {
   });
 
   const handleFile = async (file: File) => {
-    setSelectedFile(file);
-    const objectUrl = URL.createObjectURL(file);
-    setPreviewUrl(objectUrl);
-
     // Derive readable name from file
     const cleanName = file.name
       .replace(/\.[^/.]+$/, '')
       .replace(/[_-]+/g, ' ')
       .replace(/\b\w/g, (c) => c.toUpperCase());
 
-    const isVideo = file.type.startsWith('video/') || file.name.endsWith('.mp4') || file.name.endsWith('.webm');
-    const mediaType = isVideo ? 2 : 1;
+    const extension = file.name.split('.').pop()?.toLowerCase() || '';
+    const isVideo = file.type.startsWith('video/') || ['mp4', 'webm'].includes(extension);
+    const isAudio = file.type.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a', 'aac'].includes(extension);
+    if (!isVideo && !isAudio && !file.type.startsWith('image/')) {
+      alert('Format berkas tidak didukung. Pilih gambar, video MP4/WebM, atau audio MP3/WAV/OGG/M4A/AAC.');
+      return;
+    }
+    setSelectedFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+
+    const mediaType = isVideo ? 2 : isAudio ? 4 : 1;
+    const fallbackMimeType = ({
+      mp3: 'audio/mpeg',
+      wav: 'audio/wav',
+      ogg: 'audio/ogg',
+      m4a: 'audio/mp4',
+      aac: 'audio/aac',
+      mp4: 'video/mp4',
+      webm: 'video/webm',
+    } as Record<string, string>)[extension] || 'image/jpeg';
+    const mimeTypeMatchesType = isAudio
+      ? file.type.startsWith('audio/')
+      : isVideo
+        ? file.type.startsWith('video/')
+        : file.type.startsWith('image/');
+    const mimeType = mimeTypeMatchesType ? file.type : fallbackMimeType;
 
     setFormData((prev) => ({
       ...prev,
       name: cleanName,
       originalFilename: file.name,
       mediaType: mediaType,
-      mimeType: file.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
+      mimeType,
       fileSizeBytes: file.size,
       publicUrl: objectUrl, // Used for local display & player preview
     }));
 
     // Detect pixel dimensions and duration
-    if (isVideo) {
-      const video = document.createElement('video');
-      video.preload = 'metadata';
-      video.onloadedmetadata = () => {
+    if (isVideo || isAudio) {
+      const media = isVideo ? document.createElement('video') : document.createElement('audio');
+      media.preload = 'metadata';
+      media.onloadedmetadata = () => {
         setFormData((prev) => ({
           ...prev,
-          width: video.videoWidth || 1920,
-          height: video.videoHeight || 1080,
-          durationSeconds: Math.round(video.duration) || 10,
+          width: isVideo ? (media as HTMLVideoElement).videoWidth || 1920 : 0,
+          height: isVideo ? (media as HTMLVideoElement).videoHeight || 1080 : 0,
+          durationSeconds: Number.isFinite(media.duration) ? Math.round(media.duration) : 0,
         }));
       };
-      video.src = objectUrl;
+      media.src = objectUrl;
     } else {
       const img = new Image();
       img.onload = () => {
@@ -137,7 +158,7 @@ export default function CreateMediaPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (mode === 'upload' && !selectedFile && !previewUrl) {
-      alert('Silakan pilih berkas gambar atau video untuk diunggah.');
+      alert('Silakan pilih berkas gambar, video, atau audio untuk diunggah.');
       return;
     }
 
@@ -155,7 +176,7 @@ export default function CreateMediaPage() {
         .substring(0, 64);
 
       let savedPublicUrl = formData.publicUrl;
-      let savedFilename = formData.originalFilename || `${formData.name.toLowerCase().replace(/\s+/g, '_')}.${formData.mediaType === 2 ? 'mp4' : 'jpg'}`;
+      let savedFilename = formData.originalFilename || `${formData.name.toLowerCase().replace(/\s+/g, '_')}.${formData.mediaType === 2 ? 'mp4' : formData.mediaType === 4 ? 'mp3' : 'jpg'}`;
       let finalSha256 = fileSha256 || fallbackHash;
       let finalFileSize = formData.fileSizeBytes || selectedFile?.size || 0;
       let finalFilePath = `/storage/studio/media/${savedFilename}`;
@@ -224,7 +245,7 @@ export default function CreateMediaPage() {
             Unggah / Daftarkan Media Baru
           </h1>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Unggah file gambar atau video promosi untuk dimasukkan ke dalam daftar putar dan layout display.
+            Unggah file gambar, video, atau audio untuk dimasukkan ke dalam pustaka media.
           </p>
         </div>
       </div>

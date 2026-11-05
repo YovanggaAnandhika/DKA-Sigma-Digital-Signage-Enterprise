@@ -2,8 +2,9 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Check, Copy, ExternalLink, AlertTriangle, UploadCloud } from 'lucide-react';
+import { Check, Copy, ExternalLink, AlertTriangle, UploadCloud, Music } from 'lucide-react';
 import { MediaItem } from '@/lib/services';
+import { isAudioMedia } from '@/lib/services/studio/media.service';
 
 interface MediaVisualPreviewProps {
   media: MediaItem;
@@ -20,6 +21,7 @@ export default function MediaVisualPreview({
   mediaLoadError,
   setMediaLoadError,
 }: MediaVisualPreviewProps) {
+  const isAudio = isAudioMedia(media);
   return (
     <div className="card-elevated" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
@@ -33,12 +35,12 @@ export default function MediaVisualPreview({
               fontWeight: 700,
               padding: '3px 8px',
               borderRadius: '6px',
-              backgroundColor: media.mediaType === 2 ? 'rgba(6, 182, 212, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-              color: media.mediaType === 2 ? 'var(--accent-cyan)' : 'var(--accent-emerald)',
-              border: `1px solid ${media.mediaType === 2 ? 'rgba(6, 182, 212, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
+              backgroundColor: isAudio ? 'rgba(192, 132, 252, 0.15)' : media.mediaType === 2 ? 'rgba(6, 182, 212, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+              color: isAudio ? '#c084fc' : media.mediaType === 2 ? 'var(--accent-cyan)' : 'var(--accent-emerald)',
+              border: `1px solid ${isAudio ? 'rgba(192, 132, 252, 0.3)' : media.mediaType === 2 ? 'rgba(6, 182, 212, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
             }}
           >
-            {media.mediaType === 2 ? 'Video MP4' : media.mediaType === 3 ? 'Web URL' : 'Gambar'}
+            {isAudio ? 'Audio' : media.mediaType === 2 ? 'Video' : media.mediaType === 3 ? 'Web URL' : 'Gambar'}
           </span>
         </div>
 
@@ -102,6 +104,13 @@ export default function MediaVisualPreview({
               <span>Unggah Media Baru</span>
             </Link>
           </div>
+        ) : isAudio ? (
+          <audio
+            src={media.publicUrl}
+            controls
+            onError={() => setMediaLoadError(true)}
+            style={{ width: 'min(640px, 90%)' }}
+          />
         ) : media.mediaType === 2 ? (
           <video
             src={media.publicUrl}

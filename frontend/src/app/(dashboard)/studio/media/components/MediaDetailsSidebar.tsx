@@ -2,9 +2,9 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Film, Image as ImageIcon, Globe, Eye, Edit, Trash2, X } from 'lucide-react';
+import { Film, Image as ImageIcon, Globe, Eye, Edit, Trash2, X, Music } from 'lucide-react';
 import { MediaItem } from '@/lib/services';
-import { getMediaDisplayUrl } from '@/lib/services/studio/media.service';
+import { getMediaDisplayUrl, isAudioMedia } from '@/lib/services/studio/media.service';
 
 interface MediaDetailsSidebarProps {
   selectedMedia: MediaItem;
@@ -19,7 +19,15 @@ export default function MediaDetailsSidebar({
   handleDelete,
   width,
 }: MediaDetailsSidebarProps) {
+  const isAudio = isAudioMedia(selectedMedia);
   const getMediaTypeBadge = (type: number) => {
+    if (isAudio) {
+      return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--primary-500)', fontWeight: 600, fontSize: '0.75rem' }}>
+          <Music size={13} /> Audio
+        </span>
+      );
+    }
     if (type === 2) {
       return (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--accent-cyan)', fontWeight: 600, fontSize: '0.75rem' }}>
@@ -51,7 +59,11 @@ export default function MediaDetailsSidebar({
       <div style={{ height: '180px', backgroundColor: 'var(--bg-surface-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {(() => {
           const displayUrl = getMediaDisplayUrl(selectedMedia);
-          return selectedMedia.mediaType === 2 && displayUrl ? (
+          return isAudio && displayUrl ? (
+            <audio src={displayUrl} controls style={{ width: '90%' }} />
+          ) : isAudio ? (
+            <Music size={48} color="var(--primary-500)" />
+          ) : selectedMedia.mediaType === 2 && displayUrl ? (
             <video 
               ref={(el) => {
                 if (el) {
@@ -96,7 +108,7 @@ export default function MediaDetailsSidebar({
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
             <span style={{ color: 'var(--text-secondary)' }}>Dimensi</span>
-            <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'monospace' }}>{selectedMedia.width} × {selectedMedia.height} px</span>
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'monospace' }}>{isAudio ? '-' : `${selectedMedia.width} × ${selectedMedia.height} px`}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '6px' }}>
             <span style={{ color: 'var(--text-secondary)' }}>Durasi</span>

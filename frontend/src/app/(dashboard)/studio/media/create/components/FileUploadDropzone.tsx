@@ -25,7 +25,7 @@ export default function FileUploadDropzone({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm"
+        accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/aac,.mp3,.wav,.ogg,.m4a,.aac"
         style={{ display: 'none' }}
         onChange={(e) => {
           if (e.target.files && e.target.files[0]) {
@@ -69,7 +69,7 @@ export default function FileUploadDropzone({
         </div>
         <div>
           <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-            Tarik & Letakkan gambar atau video di sini
+            Tarik & Letakkan gambar, video, atau audio di sini
           </h3>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px', margin: 0 }}>
             atau <span style={{ color: 'var(--primary-600)', fontWeight: 600, textDecoration: 'underline' }}>klik untuk memilih berkas</span> dari komputer Anda
@@ -78,6 +78,7 @@ export default function FileUploadDropzone({
         <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
           <span style={{ fontSize: '0.6875rem', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'var(--bg-base)', color: 'var(--text-secondary)' }}>JPG, PNG, WebP</span>
           <span style={{ fontSize: '0.6875rem', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'var(--bg-base)', color: 'var(--text-secondary)' }}>MP4, WebM Video</span>
+          <span style={{ fontSize: '0.6875rem', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'var(--bg-base)', color: 'var(--text-secondary)' }}>MP3, WAV, OGG, M4A, AAC</span>
         </div>
       </div>
     </>

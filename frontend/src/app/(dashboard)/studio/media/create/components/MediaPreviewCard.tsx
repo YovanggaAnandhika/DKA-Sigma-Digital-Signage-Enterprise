@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { CheckCircle2, X } from 'lucide-react';
+import { CheckCircle2, Music, X } from 'lucide-react';
 
 interface MediaPreviewCardProps {
   previewUrl: string | null;
@@ -64,7 +64,12 @@ export default function MediaPreviewCard({
             boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
           }}
         >
-          {formData.mediaType === 2 ? (
+          {formData.mediaType === 4 ? (
+            <div style={{ width: '100%', padding: '12px', textAlign: 'center' }}>
+              <Music size={28} color="var(--primary-500)" style={{ margin: '0 auto 10px' }} />
+              <audio src={previewUrl!} controls style={{ width: '100%' }} />
+            </div>
+          ) : formData.mediaType === 2 ? (
             <video src={previewUrl!} style={{ width: '100%', height: '100%', objectFit: 'contain' }} muted />
           ) : (
             <img src={previewUrl!} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -78,9 +83,9 @@ export default function MediaPreviewCard({
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
             <span>Ukuran: <strong>{formatBytes(formData.fileSizeBytes)}</strong></span>
-            <span>Resolusi: <strong>{formData.width} × {formData.height} px</strong></span>
+            {formData.mediaType !== 4 && <span>Resolusi: <strong>{formData.width} × {formData.height} px</strong></span>}
             <span>Format: <strong>{formData.mimeType}</strong></span>
-            {formData.mediaType === 2 && (
+            {formData.mediaType !== 1 && (
               <span>Durasi: <strong style={{ color: 'var(--accent-amber)' }}>{formData.durationSeconds} detik</strong></span>
             )}
           </div>
