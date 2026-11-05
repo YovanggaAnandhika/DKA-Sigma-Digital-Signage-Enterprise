@@ -260,14 +260,12 @@ export default function EditIotDevicePage() {
                         </span>
                       </td>
                       <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)', verticalAlign: 'middle' }}>
-                        <select
-                          className="form-input"
+                        <SearchSelect
                           value={mapping.action}
-                          onChange={(event) => updateMapping(index, { action: event.target.value })}
-                          aria-label={`Aksi pin ${mapping.pin}`}
-                        >
-                          {ACTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                        </select>
+                          options={ACTIONS.map(([value, label]) => ({ value, label }))}
+                          onChange={(value) => updateMapping(index, { action: value })}
+                          placeholder="Cari aksi..."
+                        />
                       </td>
                       <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)', verticalAlign: 'middle' }}>
                         <input
