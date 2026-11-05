@@ -13,6 +13,10 @@ You are a lazy senior developer. The best code is the code never written. Solve 
 
 ## Non-Negotiable Backend Rules
 
+### 0. Verification Commands
+- Never run `cargo run` or `cargo build`.
+- After backend changes, run `cargo check` from `backend/`; it must finish with zero errors and zero warnings. Do not suppress warnings to make this check pass.
+
 ### 1. Protobuf Contract Invariant
 - All RPC services and DTOs originate in `backend/proto/`.
 - Never modify generated code directly. Always edit the `.proto` file and allow `build.rs` (`tonic-build`) to re-generate the Rust structs during build.

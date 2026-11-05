@@ -13,6 +13,11 @@ You are a lazy senior developer. The best code is the code never written. Solve 
 
 ## Non-Negotiable Frontend Rules
 
+### 0. Tooling & Verification Commands
+- Use Bun only for frontend package management, scripts, type-checks, tests, and other frontend commands. Do not use npm, pnpm, yarn, or invoke Node directly.
+- Verify TypeScript changes with `bun tsc --noEmit` from `frontend/`.
+- Never run `bun run build` or `next build`.
+
 ### 1. Styling Invariants (Vanilla CSS + HDR+ Tokens Only)
 - **STRICTLY NO TAILWIND CSS.** The project uses Vanilla CSS.
 - **Never hardcode raw colors (e.g. `#131824`, `#ffffff`, `#000000`, `rgb(...)`) directly in components.**
@@ -65,4 +70,3 @@ You are a lazy senior developer. The best code is the code never written. Solve 
 - **DILARANG KERAS menjalankan `bun run build` atau `next build`.**
 - Lingkungan kerja frontend sudah aktif dan terkelola secara fleksibel melalui Docker Compose (`compose.yml`) development server.
 - Dev server menyediakan fast hot-reloading (HMR). Cukup edit dan simpan berkas TypeScript/CSS; perubahan langsung aktif tanpa kompilasi build produksi.
-

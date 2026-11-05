@@ -96,3 +96,8 @@ This project is an enterprise-grade digital signage management and streaming pla
 - **DILARANG KERAS menjalankan `bun run build` atau `next build`.**
 - Lingkungan kerja sudah berjalan fleksibel menggunakan Docker Compose (`compose.yml`) dalam mode dev dengan live HMR (Hot Module Replacement) / auto-reload.
 - Cukup ubah berkas kode langsung, Next.js dev server di container akan me-reload otomatis tanpa perlu kompilasi produksi manual.
+
+### 8. Required Verification Commands
+- Backend: never run `cargo run` or `cargo build`; verify Rust changes with `cargo check` from `backend/` and require zero errors and zero warnings.
+- Frontend: use Bun only for all frontend package, script, type-check, and test commands; never use npm, pnpm, yarn, or direct Node commands. Verify TypeScript changes with `bun tsc --noEmit` from `frontend/`. Never run `bun run build` or `next build`.
+- Android: verification is limited to `./gradlew :app:check` and `./gradlew :app:assemble` from `android/`. Do not run debug-variant tasks (including `assembleDebug`) or the `build` task.

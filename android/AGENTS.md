@@ -20,3 +20,8 @@ These rules supplement the repository-root `AGENTS.md`.
 - Use the existing gRPC/protobuf and Media3 dependencies; do not introduce a parallel HTTP/API contract for backend RPCs.
 - For contract changes, edit `backend/proto/` only, then regenerate Android clients through Gradle. Do not duplicate proto sources or edit generated code manually.
 - Add tests for changed use-case behavior where practical. Exercise hardware-, storage-, and stream-dependent behavior on representative devices before claiming it is verified.
+
+## Verification Commands
+
+- From `android/`, verification is limited to `./gradlew :app:check` and `./gradlew :app:assemble`.
+- Do not run debug-variant tasks (including `assembleDebug`) or the `build` task.
