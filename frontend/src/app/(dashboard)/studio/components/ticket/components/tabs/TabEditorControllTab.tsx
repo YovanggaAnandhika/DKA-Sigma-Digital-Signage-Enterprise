@@ -29,6 +29,7 @@ const QueueLiveMonitorCanvas = dynamic(() => import('../control/QueueLiveMonitor
 export default function TabEditorControllTab() {
   const { queue, setQueue, simulator, setSimulator, triggerChime } = useQueueEditor();
   const [calling, setCalling] = useState(false);
+  const callingRef = useRef(false);
   const [counterMenuOpen, setCounterMenuOpen] = useState(false);
 
   // Efek invert visual pemanggilan (100% konsisten dengan Android player: aktif selama audio TTS berbicara)
@@ -82,6 +83,16 @@ export default function TabEditorControllTab() {
 
   // Sesuai permintaan: saat ditutup tombol kontrol pemanggil dinonaktifkan
   const isCallingDisabled = calling || isLocked;
+  const beginCalling = () => {
+    if (callingRef.current || isLocked) return false;
+    callingRef.current = true;
+    setCalling(true);
+    return true;
+  };
+  const finishCalling = () => {
+    callingRef.current = false;
+    setCalling(false);
+  };
 
   // Real-time synchronization: saat layar disentuh di Android (player touch), konsol web ikut terupdate
   React.useEffect(() => {
@@ -197,7 +208,7 @@ export default function TabEditorControllTab() {
       isSyncing = true;
       try {
         const sync = await getQueueSyncState(queue.id).catch(() => null);
-        if (!sync) return;
+        if (!sync || callingRef.current) return;
 
         const dbTicket = sync.currentTicketNumber || sync.current_ticket_number;
         const dbCounters: any[] = sync.countersList || sync.counters || [];
@@ -327,8 +338,7 @@ export default function TabEditorControllTab() {
 
   // Next ticket call
   const handleCallNext = async () => {
-    if (isCallingDisabled) return;
-    setCalling(true);
+    if (!beginCalling()) return;
     startInvertEffect();
     try {
       let nextNumber = queue.currentNumber || simulator.currentNumber || `${queue.prefix || 'A'}-000`;
@@ -347,6 +357,7 @@ export default function TabEditorControllTab() {
         nextNumber = `${queue.prefix || 'A'}-${String(nextSeq).padStart(3, '0')}`;
       }
 
+      lastSyncedTicketRef.current = nextNumber;
       setQueue((prev) => ({
         ...prev,
         currentNumber: nextNumber,
@@ -382,7 +393,7 @@ export default function TabEditorControllTab() {
             activeCounter.counterName,
             false,
             () => {
-              setCalling(false);
+              finishCalling();
               stopInvertEffect();
             },
             queue
@@ -394,22 +405,21 @@ export default function TabEditorControllTab() {
           activeCounter.counterName,
           false,
           () => {
-            setCalling(false);
+            finishCalling();
             stopInvertEffect();
           },
           queue
         );
       }
     } catch {
-      setCalling(false);
+      finishCalling();
       stopInvertEffect();
     }
   };
 
   // Recall current ticket
   const handleRecall = () => {
-    if (isCallingDisabled) return;
-    setCalling(true);
+    if (!beginCalling()) return;
     startInvertEffect();
     const curNumber = queue.currentNumber || simulator.currentNumber || `${queue.prefix || 'A'}-001`;
     recordCallHistory(curNumber, activeCounter.counterName, 'recall');
@@ -434,7 +444,7 @@ export default function TabEditorControllTab() {
           activeCounter.counterName,
           true,
           () => {
-            setCalling(false);
+            finishCalling();
             stopInvertEffect();
           },
           queue
@@ -446,7 +456,7 @@ export default function TabEditorControllTab() {
         activeCounter.counterName,
         true,
         () => {
-          setCalling(false);
+          finishCalling();
           stopInvertEffect();
         },
         queue
@@ -456,8 +466,7 @@ export default function TabEditorControllTab() {
 
   // Previous ticket call
   const handleCallPrevious = async () => {
-    if (isCallingDisabled) return;
-    setCalling(true);
+    if (!beginCalling()) return;
     startInvertEffect();
     try {
       let prevNumber = queue.currentNumber || simulator.currentNumber || `${queue.prefix || 'A'}-001`;
@@ -511,7 +520,7 @@ export default function TabEditorControllTab() {
             activeCounter.counterName,
             false,
             () => {
-              setCalling(false);
+              finishCalling();
               stopInvertEffect();
             },
             queue
@@ -523,14 +532,14 @@ export default function TabEditorControllTab() {
           activeCounter.counterName,
           false,
           () => {
-            setCalling(false);
+            finishCalling();
             stopInvertEffect();
           },
           queue
         );
       }
     } catch {
-      setCalling(false);
+      finishCalling();
       stopInvertEffect();
     }
   };
