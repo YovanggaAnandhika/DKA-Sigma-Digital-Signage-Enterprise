@@ -41,6 +41,7 @@ You are a lazy senior developer. The best code is the code never written. Solve 
   - `XXXX_<action>.up.sql`
   - `XXXX_<action>.down.sql`
 - Each pair must alter exactly one table; keep that table's change and rollback in the matching `.up.sql` and `.down.sql` files.
+- During development, edit an existing migration pair directly if it is still uncommitted and unapplied; do not add a follow-up migration just to revise it. Do not run `migrate:fresh` or seed commands unless asked—the user will run `migrate:fresh --seed` manually. Once a migration has been applied or shared, preserve it and add a forward migration.
 - Always use parameterized queries (`$1`, `$2`, etc.) via `sqlx::query` or `sqlx::query_as`. Never format or concatenate strings into SQL queries.
 - Multi-step operations (e.g. saving a layout and its items) **MUST** run inside an explicit database transaction (`pool.begin().await`).
 

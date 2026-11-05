@@ -42,6 +42,7 @@ use std::env;
 use std::net::SocketAddr;
 use tonic::transport::Server;
 use tracing::{info, warn};
+use uuid::Uuid;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -223,18 +224,48 @@ fn spawn_mqtt_worker(pool: sqlx::PgPool, stream_manager: StreamConnectionManager
                                     .and_then(|value| i32::try_from(value).ok());
 
                                 if let (Some(uid), Some(pin)) = (device_uid, pin) {
-                                    if let Err(error) = sqlx::query(
+                                    let event = val
+                                        .get("event")
+                                        .and_then(|value| value.as_str())
+                                        .unwrap_or_default();
+                                    let uptime_ms = val
+                                        .get("uptime_ms")
+                                        .and_then(|value| value.as_i64());
+                                    let device_id = match sqlx::query_scalar::<_, Uuid>(
                                         "INSERT INTO iot_devices (device_uid, name, last_seen_at) \
                                          VALUES ($1, LEFT('IoT ' || $1, 100), NOW()) \
-                                         ON CONFLICT (device_uid) DO UPDATE SET last_seen_at = NOW()",
+                                         ON CONFLICT (device_uid) DO UPDATE SET last_seen_at = NOW() \
+                                         RETURNING id",
                                     )
                                     .bind(uid)
-                                    .execute(&pool)
+                                    .fetch_one(&pool)
                                     .await
                                     {
-                                        tracing::error!("Failed to register discovered IoT device {uid}: {error}");
-                                        continue;
-                                    }
+                                        Ok(id) => id,
+                                        Err(error) => {
+                                            tracing::error!("Failed to register discovered IoT device {uid}: {error}");
+                                            continue;
+                                        }
+                                    };
+                                    let history_id = match sqlx::query_scalar::<_, Uuid>(
+                                        "INSERT INTO iot_device_telemetry \
+                                         (iot_device_id, device_uid, record_type, uptime_ms, pin, button_event) \
+                                         VALUES ($1, $2, 'BUTTON', $3, $4, $5) RETURNING id",
+                                    )
+                                    .bind(device_id)
+                                    .bind(uid)
+                                    .bind(uptime_ms)
+                                    .bind(pin)
+                                    .bind(event)
+                                    .fetch_one(&pool)
+                                    .await
+                                    {
+                                        Ok(id) => id,
+                                        Err(error) => {
+                                            tracing::error!("Failed to save IoT button event for {uid}: {error}");
+                                            continue;
+                                        }
+                                    };
                                     let queue_svc = crate::grpc::components::queue::service::QueueServiceImpl::with_stream_manager(pool.clone(), stream_manager.clone());
 
                                     let res = queue_svc.trigger_iot_action(uid, pin).await;
@@ -246,6 +277,22 @@ fn spawn_mqtt_worker(pool: sqlx::PgPool, stream_manager: StreamConnectionManager
                                         }
                                         Err(e) => ("ERROR", e.message().to_string(), "NONE".to_string()),
                                     };
+
+                                    if let Err(error) = sqlx::query(
+                                        "UPDATE iot_device_telemetry \
+                                         SET action = $2, status = $3, message = $4 WHERE id = $1",
+                                    )
+                                    .bind(history_id)
+                                    .bind(&action)
+                                    .bind(status)
+                                    .bind(&msg)
+                                    .execute(&pool)
+                                    .await
+                                    {
+                                        tracing::error!(
+                                            "Failed to save IoT action result for {uid}: {error}"
+                                        );
+                                    }
 
                                     let ack_payload = serde_json::json!({
                                         "status": status,
@@ -268,8 +315,15 @@ fn spawn_mqtt_worker(pool: sqlx::PgPool, stream_manager: StreamConnectionManager
                                     let uid = parts[2];
                                     let ip = val.get("ip").and_then(|i| i.as_str());
                                     let fw = val.get("fw").and_then(|f| f.as_str());
+                                    let rssi = val
+                                        .get("rssi")
+                                        .and_then(|value| value.as_i64())
+                                        .and_then(|value| i32::try_from(value).ok());
+                                    let uptime_ms = val
+                                        .get("uptime_ms")
+                                        .and_then(|value| value.as_i64());
 
-                                    if let Err(error) = sqlx::query(
+                                    let device_id = sqlx::query_scalar::<_, Uuid>(
                                         r#"
                                         INSERT INTO iot_devices (
                                             device_uid, name, ip_address, firmware_version, last_seen_at
@@ -279,14 +333,37 @@ fn spawn_mqtt_worker(pool: sqlx::PgPool, stream_manager: StreamConnectionManager
                                         SET ip_address = COALESCE(EXCLUDED.ip_address, iot_devices.ip_address),
                                             firmware_version = COALESCE(EXCLUDED.firmware_version, iot_devices.firmware_version),
                                             last_seen_at = NOW()
+                                        RETURNING id
                                         "#
                                     )
                                     .bind(uid)
                                     .bind(ip)
                                     .bind(fw)
-                                    .execute(&pool)
-                                    .await {
-                                        tracing::error!("Failed to update discovered IoT device {uid}: {error}");
+                                    .fetch_one(&pool)
+                                    .await;
+
+                                    match device_id {
+                                        Ok(device_id) => {
+                                            if let Err(error) = sqlx::query(
+                                                "INSERT INTO iot_device_telemetry \
+                                                 (iot_device_id, device_uid, record_type, ip_address, rssi, firmware_version, uptime_ms) \
+                                                 VALUES ($1, $2, 'TELEMETRY', $3, $4, $5, $6)",
+                                            )
+                                            .bind(device_id)
+                                            .bind(uid)
+                                            .bind(ip)
+                                            .bind(rssi)
+                                            .bind(fw)
+                                            .bind(uptime_ms)
+                                            .execute(&pool)
+                                            .await
+                                            {
+                                                tracing::error!("Failed to save IoT telemetry for {uid}: {error}");
+                                            }
+                                        }
+                                        Err(error) => {
+                                            tracing::error!("Failed to update discovered IoT device {uid}: {error}");
+                                        }
                                     }
                                 }
                             }

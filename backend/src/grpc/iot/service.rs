@@ -6,10 +6,11 @@ use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
 use crate::grpc::proto::iot::v1::device::{
-    iot_device_service_server::IotDeviceService as IotDeviceServiceTrait,
-    ApproveIotDeviceRequest, DeleteIotDeviceRequest, DeleteIotDeviceResponse, IotDevice,
-    IotPinMapping, ListIotDevicesRequest, ListIotDevicesResponse, TriggerIotActionRequest,
-    TriggerIotActionResponse, UpdateIotDeviceRequest,
+    iot_device_service_server::IotDeviceService as IotDeviceServiceTrait, ApproveIotDeviceRequest,
+    DeleteIotDeviceRequest, DeleteIotDeviceResponse, GetIotDeviceTelemetryRequest, IotDevice,
+    IotDeviceTelemetry, IotDeviceTelemetryRecord, IotPinMapping, ListIotDevicesRequest,
+    ListIotDevicesResponse, TriggerIotActionRequest, TriggerIotActionResponse,
+    UpdateIotDeviceRequest,
 };
 use crate::modules::distribution::stream::services::StreamConnectionManager;
 
@@ -40,6 +41,55 @@ struct IotDeviceRow {
     last_action: Option<String>,
     created_at: chrono::DateTime<chrono::Utc>,
     updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(FromRow)]
+struct IotDeviceTelemetryDeviceRow {
+    id: Uuid,
+    device_uid: String,
+    device_name: String,
+    ip_address: Option<String>,
+    firmware_version: Option<String>,
+    last_seen_at: Option<chrono::DateTime<chrono::Utc>>,
+    last_action: Option<String>,
+}
+
+#[derive(FromRow)]
+struct IotDeviceTelemetryRecordRow {
+    id: Uuid,
+    record_type: String,
+    ip_address: Option<String>,
+    rssi: Option<i32>,
+    firmware_version: Option<String>,
+    uptime_ms: Option<i64>,
+    pin: Option<i32>,
+    button_event: Option<String>,
+    action: Option<String>,
+    status: Option<String>,
+    message: Option<String>,
+    recorded_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl IotDeviceTelemetryRecordRow {
+    fn into_proto(self) -> IotDeviceTelemetryRecord {
+        IotDeviceTelemetryRecord {
+            id: self.id.to_string(),
+            record_type: self.record_type,
+            ip_address: self.ip_address.unwrap_or_default(),
+            rssi: self.rssi.unwrap_or_default(),
+            has_rssi: self.rssi.is_some(),
+            firmware_version: self.firmware_version.unwrap_or_default(),
+            uptime_ms: self.uptime_ms.unwrap_or_default(),
+            has_uptime: self.uptime_ms.is_some(),
+            pin: self.pin.unwrap_or_default(),
+            has_pin: self.pin.is_some(),
+            event: self.button_event.unwrap_or_default(),
+            action: self.action.unwrap_or_default(),
+            status: self.status.unwrap_or_default(),
+            message: self.message.unwrap_or_default(),
+            recorded_at: self.recorded_at.to_rfc3339(),
+        }
+    }
 }
 
 impl IotDeviceRow {
@@ -89,6 +139,94 @@ impl IotDeviceRow {
 
 #[tonic::async_trait]
 impl IotDeviceServiceTrait for IotDeviceServiceImpl {
+    async fn get_device_telemetry(
+        &self,
+        request: Request<GetIotDeviceTelemetryRequest>,
+    ) -> Result<Response<IotDeviceTelemetry>, Status> {
+        crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
+        let id = Uuid::from_str(&request.into_inner().id)
+            .map_err(|_| Status::invalid_argument("Invalid IoT device id"))?;
+        let row = sqlx::query_as::<_, IotDeviceTelemetryDeviceRow>(
+            "SELECT id, device_uid, name AS device_name, ip_address, firmware_version, \
+             last_seen_at, last_action \
+             FROM iot_devices WHERE id = $1",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(db_error)?
+        .ok_or_else(|| Status::not_found("IoT device not found"))?;
+
+        let latest_telemetry = sqlx::query_as::<_, IotDeviceTelemetryRecordRow>(
+            "SELECT id, record_type, ip_address, rssi, firmware_version, uptime_ms, pin, \
+             button_event, action, status, message, recorded_at \
+             FROM iot_device_telemetry WHERE iot_device_id = $1 AND record_type = 'TELEMETRY' \
+             ORDER BY recorded_at DESC, id DESC LIMIT 1",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(db_error)?;
+
+        let latest_button = sqlx::query_as::<_, IotDeviceTelemetryRecordRow>(
+            "SELECT id, record_type, ip_address, rssi, firmware_version, uptime_ms, pin, \
+             button_event, action, status, message, recorded_at \
+             FROM iot_device_telemetry WHERE iot_device_id = $1 AND record_type = 'BUTTON' \
+             ORDER BY recorded_at DESC, id DESC LIMIT 1",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(db_error)?;
+
+        // shortcut: the RPC returns only the latest 100 records; add range-based pagination when historical charting needs older data.
+        let history = sqlx::query_as::<_, IotDeviceTelemetryRecordRow>(
+            "SELECT id, record_type, ip_address, rssi, firmware_version, uptime_ms, pin, \
+             button_event, action, status, message, recorded_at \
+             FROM iot_device_telemetry WHERE iot_device_id = $1 \
+             ORDER BY recorded_at DESC, id DESC LIMIT 100",
+        )
+        .bind(id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(db_error)?;
+
+        let rssi = latest_telemetry.as_ref().and_then(|record| record.rssi);
+        let uptime_ms = latest_telemetry
+            .as_ref()
+            .and_then(|record| record.uptime_ms);
+        let last_pin = latest_button.as_ref().and_then(|record| record.pin);
+        let last_event = latest_button
+            .as_ref()
+            .and_then(|record| record.button_event.clone());
+        let last_event_at = latest_button.map(|record| record.recorded_at.to_rfc3339());
+
+        Ok(Response::new(IotDeviceTelemetry {
+            id: row.id.to_string(),
+            device_uid: row.device_uid,
+            device_name: row.device_name,
+            ip_address: row.ip_address.unwrap_or_default(),
+            rssi: rssi.unwrap_or_default(),
+            has_rssi: rssi.is_some(),
+            firmware_version: row.firmware_version.unwrap_or_default(),
+            uptime_ms: uptime_ms.unwrap_or_default(),
+            has_uptime: uptime_ms.is_some(),
+            last_seen_at: row
+                .last_seen_at
+                .map(|time| time.to_rfc3339())
+                .unwrap_or_default(),
+            last_pin: last_pin.unwrap_or_default(),
+            has_last_pin: last_pin.is_some(),
+            last_event: last_event.unwrap_or_default(),
+            last_event_at: last_event_at.unwrap_or_default(),
+            last_action: row.last_action.unwrap_or_default(),
+            history: history
+                .into_iter()
+                .map(IotDeviceTelemetryRecordRow::into_proto)
+                .collect(),
+        }))
+    }
+
     async fn list_devices(
         &self,
         request: Request<ListIotDevicesRequest>,

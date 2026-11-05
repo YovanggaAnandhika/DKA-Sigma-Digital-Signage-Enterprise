@@ -10,4 +10,5 @@ service IotDeviceService {
   rpc UpdateDevice(UpdateIotDeviceRequest) returns (IotDevice);
   rpc DeleteDevice(DeleteIotDeviceRequest) returns (DeleteIotDeviceResponse);
   rpc TriggerAction(TriggerIotActionRequest) returns (TriggerIotActionResponse);
+  rpc GetDeviceTelemetry(GetIotDeviceTelemetryRequest) returns (IotDeviceTelemetry);
 }

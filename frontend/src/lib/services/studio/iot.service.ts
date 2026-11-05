@@ -21,9 +21,50 @@ export interface IotDevice {
   lastAction: string;
 }
 
+export interface IotDeviceTelemetry {
+  id: string;
+  deviceUid: string;
+  deviceName: string;
+  ipAddress: string;
+  rssi: number;
+  hasRssi: boolean;
+  firmwareVersion: string;
+  uptimeMs: number;
+  hasUptime: boolean;
+  lastSeenAt: string;
+  lastPin: number;
+  hasLastPin: boolean;
+  lastEvent: string;
+  lastEventAt: string;
+  lastAction: string;
+  historyList: IotDeviceTelemetryRecord[];
+}
+
+export interface IotDeviceTelemetryRecord {
+  id: string;
+  recordType: string;
+  ipAddress: string;
+  rssi: number;
+  hasRssi: boolean;
+  firmwareVersion: string;
+  uptimeMs: number;
+  hasUptime: boolean;
+  pin: number;
+  hasPin: boolean;
+  event: string;
+  action: string;
+  status: string;
+  message: string;
+  recordedAt: string;
+}
+
 export async function listIotDevices(): Promise<IotDevice[]> {
   const response = await invokeApi<{ itemsList?: IotDevice[] }>('/api/grpc/iot/device/ListDevices', {});
   return response.itemsList ?? [];
+}
+
+export function getIotDeviceTelemetry(id: string): Promise<IotDeviceTelemetry> {
+  return invokeApi('/api/grpc/iot/device/GetDeviceTelemetry', { id });
 }
 
 export async function approveIotDevice(id: string): Promise<IotDevice> {

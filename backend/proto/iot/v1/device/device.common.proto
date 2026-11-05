@@ -61,3 +61,44 @@ message TriggerIotActionResponse {
   string action = 2;
   string message = 3;
 }
+
+message GetIotDeviceTelemetryRequest {
+  string id = 1;
+}
+
+message IotDeviceTelemetryRecord {
+  string id = 1;
+  string record_type = 2;
+  string ip_address = 3;
+  int32 rssi = 4;
+  bool has_rssi = 5;
+  string firmware_version = 6;
+  int64 uptime_ms = 7;
+  bool has_uptime = 8;
+  int32 pin = 9;
+  bool has_pin = 10;
+  string event = 11;
+  string action = 12;
+  string status = 13;
+  string message = 14;
+  string recorded_at = 15;
+}
+
+message IotDeviceTelemetry {
+  string id = 1;
+  string device_uid = 2;
+  string ip_address = 3;
+  int32 rssi = 4;
+  bool has_rssi = 5;
+  string firmware_version = 6;
+  int64 uptime_ms = 7;
+  bool has_uptime = 8;
+  string last_seen_at = 9;
+  int32 last_pin = 10;
+  bool has_last_pin = 11;
+  string last_event = 12;
+  string last_event_at = 13;
+  string last_action = 14;
+  string device_name = 15;
+  repeated IotDeviceTelemetryRecord history = 16;
+}
