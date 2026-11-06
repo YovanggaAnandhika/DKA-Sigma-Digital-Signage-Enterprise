@@ -100,11 +100,25 @@ impl ScheduleRepository {
         dto: AddScheduleEventDto,
     ) -> Result<ScheduleEventEntity, sqlx::Error> {
         let start_time = NaiveTime::parse_from_str(&dto.start_time, "%H:%M:%S")
-            .unwrap_or_else(|_| NaiveTime::from_hms_opt(0, 0, 0).unwrap());
+            .or_else(|_| NaiveTime::parse_from_str(&dto.start_time, "%H:%M"))
+            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
         let end_time = NaiveTime::parse_from_str(&dto.end_time, "%H:%M:%S")
-            .unwrap_or_else(|_| NaiveTime::from_hms_opt(23, 59, 59).unwrap());
-        let start_date = dto.start_date.as_ref().and_then(|d| NaiveDate::parse_from_str(d, "%Y-%m-%d").ok());
-        let end_date = dto.end_date.as_ref().and_then(|d| NaiveDate::parse_from_str(d, "%Y-%m-%d").ok());
+            .or_else(|_| NaiveTime::parse_from_str(&dto.end_time, "%H:%M"))
+            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+        let start_date = match dto.start_date.as_deref() {
+            Some(d) if !d.trim().is_empty() => Some(
+                NaiveDate::parse_from_str(d.trim(), "%Y-%m-%d")
+                    .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
+            ),
+            _ => None,
+        };
+        let end_date = match dto.end_date.as_deref() {
+            Some(d) if !d.trim().is_empty() => Some(
+                NaiveDate::parse_from_str(d.trim(), "%Y-%m-%d")
+                    .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
+            ),
+            _ => None,
+        };
 
         let event = sqlx::query_as::<_, ScheduleEventEntity>(
             r#"

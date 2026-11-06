@@ -42,6 +42,29 @@ fn parse_schedule_date_range(
     Ok((start, end))
 }
 
+fn parse_schedule_time_range(
+    start: &str,
+    end: &str,
+) -> Result<(chrono::NaiveTime, chrono::NaiveTime), Status> {
+    let parse = |value: &str, field: &str| {
+        chrono::NaiveTime::parse_from_str(value, "%H:%M:%S")
+            .or_else(|_| chrono::NaiveTime::parse_from_str(value, "%H:%M"))
+            .map_err(|_| {
+                Status::invalid_argument(format!(
+                    "Invalid {field}; expected HH:MM:SS or HH:MM"
+                ))
+            })
+    };
+    let start_time = parse(start, "start_time")?;
+    let end_time = parse(end, "end_time")?;
+    if start_time > end_time {
+        return Err(Status::invalid_argument(
+            "end_time must be on or after start_time",
+        ));
+    }
+    Ok((start_time, end_time))
+}
+
 #[derive(sqlx::FromRow)]
 struct ScheduleEventWithLayoutRow {
     id: Uuid,
@@ -349,13 +372,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         };
 
         // 3. Add schedule_event with version_hash
-        let start_time = chrono::NaiveTime::parse_from_str(&req.start_time, "%H:%M:%S")
-            .or_else(|_| chrono::NaiveTime::parse_from_str(&req.start_time, "%H:%M"))
-            .map_err(|_| Status::invalid_argument("Invalid start_time"))?;
-
-        let end_time = chrono::NaiveTime::parse_from_str(&req.end_time, "%H:%M:%S")
-            .or_else(|_| chrono::NaiveTime::parse_from_str(&req.end_time, "%H:%M"))
-            .map_err(|_| Status::invalid_argument("Invalid end_time"))?;
+        let (start_time, end_time) = parse_schedule_time_range(&req.start_time, &req.end_time)?;
 
         let (start_date, end_date) =
             parse_schedule_date_range(req.start_date.as_deref(), req.end_date.as_deref())?;
@@ -518,12 +535,20 @@ impl ScheduleEventServiceTrait for ScheduleEventServiceImpl {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_schedule_date_range;
+    use super::{parse_schedule_date_range, parse_schedule_time_range};
 
     #[test]
     fn schedule_date_range_requires_valid_order_and_format() {
         assert!(parse_schedule_date_range(Some("2026-11-06"), Some("2026-11-07")).is_ok());
         assert!(parse_schedule_date_range(Some("2026-11-07"), Some("2026-11-06")).is_err());
         assert!(parse_schedule_date_range(Some("06-11-2026"), None).is_err());
+    }
+
+    #[test]
+    fn schedule_time_range_requires_valid_order_and_format() {
+        assert!(parse_schedule_time_range("08:00:00", "17:00:00").is_ok());
+        assert!(parse_schedule_time_range("08:00", "17:00").is_ok());
+        assert!(parse_schedule_time_range("17:00", "08:00").is_err());
+        assert!(parse_schedule_time_range("invalid", "17:00").is_err());
     }
 }
