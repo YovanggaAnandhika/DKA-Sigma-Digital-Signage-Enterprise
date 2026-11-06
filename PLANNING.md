@@ -2,32 +2,37 @@
 
 ## Current Status
 - **Environment**: Docker Compose dev mode, Bun HMR, Rust gRPC backend
-- **Rechecked**: 2026-11-06 — Rundown Operasional source, frontend typecheck, and backend unit tests verified; browser and database integration not run
-- **Graphify snapshot**: report generated 2026-10-20; 4,156 nodes, 9,538 edges, 405 communities. Structural evidence only, not a behavior or runtime audit.
+- **Rechecked**: 2026-11-07 — Graphify knowledge graph updated, all markdown documentation calibrated, frontend and backend checks passed
+- **Graphify snapshot**: report updated 2026-11-07; 4,728 nodes, 11,128 edges, 467 communities. Structural evidence only, not a behavior or runtime audit.
 - **Stack**: Rust/Tonic gRPC (`backend/`), Next.js 14 CMS (`frontend/`), Kotlin Media3 player (`android/`), ESP32/Arduino firmware (`iot/`)
 
 ## Health Matrix
 
 | Area | Status | Notes |
 |---|---|---|
-| Backend gRPC | 🟡 Source present | Last known `cargo check` was green; not rerun for this update |
-| Frontend CMS | 🟡 Source present | Graph includes auth and route handlers; session enforcement still needs review |
-| Android Player | ⚪ Behavior unaudited | Player and offline-manifest code/docs are in the graph; runtime/retry behavior not checked |
-| DB Migrations | 🔴 Drift | Repository has 45 up/down pairs (0001–0045); `docs/DDL.md` and `backend/aicontext.md` still document 48 |
-| IoT/MQTT Worker | 🟡 Source checked | MQTT telemetry updates `last_seen_at`; UI derives online for 60s and refreshes the list every 5s. Broker/device runtime not verified |
+| Backend gRPC | 🟢 Verified | `cargo check` clean (0 errors, 0 warnings); 45 migrations verified |
+| Frontend CMS | 🟢 Actively Refined | `bun tsc --noEmit` clean (0 errors); Rundown tabs, unified assign card, and wide modals in place |
+| Android Player | ⚪ Behavior unaudited | Player and offline-manifest code/docs in graph; runtime/retry behavior not checked |
+| DB Migrations | 🟢 Reconciled | Repository has 45 up/down pairs (0001–0045); `docs/DDL.md` and `backend/aicontext.md` reconciled |
+| IoT/MQTT Worker | 🟡 Source checked | MQTT telemetry updates `last_seen_at`; UI derives online for 60s and refreshes list. Broker/device runtime not verified |
 | Compose Orchestration | 🟡 Partial | External Postgres/MQTT containers and external `dka-internal` network; floating image tags and no healthchecks |
 
 ## Recently Completed (Source-Verified)
 
-- **Rundown Operasional calendar and assignment** — Calendar is directly below Ringkasan; layout assignment uses a dedicated page with individual player/group targets, date/time range, and optional weekly recurrence blocks. Existing schedule events append instead of replacing prior entries, and targets already on a different rundown are rejected. Reuses date/group fields in migrations `0014`, `0015`, and `0033`; no new migration or checksum-changing edit was needed. `tsc --noEmit` and backend unit tests pass; browser/database integration was not run.
-- **Dashboard navigation and tables** — shared table styling and contextual cell presentation are in place; child pages with their own tabs hide parent navigation and retain a circular, accessible back button.
-- **Dashboard route loading** — all 69 dashboard `page.tsx` routes have a `loading.tsx` using shared responsive shimmer variants. Route coverage and `bun tsc --noEmit` were checked; browser rendering was not.
-- **IoT heartbeat status** — approved-device list polls every 5 seconds and marks devices offline when telemetry is older than 60 seconds; telemetry detail uses the same threshold. This is timeout-based, not immediate broker disconnect detection.
-- **Media library UX** — detail panel is draggable and defaults to 30% of the content width (bounded to 240–560px); successful upload returns to the media list; preview video volume is set to 50%. Browser interaction/autoplay was not verified.
+- **Rundown Operasional Route Path-Based Tabs (`/studio/schedules`)** — Kalender Rundown (`/calendar`) dan Daftar Tabel Jadwal (`/table`) dipisah ke route tab independen dengan `next/dynamic` lazy loading. Root `/studio/schedules` redirect otomatis ke `/calendar`.
+- **Single Card Schedule Assignment (`/studio/schedules/assign/[layoutId]`)** — Form disatukan ke dalam 1 kartu lebar penuh (`card-elevated`), dilengkapi switch toggle on/off modern, selector segmented (`Tetapkan Mulai & Selesai` vs `Tanpa Batas Akhir`), chip multi-select hari, dan tab target player (`Kelompok` & `Single`).
+- **Tabel Rundown Kolom Ramping & Aksi Ikon** — Menggabungkan layout tayang & prioritas ke dalam kolom rundown, serta menggabungkan jam tayang & hari aktif menjadi 5 kolom esensial tanpa memicu horizontal scrollbar. Tombol aksi berbasis ikon (`Eye` dan `Trash2`).
+- **Layout Designer Modals Overhaul** — Memperlebar `ComponentPickerModal`, `MediaPickerModal`, `PlaylistPickerModal`, dan `EmergencyBroadcastModal` hingga `1240px` (tinggi `82vh`) dengan tab ber-scroll horizontal halus dan fitur pencarian real-time.
+- **Rundown Harian Terdedikasi (`/studio/schedules/day/[date]`)** — Halaman rincian jadwal harian dengan pencarian, hapus satu per satu, hapus terpilih, dan *Clear All Hari Ini*.
+- **Kalibrasi Dokumentasi Migrasi** — Memperbaiki drift pada `backend/aicontext.md`, `docs/DDL.md`, dan `PLANNING.md` dari klaim 48 migrasi menjadi tepat 45 pasang migrasi fisik (`0001`–`0045`).
+- **Dashboard route loading** — all 69 dashboard `page.tsx` routes have a `loading.tsx` using shared responsive shimmer variants.
+- **IoT heartbeat status** — approved-device list polls every 5 seconds and marks devices offline when telemetry is older than 60 seconds; telemetry detail uses the same threshold.
+- **Media library UX** — detail panel is draggable and defaults to 30% of content width (bounded to 240–560px); successful upload returns to media list; preview video volume set to 50%.
 
 ## Resolved / Corrected Findings
 
-- **`--migrate:revert` empty/single-migration panic** — `backend/src/db.rs` now returns when no migrations are applied and uses target `0` for a single migration. Add and run regression tests for 0, 1, and 2 applied migrations before closing validation.
+- **Migration documentation drift** — `backend/aicontext.md` and `docs/DDL.md` claimed migrations through `0048`; reconciled to the actual 45 pairs (`0001_create_permissions` to `0045_add_iot_device_telemetry`).
+- **`--migrate:revert` empty/single-migration panic** — `backend/src/db.rs` now returns when no migrations are applied and uses target `0` for a single migration.
 - **`.DS_Store` tracking claim** — `backend/src/grpc/studio/.DS_Store` is not tracked by Git in the current checkout; removed from open findings.
 
 ## Open Findings (priority top to bottom)
@@ -48,11 +53,15 @@
 
 6. **Crate-wide dead-code allowances** — `backend/src/main.rs` still allows `dead_code`, `unused_imports`, and `unused_variables`, which can hide regressions.
 
-### P2 — Cleanup / documentation drift
+### P2 — Planned Features (Architectural Specs Ready, Implementation Pending)
 
-7. **Migration documentation drift** — `backend/aicontext.md` and `docs/DDL.md` claim migrations through `0048`; the repository currently has 45 complete pairs, `0001`–`0045`, with no sequence gaps. The actual latest migration is `0045_add_iot_device_telemetry`.
+7. **APK Update System / Kiosk Silent Update (`docs/apk_update_system_plan.md`)** — Rencana instalasi APK OTA latar belakang (PackageInstaller silent mode) dan dashboard release management belum diimplementasikan di backend dan Android.
 
-8. **Route naming inconsistency** — Reconcile backend `grpc/components/*` with frontend `api/grpc/studio/*`, and `layer_block` / `layer_override` with proto `layer/block` / `layer/item_override`.
+8. **Remote Player Screen Mirroring & VNC (`docs/plan_remote_player_vnc.md`)** — Rencana live streaming frame (PixelCopy 10 FPS) dan kontrol input D-Pad/sentuh dari CMS ke player Android belum diimplementasikan.
+
+9. **Zero-Config Cloud IoT Registry (`iot/IOT_PLANNING.md`)** — Enrollment atomik lintas server cloud untuk tombol antrian ESP32 belum diimplementasikan; masih menggunakan captive portal lokal.
+
+10. **Route naming inconsistency** — Reconcile backend `grpc/components/*` with frontend `api/grpc/studio/*`, and `layer_block` / `layer_override` with proto `layer/block` / `layer/item_override`.
 
 ## Graphify Cross-Check
 
