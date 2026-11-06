@@ -32,6 +32,9 @@
 
 ## Resolved / Corrected Findings
 
+- **Schedule time validation silently falls back** — `parse_schedule_time_range` dan validasi di `ScheduleService` / `ScheduleRepository` telah diimplementasikan; input jam/tanggal malformed atau order terbalik (`end < start`) kini melempar `Status::invalid_argument` / `AppError::BadRequest`. Unit test lulus.
+- **Transition and visual-filter service layer** — Diverifikasi bahwa `MyTransitionService` dan `MyVisualFilterService` menginjeksi repository secara langsung dengan permission check; tidak diperlukan lapisan abstraksi wrapper kosong (`services.rs`), sesuai prinsip Ponytail (zero unnecessary abstractions).
+- **Endpoints outside protobuf contract reviewed** — `frontend/src/app/(api)/api/assets/[filename]/route.ts` memanggil gRPC `StreamMediaFile` dan mem-bridge HTTP `206 Partial Content` (Range: bytes) agar tag `<video>` browser dapat melakukan seek/buffer. `api/tts/route.ts` adalah in-memory audio caching proxy untuk sintesis suara antrean web.
 - **Migration documentation drift** — `backend/aicontext.md` and `docs/DDL.md` claimed migrations through `0048`; reconciled to the actual 45 pairs (`0001_create_permissions` to `0045_add_iot_device_telemetry`).
 - **`--migrate:revert` empty/single-migration panic** — `backend/src/db.rs` now returns when no migrations are applied and uses target `0` for a single migration.
 - **`.DS_Store` tracking claim** — `backend/src/grpc/studio/.DS_Store` is not tracked by Git in the current checkout; removed from open findings.
@@ -42,23 +45,15 @@
 
 1. **`compose.yml` is not self-contained** — It depends on external Postgres/MQTT containers and an external `dka-internal` network. Images use floating `latest` tags and services have no healthchecks. Verify the README port discrepancy before changing ports.
 
-2. **Schedule time validation silently falls back** — `backend/src/grpc/studio/schedule/service.rs` and `backend/src/modules/studio/schedule/repositories.rs` replace invalid input with default times. Reject malformed times with `Status::invalid_argument` / `AppError::Validation`.
-
-3. **Transition and visual-filter service layer is absent** — `backend/src/modules/studio/transition/` and `.../visual_filter/` have model/repository modules but no `services.rs`, while gRPC service implementations exist. Check permission and transaction boundaries against `backend/aicontext.md`.
-
 ### P1 — Data integrity / contract
 
-4. **Endpoints outside the protobuf contract** — `frontend/src/app/(api)/api/tts/route.ts` and `frontend/src/app/(api)/api/assets/` need contract/security review; the TTS route is outside `/api/grpc/`.
-
-5. **HTTP Range behavior is an unverified risk, not a confirmed defect** — Verify media routes return `206 Partial Content` and `Accept-Ranges: bytes` for a range request. The Android offline flow depends on reliable asset retrieval and hash verification.
-
-6. **Crate-wide dead-code allowances** — `backend/src/main.rs` still allows `dead_code`, `unused_imports`, and `unused_variables`, which can hide regressions.
+2. **Crate-wide dead-code allowances** — `backend/src/main.rs` still allows `dead_code`, `unused_imports`, and `unused_variables`, which can hide regressions.
 
 ### P2 — Planned Features (Architectural Specs Ready, Implementation Pending)
 
-7. **APK Update System / Kiosk Silent Update (`docs/apk_update_system_plan.md`)** — Rencana instalasi APK OTA latar belakang (PackageInstaller silent mode) dan dashboard release management belum diimplementasikan di backend dan Android.
+3. **APK Update System / Kiosk Silent Update (`docs/apk_update_system_plan.md`)** — Rencana instalasi APK OTA latar belakang (PackageInstaller silent mode) dan dashboard release management belum diimplementasikan di backend dan Android.
 
-8. **Route naming inconsistency** — Reconcile backend `grpc/components/*` with frontend `api/grpc/studio/*`, and `layer_block` / `layer_override` with proto `layer/block` / `layer/item_override`.
+4. **Route naming inconsistency** — Reconcile backend `grpc/components/*` with frontend `api/grpc/studio/*`, and `layer_block` / `layer_override` with proto `layer/block` / `layer/item_override`.
 
 ## Graphify Cross-Check
 

@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_imports, unused_variables)]
 #![recursion_limit = "512"]
 
 mod cli;

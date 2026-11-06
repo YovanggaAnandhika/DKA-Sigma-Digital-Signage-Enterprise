@@ -6,7 +6,7 @@ use std::str::FromStr;
 use crate::grpc::proto::components::v1::album::album::{
     album_service_server::AlbumService as AlbumServiceTrait,
     CreateAlbumRequest, GetAlbumRequest, ListAlbumsRequest, ListAlbumsResponse,
-    UpdateAlbumRequest, DeleteAlbumRequest, DeleteAlbumResponse, AlbumDetail, AddAlbumPhotoInput,
+    UpdateAlbumRequest, DeleteAlbumRequest, DeleteAlbumResponse, AlbumDetail,
 };
 use crate::grpc::proto::components::v1::album::photo::{
     album_photo_service_server::AlbumPhotoService as AlbumPhotoServiceTrait,
