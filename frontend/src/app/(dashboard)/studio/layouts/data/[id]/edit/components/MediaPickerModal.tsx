@@ -16,6 +16,7 @@ export default function MediaPickerModal() {
   } = useLayoutEditor();
   
   const [searchQuery, setSearchQuery] = useState('');
+  const [mediaTypeFilter, setMediaTypeFilter] = useState<'all' | 'image' | 'video'>('all');
 
   if (!mediaPickerZoneId) return null;
 
@@ -93,17 +94,25 @@ export default function MediaPickerModal() {
     }
   };
 
-  const filteredMedia = mediaList.filter(m => 
-    m.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    m.originalFilename.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredMedia = mediaList.filter((m) => {
+    const matchesSearch =
+      m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.originalFilename.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
+    if (mediaTypeFilter === 'image') return m.mediaType === 1;
+    if (mediaTypeFilter === 'video') return m.mediaType === 2;
+    return true;
+  });
+
+  const imageCount = mediaList.filter((m) => m.mediaType === 1).length;
+  const videoCount = mediaList.filter((m) => m.mediaType === 2).length;
 
   return (
     <div style={{
       position: 'fixed',
       top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      backdropFilter: 'blur(4px)',
+      backgroundColor: 'rgba(0, 0, 0, 0.65)',
+      backdropFilter: 'blur(6px)',
       zIndex: 9999,
       display: 'flex',
       alignItems: 'center',
@@ -111,9 +120,10 @@ export default function MediaPickerModal() {
       animation: 'fadeIn 0.2s ease-out'
     }}>
       <div style={{
-        width: '95vw',
-        maxWidth: '1100px',
-        maxHeight: '90vh',
+        width: '94vw',
+        maxWidth: '1240px',
+        height: '82vh',
+        minHeight: '600px',
         backgroundColor: 'var(--bg-surface)',
         borderRadius: '14px',
         border: '1px solid var(--border-subtle)',
@@ -124,40 +134,97 @@ export default function MediaPickerModal() {
         animation: 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
       }}>
         {/* Header */}
-        <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-surface)' }}>
-          <h2 style={{ fontSize: '1.0625rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-surface-elevated)' }}>
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <ImageIcon size={20} color="var(--primary-500)" />
             Pilih Media Langsung untuk Layer
-            <span style={{ color: 'var(--primary-400)', backgroundColor: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8125rem' }}>
+            <span style={{ color: 'var(--primary-400)', backgroundColor: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '2px 8px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
               {targetZone.name}
             </span>
           </h2>
           <button 
             onClick={handleClose}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}
+            className="btn btn-ghost"
+            style={{ padding: '6px', borderRadius: '50%', color: 'var(--text-secondary)' }}
+            aria-label="Tutup modal"
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Search */}
-        <div style={{ padding: '14px 24px', borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface-elevated)' }}>
-          <div style={{ position: 'relative' }}>
-            <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '10px' }} />
+        {/* Toolbar: Search & Type Filter Tabs */}
+        <div style={{ padding: '12px 24px', borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
+            <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
-              placeholder="Cari media (gambar/video)..."
+              placeholder="Cari media gambar atau video berdasarkan nama..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="form-input"
-              style={{ paddingLeft: '36px', fontSize: '0.8125rem', width: '100%' }}
+              style={{ paddingLeft: '36px', fontSize: '0.82rem', height: '38px', width: '100%' }}
             />
+          </div>
+
+          {/* Quick Segmented Filter */}
+          <div style={{ display: 'inline-flex', padding: 3, borderRadius: 8, backgroundColor: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)' }}>
+            <button
+              type="button"
+              onClick={() => setMediaTypeFilter('all')}
+              style={{
+                padding: '5px 12px',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                borderRadius: 6,
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: mediaTypeFilter === 'all' ? 'var(--primary-500)' : 'transparent',
+                color: mediaTypeFilter === 'all' ? '#fff' : 'var(--text-secondary)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Semua ({mediaList.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setMediaTypeFilter('image')}
+              style={{
+                padding: '5px 12px',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                borderRadius: 6,
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: mediaTypeFilter === 'image' ? 'var(--primary-500)' : 'transparent',
+                color: mediaTypeFilter === 'image' ? '#fff' : 'var(--text-secondary)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Gambar ({imageCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setMediaTypeFilter('video')}
+              style={{
+                padding: '5px 12px',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                borderRadius: 6,
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: mediaTypeFilter === 'video' ? 'var(--primary-500)' : 'transparent',
+                color: mediaTypeFilter === 'video' ? '#fff' : 'var(--text-secondary)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Video ({videoCount})
+            </button>
           </div>
         </div>
 
         {/* Grid List */}
         <div style={{ padding: '24px', overflowY: 'auto', flex: 1, backgroundColor: 'var(--bg-primary)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
             {/* Media Cards */}
             {filteredMedia.map(media => {
               const isSelected = targetZone.blocksList?.some(b => b.mediaItemId === media.id) || false;
@@ -170,8 +237,8 @@ export default function MediaPickerModal() {
                   style={{
                     border: `1.5px solid ${isSelected ? 'var(--primary-500)' : 'var(--border-subtle)'}`,
                     backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.12)' : 'var(--bg-surface)',
-                    borderRadius: '8px',
-                    padding: '12px',
+                    borderRadius: '10px',
+                    padding: '12px 14px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -192,43 +259,54 @@ export default function MediaPickerModal() {
                   }}
                 >
                   <div style={{ 
-                    width: '68px', height: '52px', borderRadius: '6px', backgroundColor: 'var(--bg-surface-elevated)', 
+                    width: '72px', height: '54px', borderRadius: '6px', backgroundColor: 'var(--bg-surface-elevated)', 
                     display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0,
                     border: '1px solid var(--border-subtle)'
                   }}>
                     {media.publicUrl && !isVideo ? (
                       <img src={media.publicUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : isVideo ? (
-                      <Film size={18} color="var(--accent-amber)" />
+                      <Film size={20} color="var(--accent-amber)" />
                     ) : (
-                      <ImageIcon size={18} color="var(--text-muted)" />
+                      <ImageIcon size={20} color="var(--text-muted)" />
                     )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <h4 style={{ margin: 0, fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <h4 style={{ margin: 0, fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {media.name}
                     </h4>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                      <span style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                        {isVideo ? <Film size={10} /> : <ImageIcon size={10} />}
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        {isVideo ? <Film size={11} /> : <ImageIcon size={11} />}
                         {isVideo ? 'Video' : 'Gambar'}
                       </span>
                       {isVideo && (
-                        <span style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                          <Clock size={10} /> {media.durationSeconds || 0}s
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <Clock size={11} /> {media.durationSeconds || 0}s
                         </span>
                       )}
                     </div>
                   </div>
-                  {isSelected && <Check size={16} color="var(--primary-500)" />}
+                  {isSelected ? (
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', backgroundColor: 'var(--primary-500)', color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                      <Check size={14} />
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-400)', flexShrink: 0 }}>
+                      Pilih +
+                    </span>
+                  )}
                 </div>
               );
             })}
           </div>
           
-          {searchQuery && filteredMedia.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
-              Tidak ada media yang cocok dengan pencarian.
+          {filteredMedia.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+              <ImageIcon size={40} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
+              <p style={{ margin: 0, fontWeight: 600 }}>
+                {searchQuery ? 'Tidak ada media yang cocok dengan pencarian.' : 'Belum ada media pada kategori ini.'}
+              </p>
             </div>
           )}
         </div>

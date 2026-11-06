@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { X, Globe, Type, Clock, Users, Images, Plus, Sparkles, Check, ListMusic } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, Globe, Type, Clock, Users, Images, Plus, Sparkles, Check, ListMusic, Search } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 import { addMediaBlock, addPlaylistBlock, addWidgetBlock, createLayer } from '@/lib/services/studio/layout.service';
 import { DEFAULT_WEBVIEWS, WEBVIEW_STORAGE_KEY, WebViewConfig } from '@/app/(dashboard)/studio/components/webview/types';
@@ -25,12 +25,51 @@ export default function ComponentPickerModal() {
   } = useLayoutEditor();
 
   const [activeTab, setActiveTab] = useState<'playlist' | 'webview' | 'ticker' | 'clock' | 'queue' | 'album'>('playlist');
+  const [searchQuery, setSearchQuery] = useState('');
   const [webviews, setWebviews] = useState<WebViewConfig[]>(DEFAULT_WEBVIEWS);
   const [tickers, setTickers] = useState<TickerConfig[]>(DEFAULT_TICKERS);
   const [clocks, setClocks] = useState<ClockWeatherConfig[]>(DEFAULT_CLOCKS);
   const [queues, setQueues] = useState<QueueDisplayConfig[]>(DEFAULT_QUEUES);
   const [albums, setAlbums] = useState<PhotoAlbum[]>([]);
   const [albumsError, setAlbumsError] = useState('');
+
+  const query = searchQuery.toLowerCase().trim();
+
+  const filteredPlaylists = useMemo(() => {
+    return availablePlaylists.filter((item) =>
+      !query || item.name.toLowerCase().includes(query) || (item.description || '').toLowerCase().includes(query)
+    );
+  }, [availablePlaylists, query]);
+
+  const filteredWebviews = useMemo(() => {
+    return webviews.filter((item) =>
+      !query || item.name.toLowerCase().includes(query) || item.url.toLowerCase().includes(query)
+    );
+  }, [webviews, query]);
+
+  const filteredTickers = useMemo(() => {
+    return tickers.filter((item) =>
+      !query || item.name.toLowerCase().includes(query) || item.messages.join(' ').toLowerCase().includes(query)
+    );
+  }, [tickers, query]);
+
+  const filteredClocks = useMemo(() => {
+    return clocks.filter((item) =>
+      !query || item.name.toLowerCase().includes(query) || item.city.toLowerCase().includes(query)
+    );
+  }, [clocks, query]);
+
+  const filteredQueues = useMemo(() => {
+    return queues.filter((item) =>
+      !query || item.name.toLowerCase().includes(query) || (item.currentCounter || '').toLowerCase().includes(query)
+    );
+  }, [queues, query]);
+
+  const filteredAlbums = useMemo(() => {
+    return albums.filter((item) =>
+      !query || item.name.toLowerCase().includes(query)
+    );
+  }, [albums, query]);
 
   useEffect(() => {
     let isMounted = true;
@@ -258,22 +297,24 @@ export default function ComponentPickerModal() {
     >
       <div
         style={{
-          width: '95vw',
-          maxWidth: '900px',
-          maxHeight: '85vh',
+          width: '94vw',
+          maxWidth: '1240px',
+          height: '82vh',
+          minHeight: '600px',
           backgroundColor: 'var(--bg-surface)',
-          borderRadius: '12px',
+          borderRadius: '14px',
           border: '1px solid var(--border-subtle)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.45)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
+          animation: 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
         {/* Header */}
         <div
           style={{
-            padding: '16px 20px',
+            padding: '16px 24px',
             borderBottom: '1px solid var(--border-subtle)',
             display: 'flex',
             alignItems: 'center',
@@ -282,28 +323,65 @@ export default function ComponentPickerModal() {
           }}
         >
           <div>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
               Pilih Komponen Layar
+              <span style={{ color: 'var(--primary-400)', backgroundColor: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '2px 8px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
+                {targetZone.name}
+              </span>
             </h3>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
-              Tambahkan widget interaktif atau dinamis ke dalam <strong>{targetZone.name}</strong>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+              Tambahkan widget interaktif, feed dinamis, atau daftar putar ke dalam layer terpilih.
             </p>
           </div>
           <button
             onClick={handleClose}
             className="btn btn-ghost"
             style={{ padding: '6px', borderRadius: '50%', color: 'var(--text-secondary)' }}
+            aria-label="Tutup modal"
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Component Tabs */}
+        {/* Search Bar */}
+        <div style={{ padding: '12px 24px', borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+            <input
+              type="text"
+              placeholder={`Cari ${tabs.find((t) => t.key === activeTab)?.label.toLowerCase() || 'komponen'} berdasarkan nama atau isi...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="form-input"
+              style={{ paddingLeft: '36px', height: '38px', fontSize: '0.82rem', width: '100%' }}
+            />
+          </div>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="btn btn-outline"
+              style={{ padding: '6px 12px', fontSize: '0.78rem' }}
+            >
+              Reset
+            </button>
+          )}
+        </div>
+
+        {/* Component Tabs with Smooth Horizontal Scroll */}
         <div
           className="dashboard-tabs"
           role="group"
           aria-label="Jenis komponen"
-          style={{ margin: '12px 20px', background: 'var(--bg-base)' }}
+          style={{
+            margin: '12px 24px',
+            background: 'var(--bg-base)',
+            overflowX: 'auto',
+            flexWrap: 'nowrap',
+            display: 'flex',
+            gap: 6,
+            scrollbarWidth: 'none',
+            padding: '4px',
+          }}
         >
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -311,11 +389,15 @@ export default function ComponentPickerModal() {
             return (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key as any)}
+                onClick={() => {
+                  setActiveTab(tab.key as any);
+                  setSearchQuery('');
+                }}
                 className="dashboard-tab"
                 aria-pressed={isActive}
+                style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
               >
-                <Icon size={19} strokeWidth={2.2} />
+                <Icon size={18} strokeWidth={2.2} />
                 <span>{tab.label}</span>
                 <span
                   style={{
@@ -334,40 +416,46 @@ export default function ComponentPickerModal() {
         </div>
 
         {/* Content List */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', backgroundColor: 'var(--bg-primary)' }}>
           {activeTab === 'playlist' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
-              {availablePlaylists.length === 0 ? (
-                <div style={{ gridColumn: '1 / -1', padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  <ListMusic size={32} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
-                  <p style={{ fontSize: '0.8125rem' }}>Belum ada daftar putar yang dibuat.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+              {filteredPlaylists.length === 0 ? (
+                <div style={{ gridColumn: '1 / -1', padding: '48px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <ListMusic size={36} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+                  <p style={{ fontSize: '0.85rem', fontWeight: 600 }}>{searchQuery ? 'Tidak ada daftar putar yang cocok dengan pencarian.' : 'Belum ada daftar putar yang dibuat.'}</p>
                 </div>
               ) : (
-                availablePlaylists.map((item) => (
+                filteredPlaylists.map((item) => (
                   <div
                     key={item.id}
                     onClick={() => handleSelectPlaylist(item.id)}
                     className="card-elevated hover-card"
                     style={{
-                      padding: '14px',
+                      padding: '16px',
                       cursor: 'pointer',
-                      borderRadius: '8px',
+                      borderRadius: '10px',
                       border: '1px solid var(--border-subtle)',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '8px',
+                      gap: '10px',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <ListMusic size={18} className="text-primary" />
-                      <span style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{item.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: 'rgba(59, 130, 246, 0.12)', color: 'var(--primary-400)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                        <ListMusic size={18} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.name}
+                        </span>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.description || 'Daftar putar media'}
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {item.description || 'Daftar putar media'}
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--text-secondary)', marginTop: 'auto' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--border-subtle)' }}>
                       <span>{item.itemsList?.length || 0} media &bull; {item.totalDurationSeconds || 0}s</span>
-                      <span style={{ color: 'var(--primary-600)', fontWeight: 600 }}>Pilih +</span>
+                      <span style={{ color: 'var(--primary-400)', fontWeight: 700 }}>Pilih +</span>
                     </div>
                   </div>
                 ))
@@ -376,160 +464,225 @@ export default function ComponentPickerModal() {
           )}
 
           {activeTab === 'webview' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
-              {webviews.map((item: WebViewConfig) => (
-                <div
-                  key={item.id}
-                  onClick={() => handleSelectComponent('webview', item)}
-                  className="card-elevated hover-card"
-                  style={{
-                    padding: '14px',
-                    cursor: 'pointer',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-subtle)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Globe size={18} className="text-primary" />
-                    <span style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{item.name}</span>
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', wordBreak: 'break-all' }}>{item.url}</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--text-secondary)', marginTop: 'auto' }}>
-                    <span>Auto-refresh: {item.refreshIntervalSeconds}s</span>
-                    <span style={{ color: 'var(--primary-600)', fontWeight: 600 }}>Pilih +</span>
-                  </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+              {filteredWebviews.length === 0 ? (
+                <div style={{ gridColumn: '1 / -1', padding: '48px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <Globe size={36} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+                  <p style={{ fontSize: '0.85rem', fontWeight: 600 }}>{searchQuery ? 'Tidak ada web view yang cocok.' : 'Belum ada web view.'}</p>
                 </div>
-              ))}
+              ) : (
+                filteredWebviews.map((item: WebViewConfig) => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleSelectComponent('webview', item)}
+                    className="card-elevated hover-card"
+                    style={{
+                      padding: '16px',
+                      cursor: 'pointer',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: 'rgba(59, 130, 246, 0.12)', color: 'var(--primary-400)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                        <Globe size={18} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.name}
+                        </span>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.url}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--border-subtle)' }}>
+                      <span>Auto-refresh: {item.refreshIntervalSeconds}s</span>
+                      <span style={{ color: 'var(--primary-400)', fontWeight: 700 }}>Pilih +</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
           {activeTab === 'ticker' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
-              {tickers.map((item: TickerConfig) => (
-                <div
-                  key={item.id}
-                  onClick={() => handleSelectComponent('ticker', item)}
-                  className="card-elevated hover-card"
-                  style={{
-                    padding: '14px',
-                    cursor: 'pointer',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-subtle)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Type size={18} className="text-primary" />
-                    <span style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{item.name}</span>
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {item.messages.join(' • ')}
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--text-secondary)', marginTop: 'auto' }}>
-                    <span>Badge: {item.badge || 'INFO'}</span>
-                    <span style={{ color: 'var(--primary-600)', fontWeight: 600 }}>Pilih +</span>
-                  </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+              {filteredTickers.length === 0 ? (
+                <div style={{ gridColumn: '1 / -1', padding: '48px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <Type size={36} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+                  <p style={{ fontSize: '0.85rem', fontWeight: 600 }}>{searchQuery ? 'Tidak ada teks berjalan yang cocok.' : 'Belum ada teks berjalan.'}</p>
                 </div>
-              ))}
+              ) : (
+                filteredTickers.map((item: TickerConfig) => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleSelectComponent('ticker', item)}
+                    className="card-elevated hover-card"
+                    style={{
+                      padding: '16px',
+                      cursor: 'pointer',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: 'rgba(59, 130, 246, 0.12)', color: 'var(--primary-400)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                        <Type size={18} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.name}
+                        </span>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          Badge: {item.badge || 'INFO'}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: 32 }}>
+                      {item.messages.join(' • ')}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', fontSize: '0.72rem', color: 'var(--primary-400)', fontWeight: 700, marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--border-subtle)' }}>
+                      <span>Pilih +</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
           {activeTab === 'clock' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
-              {clocks.map((item: ClockWeatherConfig) => (
-                <div
-                  key={item.id}
-                  onClick={() => handleSelectComponent('clock', item)}
-                  className="card-elevated hover-card"
-                  style={{
-                    padding: '14px',
-                    cursor: 'pointer',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-subtle)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Clock size={18} className="text-primary" />
-                    <span style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{item.name}</span>
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Kota: {item.city} &bull; Tema: {item.theme}</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--text-secondary)', marginTop: 'auto' }}>
-                    <span>Format: {item.is24Hour ? '24 Jam' : '12 Jam'}</span>
-                    <span style={{ color: 'var(--primary-600)', fontWeight: 600 }}>Pilih +</span>
-                  </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+              {filteredClocks.length === 0 ? (
+                <div style={{ gridColumn: '1 / -1', padding: '48px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <Clock size={36} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+                  <p style={{ fontSize: '0.85rem', fontWeight: 600 }}>{searchQuery ? 'Tidak ada jam/cuaca yang cocok.' : 'Belum ada konfigurasi jam & cuaca.'}</p>
                 </div>
-              ))}
+              ) : (
+                filteredClocks.map((item: ClockWeatherConfig) => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleSelectComponent('clock', item)}
+                    className="card-elevated hover-card"
+                    style={{
+                      padding: '16px',
+                      cursor: 'pointer',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: 'rgba(59, 130, 246, 0.12)', color: 'var(--primary-400)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                        <Clock size={18} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.name}
+                        </span>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Kota: {item.city} &bull; Tema: {item.theme}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--border-subtle)' }}>
+                      <span>Format: {item.is24Hour ? '24 Jam' : '12 Jam'}</span>
+                      <span style={{ color: 'var(--primary-400)', fontWeight: 700 }}>Pilih +</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
           {activeTab === 'queue' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
-              {queues.map((item: QueueDisplayConfig) => (
-                <div
-                  key={item.id}
-                  onClick={() => handleSelectComponent('queue', item)}
-                  className="card-elevated hover-card"
-                  style={{
-                    padding: '14px',
-                    cursor: 'pointer',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-subtle)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Users size={18} className="text-primary" />
-                    <span style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{item.name}</span>
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Nomor Terakhir: {item.currentNumber} ({item.currentCounter})</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--text-secondary)', marginTop: 'auto' }}>
-                    <span>Audio Chime: {item.audioChimeEnabled ? 'Aktif' : 'Mati'}</span>
-                    <span style={{ color: 'var(--primary-600)', fontWeight: 600 }}>Pilih +</span>
-                  </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+              {filteredQueues.length === 0 ? (
+                <div style={{ gridColumn: '1 / -1', padding: '48px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <Users size={36} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+                  <p style={{ fontSize: '0.85rem', fontWeight: 600 }}>{searchQuery ? 'Tidak ada layar antrian yang cocok.' : 'Belum ada layar antrian.'}</p>
                 </div>
-              ))}
+              ) : (
+                filteredQueues.map((item: QueueDisplayConfig) => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleSelectComponent('queue', item)}
+                    className="card-elevated hover-card"
+                    style={{
+                      padding: '16px',
+                      cursor: 'pointer',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: 'rgba(59, 130, 246, 0.12)', color: 'var(--primary-400)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                        <Users size={18} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.name}
+                        </span>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Nomor Terakhir: {item.currentNumber} ({item.currentCounter})</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--border-subtle)' }}>
+                      <span>Audio Chime: {item.audioChimeEnabled ? 'Aktif' : 'Mati'}</span>
+                      <span style={{ color: 'var(--primary-400)', fontWeight: 700 }}>Pilih +</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
           {activeTab === 'album' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
               {albumsError && <p role="alert" style={{ gridColumn: '1 / -1', color: 'var(--accent-rose)' }}>{albumsError}</p>}
-              {!albumsError && albums.length === 0 && (
-                <p style={{ gridColumn: '1 / -1', color: 'var(--text-muted)' }}>Belum ada album foto.</p>
+              {!albumsError && filteredAlbums.length === 0 && (
+                <div style={{ gridColumn: '1 / -1', padding: '48px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <Images size={36} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+                  <p style={{ fontSize: '0.85rem', fontWeight: 600 }}>{searchQuery ? 'Tidak ada album foto yang cocok.' : 'Belum ada album foto.'}</p>
+                </div>
               )}
-              {albums.map((item: PhotoAlbum) => (
+              {filteredAlbums.map((item: PhotoAlbum) => (
                 <div
                   key={item.id}
                   onClick={() => handleSelectComponent('album', item)}
                   className="card-elevated hover-card"
                   style={{
-                    padding: '14px',
+                    padding: '16px',
                     cursor: 'pointer',
-                    borderRadius: '8px',
+                    borderRadius: '10px',
                     border: '1px solid var(--border-subtle)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '8px',
+                    gap: '10px',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Images size={18} className="text-primary" />
-                    <span style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{item.name}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: 'rgba(59, 130, 246, 0.12)', color: 'var(--primary-400)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                      <Images size={18} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {item.name}
+                      </span>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{item.photos?.length || 0} Foto &bull; Efek: {item.transitionEffect}</div>
+                    </div>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.photos?.length || 0} Foto &bull; Efek: {item.transitionEffect}</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--text-secondary)', marginTop: 'auto' }}>
-                    <span>Durasi per foto: {item.slideDurationSeconds}s</span>
-                    <span style={{ color: 'var(--primary-600)', fontWeight: 600 }}>Pilih +</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--border-subtle)' }}>
+                    <span>Durasi: {item.slideDurationSeconds}s</span>
+                    <span style={{ color: 'var(--primary-400)', fontWeight: 700 }}>Pilih +</span>
                   </div>
                 </div>
               ))}
