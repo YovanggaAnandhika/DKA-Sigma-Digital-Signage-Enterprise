@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
-import java.util.Locale
 
 /**
  * Pembungkus engine lokal Android TextToSpeech.
@@ -31,27 +30,27 @@ class LocalTtsEngine(
 
                 runCatching {
                     val tts = textToSpeech ?: return@TextToSpeech
-                    val idLocale = Locale("id", "ID")
-                    val isIdSupported = tts.isLanguageAvailable(idLocale).let {
-                        it != TextToSpeech.LANG_MISSING_DATA && it != TextToSpeech.LANG_NOT_SUPPORTED
+                    val indonesianVoices = tts.voices.orEmpty().filter {
+                        it.locale.language.equals("id", ignoreCase = true)
                     }
+                    val chosenVoice = indonesianVoices.firstOrNull {
+                        it.locale.country.equals("ID", ignoreCase = true) && !it.isNetworkConnectionRequired
+                    } ?: indonesianVoices.firstOrNull {
+                        !it.isNetworkConnectionRequired
+                    } ?: indonesianVoices.firstOrNull {
+                        it.locale.country.equals("ID", ignoreCase = true)
+                    } ?: indonesianVoices.firstOrNull()
 
-                    val chosenLocale = when {
-                        isIdSupported -> idLocale
-                        else -> Locale.getDefault().takeIf { loc ->
-                            val avail = tts.isLanguageAvailable(loc)
-                            avail != TextToSpeech.LANG_MISSING_DATA && avail != TextToSpeech.LANG_NOT_SUPPORTED
-                        }
-                    }
-
-                    if (chosenLocale != null) {
-                        tts.language = chosenLocale
-                        isReady = true
-                    } else {
+                    if (chosenVoice == null) {
                         isReady = false
-                        Log.w(TAG, "Engine TTS lokal tidak mendukung Bahasa Indonesia atau Locale default")
+                        Log.w(TAG, "Voice Bahasa Indonesia tidak tersedia; pasang data voice Indonesia di engine TTS perangkat")
+                        return@runCatching
                     }
 
+                    isReady = tts.setVoice(chosenVoice) >= TextToSpeech.LANG_AVAILABLE
+                    if (!isReady) {
+                        Log.w(TAG, "Engine TTS gagal mengaktifkan voice Bahasa Indonesia offline: ${chosenVoice.name}")
+                    }
                     tts.apply {
                         setSpeechRate(1.15f)
                         setPitch(1.0f)
@@ -64,12 +63,22 @@ class LocalTtsEngine(
                                 onSpeechDone(utteranceId)
                             }
 
+                            override fun onError(utteranceId: String?, errorCode: Int) {
+                                Log.e(TAG, "TTS gagal memutar utterance: error=$errorCode, voice=${chosenVoice.name}")
+                                onSpeechError(utteranceId)
+                            }
+
                             override fun onError(utteranceId: String?) {
+                                Log.e(TAG, "TTS gagal memutar utterance, voice=${chosenVoice.name}")
                                 onSpeechError(utteranceId)
                             }
                         })
                     }
-                    Log.i(TAG, "Android TextToSpeech engine siap: isReady=$isReady")
+                    Log.i(
+                        TAG,
+                        "Android TextToSpeech engine siap: isReady=$isReady, voice=${chosenVoice.name}, " +
+                            "networkRequired=${chosenVoice.isNetworkConnectionRequired}"
+                    )
                 }.onFailure { t ->
                     isReady = false
                     Log.w(TAG, "Gagal inisialisasi TextToSpeech callback: ${t.message}")
@@ -82,11 +91,18 @@ class LocalTtsEngine(
     }
 
     fun speak(utteranceText: String, utteranceId: String): Boolean {
-        val tts = textToSpeech?.takeIf { isReady } ?: return false
+        val tts = textToSpeech?.takeIf { isReady } ?: run {
+            Log.w(TAG, "Ucapan dilewati: engine TTS belum siap")
+            return false
+        }
         val params = Bundle().apply {
             putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
         }
-        return tts.speak(utteranceText, TextToSpeech.QUEUE_FLUSH, params, utteranceId) == TextToSpeech.SUCCESS
+        val result = tts.speak(utteranceText, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+        if (result != TextToSpeech.SUCCESS) {
+            Log.e(TAG, "Engine TTS menolak ucapan: result=$result")
+        }
+        return result == TextToSpeech.SUCCESS
     }
 
     fun stop() {
