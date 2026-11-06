@@ -148,21 +148,23 @@ export default function LayoutsDataPage() {
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div style={{ display: 'inline-flex', gap: '6px' }}>
-                        <button
-                          onClick={() => handleOpenScheduleAssignment(l)}
-                          className="btn btn-primary"
-                          style={{
-                            padding: '5px 10px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                          }}
-                          title="Tambahkan ke Rundown Operasional"
-                        >
-                          <Send size={13} />
-                        </button>
+                        {!l.isScheduleSynced && (
+                          <button
+                            onClick={() => handleOpenScheduleAssignment(l)}
+                            className="btn btn-primary"
+                            style={{
+                              padding: '5px 10px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                            }}
+                            title="Tambahkan ke Rundown Operasional"
+                          >
+                            <Send size={13} />
+                          </button>
+                        )}
                         <button
                           onClick={() => handleDelete(l.id, l.name)}
                           className="btn btn-outline"
