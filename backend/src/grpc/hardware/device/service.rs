@@ -131,9 +131,7 @@ impl DeviceServiceTrait for DeviceServiceImpl {
 
         let dto = PairDeviceDto {
             device_id,
-            pairing_code: req.pairing_code,
             device_name: req.device_name,
-            store_location: req.store_location,
             default_layout_id,
             canary_group_id,
         };
@@ -214,7 +212,6 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             memory_percent: Some(req.memory_usage_percent),
             current_playing_media_id,
             active_layout_id,
-            active_manifest_hash: client_hash.clone(),
         };
 
         DeviceService::process_heartbeat(&self.pool, dto)

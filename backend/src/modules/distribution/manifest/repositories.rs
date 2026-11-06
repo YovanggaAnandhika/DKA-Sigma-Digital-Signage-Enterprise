@@ -34,19 +34,4 @@ impl ManifestRepository {
         tx.commit().await?;
         Ok(())
     }
-
-    pub async fn get_active_layout_id(
-        pool: &DbPool,
-        device_id: Uuid,
-    ) -> Result<Option<Uuid>, sqlx::Error> {
-        let row = sqlx::query_scalar::<_, Option<Uuid>>(
-            "SELECT current_layout_id FROM hardware_devices WHERE id = $1",
-        )
-        .bind(device_id)
-        .fetch_optional(pool)
-        .await?
-        .flatten();
-
-        Ok(row)
-    }
 }

@@ -8,7 +8,6 @@ pub struct Config {
     pub jwt_secret: String,
     pub jwt_expiration_hours: i64,
     pub upload_dir: String,
-    pub base_url: String,
 }
 
 impl Config {
@@ -38,7 +37,6 @@ impl Config {
                 .parse()
                 .unwrap_or(24),
             upload_dir: env::var("UPLOAD_DIR").unwrap_or_else(|_| "./uploads".to_string()),
-            base_url: env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:8080".to_string()),
         }
     }
 }

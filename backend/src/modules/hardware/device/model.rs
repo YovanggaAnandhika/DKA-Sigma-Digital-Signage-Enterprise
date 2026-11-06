@@ -37,18 +37,6 @@ pub struct DeviceEntity {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct DevicePairingEntity {
-    pub id: Uuid,
-    pub device_id: Uuid,
-    pub pairing_code: String,
-    pub status: String,
-    pub expires_at: DateTime<Utc>,
-    pub approved_by_user_id: Option<Uuid>,
-    pub paired_at: Option<DateTime<Utc>>,
-    pub created_at: DateTime<Utc>,
-}
-
 #[derive(Debug, Deserialize)]
 pub struct RegisterDeviceDto {
     pub name: Option<String>,
@@ -65,9 +53,7 @@ pub struct RegisterDeviceDto {
 #[derive(Debug, Deserialize)]
 pub struct PairDeviceDto {
     pub device_id: Uuid,
-    pub pairing_code: Option<String>,
     pub device_name: Option<String>,
-    pub store_location: Option<String>,
     pub default_layout_id: Option<Uuid>,
     pub canary_group_id: Option<Uuid>,
 }
@@ -87,7 +73,6 @@ pub struct HeartbeatDto {
     pub memory_percent: Option<i32>,
     pub current_playing_media_id: Option<Uuid>,
     pub active_layout_id: Option<Uuid>,
-    pub active_manifest_hash: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

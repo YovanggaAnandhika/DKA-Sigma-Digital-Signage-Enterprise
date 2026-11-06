@@ -15,29 +15,6 @@ pub struct ManifestAssetDto {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ZoneWithPlaylistDto {
-    pub id: Uuid,
-    pub name: String,
-    pub x: i32,
-    pub y: i32,
-    pub width: i32,
-    pub height: i32,
-    pub z_index: i32,
-    pub background_color: String,
-    pub blocks: Vec<ZonePlaylistBlockDto>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ZonePlaylistBlockDto {
-    pub id: Uuid,
-    pub start_time_seconds: i32,
-    pub duration_seconds: i32,
-    pub transition_type: Option<String>,
-    pub order_index: i32,
-    pub playlist: PlaylistWithItemsDto,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompiledManifestDto {
     pub manifest_id: Uuid,
     pub device_id: Uuid,

@@ -8,7 +8,6 @@ pub mod webview;
 macro_rules! register_components_services {
     ($router:expr, $pool:expr, $stream_manager:expr) => {{
         let queue_service = crate::grpc::components::queue::service::QueueServiceImpl::with_stream_manager($pool.clone(), $stream_manager.clone());
-        let album_service = crate::grpc::components::album::service::AlbumServiceImpl::new($pool.clone());
 
         $router
             .add_service(crate::grpc::proto::components::v1::ticker::ticker_service_server::TickerServiceServer::new(
