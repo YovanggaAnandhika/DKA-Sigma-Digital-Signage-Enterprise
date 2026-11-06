@@ -224,11 +224,8 @@ export default function ScheduleTableView() {
                     title="Pilih Semua di Halaman Ini"
                   />
                 </th>
-                <th>NAMA JADWAL</th>
-                <th>LAYOUT TAYANG</th>
-                <th>JAM TAYANG AKTIF</th>
-                <th>HARI TAYANG</th>
-                <th>PRIORITAS</th>
+                <th>RUNDOWN & LAYOUT</th>
+                <th>WAKTU & HARI TAYANG</th>
                 <th>TANGGAL DIBUAT</th>
                 <th style={{ textAlign: 'right' }}>AKSI</th>
               </tr>
@@ -236,14 +233,14 @@ export default function ScheduleTableView() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
                     <RefreshCw size={20} className="animate-spin" style={{ margin: '0 auto 8px auto' }} />
                     <span>Memuat data jadwal tayang...</span>
                   </td>
                 </tr>
               ) : schedules.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
                     Tidak ada jadwal ditemukan. Push layout baru dari menu Tata Letak untuk mulai menayangkan konten.
                   </td>
                 </tr>
@@ -252,6 +249,8 @@ export default function ScheduleTableView() {
                   const firstEvent = s.eventsList?.[0];
                   const createdDate = s.createdAt || (s as any).created_at;
                   const isSelected = selectedIds.includes(s.id);
+                  const priority = firstEvent?.priority ?? 0;
+                  const layoutTitle = firstEvent?.layoutName || firstEvent?.layoutId ? `Layout: ${firstEvent.layoutName || firstEvent.layoutId}` : undefined;
 
                   return (
                     <tr key={s.id} style={{ backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.08)' : undefined }}>
@@ -264,58 +263,48 @@ export default function ScheduleTableView() {
                         />
                       </td>
                       <td>
-                        <TableDataValue icon={CalendarDays} detail={s.description || undefined}>
-                          <Link href={`/studio/schedules/${s.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                            {s.name}
-                          </Link>
+                        <TableDataValue
+                          icon={CalendarDays}
+                          detail={layoutTitle || s.description || undefined}
+                        >
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                            <Link href={`/studio/schedules/${s.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                              {s.name}
+                            </Link>
+                            <span
+                              style={{
+                                fontSize: '0.68rem',
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                color: 'var(--primary-400)',
+                                border: '1px solid rgba(59, 130, 246, 0.2)',
+                                fontFamily: 'monospace',
+                                fontWeight: 700,
+                              }}
+                              title={`Prioritas: ${priority}`}
+                            >
+                              P{priority}
+                            </span>
+                          </div>
                         </TableDataValue>
                       </td>
                       <td>
                         {firstEvent ? (
-                          <TableDataValue icon={Layers} tone="primary">
-                            {firstEvent.layoutName || firstEvent.layoutId}
+                          <TableDataValue
+                            icon={Clock}
+                            tone="cyan"
+                            detail={formatDays(firstEvent.daysOfWeek)}
+                          >
+                            {firstEvent.startTime} – {firstEvent.endTime}
                           </TableDataValue>
                         ) : (
                           '-'
                         )}
-                      </td>
-                      <td>
-                        {firstEvent ? (
-                          <TableDataValue icon={Clock} tone="cyan">
-                            {firstEvent.startTime} - {firstEvent.endTime}
-                          </TableDataValue>
-                        ) : (
-                          '-'
-                        )}
-                      </td>
-                      <td>
-                        {firstEvent ? (
-                          <TableDataValue icon={CalendarDays} tone="violet">
-                            {formatDays(firstEvent.daysOfWeek)}
-                          </TableDataValue>
-                        ) : (
-                          '-'
-                        )}
-                      </td>
-                      <td>
-                        <span
-                          style={{
-                            fontSize: '0.75rem',
-                            padding: '2px 8px',
-                            borderRadius: '6px',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            color: 'var(--primary-400)',
-                            border: '1px solid rgba(59, 130, 246, 0.2)',
-                            fontFamily: 'monospace',
-                            fontWeight: 700,
-                          }}
-                        >
-                          P: {firstEvent?.priority ?? 0}
-                        </span>
                       </td>
                       <td style={{ whiteSpace: 'nowrap' }}>
                         {createdDate ? (
-                          <TableDataValue icon={Clock} tone="amber">
+                          <TableDataValue icon={CalendarDays} tone="amber">
                             {new Date(createdDate).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
                           </TableDataValue>
                         ) : (
