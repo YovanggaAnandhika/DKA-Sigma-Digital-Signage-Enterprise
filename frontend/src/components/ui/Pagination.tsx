@@ -38,15 +38,15 @@ export function Pagination({
         gap: '12px',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+        <div style={{ whiteSpace: 'nowrap' }}>
           Menampilkan <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{startIndex}</span> -{' '}
           <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{endIndex}</span> dari{' '}
           <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{total}</span> entri
         </div>
 
         {onLimitChange && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderLeft: '1px solid var(--border-subtle)', paddingLeft: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderLeft: '1px solid var(--border-subtle)', paddingLeft: '12px', whiteSpace: 'nowrap' }}>
             <span>Baris:</span>
             <select
               value={limit}

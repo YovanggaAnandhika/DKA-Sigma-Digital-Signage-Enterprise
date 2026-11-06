@@ -227,84 +227,109 @@ export default function DisplaysPage() {
                   </td>
                 </tr>
               ) : (
-                devices.map((d) => (
-                  <tr key={d.id}>
-                    <td>
-                      <TableDataValue icon={Tv} detail={d.isPaired ? 'Player terdaftar' : 'Menunggu aktivasi'}>
-                      <Link href={`/hardware/displays/${d.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        {d.name}
-                      </Link>
-                      </TableDataValue>
-                    </td>
-                    <td>
-                      <TableDataValue icon={Fingerprint} tone="violet">
-                      <span
-                        style={{
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          backgroundColor: 'var(--bg-surface-elevated)',
-                          border: '1px solid var(--border-subtle)',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                        }}
-                      >
-                        {d.pairingCode || d.hardwareFingerprint?.substring(0, 10) || d.id.substring(0, 8).toUpperCase()}
-                      </span>
-                      </TableDataValue>
-                    </td>
-                    <td>{d.displayGroupId ? <TableDataValue icon={Layers3}>{'Tergabung'}</TableDataValue> : '-'}</td>
-                    <td>
-                      {!d.isPaired ? (
-                        <TableStatus icon={Clock3} tone="amber">Menunggu persetujuan</TableStatus>
-                      ) : (() => {
-                        const isTrulyOnline = Boolean(
-                          d.isOnline &&
-                          d.lastHeartbeatAt &&
-                          (Date.now() - new Date(d.lastHeartbeatAt).getTime() <= 10000)
-                        );
-                        return (
+                devices.map((d) => {
+                  const orientationLabel =
+                    String(d.orientation) === '2' || d.orientation === 'portrait' || (d.orientation as any) === 'ORIENTATION_PORTRAIT'
+                      ? 'Portrait'
+                      : 'Landscape';
+
+                  const isTrulyOnline = Boolean(
+                    d.isOnline &&
+                    d.lastHeartbeatAt &&
+                    (Date.now() - new Date(d.lastHeartbeatAt).getTime() <= 10000)
+                  );
+
+                  return (
+                    <tr key={d.id}>
+                      <td>
+                        <TableDataValue icon={Tv} detail={d.isPaired ? 'Player terdaftar' : 'Menunggu aktivasi'}>
+                          <Link href={`/hardware/displays/${d.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                            {d.name}
+                          </Link>
+                        </TableDataValue>
+                      </td>
+                      <td>
+                        <TableDataValue icon={Fingerprint} tone="violet">
+                          <span
+                            style={{
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              backgroundColor: 'var(--bg-surface-elevated)',
+                              border: '1px solid var(--border-subtle)',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              fontFamily: 'monospace',
+                              letterSpacing: '0.04em',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {d.pairingCode || d.hardwareFingerprint?.substring(0, 10) || d.id.substring(0, 8).toUpperCase()}
+                          </span>
+                        </TableDataValue>
+                      </td>
+                      <td>
+                        {d.displayGroupId ? (
+                          <TableDataValue icon={Layers3} tone="primary">
+                            Tergabung
+                          </TableDataValue>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', paddingLeft: '4px' }}>-</span>
+                        )}
+                      </td>
+                      <td>
+                        {!d.isPaired ? (
+                          <TableStatus icon={Clock3} tone="amber">Menunggu persetujuan</TableStatus>
+                        ) : (
                           <TableStatus
                             icon={isTrulyOnline ? CircleCheck : CircleX}
                             tone={isTrulyOnline ? 'emerald' : 'rose'}
                           >
                             {isTrulyOnline ? 'Online' : 'Offline'}
                           </TableStatus>
-                        );
-                      })()}
-                    </td>
-                    <td><TableDataValue icon={MonitorCheck} tone="cyan" detail={d.orientation}>{d.screenWidth} × {d.screenHeight}</TableDataValue></td>
-                    <td><TableDataValue icon={Network} tone="cyan">{d.ipAddress || '127.0.0.1'}</TableDataValue></td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        {!d.isPaired && (
-                          <button
-                            onClick={() => handleAccept(d)}
-                            disabled={pairingId === d.id}
-                            className="btn btn-primary"
-                            title="Setujui dan Aktifkan Layar Android"
-                            aria-label={`Setujui dan aktifkan layar ${d.name}`}
-                          >
-                            <CheckCircle2 size={13} />
-                          </button>
                         )}
-                        <Link href={`/hardware/displays/${d.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Lihat Detail">
-                          <Eye size={14} />
-                        </Link>
-                        <Link href={`/hardware/displays/${d.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit">
-                          <Edit size={14} />
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(d.id, d.name)}
-                          className="btn btn-danger"
-                          style={{ padding: '5px 8px' }}
-                          title="Hapus Perangkat"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td>
+                        <TableDataValue icon={MonitorCheck} tone="cyan" detail={orientationLabel}>
+                          {d.screenWidth || 1920} × {d.screenHeight || 1080}
+                        </TableDataValue>
+                      </td>
+                      <td>
+                        <TableDataValue icon={Network} tone="cyan">
+                          {d.ipAddress || '127.0.0.1'}
+                        </TableDataValue>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          {!d.isPaired && (
+                            <button
+                              onClick={() => handleAccept(d)}
+                              disabled={pairingId === d.id}
+                              className="btn btn-primary"
+                              title="Setujui dan Aktifkan Layar Android"
+                              aria-label={`Setujui dan aktifkan layar ${d.name}`}
+                            >
+                              <CheckCircle2 size={13} />
+                            </button>
+                          )}
+                          <Link href={`/hardware/displays/${d.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Lihat Detail">
+                            <Eye size={14} />
+                          </Link>
+                          <Link href={`/hardware/displays/${d.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit">
+                            <Edit size={14} />
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(d.id, d.name)}
+                            className="btn btn-danger"
+                            style={{ padding: '5px 8px' }}
+                            title="Hapus Perangkat"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
