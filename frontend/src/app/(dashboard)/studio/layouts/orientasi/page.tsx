@@ -3,7 +3,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { api, Orientation } from '@/lib/services';
-import { Plus, Search, RefreshCw, Edit, Trash2, Compass } from 'lucide-react';
+import { TableDataValue } from '@/components/ui/TableDataValue';
+import { Plus, Search, RefreshCw, Edit, Trash2, Compass, Code2, CalendarDays } from 'lucide-react';
 
 export default function OrientasiPage() {
   const [orientations, setOrientations] = useState<Orientation[]>([]);
@@ -98,23 +99,29 @@ export default function OrientasiPage() {
               ) : (
                 filteredOrientations.map((o) => (
                   <tr key={o.id} style={{ borderBottom: '1px solid var(--border-subtle)', transition: 'background-color 0.15s ease' }}>
-                    <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {o.name}
+                    <td>
+                      <TableDataValue icon={Compass}>
+                        {o.name}
+                      </TableDataValue>
                     </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>
-                      <code style={{ padding: '3px 8px', borderRadius: '4px', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', fontSize: '0.8125rem' }}>
-                        {o.value}
-                      </code>
+                    <td>
+                      <TableDataValue icon={Code2} tone="violet">
+                        <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', fontWeight: 700, padding: '2px 7px', borderRadius: 4, backgroundColor: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)' }}>
+                          {o.value}
+                        </span>
+                      </TableDataValue>
                     </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
-                      {o.createdAt ? new Date(o.createdAt).toLocaleDateString('id-ID', { dateStyle: 'medium' }) : '-'}
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <TableDataValue icon={CalendarDays} tone="amber">
+                        {o.createdAt ? new Date(o.createdAt).toLocaleDateString('id-ID', { dateStyle: 'medium' }) : '-'}
+                      </TableDataValue>
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '6px' }}>
-                        <Link href={`/studio/layouts/orientasi/${o.id}/edit`} className="btn btn-secondary dashboard-icon-action" style={{ padding: '5px 8px' }} title="Edit Orientasi">
+                        <Link href={`/studio/layouts/orientasi/${o.id}/edit`} className="btn btn-secondary dashboard-icon-action" style={{ padding: '5px 8px' }} title="Edit Orientasi" aria-label={`Edit ${o.name}`}>
                           <Edit size={14} />
                         </Link>
-                        <button onClick={() => handleDelete(o.id, o.name)} className="btn btn-outline dashboard-icon-action dashboard-icon-action-danger" style={{ padding: '5px 8px' }} title="Hapus Orientasi">
+                        <button onClick={() => handleDelete(o.id, o.name)} className="btn btn-outline dashboard-icon-action dashboard-icon-action-danger" style={{ padding: '5px 8px' }} title="Hapus Orientasi" aria-label={`Hapus ${o.name}`}>
                           <Trash2 size={14} />
                         </button>
                       </div>

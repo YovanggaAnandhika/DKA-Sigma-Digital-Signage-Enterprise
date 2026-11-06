@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { api } from '@/lib/services';
 import type { LayoutHistoryItem } from '@/lib/services';
 import { Pagination } from '@/components/ui/Pagination';
-import { Search, RefreshCw, RotateCcw, FileCode, Check, Copy, X, Layers, Clock, Trash2, Trash } from 'lucide-react';
+import { TableDataValue } from '@/components/ui/TableDataValue';
+import { Search, RefreshCw, RotateCcw, FileCode, Check, Copy, X, Layers, Clock, Trash2, Trash, LayoutTemplate, GitCommit, FileText } from 'lucide-react';
 
 export default function LayoutHistoryPage() {
   const [historyItems, setHistoryItems] = useState<LayoutHistoryItem[]>([]);
@@ -137,9 +138,9 @@ export default function LayoutHistoryPage() {
       const layersCount = Array.isArray(obj.layers) ? obj.layers.length : (Array.isArray(obj.layersList) ? obj.layersList.length : 0);
       const width = obj.canvasWidth || obj.layout?.canvas_width || 1920;
       const height = obj.canvasHeight || obj.layout?.canvas_height || 1080;
-      return `${width}×${height} • ${layersCount} Layer`;
+      return { width, height, layersCount };
     } catch {
-      return '-';
+      return { width: 1920, height: 1080, layersCount: 0 };
     }
   };
 
@@ -277,6 +278,7 @@ export default function LayoutHistoryPage() {
                   const shortHash = item.versionHash ? item.versionHash.substring(0, 8) : '--------';
                   const isRollingBack = rollingBackId === item.id;
                   const isSelected = selectedIds.includes(item.id);
+                  const snap = parseSnapshotSummary(item.snapshotJson);
 
                   return (
                     <tr
@@ -295,65 +297,77 @@ export default function LayoutHistoryPage() {
                           style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-500)' }}
                         />
                       </td>
-                      <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                        <Link href={`/studio/layouts/data/${item.layoutId}/edit`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                          {item.layoutName || 'Layout'}
-                        </Link>
+                      <td>
+                        <TableDataValue icon={LayoutTemplate} detail="Layout Template">
+                          <Link href={`/studio/layouts/data/${item.layoutId}/edit`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                            {item.layoutName || 'Layout'}
+                          </Link>
+                        </TableDataValue>
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span
-                          style={{
-                            fontFamily: 'monospace',
-                            fontSize: '0.8125rem',
-                            backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                            color: 'var(--primary-400)',
-                            padding: '3px 8px',
-                            borderRadius: '6px',
-                            border: '1px solid rgba(59, 130, 246, 0.25)',
-                          }}
-                          title={item.versionHash}
-                        >
-                          {shortHash}
-                        </span>
+                      <td>
+                        <TableDataValue icon={GitCommit} tone="violet">
+                          <span
+                            style={{
+                              fontFamily: 'monospace',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              letterSpacing: '0.04em',
+                              backgroundColor: 'var(--bg-surface-elevated)',
+                              border: '1px solid var(--border-subtle)',
+                              padding: '2px 7px',
+                              borderRadius: '4px',
+                            }}
+                            title={item.versionHash}
+                          >
+                            {shortHash}
+                          </span>
+                        </TableDataValue>
                       </td>
-                      <td style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>
-                        {parseSnapshotSummary(item.snapshotJson)}
+                      <td>
+                        <TableDataValue icon={Layers} tone="cyan" detail={`${snap.width} × ${snap.height} px`}>
+                          {snap.layersCount} Layer
+                        </TableDataValue>
                       </td>
-                      <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
-                        {item.description || 'Perubahan disimpan'}
+                      <td>
+                        <TableDataValue icon={FileText} tone="primary">
+                          {item.description || 'Perubahan disimpan'}
+                        </TableDataValue>
                       </td>
-                      <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
-                        {item.createdAt ? new Date(item.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '-'}
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <TableDataValue icon={Clock} tone="amber">
+                          {item.createdAt ? new Date(item.createdAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '-'}
+                        </TableDataValue>
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
                           <button
                             onClick={() => setSelectedSnapshot({ name: item.layoutName || 'Layout', hash: item.versionHash, json: item.snapshotJson })}
                             className="btn btn-outline"
-                            style={{ padding: '6px 10px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                            style={{ padding: '5px 8px' }}
                             title="Lihat Format Snapshot JSON"
+                            aria-label={`Lihat snapshot JSON ${item.layoutName || 'layout'}`}
                           >
-                            <FileCode size={13} />
-                            <span>Lihat JSON</span>
+                            <FileCode size={14} />
                           </button>
                           <button
                             onClick={() => handleRollback(item)}
                             disabled={isRollingBack || deleting}
                             className="btn btn-secondary"
-                            style={{ padding: '6px 12px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                            title="Rollback ke Versi Ini"
+                            style={{ padding: '5px 8px' }}
+                            title={isRollingBack ? 'Sedang memulihkan...' : 'Rollback ke Versi Ini'}
+                            aria-label={`Rollback ke versi ${shortHash}`}
                           >
-                            <RotateCcw size={13} className={isRollingBack ? 'animate-spin' : ''} />
-                            <span>{isRollingBack ? 'Memulihkan...' : 'Rollback'}</span>
+                            <RotateCcw size={14} className={isRollingBack ? 'animate-spin' : ''} />
                           </button>
                           <button
                             onClick={() => handleDeleteSingle(item)}
                             disabled={deleting}
                             className="btn btn-danger"
-                            style={{ padding: '6px 8px', display: 'inline-flex', alignItems: 'center' }}
+                            style={{ padding: '5px 8px' }}
                             title="Hapus Riwayat Versi Ini"
+                            aria-label={`Hapus riwayat versi ${shortHash}`}
                           >
-                            <Trash2 size={13} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </td>

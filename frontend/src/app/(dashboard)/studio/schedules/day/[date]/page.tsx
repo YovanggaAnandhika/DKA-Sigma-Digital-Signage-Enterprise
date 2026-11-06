@@ -3,7 +3,8 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, CalendarDays, Clock, Monitor, Users, Eye, RefreshCw, Layers, Search, ArrowRight, Trash2, Trash } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Clock, Monitor, Users, Eye, RefreshCw, Layers, Search, ArrowRight, Trash2, Trash, LayoutTemplate } from 'lucide-react';
+import { TableDataValue } from '@/components/ui/TableDataValue';
 import { api, Device, DisplayGroup } from '@/lib/services';
 import type { Schedule } from '@/lib/services/studio/schedule.types';
 
@@ -388,32 +389,25 @@ export default function DailyRundownPage() {
                           style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-500)' }}
                         />
                       </td>
-                      <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                        <Link
-                          href={`/studio/schedules/${schedule.id}`}
-                          style={{ color: 'inherit', textDecoration: 'none' }}
-                          className="hover:underline"
-                        >
-                          {schedule.name}
-                        </Link>
+                      <td>
+                        <TableDataValue icon={CalendarDays} detail={schedule.description || 'Rundown aktif'}>
+                          <Link
+                            href={`/studio/schedules/${schedule.id}`}
+                            style={{ color: 'inherit', textDecoration: 'none' }}
+                          >
+                            {schedule.name}
+                          </Link>
+                        </TableDataValue>
                       </td>
                       <td>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '4px 8px',
-                            borderRadius: '6px',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            color: 'var(--primary-400)',
-                            fontSize: '0.8125rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          <Layers size={13} />
+                        <TableDataValue icon={LayoutTemplate} tone="primary">
                           {event.layoutName || 'Layout Template'}
-                        </span>
+                        </TableDataValue>
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <TableDataValue icon={Clock} tone="cyan">
+                          {event.startTime || '00:00'} – {event.endTime || '23:59'}
+                        </TableDataValue>
                       </td>
                       <td>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '320px' }}>
@@ -458,31 +452,36 @@ export default function DailyRundownPage() {
                           )}
                         </div>
                       </td>
-                      <td style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
-                        {event.startDate ? event.startDate.slice(0, 10) : 'Permanen'}
-                        {event.endDate ? ` s/d ${event.endDate.slice(0, 10)}` : ''}
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <TableDataValue icon={CalendarDays} tone="amber">
+                          {event.startDate ? event.startDate.slice(0, 10) : 'Permanen'}
+                          {event.endDate ? ` – ${event.endDate.slice(0, 10)}` : ''}
+                        </TableDataValue>
                       </td>
-                      <td style={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>
-                        {formatDays(event.daysOfWeek)}
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <span style={{ padding: '3px 8px', borderRadius: '4px', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary-400)', fontSize: '0.75rem', fontWeight: 600 }}>
+                          {formatDays(event.daysOfWeek)}
+                        </span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                           <Link
                             href={`/studio/schedules/${schedule.id}`}
                             className="btn btn-outline"
-                            style={{ padding: '6px 10px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                            style={{ padding: '5px 8px' }}
                             title="Lihat Detail Jadwal"
+                            aria-label={`Lihat detail jadwal ${schedule.name}`}
                           >
-                            <Eye size={13} />
-                            <span style={{ fontSize: '0.75rem' }}>Detail</span>
+                            <Eye size={14} />
                           </Link>
                           <button
                             onClick={() => handleDelete(schedule.id, schedule.name)}
                             className="btn btn-danger"
-                            style={{ padding: '6px 8px' }}
+                            style={{ padding: '5px 8px' }}
                             title="Hapus Jadwal Ini"
+                            aria-label={`Hapus jadwal ${schedule.name}`}
                           >
-                            <Trash2 size={13} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </td>

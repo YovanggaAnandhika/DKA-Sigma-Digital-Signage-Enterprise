@@ -223,12 +223,12 @@ export default function TabDataTab() {
                         <div style={{ display: 'inline-flex', gap: '6px' }}>
                           <Link
                             href={`/studio/components/ticket/${q.id}/edit`}
-                            className="btn btn-outline"
-                            style={{ padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem' }}
+                            className="btn btn-secondary"
+                            style={{ padding: '5px 8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                             title="Buka Editor & Konsol Pemanggil"
+                            aria-label={`Edit antrian ${q.name}`}
                           >
-                            <Edit3 size={13} />
-                            <span>Edit</span>
+                            <Edit3 size={14} />
                           </Link>
                           <button
                             type="button"

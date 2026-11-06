@@ -5,12 +5,19 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api, Layout } from '@/lib/services';
 import { Pagination } from '@/components/ui/Pagination';
+import { TableDataValue } from '@/components/ui/TableDataValue';
 import {
   Plus,
   Search,
   RefreshCw,
   Trash2,
   Send,
+  LayoutTemplate,
+  Monitor,
+  MonitorCheck,
+  Smartphone,
+  Layers,
+  CalendarDays,
 } from 'lucide-react';
 
 export default function LayoutsDataPage() {
@@ -112,71 +119,86 @@ export default function LayoutsDataPage() {
                   </td>
                 </tr>
               ) : (
-                layouts.map((l) => (
-                  <tr
-                    key={l.id}
-                    onClick={() => router.push(`/studio/layouts/data/${l.id}/edit`)}
-                    style={{
-                      borderBottom: '1px solid var(--border-subtle)',
-                      transition: 'background-color 0.15s ease',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      <Link
-                        href={`/studio/layouts/data/${l.id}/edit`}
-                        style={{ textDecoration: 'none', color: 'inherit' }}
+                layouts.map((l) => {
+                  const isPortrait = String(l.orientation) === '2' || l.orientation === 'portrait';
+                  const layerCount = l.layersList ? l.layersList.length : 0;
+
+                  return (
+                    <tr
+                      key={l.id}
+                      onClick={() => router.push(`/studio/layouts/data/${l.id}/edit`)}
+                      style={{
+                        borderBottom: '1px solid var(--border-subtle)',
+                        transition: 'background-color 0.15s ease',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <td>
+                        <TableDataValue icon={LayoutTemplate} detail={l.isScheduleSynced ? 'Tersinkronisasi' : 'Belum dijadwalkan'}>
+                          <Link
+                            href={`/studio/layouts/data/${l.id}/edit`}
+                            style={{ textDecoration: 'none', color: 'inherit' }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {l.name}
+                          </Link>
+                        </TableDataValue>
+                      </td>
+                      <td>
+                        <TableDataValue icon={Monitor} tone="cyan">
+                          {l.canvasWidth} × {l.canvasHeight} px
+                        </TableDataValue>
+                      </td>
+                      <td>
+                        <TableDataValue icon={isPortrait ? Smartphone : MonitorCheck} tone="violet">
+                          {isPortrait ? 'Portrait' : 'Landscape'}
+                        </TableDataValue>
+                      </td>
+                      <td>
+                        <TableDataValue icon={Layers} tone="primary">
+                          {layerCount} Layer
+                        </TableDataValue>
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <TableDataValue icon={CalendarDays} tone="amber">
+                          {l.createdAt ? new Date(l.createdAt).toLocaleDateString('id-ID', { dateStyle: 'medium' }) : '-'}
+                        </TableDataValue>
+                      </td>
+                      <td
+                        style={{ padding: '12px 16px', textAlign: 'right' }}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {l.name}
-                      </Link>
-                    </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>
-                      {l.canvasWidth} × {l.canvasHeight} px
-                    </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>
-                      {String(l.orientation) === '2' || l.orientation === 'portrait' ? 'Portrait' : 'Landscape'}
-                    </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>
-                      {l.layersList ? l.layersList.length : 0} Layer
-                    </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
-                      {l.createdAt ? new Date(l.createdAt).toLocaleDateString('id-ID', { dateStyle: 'medium' }) : '-'}
-                    </td>
-                    <td
-                      style={{ padding: '12px 16px', textAlign: 'right' }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div style={{ display: 'inline-flex', gap: '6px' }}>
-                        {!l.isScheduleSynced && (
+                        <div style={{ display: 'inline-flex', gap: '6px' }}>
+                          {!l.isScheduleSynced && (
+                            <button
+                              onClick={() => handleOpenScheduleAssignment(l)}
+                              className="btn btn-primary"
+                              style={{
+                                padding: '5px 8px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                              title="Tambahkan ke Rundown Operasional"
+                              aria-label={`Jadwalkan layout ${l.name}`}
+                            >
+                              <Send size={14} />
+                            </button>
+                          )}
                           <button
-                            onClick={() => handleOpenScheduleAssignment(l)}
-                            className="btn btn-primary"
-                            style={{
-                              padding: '5px 10px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px',
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                            }}
-                            title="Tambahkan ke Rundown Operasional"
+                            onClick={() => handleDelete(l.id, l.name)}
+                            className="btn btn-outline"
+                            style={{ padding: '5px 8px', color: 'var(--accent-rose)' }}
+                            title="Hapus Template"
+                            aria-label={`Hapus layout ${l.name}`}
                           >
-                            <Send size={13} />
+                            <Trash2 size={14} />
                           </button>
-                        )}
-                        <button
-                          onClick={() => handleDelete(l.id, l.name)}
-                          className="btn btn-outline"
-                          style={{ padding: '5px 8px', color: 'var(--accent-rose)' }}
-                          title="Hapus Template"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
