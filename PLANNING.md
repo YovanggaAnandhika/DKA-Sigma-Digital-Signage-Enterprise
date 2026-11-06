@@ -57,11 +57,7 @@
 
 7. **APK Update System / Kiosk Silent Update (`docs/apk_update_system_plan.md`)** — Rencana instalasi APK OTA latar belakang (PackageInstaller silent mode) dan dashboard release management belum diimplementasikan di backend dan Android.
 
-8. **Remote Player Screen Mirroring & VNC (`docs/plan_remote_player_vnc.md`)** — Rencana live streaming frame (PixelCopy 10 FPS) dan kontrol input D-Pad/sentuh dari CMS ke player Android belum diimplementasikan.
-
-9. **Zero-Config Cloud IoT Registry (`iot/IOT_PLANNING.md`)** — Enrollment atomik lintas server cloud untuk tombol antrian ESP32 belum diimplementasikan; masih menggunakan captive portal lokal.
-
-10. **Route naming inconsistency** — Reconcile backend `grpc/components/*` with frontend `api/grpc/studio/*`, and `layer_block` / `layer_override` with proto `layer/block` / `layer/item_override`.
+8. **Route naming inconsistency** — Reconcile backend `grpc/components/*` with frontend `api/grpc/studio/*`, and `layer_block` / `layer_override` with proto `layer/block` / `layer/item_override`.
 
 ## Graphify Cross-Check
 
