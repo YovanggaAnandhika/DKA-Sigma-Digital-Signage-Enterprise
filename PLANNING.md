@@ -32,6 +32,7 @@
 
 ## Resolved / Corrected Findings
 
+- **Crate-wide dead-code allowances eliminated** — `#![allow(dead_code, unused_imports, unused_variables)]` telah dihapus dari `backend/src/main.rs`. Sebanyak 69 warning compiler dibersihkan tuntas: unused imports dibuang, dead models/functions (`find_by_hardware_fingerprint`, `find_by_version_hash`, `ZoneWithPlaylistDto`, `DevicePairingEntity`, dll) dihapus, re-exports tak terpakai pada `mod.rs` dibersihkan. `cargo check` menghasilkan **0 error dan 0 warning**.
 - **Schedule time validation silently falls back** — `parse_schedule_time_range` dan validasi di `ScheduleService` / `ScheduleRepository` telah diimplementasikan; input jam/tanggal malformed atau order terbalik (`end < start`) kini melempar `Status::invalid_argument` / `AppError::BadRequest`. Unit test lulus.
 - **Transition and visual-filter service layer** — Diverifikasi bahwa `MyTransitionService` dan `MyVisualFilterService` menginjeksi repository secara langsung dengan permission check; tidak diperlukan lapisan abstraksi wrapper kosong (`services.rs`), sesuai prinsip Ponytail (zero unnecessary abstractions).
 - **Endpoints outside protobuf contract reviewed** — `frontend/src/app/(api)/api/assets/[filename]/route.ts` memanggil gRPC `StreamMediaFile` dan mem-bridge HTTP `206 Partial Content` (Range: bytes) agar tag `<video>` browser dapat melakukan seek/buffer. `api/tts/route.ts` adalah in-memory audio caching proxy untuk sintesis suara antrean web.
@@ -45,15 +46,11 @@
 
 1. **`compose.yml` is not self-contained** — It depends on external Postgres/MQTT containers and an external `dka-internal` network. Images use floating `latest` tags and services have no healthchecks. Verify the README port discrepancy before changing ports.
 
-### P1 — Data integrity / contract
-
-2. **Crate-wide dead-code allowances** — `backend/src/main.rs` still allows `dead_code`, `unused_imports`, and `unused_variables`, which can hide regressions.
-
 ### P2 — Planned Features (Architectural Specs Ready, Implementation Pending)
 
-3. **APK Update System / Kiosk Silent Update (`docs/apk_update_system_plan.md`)** — Rencana instalasi APK OTA latar belakang (PackageInstaller silent mode) dan dashboard release management belum diimplementasikan di backend dan Android.
+2. **APK Update System / Kiosk Silent Update (`docs/apk_update_system_plan.md`)** — Rencana instalasi APK OTA latar belakang (PackageInstaller silent mode) dan dashboard release management belum diimplementasikan di backend dan Android.
 
-4. **Route naming inconsistency** — Reconcile backend `grpc/components/*` with frontend `api/grpc/studio/*`, and `layer_block` / `layer_override` with proto `layer/block` / `layer/item_override`.
+3. **Route naming inconsistency** — Reconcile backend `grpc/components/*` with frontend `api/grpc/studio/*`, and `layer_block` / `layer_override` with proto `layer/block` / `layer/item_override`.
 
 ## Graphify Cross-Check
 
