@@ -30,6 +30,50 @@ function weekdayForDate(value: string) {
   return weekday === 0 ? 7 : weekday;
 }
 
+// Modern On/Off Slider Switch
+function ModernSwitch({
+  checked,
+  onChange,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!disabled) onChange(!checked);
+      }}
+      style={{
+        width: 36,
+        height: 20,
+        borderRadius: 9999,
+        backgroundColor: checked ? 'var(--primary-500)' : 'var(--border-subtle)',
+        padding: 2,
+        transition: 'background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+        position: 'relative',
+        flexShrink: 0,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        boxShadow: checked ? '0 0 10px rgba(59, 130, 246, 0.35)' : 'none',
+      }}
+    >
+      <div
+        style={{
+          width: 16,
+          height: 16,
+          borderRadius: '50%',
+          backgroundColor: '#ffffff',
+          transform: checked ? 'translateX(16px)' : 'translateX(0px)',
+          transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)',
+        }}
+      />
+    </div>
+  );
+}
+
 function DayMultiSelectAutocomplete({
   selectedDays,
   onChange,
@@ -347,6 +391,7 @@ export default function AssignSchedulePage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18, width: '100%' }}>
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <Link
           href="/studio/layouts/data"
@@ -366,17 +411,27 @@ export default function AssignSchedulePage() {
           <ArrowLeft size={18} />
         </Link>
         <div>
-          <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.5rem', fontWeight: 800 }}>Buat Rundown Operasional</h1>
-          <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+          <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.45rem', fontWeight: 800 }}>Buat Rundown Operasional</h1>
+          <p style={{ margin: '3px 0 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
             Atur penayangan <strong style={{ color: 'var(--text-secondary)' }}>{layout.name}</strong> ke player atau kelompok player.
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 20, alignItems: 'start', width: '100%' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Bagian Nama Rundown */}
-          <div style={{ padding: '0 2px' }}>
+      {/* 1 Single Unified Card */}
+      <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+        <div
+          className="card-elevated"
+          style={{
+            padding: '24px 28px',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 22,
+          }}
+        >
+          {/* Section 1: Nama Rundown */}
+          <div>
             <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 600 }}>
               Nama Rundown
               <input
@@ -396,26 +451,38 @@ export default function AssignSchedulePage() {
             </label>
           </div>
 
-          {/* Card Khusus: Masa Berlaku & Waktu Tayang */}
-          <section className="card-elevated" style={{ padding: 22 }}>
-            <h2 style={{ margin: '0 0 14px', color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 700 }}>
-              Masa Berlaku
-            </h2>
+          <div style={{ height: 1, backgroundColor: 'var(--border-subtle)' }} />
 
-            {/* Mode: Tetapkan Mulai & Selesai vs Tanpa Batas Akhir */}
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {/* Section 2: Masa Berlaku */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+              <span style={{ color: 'var(--text-primary)', fontSize: '0.92rem', fontWeight: 700 }}>
+                Masa Berlaku
+              </span>
+
+              {/* Segmented Switch: Tetapkan Mulai & Selesai vs Tanpa Batas Akhir */}
+              <div
+                style={{
+                  display: 'inline-flex',
+                  padding: 3,
+                  borderRadius: 10,
+                  backgroundColor: 'var(--bg-surface-elevated)',
+                  border: '1px solid var(--border-subtle)',
+                }}
+              >
                 <button
                   type="button"
                   onClick={() => setDateMode('range')}
-                  className="btn btn-outline"
                   style={{
-                    padding: '7px 14px',
-                    fontSize: '0.8rem',
+                    padding: '6px 14px',
+                    fontSize: '0.78rem',
                     fontWeight: 600,
-                    borderColor: dateMode === 'range' ? 'var(--primary-500)' : 'var(--border-subtle)',
-                    backgroundColor: dateMode === 'range' ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
-                    color: dateMode === 'range' ? 'var(--primary-400)' : 'var(--text-secondary)',
+                    borderRadius: 7,
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: dateMode === 'range' ? 'var(--primary-500)' : 'transparent',
+                    color: dateMode === 'range' ? '#ffffff' : 'var(--text-secondary)',
+                    transition: 'all 0.16s ease',
                   }}
                 >
                   Tetapkan Mulai & Selesai
@@ -423,14 +490,16 @@ export default function AssignSchedulePage() {
                 <button
                   type="button"
                   onClick={() => setDateMode('unlimited')}
-                  className="btn btn-outline"
                   style={{
-                    padding: '7px 14px',
-                    fontSize: '0.8rem',
+                    padding: '6px 14px',
+                    fontSize: '0.78rem',
                     fontWeight: 600,
-                    borderColor: dateMode === 'unlimited' ? 'var(--primary-500)' : 'var(--border-subtle)',
-                    backgroundColor: dateMode === 'unlimited' ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
-                    color: dateMode === 'unlimited' ? 'var(--primary-400)' : 'var(--text-secondary)',
+                    borderRadius: 7,
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: dateMode === 'unlimited' ? 'var(--primary-500)' : 'transparent',
+                    color: dateMode === 'unlimited' ? '#ffffff' : 'var(--text-secondary)',
+                    transition: 'all 0.16s ease',
                   }}
                 >
                   Tanpa Batas Akhir
@@ -438,7 +507,8 @@ export default function AssignSchedulePage() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {/* Tanggal Inputs */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
               <label style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>
                 {dateMode === 'unlimited' ? 'Mulai Dari Tanggal' : 'Dari Tanggal'}
                 <input
@@ -476,12 +546,12 @@ export default function AssignSchedulePage() {
                   <div
                     style={{
                       marginTop: 6,
-                      padding: '10px 12px',
+                      padding: '10px 14px',
                       borderRadius: 8,
                       border: '1px dashed rgba(59, 130, 246, 0.35)',
                       backgroundColor: 'rgba(59, 130, 246, 0.08)',
                       color: 'var(--primary-400)',
-                      fontSize: '0.78rem',
+                      fontSize: '0.8rem',
                       fontWeight: 600,
                     }}
                   >
@@ -491,7 +561,8 @@ export default function AssignSchedulePage() {
               )}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+            {/* Jam Inputs */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
               <label style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>
                 Jam Mulai
                 <input
@@ -516,18 +587,33 @@ export default function AssignSchedulePage() {
               </label>
             </div>
 
-            <div style={{ marginTop: 16 }}>
-              <label style={{ display: 'flex', gap: 9, alignItems: 'center', marginBottom: 10, color: 'var(--text-primary)', fontSize: '0.85rem', fontWeight: 600 }}>
-                <input
-                  type="checkbox"
+            {/* Repeat Weekly with Modern On/Off Switch */}
+            <div style={{ marginTop: 4 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  marginBottom: recurring ? 10 : 0,
+                  cursor: 'pointer',
+                }}
+                onClick={() => {
+                  const nextVal = !recurring;
+                  setRecurring(nextVal);
+                  if (!nextVal && dateMode === 'range') setEndDate(startDate);
+                }}
+              >
+                <ModernSwitch
                   checked={recurring}
-                  onChange={(e) => {
-                    setRecurring(e.target.checked);
-                    if (!e.target.checked && dateMode === 'range') setEndDate(startDate);
+                  onChange={(nextVal) => {
+                    setRecurring(nextVal);
+                    if (!nextVal && dateMode === 'range') setEndDate(startDate);
                   }}
                 />
-                Ulangi setiap minggu
-              </label>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Ulangi setiap minggu
+                </span>
+              </div>
 
               {recurring && (
                 <DayMultiSelectAutocomplete
@@ -536,205 +622,248 @@ export default function AssignSchedulePage() {
                 />
               )}
             </div>
+          </div>
 
-            <p style={{ margin: '12px 0 0', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-              Waktu mengikuti zona waktu lokal player. {dateMode === 'unlimited' ? 'Jadwal akan terus aktif selamanya mengikuti hari dan jam yang dipilih.' : 'Jadwal hanya aktif pada hari terpilih di dalam rentang tanggal.'}
-            </p>
-          </section>
+          <div style={{ height: 1, backgroundColor: 'var(--border-subtle)' }} />
 
-          {/* Bagian Target Player: Tab Kelompok vs Single */}
-          <div style={{ padding: '0 2px' }}>
-            <h2 style={{ margin: '0 0 10px', color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 700 }}>
-              Target Player
-            </h2>
+          {/* Section 3: Target Player */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+              <span style={{ color: 'var(--text-primary)', fontSize: '0.92rem', fontWeight: 700 }}>
+                Target Player
+              </span>
 
-            {/* Tab Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border-subtle)', paddingBottom: 10, marginBottom: 14 }}>
-              <button
-                type="button"
-                onClick={() => setTargetTab('group')}
+              {/* Tabs: Kelompok vs Single */}
+              <div
                 style={{
                   display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '7px 14px',
-                  borderRadius: 8,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  backgroundColor: targetTab === 'group' ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                  color: targetTab === 'group' ? 'var(--primary-400)' : 'var(--text-secondary)',
-                  transition: 'all 0.15s ease',
+                  padding: 3,
+                  borderRadius: 10,
+                  backgroundColor: 'var(--bg-surface-elevated)',
+                  border: '1px solid var(--border-subtle)',
                 }}
               >
-                <Users size={15} />
-                <span>Kelompok</span>
-                {groupIds.length > 0 && (
-                  <span style={{ padding: '1px 7px', borderRadius: 999, fontSize: '0.68rem', backgroundColor: 'var(--primary-500)', color: '#fff' }}>
-                    {groupIds.length}
-                  </span>
-                )}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setTargetTab('group')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 14px',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    borderRadius: 7,
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: targetTab === 'group' ? 'var(--primary-500)' : 'transparent',
+                    color: targetTab === 'group' ? '#ffffff' : 'var(--text-secondary)',
+                    transition: 'all 0.16s ease',
+                  }}
+                >
+                  <Users size={14} />
+                  <span>Kelompok</span>
+                  {groupIds.length > 0 && (
+                    <span style={{ padding: '0 6px', borderRadius: 999, fontSize: '0.68rem', backgroundColor: 'rgba(255,255,255,0.25)', color: '#fff' }}>
+                      {groupIds.length}
+                    </span>
+                  )}
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setTargetTab('single')}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '7px 14px',
-                  borderRadius: 8,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  backgroundColor: targetTab === 'single' ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                  color: targetTab === 'single' ? 'var(--primary-400)' : 'var(--text-secondary)',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <Monitor size={15} />
-                <span>Single</span>
-                {deviceIds.length > 0 && (
-                  <span style={{ padding: '1px 7px', borderRadius: 999, fontSize: '0.68rem', backgroundColor: 'var(--primary-500)', color: '#fff' }}>
-                    {deviceIds.length}
-                  </span>
-                )}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setTargetTab('single')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 14px',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    borderRadius: 7,
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: targetTab === 'single' ? 'var(--primary-500)' : 'transparent',
+                    color: targetTab === 'single' ? '#ffffff' : 'var(--text-secondary)',
+                    transition: 'all 0.16s ease',
+                  }}
+                >
+                  <Monitor size={14} />
+                  <span>Single</span>
+                  {deviceIds.length > 0 && (
+                    <span style={{ padding: '0 6px', borderRadius: 999, fontSize: '0.68rem', backgroundColor: 'rgba(255,255,255,0.25)', color: '#fff' }}>
+                      {deviceIds.length}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
 
-            {/* Tab Content: Kelompok */}
+            {/* Tab Kelompok Cards with Modern Switch */}
             {targetTab === 'group' && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 10 }}>
                 {groups.map((group) => {
                   const checked = groupIds.includes(group.id);
                   return (
-                    <label
+                    <div
                       key={group.id}
+                      onClick={() => toggle(group.id, groupIds, setGroupIds)}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 9,
-                        padding: '10px 12px',
-                        border: '1px solid var(--border-subtle)',
-                        borderRadius: 9,
-                        color: 'var(--text-primary)',
-                        fontSize: '0.82rem',
-                        cursor: 'pointer',
+                        gap: 12,
+                        padding: '12px 14px',
+                        border: `1px solid ${checked ? 'var(--primary-500)' : 'var(--border-subtle)'}`,
+                        borderRadius: 10,
                         backgroundColor: checked ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-surface)',
-                        transition: 'background 0.15s ease',
+                        cursor: 'pointer',
+                        transition: 'all 0.16s ease',
                       }}
                     >
-                      <input
-                        type="checkbox"
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 8,
+                          backgroundColor: checked ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-surface-elevated)',
+                          color: checked ? 'var(--primary-400)' : 'var(--text-muted)',
+                          display: 'grid',
+                          placeItems: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Users size={16} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 650, fontSize: '0.84rem', color: checked ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {group.name}
+                        </div>
+                      </div>
+                      <ModernSwitch
                         checked={checked}
                         onChange={() => toggle(group.id, groupIds, setGroupIds)}
-                        style={{ cursor: 'pointer', accentColor: 'var(--primary-500)' }}
                       />
-                      <span style={{ fontWeight: 600 }}>{group.name}</span>
-                    </label>
+                    </div>
                   );
                 })}
                 {!groups.length && <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Belum ada kelompok player.</span>}
               </div>
             )}
 
-            {/* Tab Content: Single */}
+            {/* Tab Single Cards with Modern Switch */}
             {targetTab === 'single' && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 10 }}>
                 {devices.map((device) => {
                   const checked = deviceIds.includes(device.id);
                   return (
-                    <label
+                    <div
                       key={device.id}
+                      onClick={() => toggle(device.id, deviceIds, setDeviceIds)}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 9,
-                        padding: '10px 12px',
-                        border: '1px solid var(--border-subtle)',
-                        borderRadius: 9,
-                        color: 'var(--text-primary)',
-                        fontSize: '0.82rem',
-                        cursor: 'pointer',
+                        gap: 12,
+                        padding: '12px 14px',
+                        border: `1px solid ${checked ? 'var(--primary-500)' : 'var(--border-subtle)'}`,
+                        borderRadius: 10,
                         backgroundColor: checked ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-surface)',
-                        transition: 'background 0.15s ease',
+                        cursor: 'pointer',
+                        transition: 'all 0.16s ease',
                       }}
                     >
-                      <input
-                        type="checkbox"
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 8,
+                          backgroundColor: checked ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-surface-elevated)',
+                          color: checked ? 'var(--primary-400)' : 'var(--text-muted)',
+                          display: 'grid',
+                          placeItems: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Monitor size={16} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 650, fontSize: '0.84rem', color: checked ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {device.name}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: device.isOnline ? 'var(--accent-emerald)' : 'var(--text-muted)', marginTop: 2 }}>
+                          {device.isOnline ? 'Online' : 'Offline'}
+                        </div>
+                      </div>
+                      <ModernSwitch
                         checked={checked}
                         onChange={() => toggle(device.id, deviceIds, setDeviceIds)}
-                        style={{ cursor: 'pointer', accentColor: 'var(--primary-500)' }}
                       />
-                      <span style={{ fontWeight: 600 }}>{device.name}</span>
-                      <span style={{ marginLeft: 'auto', color: device.isOnline ? 'var(--accent-emerald)' : 'var(--text-muted)', fontSize: '0.7rem' }}>
-                        {device.isOnline ? 'Online' : 'Offline'}
-                      </span>
-                    </label>
+                    </div>
                   );
                 })}
                 {!devices.length && <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Belum ada player terdaftar.</span>}
               </div>
             )}
           </div>
-        </div>
 
-        {/* Aside: Ringkasan Penugasan */}
-        <aside style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <section className="card-elevated" style={{ padding: 20 }}>
-            <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 12px', color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 700 }}>
-              <CalendarDays size={17} /> Ringkasan Penugasan
-            </h2>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {devices.filter((device) => deviceIds.includes(device.id)).map((device) => (
-                <span key={device.id} style={{ padding: '5px 8px', borderRadius: 999, background: 'rgba(59,130,246,.12)', color: 'var(--primary-400)', fontSize: '0.72rem' }}>
-                  <Monitor size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} />{device.name}
-                </span>
-              ))}
-              {groups.filter((group) => groupIds.includes(group.id)).map((group) => (
-                <span key={group.id} style={{ padding: '5px 8px', borderRadius: 999, background: 'rgba(16,185,129,.12)', color: 'var(--accent-emerald)', fontSize: '0.72rem' }}>
-                  <Users size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} />{group.name}
-                </span>
-              ))}
-              {!deviceIds.length && !groupIds.length && <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Belum ada target dipilih.</span>}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-              <Clock3 size={15} /> {startTime}–{endTime}
-            </div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '8px 0 0' }}>
-              {dateMode === 'unlimited'
-                ? `Mulai ${startDate} · Tanpa Batas Akhir`
-                : `${startDate} sampai ${recurring ? endDate : startDate}`}
-              {recurring ? ` · ${days.map((value) => ALL_DAYS[value - 1]?.short || value).join(', ')}` : ' · Satu kali'}
-            </p>
-            {selectedScheduleIds.length === 1 && (
-              <p style={{ color: 'var(--accent-emerald)', fontSize: '0.76rem', margin: '12px 0 0' }}>
-                Event akan ditambahkan ke rundown {currentSchedule?.name || 'yang sudah terpasang'} agar jadwal target tetap terjaga.
-              </p>
-            )}
-            {selectedScheduleIds.length > 1 && (
-              <p style={{ color: 'var(--accent-rose)', fontSize: '0.76rem', margin: '12px 0 0' }}>
-                Target terpilih memakai rundown berbeda. Pisahkan penugasan agar jadwal yang sudah ada tidak tertimpa.
-              </p>
-            )}
-          </section>
+          <div style={{ height: 1, backgroundColor: 'var(--border-subtle)' }} />
 
-          {error && (
-            <div role="alert" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: 12, borderRadius: 9, color: 'var(--accent-rose)', background: 'rgba(244,63,94,.1)', fontSize: '0.82rem' }}>
-              <X size={16} style={{ flexShrink: 0 }} />{error}
+          {/* Section 4: Ringkasan Penugasan & Aksi Bawah */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+            {/* Live Summary Chips */}
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <Clock3 size={15} style={{ color: 'var(--primary-400)' }} />
+                <span>{startTime}–{endTime}</span>
+              </div>
+              <span>•</span>
+              <div>
+                {dateMode === 'unlimited'
+                  ? `Mulai ${startDate} · Tanpa Batas Akhir`
+                  : `${startDate} sampai ${recurring ? endDate : startDate}`}
+              </div>
+              <span>•</span>
+              <div>
+                {recurring
+                  ? days.length === 7 ? 'Setiap Hari' : days.map((val) => ALL_DAYS[val - 1]?.short || val).join(', ')
+                  : 'Satu kali'}
+              </div>
+              <span>•</span>
+              <div style={{ fontWeight: 600, color: (deviceIds.length > 0 || groupIds.length > 0) ? 'var(--accent-emerald)' : 'var(--text-muted)' }}>
+                {deviceIds.length + groupIds.length} Target Dipilih
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Link href="/studio/schedules" className="btn btn-outline" style={{ padding: '8px 16px' }}>
+                Batal
+              </Link>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={saving}
+                style={{ padding: '8px 20px', display: 'inline-flex', alignItems: 'center', gap: 7 }}
+              >
+                <Layers size={15} />
+                <span>{saving ? 'Menyimpan...' : 'Simpan ke Rundown'}</span>
+              </button>
+            </div>
+          </div>
+
+          {selectedScheduleIds.length > 1 && (
+            <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, backgroundColor: 'rgba(244, 63, 94, 0.1)', color: 'var(--accent-rose)', fontSize: '0.8rem' }}>
+              <X size={15} style={{ flexShrink: 0 }} />
+              <span>Target terpilih memakai rundown berbeda. Pisahkan penugasan agar jadwal yang sudah ada tidak tertimpa.</span>
             </div>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 9 }}>
-            <Link href="/studio/schedules" className="btn btn-outline">Batal</Link>
-            <button type="submit" className="btn btn-primary" disabled={saving} style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-              <Layers size={15} />{saving ? 'Menyimpan...' : 'Simpan ke Rundown'}
-            </button>
-          </div>
-        </aside>
+          {error && (
+            <div role="alert" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: 12, borderRadius: 9, color: 'var(--accent-rose)', background: 'rgba(244,63,94,.1)', fontSize: '0.82rem' }}>
+              <X size={16} style={{ flexShrink: 0 }} />
+              <span>{error}</span>
+            </div>
+          )}
+        </div>
       </form>
     </div>
   );
