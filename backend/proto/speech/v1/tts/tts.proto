@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package signage.speech.v1.tts;
+
+import "speech/v1/tts/tts.common.proto";
+
+service TtsService {
+  rpc Synthesize(SynthesizeRequest) returns (SynthesizeResponse);
+}

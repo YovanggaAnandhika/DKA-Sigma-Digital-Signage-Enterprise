@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package signage.speech.v1.tts;
+
+message SynthesizeRequest {
+  string device_id = 1;
+  string device_token = 2;
+  string text = 3;
+}
+
+message SynthesizeResponse {
+  bytes audio_mpeg = 1;
+}

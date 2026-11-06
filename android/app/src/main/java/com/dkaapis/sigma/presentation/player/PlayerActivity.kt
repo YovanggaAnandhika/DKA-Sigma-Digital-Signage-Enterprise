@@ -232,6 +232,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         audioManager = PlayerAudioManager(
             context = this,
             scope = lifecycleScope,
+            channelFactory = channelFactory,
+            tokenStorage = tokenStorage,
             config = AudioConfigPayload(
                 onDuckingChanged = { zoneManager.setDuckedVolume(it) },
                 onStopCallEffect = { activeQueueRenderer?.stopCallEffect() },

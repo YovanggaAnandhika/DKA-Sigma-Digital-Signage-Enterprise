@@ -7,6 +7,8 @@ import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
+import com.dkaapis.sigma.data.local.TokenStorage
 import com.dkaapis.sigma.presentation.player.audio.model.AudioConfigPayload
 import com.dkaapis.sigma.presentation.player.audio.model.CounterStatusPayload
 import com.dkaapis.sigma.presentation.player.audio.model.QueueSpeechPayload
@@ -15,7 +17,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import signage.speech.v1.tts.TtsServiceGrpcKt
+import signage.speech.v1.tts.TtsCommon
 import java.io.File
+import java.io.FileOutputStream
+import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
 
 /**
  * Orkestrator Audio & TextToSpeech untuk Signage Player:
@@ -25,6 +32,8 @@ import java.io.File
 class PlayerAudioManager(
     private val context: Context,
     private val scope: CoroutineScope,
+    private val channelFactory: GrpcChannelFactory,
+    private val tokenStorage: TokenStorage,
     private val config: AudioConfigPayload
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -74,6 +83,7 @@ class PlayerAudioManager(
     fun stopCurrentVoice() {
         currentSpeechGeneration++
         currentUtteranceId = null
+        currentSpeechText = null
 
         speechTimeoutRunnable?.let { mainHandler.removeCallbacks(it) }
         speechTimeoutRunnable = null
@@ -205,17 +215,71 @@ class PlayerAudioManager(
 
     private fun playTtsVoice(utteranceText: String, expectedGen: Long) {
         if (currentSpeechGeneration != expectedGen) return
-        mainHandler.post {
-            if (currentSpeechGeneration == expectedGen) {
-                playLocalTtsOrFallback(utteranceText, expectedGen)
+        currentSpeechText = utteranceText
+        scope.launch(Dispatchers.IO) {
+            val audioFile = getCachedOrDownloadTtsAudio(utteranceText)
+            withContext(Dispatchers.Main) {
+                if (currentSpeechGeneration == expectedGen) {
+                    if (audioFile != null) {
+                        playTtsAudioFile(audioFile, expectedGen)
+                    } else {
+                        playLocalTtsOrFallback(utteranceText, expectedGen)
+                    }
+                }
             }
         }
     }
 
+    private suspend fun getCachedOrDownloadTtsAudio(text: String): File? = withContext(Dispatchers.IO) {
+        val directory = File(context.cacheDir, "tts_cache")
+        val cacheFile = File(directory, "tts_${text.sha256()}.mp3")
+        if (cacheFile.isFile && cacheFile.length() > 0L) return@withContext cacheFile
+
+        try {
+            val deviceId = tokenStorage.getDeviceId().orEmpty()
+            val deviceToken = tokenStorage.getDeviceToken().orEmpty()
+            if (deviceId.isBlank() || deviceToken.isBlank()) {
+                error("Player belum ter-pair untuk meminta audio TTS")
+            }
+
+            val request = TtsCommon.SynthesizeRequest.newBuilder()
+                .setDeviceId(deviceId)
+                .setDeviceToken(deviceToken)
+                .setText(text)
+                .build()
+            val response = TtsServiceGrpcKt.TtsServiceCoroutineStub(channelFactory.getChannel())
+                .withDeadlineAfter(10, TimeUnit.SECONDS)
+                .synthesize(request)
+            val audio = response.audioMpeg.toByteArray()
+            if (audio.isEmpty()) error("Server mengembalikan audio TTS kosong")
+
+            if (!directory.exists() && !directory.mkdirs()) {
+                error("Gagal membuat cache audio TTS")
+            }
+            val temporaryFile = File(directory, "${cacheFile.name}.tmp")
+            FileOutputStream(temporaryFile).use { it.write(audio) }
+            if (!temporaryFile.renameTo(cacheFile)) {
+                temporaryFile.delete()
+                error("Gagal menyimpan cache audio TTS")
+            }
+            cacheFile
+        } catch (error: Exception) {
+            Log.w(TAG, "Audio TTS gRPC tidak tersedia, lanjut ke engine lokal: ${error.message}")
+            null
+        }
+    }
+
+    private fun String.sha256(): String =
+        MessageDigest.getInstance("SHA-256")
+            .digest(toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it.toInt() and 0xff) }
+
     private fun playTtsAudioFile(file: File, expectedGen: Long) {
         if (currentSpeechGeneration != expectedGen) return
-        runCatching {
-            MediaPlayer().apply {
+        val player = MediaPlayer()
+        activeTtsPlayer = player
+        try {
+            player.apply {
                 setDataSource(file.absolutePath)
                 setAudioAttributes(
                     AudioAttributes.Builder().apply {
@@ -224,6 +288,14 @@ class PlayerAudioManager(
                     }.build()
                 )
                 setVolume(1.0f, 1.0f)
+                setOnPreparedListener {
+                    if (currentSpeechGeneration == expectedGen) {
+                        runCatching { playbackParams = playbackParams.setSpeed(1.15f) }
+                        start()
+                    } else {
+                        release()
+                    }
+                }
                 setOnCompletionListener { player ->
                     player.release()
                     if (activeTtsPlayer === player) activeTtsPlayer = null
@@ -231,20 +303,34 @@ class PlayerAudioManager(
                 }
                 setOnErrorListener { player, what, extra ->
                     Log.w(TAG, "TTS MediaPlayer error ($what, $extra), fallback ke local TTS")
+                    discardTtsCache(file)
                     player.release()
                     if (activeTtsPlayer === player) activeTtsPlayer = null
-                    if (currentSpeechGeneration == expectedGen) finishSpeech(expectedGen)
+                    if (currentSpeechGeneration == expectedGen) {
+                        playLocalTtsOrFallback(currentSpeechText.orEmpty(), expectedGen)
+                    }
                     true
                 }
-                prepare()
-                runCatching { playbackParams = playbackParams.setSpeed(1.15f) }
-                start()
-            }.also { activeTtsPlayer = it }
-        }.onFailure { err ->
+                prepareAsync()
+            }
+        } catch (err: Exception) {
+            discardTtsCache(file)
+            player.release()
+            if (activeTtsPlayer === player) activeTtsPlayer = null
             Log.e(TAG, "Failed to start TTS MediaPlayer: ${err.message}")
-            finishSpeech(expectedGen)
+            if (currentSpeechGeneration == expectedGen) {
+                playLocalTtsOrFallback(currentSpeechText.orEmpty(), expectedGen)
+            }
         }
     }
+
+    private fun discardTtsCache(file: File) {
+        if (file.exists() && !file.delete()) {
+            Log.w(TAG, "Gagal menghapus cache audio TTS yang tidak dapat diputar")
+        }
+    }
+
+    private var currentSpeechText: String? = null
 
     private fun playLocalTtsOrFallback(utteranceText: String, expectedGen: Long) {
         if (currentSpeechGeneration != expectedGen) return
@@ -271,6 +357,7 @@ class PlayerAudioManager(
     fun release() {
         stopCurrentVoice()
         localTtsEngine.release()
+        currentSpeechText = null
     }
 
     companion object {
