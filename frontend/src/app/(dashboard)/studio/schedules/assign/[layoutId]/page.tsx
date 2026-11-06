@@ -1,13 +1,13 @@
 'use client';
 
-import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, CalendarDays, Check, Clock3, Layers, Monitor, Users, X } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Check, ChevronDown, Clock3, Layers, Monitor, Users, X } from 'lucide-react';
 import { api, Device, DisplayGroup, Layout } from '@/lib/services';
 import type { Schedule } from '@/lib/services/studio/schedule.types';
 
-const weekDays = [
+const ALL_DAYS = [
   { value: 1, label: 'Senin', short: 'Sen' },
   { value: 2, label: 'Selasa', short: 'Sel' },
   { value: 3, label: 'Rabu', short: 'Rab' },
@@ -30,6 +30,202 @@ function weekdayForDate(value: string) {
   return weekday === 0 ? 7 : weekday;
 }
 
+function DayMultiSelectAutocomplete({
+  selectedDays,
+  onChange,
+}: {
+  selectedDays: number[];
+  onChange: (days: number[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const availableDays = ALL_DAYS.filter((d) => !selectedDays.includes(d.value));
+  const filteredDays = availableDays.filter((d) =>
+    d.label.toLowerCase().includes(query.toLowerCase())
+  );
+
+  const addDay = (val: number) => {
+    onChange([...selectedDays, val].sort((a, b) => a - b));
+    setQuery('');
+  };
+
+  const removeDay = (val: number) => {
+    if (selectedDays.length <= 1) return;
+    onChange(selectedDays.filter((d) => d !== val));
+  };
+
+  const selectAll = () => {
+    onChange([1, 2, 3, 4, 5, 6, 7]);
+    setQuery('');
+  };
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative' }}>
+      <div
+        className="form-input"
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: 6,
+          padding: '6px 10px',
+          minHeight: 42,
+          cursor: 'text',
+        }}
+        onClick={() => setOpen(true)}
+      >
+        {selectedDays.map((val) => {
+          const item = ALL_DAYS.find((d) => d.value === val);
+          if (!item) return null;
+          return (
+            <span
+              key={val}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '3px 8px',
+                borderRadius: 6,
+                backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                color: 'var(--primary-400)',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+              }}
+            >
+              {item.label}
+              {selectedDays.length > 1 && (
+                <button
+                  type="button"
+                  aria-label={`Hapus ${item.label}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeDay(val);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    color: 'inherit',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </span>
+          );
+        })}
+
+        <input
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder={selectedDays.length === 0 ? 'Pilih hari tayang...' : selectedDays.length === 7 ? '' : 'Ketik untuk tambah hari...'}
+          style={{
+            flex: 1,
+            minWidth: 120,
+            border: 'none',
+            outline: 'none',
+            background: 'transparent',
+            color: 'var(--text-primary)',
+            fontSize: '0.8rem',
+          }}
+        />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+          {selectedDays.length < 7 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                selectAll();
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '2px 6px',
+                cursor: 'pointer',
+                color: 'var(--primary-400)',
+                fontSize: '0.72rem',
+                fontWeight: 600,
+              }}
+            >
+              Semua Hari
+            </button>
+          )}
+          <ChevronDown size={14} color="var(--text-muted)" />
+        </div>
+      </div>
+
+      {open && availableDays.length > 0 && (
+        <div
+          role="listbox"
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            zIndex: 50,
+            maxHeight: 200,
+            overflowY: 'auto',
+            padding: 4,
+            borderRadius: 8,
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            boxShadow: '0 10px 24px -8px rgba(0,0,0,0.3)',
+          }}
+        >
+          {filteredDays.length === 0 && (
+            <div style={{ padding: '8px 10px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Tidak ada hari cocok
+            </div>
+          )}
+          {filteredDays.map((d) => (
+            <button
+              key={d.value}
+              type="button"
+              onClick={() => addDay(d.value)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                width: '100%',
+                padding: '7px 10px',
+                borderRadius: 6,
+                border: 'none',
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontSize: '0.8rem',
+                color: 'var(--text-primary)',
+                backgroundColor: 'transparent',
+              }}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AssignSchedulePage() {
   const params = useParams() as { layoutId: string };
   const router = useRouter();
@@ -43,6 +239,7 @@ export default function AssignSchedulePage() {
   const [scheduleName, setScheduleName] = useState('');
   const [deviceIds, setDeviceIds] = useState<string[]>([]);
   const [groupIds, setGroupIds] = useState<string[]>([]);
+  const [targetTab, setTargetTab] = useState<'group' | 'single'>('group');
   const [dateMode, setDateMode] = useState<'range' | 'unlimited'>('range');
   const [startDate, setStartDate] = useState(() => localDateString(new Date()));
   const [endDate, setEndDate] = useState(() => localDateString(new Date()));
@@ -94,12 +291,6 @@ export default function AssignSchedulePage() {
 
   const toggle = (id: string, values: string[], setValues: (next: string[]) => void) => {
     setValues(values.includes(id) ? values.filter((value) => value !== id) : [...values, id]);
-  };
-
-  const toggleDay = (day: number) => {
-    setDays((current) => current.includes(day)
-      ? current.length > 1 ? current.filter((value) => value !== day) : current
-      : [...current, day].sort((a, b) => a - b));
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -184,19 +375,35 @@ export default function AssignSchedulePage() {
 
       <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 20, alignItems: 'start', width: '100%' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <section className="card-elevated" style={{ padding: 20 }}>
-            <h2 style={{ margin: '0 0 14px', color: 'var(--text-primary)', fontSize: '1rem' }}>Jadwal dan periode</h2>
-            <label style={{ display: 'block', marginBottom: 14, color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>
-              Nama rundown
-              <input className="form-input" value={currentSchedule?.name || scheduleName} onChange={(e) => setScheduleName(e.target.value)} required maxLength={150} disabled={selectedScheduleIds.length === 1} style={{ display: 'block', marginTop: 6 }} />
-              {selectedScheduleIds.length === 1 && <span style={{ display: 'block', marginTop: 5, color: 'var(--text-muted)', fontSize: '0.72rem' }}>Event akan ditambahkan ke rundown yang sudah ada.</span>}
+          {/* Bagian Nama Rundown */}
+          <div style={{ padding: '0 2px' }}>
+            <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 600 }}>
+              Nama Rundown
+              <input
+                className="form-input"
+                value={currentSchedule?.name || scheduleName}
+                onChange={(e) => setScheduleName(e.target.value)}
+                required
+                maxLength={150}
+                disabled={selectedScheduleIds.length === 1}
+                style={{ display: 'block', marginTop: 6 }}
+              />
+              {selectedScheduleIds.length === 1 && (
+                <span style={{ display: 'block', marginTop: 5, color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                  Event akan ditambahkan ke rundown yang sudah ada.
+                </span>
+              )}
             </label>
+          </div>
 
-            {/* Selector: Rentang Tanggal vs Unlimited */}
+          {/* Card Khusus: Masa Berlaku & Waktu Tayang */}
+          <section className="card-elevated" style={{ padding: 22 }}>
+            <h2 style={{ margin: '0 0 14px', color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 700 }}>
+              Masa Berlaku
+            </h2>
+
+            {/* Mode: Tetapkan Mulai & Selesai vs Tanpa Batas Akhir */}
             <div style={{ marginBottom: 14 }}>
-              <span style={{ display: 'block', marginBottom: 8, color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>
-                Masa Berlaku Penayangan
-              </span>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button
                   type="button"
@@ -226,30 +433,46 @@ export default function AssignSchedulePage() {
                     color: dateMode === 'unlimited' ? 'var(--primary-400)' : 'var(--text-secondary)',
                   }}
                 >
-                  Tanpa Batas Akhir (Unlimited)
+                  Tanpa Batas Akhir
                 </button>
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <label style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>
-                {dateMode === 'unlimited' ? 'Mulai dari tanggal' : 'Dari tanggal'}
-                <input type="date" className="form-input" value={startDate} onChange={(e) => {
-                  const nextStartDate = e.target.value;
-                  setStartDate(nextStartDate);
-                  if (dateMode === 'range' && recurring && endDate < nextStartDate) setEndDate(nextStartDate);
-                  if (dateMode === 'range' && !recurring) setEndDate(e.target.value);
-                }} required style={{ display: 'block', marginTop: 6 }} />
+                {dateMode === 'unlimited' ? 'Mulai Dari Tanggal' : 'Dari Tanggal'}
+                <input
+                  type="date"
+                  className="form-input"
+                  value={startDate}
+                  onChange={(e) => {
+                    const nextStartDate = e.target.value;
+                    setStartDate(nextStartDate);
+                    if (dateMode === 'range' && recurring && endDate < nextStartDate) setEndDate(nextStartDate);
+                    if (dateMode === 'range' && !recurring) setEndDate(e.target.value);
+                  }}
+                  required
+                  style={{ display: 'block', marginTop: 6 }}
+                />
               </label>
 
               {dateMode === 'range' ? (
                 <label style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>
-                  Sampai tanggal
-                  <input type="date" className="form-input" value={recurring ? endDate : startDate} min={startDate} disabled={!recurring} onChange={(e) => setEndDate(e.target.value)} required style={{ display: 'block', marginTop: 6 }} />
+                  Sampai Tanggal
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={recurring ? endDate : startDate}
+                    min={startDate}
+                    disabled={!recurring}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    required
+                    style={{ display: 'block', marginTop: 6 }}
+                  />
                 </label>
               ) : (
                 <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>
-                  Sampai tanggal
+                  Sampai Tanggal
                   <div
                     style={{
                       marginTop: 6,
@@ -262,7 +485,7 @@ export default function AssignSchedulePage() {
                       fontWeight: 600,
                     }}
                   >
-                    Selamanya (Unlimited / Tanpa Batas Akhir)
+                    Selamanya
                   </div>
                 </div>
               )}
@@ -270,79 +493,200 @@ export default function AssignSchedulePage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
               <label style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>
-                Jam mulai
-                <input type="time" className="form-input" value={startTime} onChange={(e) => setStartTime(e.target.value)} required style={{ display: 'block', marginTop: 6 }} />
+                Jam Mulai
+                <input
+                  type="time"
+                  className="form-input"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  required
+                  style={{ display: 'block', marginTop: 6 }}
+                />
               </label>
               <label style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>
-                Jam selesai
-                <input type="time" className="form-input" value={endTime} onChange={(e) => setEndTime(e.target.value)} required style={{ display: 'block', marginTop: 6 }} />
+                Jam Selesai
+                <input
+                  type="time"
+                  className="form-input"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  required
+                  style={{ display: 'block', marginTop: 6 }}
+                />
               </label>
             </div>
 
-            <label style={{ display: 'flex', gap: 9, alignItems: 'center', marginTop: 16, color: 'var(--text-primary)', fontSize: '0.85rem', fontWeight: 600 }}>
-              <input type="checkbox" checked={recurring} onChange={(e) => {
-                setRecurring(e.target.checked);
-                if (!e.target.checked && dateMode === 'range') setEndDate(startDate);
-              }} />
-              Ulangi pada hari tertentu setiap minggu
-            </label>
-            {recurring && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 12 }}>
-                {weekDays.map((day) => {
-                  const active = days.includes(day.value);
-                  return (
-                    <button key={day.value} type="button" onClick={() => toggleDay(day.value)} aria-pressed={active} className="btn btn-outline" style={{
-                      padding: '7px 12px',
-                      color: active ? 'var(--primary-400)' : 'var(--text-secondary)',
-                      borderColor: active ? 'var(--primary-500)' : 'var(--border-subtle)',
-                      background: active ? 'rgba(59,130,246,.12)' : undefined,
-                    }}>
-                      {active && <Check size={13} style={{ marginRight: 4, verticalAlign: 'middle' }} />}{day.short}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-            <p style={{ margin: '10px 0 0', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-              Waktu mengikuti zona waktu lokal player. {dateMode === 'unlimited' ? 'Jadwal akan terus aktif selamanya mengikuti hari dan jam yang dipilih.' : 'Jadwal berulang hanya dibuat pada hari terpilih di dalam rentang tanggal.'}
+            <div style={{ marginTop: 16 }}>
+              <label style={{ display: 'flex', gap: 9, alignItems: 'center', marginBottom: 10, color: 'var(--text-primary)', fontSize: '0.85rem', fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={recurring}
+                  onChange={(e) => {
+                    setRecurring(e.target.checked);
+                    if (!e.target.checked && dateMode === 'range') setEndDate(startDate);
+                  }}
+                />
+                Ulangi setiap minggu
+              </label>
+
+              {recurring && (
+                <DayMultiSelectAutocomplete
+                  selectedDays={days}
+                  onChange={setDays}
+                />
+              )}
+            </div>
+
+            <p style={{ margin: '12px 0 0', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+              Waktu mengikuti zona waktu lokal player. {dateMode === 'unlimited' ? 'Jadwal akan terus aktif selamanya mengikuti hari dan jam yang dipilih.' : 'Jadwal hanya aktif pada hari terpilih di dalam rentang tanggal.'}
             </p>
           </section>
 
-          <section className="card-elevated" style={{ padding: 20 }}>
-            <h2 style={{ margin: '0 0 12px', color: 'var(--text-primary)', fontSize: '1rem' }}>Target player</h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8, color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 700 }}>
-              <Monitor size={16} /> Player individual
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8 }}>
-              {devices.map((device) => (
-                <label key={device.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: 10, border: '1px solid var(--border-subtle)', borderRadius: 9, color: 'var(--text-primary)', fontSize: '0.82rem' }}>
-                  <input type="checkbox" checked={deviceIds.includes(device.id)} onChange={() => toggle(device.id, deviceIds, setDeviceIds)} />
-                  <span>{device.name}</span>
-                  <span style={{ marginLeft: 'auto', color: device.isOnline ? 'var(--accent-emerald)' : 'var(--text-muted)', fontSize: '0.7rem' }}>{device.isOnline ? 'Online' : 'Offline'}</span>
-                </label>
-              ))}
-              {!devices.length && <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Belum ada player terdaftar.</span>}
+          {/* Bagian Target Player: Tab Kelompok vs Single */}
+          <div style={{ padding: '0 2px' }}>
+            <h2 style={{ margin: '0 0 10px', color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 700 }}>
+              Target Player
+            </h2>
+
+            {/* Tab Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border-subtle)', paddingBottom: 10, marginBottom: 14 }}>
+              <button
+                type="button"
+                onClick={() => setTargetTab('group')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '7px 14px',
+                  borderRadius: 8,
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  backgroundColor: targetTab === 'group' ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                  color: targetTab === 'group' ? 'var(--primary-400)' : 'var(--text-secondary)',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Users size={15} />
+                <span>Kelompok</span>
+                {groupIds.length > 0 && (
+                  <span style={{ padding: '1px 7px', borderRadius: 999, fontSize: '0.68rem', backgroundColor: 'var(--primary-500)', color: '#fff' }}>
+                    {groupIds.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setTargetTab('single')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '7px 14px',
+                  borderRadius: 8,
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  backgroundColor: targetTab === 'single' ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                  color: targetTab === 'single' ? 'var(--primary-400)' : 'var(--text-secondary)',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Monitor size={15} />
+                <span>Single</span>
+                {deviceIds.length > 0 && (
+                  <span style={{ padding: '1px 7px', borderRadius: 999, fontSize: '0.68rem', backgroundColor: 'var(--primary-500)', color: '#fff' }}>
+                    {deviceIds.length}
+                  </span>
+                )}
+              </button>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, margin: '18px 0 8px', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 700 }}>
-              <Users size={16} /> Kelompok player (Display Group)
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8 }}>
-              {groups.map((group) => (
-                <label key={group.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: 10, border: '1px solid var(--border-subtle)', borderRadius: 9, color: 'var(--text-primary)', fontSize: '0.82rem' }}>
-                  <input type="checkbox" checked={groupIds.includes(group.id)} onChange={() => toggle(group.id, groupIds, setGroupIds)} />
-                  <span>{group.name}</span>
-                </label>
-              ))}
-              {!groups.length && <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Belum ada kelompok player.</span>}
-            </div>
-          </section>
+            {/* Tab Content: Kelompok */}
+            {targetTab === 'group' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8 }}>
+                {groups.map((group) => {
+                  const checked = groupIds.includes(group.id);
+                  return (
+                    <label
+                      key={group.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 9,
+                        padding: '10px 12px',
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: 9,
+                        color: 'var(--text-primary)',
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        backgroundColor: checked ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-surface)',
+                        transition: 'background 0.15s ease',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggle(group.id, groupIds, setGroupIds)}
+                        style={{ cursor: 'pointer', accentColor: 'var(--primary-500)' }}
+                      />
+                      <span style={{ fontWeight: 600 }}>{group.name}</span>
+                    </label>
+                  );
+                })}
+                {!groups.length && <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Belum ada kelompok player.</span>}
+              </div>
+            )}
+
+            {/* Tab Content: Single */}
+            {targetTab === 'single' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8 }}>
+                {devices.map((device) => {
+                  const checked = deviceIds.includes(device.id);
+                  return (
+                    <label
+                      key={device.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 9,
+                        padding: '10px 12px',
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: 9,
+                        color: 'var(--text-primary)',
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        backgroundColor: checked ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-surface)',
+                        transition: 'background 0.15s ease',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggle(device.id, deviceIds, setDeviceIds)}
+                        style={{ cursor: 'pointer', accentColor: 'var(--primary-500)' }}
+                      />
+                      <span style={{ fontWeight: 600 }}>{device.name}</span>
+                      <span style={{ marginLeft: 'auto', color: device.isOnline ? 'var(--accent-emerald)' : 'var(--text-muted)', fontSize: '0.7rem' }}>
+                        {device.isOnline ? 'Online' : 'Offline'}
+                      </span>
+                    </label>
+                  );
+                })}
+                {!devices.length && <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Belum ada player terdaftar.</span>}
+              </div>
+            )}
+          </div>
         </div>
 
+        {/* Aside: Ringkasan Penugasan */}
         <aside style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <section className="card-elevated" style={{ padding: 20 }}>
-            <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 12px', color: 'var(--text-primary)', fontSize: '1rem' }}>
-              <CalendarDays size={17} /> Ringkasan penugasan
+            <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 12px', color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 700 }}>
+              <CalendarDays size={17} /> Ringkasan Penugasan
             </h2>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {devices.filter((device) => deviceIds.includes(device.id)).map((device) => (
@@ -362,9 +706,9 @@ export default function AssignSchedulePage() {
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '8px 0 0' }}>
               {dateMode === 'unlimited'
-                ? `Mulai ${startDate} (Tanpa Batas Akhir / Unlimited)`
+                ? `Mulai ${startDate} · Tanpa Batas Akhir`
                 : `${startDate} sampai ${recurring ? endDate : startDate}`}
-              {recurring ? ` · ${days.map((value) => weekDays[value - 1].short).join(', ')}` : ' · Satu kali'}
+              {recurring ? ` · ${days.map((value) => ALL_DAYS[value - 1]?.short || value).join(', ')}` : ' · Satu kali'}
             </p>
             {selectedScheduleIds.length === 1 && (
               <p style={{ color: 'var(--accent-emerald)', fontSize: '0.76rem', margin: '12px 0 0' }}>
