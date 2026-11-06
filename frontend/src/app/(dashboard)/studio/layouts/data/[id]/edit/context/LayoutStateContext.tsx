@@ -57,10 +57,10 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
         setLayoutName(data.name);
 
         const rawLayers = data.layersList || [];
-        const sanitizedLayers = rawLayers.map((z: any) => {
+        const sanitizedLayers = await Promise.all(rawLayers.map(async (z: any) => {
           const rawBlocks = z.blocksList || [];
-          const blocks = rawBlocks.map((b: any) => {
-            const widgetInfo = resolveWidgetInfo(b);
+          const blocks = await Promise.all(rawBlocks.map(async (b: any) => {
+            const widgetInfo = await resolveWidgetInfo(b);
             return {
               ...b,
               id: b.id,
@@ -83,7 +83,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
               })),
               ...widgetInfo,
             };
-          });
+          }));
 
           return {
             ...z,
@@ -98,7 +98,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
             backgroundColor: z.backgroundColor || '',
             blocksList: blocks,
           };
-        });
+        }));
 
         sanitizedLayers.sort((a: any, b: any) => (Number(b.zIndex) || 0) - (Number(a.zIndex) || 0));
         setLayers(sanitizedLayers);
@@ -199,15 +199,15 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
 
       const prevLayers = layers;
       const rawLayers = data.layersList || [];
-      const sanitizedLayers = rawLayers.map((z: any) => {
+      const sanitizedLayers = await Promise.all(rawLayers.map(async (z: any) => {
         const prevLayer = prevLayers.find((pz) => pz.id === z.id);
         const rawBlocks = z.blocksList || [];
-        const blocks = rawBlocks.map((b: any, bIdx: number) => {
+        const blocks = await Promise.all(rawBlocks.map(async (b: any, bIdx: number) => {
           let prevBlock = prevLayer?.blocksList?.find((pb) => pb.id === b.id);
           if (!prevBlock && prevLayer?.blocksList) {
             prevBlock = prevLayer.blocksList[bIdx];
           }
-          const widgetInfo = resolveWidgetInfo(b, prevBlock);
+          const widgetInfo = await resolveWidgetInfo(b, prevBlock);
           return {
             ...b,
             id: b.id,
@@ -231,7 +231,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
             })),
             ...widgetInfo,
           };
-        });
+        }));
         return {
           ...z,
           id: z.id,
@@ -245,7 +245,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
           backgroundColor: z.backgroundColor || '',
           blocksList: blocks,
         };
-      });
+      }));
       setLayers(sanitizedLayers);
       showToast('Template layout dan seluruh posisi layer berhasil disimpan!');
     } catch (err: any) {

@@ -34,13 +34,15 @@ class AlbumZoneRenderer(
     private var currentIndex = 0
     private var paused = false
     private var released = false
+    private var transitionEffect = "fade"
     private lateinit var imageView: ImageView
     private lateinit var badgeView: TextView
     private lateinit var titleView: TextView
     private lateinit var priceView: TextView
 
-    fun createView(parent: ViewGroup, slides: List<AlbumSlidePayload>): View {
+    fun createView(parent: ViewGroup, slides: List<AlbumSlidePayload>, transitionEffect: String): View {
         this.slides = slides
+        this.transitionEffect = transitionEffect.lowercase()
         val scale = (parent as? ZoneContainerView)?.scaleFactorX ?: 1f
         val frame = FrameLayout(context)
 
@@ -123,13 +125,44 @@ class AlbumZoneRenderer(
 
     private fun showCurrentSlide() {
         val slide = slides.getOrNull(currentIndex) ?: return
-        imageView.load(slide.file) { crossfade(300) }
+        imageView.load(slide.file) {
+            listener(onSuccess = { _, _ -> animateSlide() })
+        }
         badgeView.text = slide.promoBadge
         badgeView.visibility = if (slide.promoBadge.isBlank()) View.GONE else View.VISIBLE
         titleView.text = slide.title
         titleView.visibility = if (slide.title.isBlank()) View.GONE else View.VISIBLE
         priceView.text = slide.priceTag
         priceView.visibility = if (slide.priceTag.isBlank()) View.GONE else View.VISIBLE
+    }
+
+    private fun animateSlide() {
+        imageView.animate().cancel()
+        imageView.alpha = 1f
+        imageView.translationX = 0f
+        imageView.scaleX = 1f
+        imageView.scaleY = 1f
+
+        when (transitionEffect) {
+            "ken-burns" -> imageView.animate()
+                .scaleX(1.12f)
+                .scaleY(1.12f)
+                .setDuration(slides[currentIndex].durationSeconds * 1000L)
+                .start()
+            "slide" -> {
+                imageView.translationX = imageView.width.toFloat()
+                imageView.animate().translationX(0f).setDuration(350).start()
+            }
+            "zoom" -> {
+                imageView.scaleX = 1.2f
+                imageView.scaleY = 1.2f
+                imageView.animate().scaleX(1f).scaleY(1f).setDuration(350).start()
+            }
+            else -> {
+                imageView.alpha = 0f
+                imageView.animate().alpha(1f).setDuration(350).start()
+            }
+        }
     }
 
     private fun scheduleNextSlide() {

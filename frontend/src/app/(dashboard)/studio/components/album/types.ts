@@ -17,7 +17,3 @@ export interface PhotoAlbum {
   createdAt?: string;
 }
 
-export const ALBUM_STORAGE_KEY = 'dka_signage_photo_albums';
-
-export const DEFAULT_ALBUMS: PhotoAlbum[] = [];
-

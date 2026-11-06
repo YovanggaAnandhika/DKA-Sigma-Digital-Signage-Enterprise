@@ -67,7 +67,9 @@ class ZoneWidgetRendererFactory {
                 if (albumSlides.isEmpty()) return null
                 val renderer = AlbumZoneRenderer(activity)
                 onAlbumCreated(renderer)
-                renderer.createView(parent, albumSlides)
+                val transition = runCatching { JSONObject(jsonStr).optString("transitionEffect", "fade") }
+                    .getOrDefault("fade")
+                renderer.createView(parent, albumSlides, transition)
             }
             else -> null
         }

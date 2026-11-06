@@ -2,7 +2,7 @@ import { DEFAULT_QUEUES, QUEUE_STORAGE_KEY } from '@/app/(dashboard)/studio/comp
 import { DEFAULT_WEBVIEWS, WEBVIEW_STORAGE_KEY } from '@/app/(dashboard)/studio/components/webview/types';
 import { DEFAULT_TICKERS, TICKER_STORAGE_KEY } from '@/app/(dashboard)/studio/components/ticker/types';
 import { DEFAULT_CLOCKS, CLOCK_STORAGE_KEY } from '@/app/(dashboard)/studio/components/clock/types';
-import { DEFAULT_ALBUMS, ALBUM_STORAGE_KEY } from '@/app/(dashboard)/studio/components/album/types';
+import { getAlbum } from './album.service';
 
 export const LEGACY_UUID_MAP: Record<string, string> = {
   'q-1': 'a0000000-0000-0000-0000-000000000001',
@@ -37,7 +37,7 @@ export function ensureUuid(id: string): string {
   return `${hex}-${part2.slice(0, 4)}-4${part2.slice(5, 8)}-8${part2.slice(9, 12)}-${part2.slice(12, 24)}`;
 }
 
-export function resolveWidgetInfo(b: any, prevBlock?: any) {
+export async function resolveWidgetInfo(b: any, prevBlock?: any) {
   let widgetType: 'webview' | 'ticker' | 'clock' | 'queue' | 'album' | undefined = b.widgetType;
   let widgetId: string | undefined = b.widgetId;
 
@@ -83,7 +83,9 @@ export function resolveWidgetInfo(b: any, prevBlock?: any) {
   }
 
   let widgetData = prevBlock?.widgetData;
-  if (!widgetData && typeof window !== 'undefined') {
+  if (!widgetData && widgetType === 'album' && widgetId) {
+    widgetData = await getAlbum(widgetId);
+  } else if (!widgetData && typeof window !== 'undefined') {
     try {
       if (widgetType === 'queue') {
         const stored = localStorage.getItem(QUEUE_STORAGE_KEY);
@@ -101,10 +103,6 @@ export function resolveWidgetInfo(b: any, prevBlock?: any) {
         const stored = localStorage.getItem(CLOCK_STORAGE_KEY);
         const list = stored ? JSON.parse(stored) : DEFAULT_CLOCKS;
         widgetData = list.find((item: any) => item.id === widgetId || ensureUuid(item.id) === widgetId) || list[0] || DEFAULT_CLOCKS[0];
-      } else if (widgetType === 'album') {
-        const stored = localStorage.getItem(ALBUM_STORAGE_KEY);
-        const list = stored ? JSON.parse(stored) : DEFAULT_ALBUMS;
-        widgetData = list.find((item: any) => item.id === widgetId || ensureUuid(item.id) === widgetId) || list[0] || DEFAULT_ALBUMS[0];
       }
     } catch {}
   }
