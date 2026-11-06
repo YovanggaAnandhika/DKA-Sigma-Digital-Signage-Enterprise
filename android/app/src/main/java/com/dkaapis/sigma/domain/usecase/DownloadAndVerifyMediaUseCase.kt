@@ -2,6 +2,7 @@ package com.dkaapis.sigma.domain.usecase
 
 import com.dkaapis.sigma.domain.model.DownloadState
 import com.dkaapis.sigma.domain.model.Manifest
+import com.dkaapis.sigma.domain.model.MediaAsset
 import com.dkaapis.sigma.domain.repository.MediaStorageRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -20,9 +21,12 @@ class DownloadAndVerifyMediaUseCase(
         }
 
         // 1. Verifikasi integritas hash setiap chunk aset
-        val uncachedAssets = allAssets.filterIndexed { index, asset ->
+        val uncachedAssets = mutableListOf<MediaAsset>()
+        allAssets.forEachIndexed { index, asset ->
             trySend(DownloadState.Verifying(index + 1, total, asset.localFilename))
-            !storageRepository.isAssetCachedAndValid(asset)
+            if (!storageRepository.isAssetCachedAndValid(asset)) {
+                uncachedAssets.add(asset)
+            }
         }
 
         // 2. Jika seluruh aset sudah valid dan tersimpan di lokal

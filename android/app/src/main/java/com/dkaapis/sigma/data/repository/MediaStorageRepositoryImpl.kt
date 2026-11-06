@@ -19,10 +19,9 @@ class MediaStorageRepositoryImpl(
         GrpcMediaDownloader(channelFactory)
     )
 
-    override fun isAssetCachedAndValid(asset: MediaAsset): Boolean {
+    override suspend fun isAssetCachedAndValid(asset: MediaAsset): Boolean = withContext(Dispatchers.IO) {
         val file = diskCache.getAssetFile(asset.mediaId)
-        if (!file.exists() || file.length() == 0L) return false
-        return diskCache.verifyFileSha256(file, asset.sha256Hash)
+        file.exists() && file.length() > 0 && diskCache.verifyFileSha256(file, asset.sha256Hash)
     }
 
     override fun getLocalFileForAsset(mediaId: String): File? {

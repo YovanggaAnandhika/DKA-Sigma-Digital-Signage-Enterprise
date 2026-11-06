@@ -4,7 +4,7 @@ import com.dkaapis.sigma.domain.model.MediaAsset
 import java.io.File
 
 interface MediaStorageRepository {
-    fun isAssetCachedAndValid(asset: MediaAsset): Boolean
+    suspend fun isAssetCachedAndValid(asset: MediaAsset): Boolean
     fun getLocalFileForAsset(mediaId: String): File?
     suspend fun downloadAssetResumable(
         asset: MediaAsset,

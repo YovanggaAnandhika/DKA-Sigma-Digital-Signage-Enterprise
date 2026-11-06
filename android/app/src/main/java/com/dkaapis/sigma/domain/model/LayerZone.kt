@@ -49,3 +49,8 @@ data class LayerZone(
     val blocks: List<LayerBlock> = emptyList(),
     val isLocked: Boolean = false
 )
+
+fun LayerZone.hasActiveBlockAt(elapsedSeconds: Int): Boolean = blocks.any { block ->
+    elapsedSeconds >= block.startTimeSeconds &&
+        elapsedSeconds < block.startTimeSeconds + block.durationSeconds
+}

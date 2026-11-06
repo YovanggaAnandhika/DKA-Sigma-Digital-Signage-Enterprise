@@ -23,9 +23,12 @@ class PlayerZoneManager {
     private val timelineCoordinator = SignageTimelineCoordinator()
 
     private val videoRenderers = mutableListOf<VideoZoneRenderer>()
+    private val videoRenderersByZone = mutableMapOf<String, VideoZoneRenderer>()
+    private val activeVideoZoneIds = mutableSetOf<String>()
     private val clockRenderers = mutableListOf<ClockZoneRenderer>()
     private val albumRenderers = mutableListOf<AlbumZoneRenderer>()
     private var timelineJob: Job? = null
+    private var playbackPaused = false
 
     fun renderManifest(
         scope: CoroutineScope,
@@ -81,7 +84,8 @@ class PlayerZoneManager {
                 if (videoItems.isNotEmpty()) {
                     val renderer = VideoZoneRenderer(activity, zone.name.ifEmpty { "Zone ${videoRenderers.size + 1}" })
                     videoRenderers.add(renderer)
-                    val view = renderer.createPlaylistView(zoneView, videoItems)
+                    videoRenderersByZone[zone.id] = renderer
+                    val view = renderer.createPlaylistView(zoneView, videoItems, startWhenReady = false)
                     zoneView.addView(view)
                 } else if (firstImageFile != null) {
                     val renderer = ImageZoneRenderer(activity)
@@ -97,7 +101,11 @@ class PlayerZoneManager {
             it.startTimeSeconds + it.durationSeconds
         }?.coerceAtLeast(1) ?: 10
 
-        timelineJob = timelineCoordinator.startTimeline(scope, layoutDuration, zoneViewPairs)
+        timelineJob = timelineCoordinator.startTimeline(scope, layoutDuration, zoneViewPairs) { zoneId, isActive ->
+            val renderer = videoRenderersByZone[zoneId] ?: return@startTimeline
+            if (isActive) activeVideoZoneIds.add(zoneId) else activeVideoZoneIds.remove(zoneId)
+            if (isActive && !playbackPaused) renderer.resume() else renderer.pause()
+        }
     }
 
     fun setDuckedVolume(isDucked: Boolean) {
@@ -105,12 +113,14 @@ class PlayerZoneManager {
     }
 
     fun pausePlayback() {
+        playbackPaused = true
         videoRenderers.forEach { it.pause() }
         albumRenderers.forEach { it.pause() }
     }
 
     fun resumePlayback() {
-        videoRenderers.forEach { it.resume() }
+        playbackPaused = false
+        activeVideoZoneIds.forEach { zoneId -> videoRenderersByZone[zoneId]?.resume() }
         albumRenderers.forEach { it.resume() }
     }
 
@@ -121,6 +131,9 @@ class PlayerZoneManager {
         timelineJob = null
         videoRenderers.forEach { it.release() }
         videoRenderers.clear()
+        videoRenderersByZone.clear()
+        activeVideoZoneIds.clear()
+        playbackPaused = false
         clockRenderers.forEach { it.release() }
         clockRenderers.clear()
         albumRenderers.forEach { it.release() }

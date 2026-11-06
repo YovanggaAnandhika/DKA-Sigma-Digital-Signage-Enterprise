@@ -27,6 +27,7 @@ class VideoZoneRenderer(
     var onPlaybackCompleted: ((mediaId: String, durationSeconds: Int) -> Unit)? = null
     private var lastTrackIndex: Int = -1
     private var currentTrackStartTimeMs: Long = 0L
+    private var currentTrackElapsedMs: Long = 0L
     private var lastCheckedRenderedFrames: Int = -1
     private var stallTickCount: Int = 0
 
@@ -34,7 +35,11 @@ class VideoZoneRenderer(
         return createPlaylistView(parent, listOf(VideoPlaylistItem(videoFile, 0, isMuted, volumeLevel = volumeLevel)))
     }
 
-    fun createPlaylistView(parent: ViewGroup, playlist: List<VideoPlaylistItem>): PlayerView {
+    fun createPlaylistView(
+        parent: ViewGroup,
+        playlist: List<VideoPlaylistItem>,
+        startWhenReady: Boolean = true
+    ): PlayerView {
         this.playlistItems = playlist
 
         // Optimized load control: 8s min buffer, 15s max buffer, 1.5s playback buffer
@@ -85,16 +90,18 @@ class VideoZoneRenderer(
             val firstBaseVol = (firstItem?.volumeLevel ?: 100).coerceIn(0, 100) / 100f
             currentItemMuted = firstMuted
             volume = if (firstMuted) 0f else (if (isDucked) 0f else firstBaseVol)
-            lastTrackIndex = 0
-            currentTrackStartTimeMs = System.currentTimeMillis()
+            lastTrackIndex = if (startWhenReady) 0 else -1
+            currentTrackStartTimeMs = if (startWhenReady) System.currentTimeMillis() else 0L
 
             addListener(object : Player.Listener {
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     val prevIdx = lastTrackIndex
                     val now = System.currentTimeMillis()
-                    if (prevIdx in playlist.indices && currentTrackStartTimeMs > 0L) {
+                    if (prevIdx in playlist.indices) {
                         val prevItem = playlist[prevIdx]
-                        val playedSec = ((now - currentTrackStartTimeMs) / 1000).toInt()
+                        val elapsedMs = currentTrackElapsedMs +
+                            if (currentTrackStartTimeMs > 0L) now - currentTrackStartTimeMs else 0L
+                        val playedSec = (elapsedMs / 1000).toInt()
                         if (playedSec >= 1 && prevItem.mediaId.isNotBlank()) {
                             onPlaybackCompleted?.invoke(prevItem.mediaId, playedSec)
                         }
@@ -102,7 +109,8 @@ class VideoZoneRenderer(
 
                     val idx = currentMediaItemIndex
                     lastTrackIndex = idx
-                    currentTrackStartTimeMs = now
+                    currentTrackElapsedMs = 0L
+                    currentTrackStartTimeMs = now.takeIf { isPlaying } ?: 0L
 
                     if (idx in playlist.indices) {
                         val current = playlist[idx]
@@ -135,7 +143,7 @@ class VideoZoneRenderer(
             })
 
             prepare()
-            playWhenReady = true
+            playWhenReady = startWhenReady
         }
         exoPlayer = player
 
@@ -248,6 +256,10 @@ class VideoZoneRenderer(
     fun pause() {
         runCatching {
             playerView?.keepScreenOn = false
+            if (currentTrackStartTimeMs > 0L) {
+                currentTrackElapsedMs += System.currentTimeMillis() - currentTrackStartTimeMs
+                currentTrackStartTimeMs = 0L
+            }
             exoPlayer?.pause()
         }
     }
@@ -259,15 +271,23 @@ class VideoZoneRenderer(
                 if (player.playbackState == Player.STATE_IDLE || player.playbackState == Player.STATE_ENDED) {
                     player.prepare()
                 }
+                if (currentTrackStartTimeMs == 0L) {
+                    if (lastTrackIndex !in playlistItems.indices) {
+                        lastTrackIndex = player.currentMediaItemIndex
+                    }
+                    currentTrackStartTimeMs = System.currentTimeMillis()
+                }
                 player.play()
             }
         }
     }
 
     fun release() {
-        if (lastTrackIndex in playlistItems.indices && currentTrackStartTimeMs > 0L) {
+        if (lastTrackIndex in playlistItems.indices) {
             val item = playlistItems[lastTrackIndex]
-            val playedSec = ((System.currentTimeMillis() - currentTrackStartTimeMs) / 1000).toInt()
+            val elapsedMs = currentTrackElapsedMs +
+                if (currentTrackStartTimeMs > 0L) System.currentTimeMillis() - currentTrackStartTimeMs else 0L
+            val playedSec = (elapsedMs / 1000).toInt()
             if (playedSec >= 1 && item.mediaId.isNotBlank()) {
                 onPlaybackCompleted?.invoke(item.mediaId, playedSec)
             }
