@@ -56,7 +56,7 @@ export default function EditDisplayPage() {
         });
       } catch (err: any) {
         alert(err.message || 'Gagal memuat display');
-        router.push('/hardware/displays');
+        router.push('/hardware/displays/player');
       } finally {
         setLoading(false);
       }
@@ -109,9 +109,24 @@ export default function EditDisplayPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <Link href={`/hardware/displays/${params.id}`} className="btn btn-outline" style={{ padding: '8px' }}>
-          <ArrowLeft size={16} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <Link
+          href={`/hardware/displays/${params.id}`}
+          className="btn btn-outline"
+          style={{
+            width: '42px',
+            minWidth: '42px',
+            height: '42px',
+            padding: 0,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '50%',
+          }}
+          aria-label="Kembali ke Detail Layar"
+          title="Kembali ke Detail Layar"
+        >
+          <ArrowLeft size={18} />
         </Link>
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
@@ -292,7 +307,7 @@ export default function EditDisplayPage() {
                 try {
                   setSaving(true);
                   await api.deleteDevice(params.id);
-                  router.push('/hardware/displays');
+                  router.push('/hardware/displays/player');
                 } catch (err: any) {
                   alert(err.message || 'Gagal memutuskan hubungan perangkat');
                   setSaving(false);

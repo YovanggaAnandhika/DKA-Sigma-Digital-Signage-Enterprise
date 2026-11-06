@@ -49,7 +49,7 @@ export default function DisplayCommandToolbar() {
     try {
       setUnbinding(true);
       await api.deleteDevice(device.id);
-      router.push('/hardware/displays');
+      router.push('/hardware/displays/player');
     } catch (err: any) {
       alert(err.message || 'Gagal memutuskan hubungan perangkat');
       setUnbinding(false);
@@ -61,8 +61,23 @@ export default function DisplayCommandToolbar() {
       {/* Header Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Link href="/hardware/displays" className="btn btn-outline" style={{ padding: '8px' }}>
-            <ArrowLeft size={16} />
+          <Link
+            href="/hardware/displays/player"
+            className="btn btn-outline"
+            style={{
+              width: '42px',
+              minWidth: '42px',
+              height: '42px',
+              padding: 0,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+            }}
+            aria-label="Kembali ke Layar Pemutar"
+            title="Kembali ke Layar Pemutar"
+          >
+            <ArrowLeft size={18} />
           </Link>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

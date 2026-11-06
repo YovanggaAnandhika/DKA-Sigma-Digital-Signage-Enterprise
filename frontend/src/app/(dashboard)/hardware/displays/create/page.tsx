@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function CreateDisplayPage() {
-  redirect('/hardware/displays');
+  redirect('/hardware/displays/player');
 }

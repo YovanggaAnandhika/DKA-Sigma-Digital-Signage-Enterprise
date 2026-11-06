@@ -107,7 +107,7 @@ export default function DashboardPage() {
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             <span>Segarkan Data</span>
           </button>
-          <Link href="/hardware/displays" className="btn btn-primary">
+          <Link href="/hardware/displays/player" className="btn btn-primary">
             <Tv size={16} />
             <span>Layar Pemutar</span>
           </Link>

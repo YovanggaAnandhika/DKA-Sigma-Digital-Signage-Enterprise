@@ -166,7 +166,7 @@ export function DisplayDetailProvider({
       ]);
     } catch (err: any) {
       alert(err.message || 'Gagal memuat detail display');
-      router.push('/hardware/displays');
+      router.push('/hardware/displays/player');
     } finally {
       setLoading(false);
     }

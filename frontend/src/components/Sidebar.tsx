@@ -10,7 +10,6 @@ import {
   FolderOpen,
   ShieldCheck,
   Zap,
-  MonitorPlay,
   CalendarDays,
   Layers,
   Cpu,
@@ -42,7 +41,6 @@ const navGroups: NavGroup[] = [
     heading: 'OPERASI & PERANGKAT',
     items: [
       { name: 'Player', desc: 'Manajemen & Pairing Player', href: '/hardware/displays', icon: Tv },
-      { name: 'Player Groups', desc: 'Pengelompokan Groups', href: '/hardware/groups', icon: MonitorPlay },
       { name: 'Chip', desc: 'Internet Of Things', href: '/hardware/iot', icon: Cpu },
     ],
   },
