@@ -25,6 +25,7 @@
 - **Layout Designer Modals Overhaul** — Memperlebar `ComponentPickerModal`, `MediaPickerModal`, `PlaylistPickerModal`, dan `EmergencyBroadcastModal` hingga `1240px` (tinggi `82vh`) dengan tab ber-scroll horizontal halus dan fitur pencarian real-time.
 - **Rundown Harian Terdedikasi (`/studio/schedules/day/[date]`)** — Halaman rincian jadwal harian dengan pencarian, hapus satu per satu, hapus terpilih, dan *Clear All Hari Ini*.
 - **Kalibrasi Dokumentasi Migrasi** — Memperbaiki drift pada `backend/aicontext.md`, `docs/DDL.md`, dan `PLANNING.md` dari klaim 48 migrasi menjadi tepat 45 pasang migrasi fisik (`0001`–`0045`).
+- **IoT Cloud MQTT Auto-Setup Spec (`iot/IOT_PLANNING.md`)** — Spesifikasi firmware tombol antrean ESP32 dengan koneksi langsung ke Cloud MQTT broker (outbound-only), mengeliminasi kompleksitas local/LAN discovery (mDNS) karena broker berbasis cloud.
 - **Dashboard route loading** — all 69 dashboard `page.tsx` routes have a `loading.tsx` using shared responsive shimmer variants.
 - **IoT heartbeat status** — approved-device list polls every 5 seconds and marks devices offline when telemetry is older than 60 seconds; telemetry detail uses the same threshold.
 - **Media library UX** — detail panel is draggable and defaults to 30% of content width (bounded to 240–560px); successful upload returns to media list; preview video volume set to 50%.
