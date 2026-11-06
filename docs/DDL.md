@@ -221,17 +221,14 @@ Berikut adalah daftar urutan lengkap **48 migrasi** database di folder `backend/
 | **0035** | `0035_create_queue_counters` | `queue_counters` | Master loket/kounter antrian |
 | **0036** | `0036_create_queue_tickets` | `queue_tickets` | Tiket antrian & status panggilan |
 | **0037** | `0037_create_queue_audios` | `queue_audios` | Audio panggilan antrian |
-| **0038** | `0038_create_playback_logs_and_screenshots` | `schedule_events` (ALTER), `device_screenshots`, `playback_logs` | Rentang tanggal event, screenshot, proof-of-play |
-| **0039** | `0039_add_device_power_schedule` | `devices` (ALTER) | Jadwal tidur/bangun perangkat |
-| **0040** | `0040_add_device_pairings_device_token` | `device_pairings` (ALTER) | Token perangkat hasil pairing |
-| **0041** | `0041_sync_complete_widget_defaults` | `tickers`, `queue_displays`, `clocks` (DATA) | Sinkronisasi data default widget |
-| **0042** | `0042_add_visual_styling_columns` | `tickers` (ALTER) | Kolom warna & styling ticker |
-| **0043** | `0043_add_opacity_and_overlay_styling` | `queue_displays`, `layers` (ALTER) | Opacity & overlay styling |
-| **0044** | `0044_create_layout_history` | `layout_history` | Riwayat versi layout |
-| **0045** | `0045_add_version_hash_to_schedule_events` | `schedule_events` (ALTER) | Hash versi untuk sinkronisasi jadwal |
-| **0046** | `0046_create_device_analytics` | `device_analytics` | Riwayat analitik perangkat |
-| **0047** | `0047_enhance_queue_sync_tts_and_status` | `queue_displays` (ALTER) | Sektor, label, template TTS, status sinkron |
-| **0048** | `0048_create_queue_sectors` | `queue_sectors` (+ seed 6 sektor) | Master sektor antrian (retail, RS, bank, dll.) |
+| **0038** | `0038_create_hardware_device_screenshots` | `hardware_device_screenshots` | Log screenshot layar perangkat |
+| **0039** | `0039_create_distribution_playback_logs` | `distribution_playback_logs` | Audit trail & log pemutaran media |
+| **0040** | `0040_create_studio_layout_history` | `studio_layout_history` | Snapshot & riwayat perubahan versi layout |
+| **0041** | `0041_create_hardware_device_analytics` | `hardware_device_analytics` | Metrik analitik performa perangkat |
+| **0042** | `0042_create_components_queue_sectors` | `components_queue_sectors` | Master sektor antrian |
+| **0043** | `0043_create_iot_devices` | `iot_devices` | Registrasi & approval tombol antrian IoT |
+| **0044** | `0044_create_components_queue_iot_bindings` | `components_queue_iot_bindings` | Relasi tombol fisik IoT ke loket antrian |
+| **0045** | `0045_add_iot_device_telemetry` | `iot_devices` (ALTER) | Data telemetri IP, RSSI, & status IoT |
 
 ---
 

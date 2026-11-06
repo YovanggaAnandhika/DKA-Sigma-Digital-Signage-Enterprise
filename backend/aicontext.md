@@ -24,10 +24,10 @@ The Backend is a high-performance gRPC service built in Rust using Tonic, Tokio,
 backend/
 ├── Cargo.toml
 ├── build.rs                      # Compiles protobufs via tonic_build::configure()
-├── migrations/                   # SQLx sequential migration scripts (48 pairs, 0001-0048)
+├── migrations/                   # SQLx sequential migration scripts (45 pairs, 0001-0045)
 │   ├── 0001_create_permissions.up.sql
 │   ├── ...
-│   └── 0048_create_queue_sectors.up.sql
+│   └── 0045_add_iot_device_telemetry.up.sql
 ├── proto/                        # Protobuf definitions (Single Source of Truth)
 │   ├── common/v1/
 │   ├── distribution/v1/          # canary, manifest, stream
