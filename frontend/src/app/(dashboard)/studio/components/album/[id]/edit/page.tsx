@@ -4,9 +4,10 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Images, Plus, Trash2, Check, Sparkles, Save, RefreshCw, FolderOpen } from 'lucide-react';
-import { ALBUM_STORAGE_KEY, DEFAULT_ALBUMS, PhotoAlbum, PhotoItem } from '../../types';
+import { PhotoAlbum, PhotoItem } from '../../types';
 import AlbumMediaPickerModal from '../../components/AlbumMediaPickerModal';
 import { modal } from '@/components/ui/ModalDialog';
+import { getAlbum, updateAlbum } from '@/lib/services';
 
 export default function EditPhotoAlbumPage() {
   const params = useParams() as { id: string };
@@ -19,32 +20,21 @@ export default function EditPhotoAlbumPage() {
   const [duration, setDuration] = useState(4);
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [isMediaPickerOpen, setIsMediaPickerOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(ALBUM_STORAGE_KEY);
-      const items: PhotoAlbum[] = stored ? JSON.parse(stored) : DEFAULT_ALBUMS;
-      const found = items.find((a) => a.id === params.id);
-      if (found) {
-        setName(found.name);
-        setDescription(found.description || '');
-        setTransitionEffect(found.transitionEffect);
-        setDuration(found.slideDurationSeconds);
-        setPhotos(found.photos || []);
-      } else {
-        modal.alert({
-          title: 'Tidak Ditemukan',
-          message: 'Album foto tidak ditemukan.',
-          variant: 'warning',
-        });
-        router.push('/studio/components/album');
-      }
-    } catch {
-      router.push('/studio/components/album');
-    } finally {
-      setLoading(false);
-    }
-  }, [params.id, router]);
+    getAlbum(params.id)
+      .then((album) => {
+        setName(album.name);
+        setDescription(album.description || '');
+        setTransitionEffect(album.transitionEffect);
+        setDuration(album.slideDurationSeconds);
+        setPhotos(album.photos || []);
+      })
+      .catch((loadError: unknown) => setError(loadError instanceof Error ? loadError.message : 'Gagal memuat album.'))
+      .finally(() => setLoading(false));
+  }, [params.id]);
 
   const handleRemovePhoto = (id: string) => {
     setPhotos((prev) => prev.filter((p) => p.id !== id));
@@ -62,29 +52,28 @@ export default function EditPhotoAlbumPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
+    setSaving(true);
+    setError('');
     try {
-      const stored = localStorage.getItem(ALBUM_STORAGE_KEY);
-      const items: PhotoAlbum[] = stored ? JSON.parse(stored) : DEFAULT_ALBUMS;
-      const updated = items.map((a) =>
-        a.id === params.id
-          ? {
-              ...a,
-              name: name.trim(),
-              description: description.trim() || 'Album foto promosi produk.',
-              transitionEffect,
-              slideDurationSeconds: Math.max(2, duration),
-              photos,
-            }
-          : a
-      );
-      localStorage.setItem(ALBUM_STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
-
-    router.push('/studio/components/album');
+      const album: PhotoAlbum = {
+        id: params.id,
+        name: name.trim(),
+        description: description.trim() || 'Album foto promosi produk.',
+        transitionEffect,
+        slideDurationSeconds: Math.max(2, duration),
+        photos,
+      };
+      await updateAlbum(album);
+      router.push('/studio/components/album');
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Gagal menyimpan album.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -94,6 +83,10 @@ export default function EditPhotoAlbumPage() {
         <span>Memuat data Album Foto...</span>
       </div>
     );
+  }
+
+  if (error && !name) {
+    return <p role="alert" style={{ color: 'var(--accent-rose)' }}>{error}</p>;
   }
 
   return (
@@ -116,6 +109,7 @@ export default function EditPhotoAlbumPage() {
       <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'minmax(340px, 420px) 1fr', gap: '24px' }}>
         {/* Left: General Settings */}
         <div className="card-elevated" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {error && <p role="alert" style={{ color: 'var(--accent-rose)' }}>{error}</p>}
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
             Informasi Album
           </h2>
@@ -182,9 +176,9 @@ export default function EditPhotoAlbumPage() {
             <Link href="/studio/components/album" className="btn btn-secondary" style={{ flex: 1, textAlign: 'center', textDecoration: 'none' }}>
               Batal
             </Link>
-            <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
+            <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={saving}>
               <Save size={16} />
-              <span>Simpan Album</span>
+              <span>{saving ? 'Menyimpan...' : 'Simpan Album'}</span>
             </button>
           </div>
         </div>

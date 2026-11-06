@@ -15,6 +15,14 @@ data class VideoPlaylistItem(
     val volumeLevel: Int = 100
 )
 
+data class AlbumSlidePayload(
+    val file: File,
+    val title: String,
+    val promoBadge: String,
+    val priceTag: String,
+    val durationSeconds: Int
+)
+
 /**
  * Payload konfigurasi untuk TickerZoneRenderer
  */

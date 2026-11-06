@@ -6,9 +6,11 @@ import android.view.ViewGroup
 import com.dkaapis.sigma.domain.model.LayerBlock
 import com.dkaapis.sigma.domain.model.ZoneWidgetType
 import com.dkaapis.sigma.presentation.renderers.ClockZoneRenderer
+import com.dkaapis.sigma.presentation.renderers.AlbumZoneRenderer
 import com.dkaapis.sigma.presentation.renderers.QueueZoneRenderer
 import com.dkaapis.sigma.presentation.renderers.TickerZoneRenderer
 import com.dkaapis.sigma.presentation.renderers.WebviewZoneRenderer
+import com.dkaapis.sigma.presentation.renderers.model.AlbumSlidePayload
 import org.json.JSONObject
 
 import com.dkaapis.sigma.presentation.renderers.model.ClockConfigPayload
@@ -25,6 +27,8 @@ class ZoneWidgetRendererFactory {
         parent: ViewGroup,
         block: LayerBlock,
         onClockCreated: (ClockZoneRenderer) -> Unit,
+        onAlbumCreated: (AlbumZoneRenderer) -> Unit,
+        albumSlides: List<AlbumSlidePayload>,
         onQueueCreated: (QueueZoneRenderer, queueId: String, widgetDataJson: String?) -> Unit,
         onDuckingChanged: (isDucked: Boolean) -> Unit,
         onQueueTapNext: (ticketNum: String, counterNm: String) -> Unit
@@ -58,6 +62,12 @@ class ZoneWidgetRendererFactory {
             ZoneWidgetType.WEBVIEW -> {
                 val json = runCatching { JSONObject(jsonStr) }.getOrDefault(JSONObject())
                 WebviewZoneRenderer(activity).createView(parent, WebviewConfigPayload.fromJson(json))
+            }
+            ZoneWidgetType.ALBUM -> {
+                if (albumSlides.isEmpty()) return null
+                val renderer = AlbumZoneRenderer(activity)
+                onAlbumCreated(renderer)
+                renderer.createView(parent, albumSlides)
             }
             else -> null
         }

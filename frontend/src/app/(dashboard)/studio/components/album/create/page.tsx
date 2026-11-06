@@ -4,8 +4,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Images, Plus, Trash2, Check, Sparkles, FolderOpen } from 'lucide-react';
-import { ALBUM_STORAGE_KEY, DEFAULT_ALBUMS, PhotoAlbum, PhotoItem } from '../types';
+import { PhotoItem } from '../types';
 import AlbumMediaPickerModal from '../components/AlbumMediaPickerModal';
+import { createAlbum } from '@/lib/services';
 
 export default function CreatePhotoAlbumPage() {
   const router = useRouter();
@@ -15,6 +16,8 @@ export default function CreatePhotoAlbumPage() {
   const [transitionEffect, setTransitionEffect] = useState<'ken-burns' | 'fade' | 'slide' | 'zoom'>('ken-burns');
   const [duration, setDuration] = useState(4);
   const [isMediaPickerOpen, setIsMediaPickerOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   // Photos List in Album (starts empty)
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
@@ -23,28 +26,26 @@ export default function CreatePhotoAlbumPage() {
     setPhotos((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const newAlbum: PhotoAlbum = {
-      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `e0000000-0000-0000-0000-${Date.now().toString().padStart(12, '0')}`,
-      name: name.trim(),
-      description: description.trim() || 'Album foto promosi produk.',
-      transitionEffect,
-      slideDurationSeconds: Math.max(2, duration),
-      photos,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-
+    setSaving(true);
+    setError('');
     try {
-      const stored = localStorage.getItem(ALBUM_STORAGE_KEY);
-      const existing: PhotoAlbum[] = stored ? JSON.parse(stored) : DEFAULT_ALBUMS;
-      const updated = [newAlbum, ...existing];
-      localStorage.setItem(ALBUM_STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
-
-    router.push('/studio/components/album');
+      await createAlbum({
+        name: name.trim(),
+        description: description.trim() || 'Album foto promosi produk.',
+        transitionEffect,
+        slideDurationSeconds: Math.max(2, duration),
+        photos,
+      });
+      router.push('/studio/components/album');
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Gagal menyimpan album.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -133,12 +134,13 @@ export default function CreatePhotoAlbumPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+            {error && <p role="alert" style={{ color: 'var(--accent-rose)' }}>{error}</p>}
             <Link href="/studio/components?tab=album" className="btn btn-secondary" style={{ flex: 1, textAlign: 'center' }}>
               Batal
             </Link>
-            <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
+            <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={saving}>
               <Check size={16} />
-              <span>Simpan Album</span>
+              <span>{saving ? 'Menyimpan...' : 'Simpan Album'}</span>
             </button>
           </div>
         </div>

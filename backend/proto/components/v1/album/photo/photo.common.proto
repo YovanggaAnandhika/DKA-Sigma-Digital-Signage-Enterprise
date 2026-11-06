@@ -13,6 +13,7 @@ message AlbumPhoto {
   int32 duration_seconds = 6;
   string created_at = 7;
   optional signage.studio.v1.media.MediaItem media_item = 8;
+  string price_tag = 9;
 }
 
 message AddAlbumPhotoRequest {
@@ -21,6 +22,7 @@ message AddAlbumPhotoRequest {
   int32 order_index = 3;
   string caption = 4;
   int32 duration_seconds = 5;
+  string price_tag = 6;
 }
 
 message DeleteAlbumPhotoRequest {

@@ -8,10 +8,11 @@ import { DEFAULT_WEBVIEWS, WEBVIEW_STORAGE_KEY, WebViewConfig } from '@/app/(das
 import { DEFAULT_TICKERS, TICKER_STORAGE_KEY, TickerConfig } from '@/app/(dashboard)/studio/components/ticker/types';
 import { DEFAULT_CLOCKS, CLOCK_STORAGE_KEY, ClockWeatherConfig } from '@/app/(dashboard)/studio/components/clock/types';
 import { DEFAULT_QUEUES, QUEUE_STORAGE_KEY, QueueDisplayConfig } from '@/app/(dashboard)/studio/components/ticket/types';
-import { DEFAULT_ALBUMS, ALBUM_STORAGE_KEY, PhotoAlbum } from '@/app/(dashboard)/studio/components/album/types';
+import { PhotoAlbum } from '@/app/(dashboard)/studio/components/album/types';
 import { ensureUuid } from '@/lib/services/studio/widgetHelper';
 
 import { invokeApi } from '@/lib/core/invokeApi';
+import { getAlbums } from '@/lib/services';
 
 export default function ComponentPickerModal() {
   const {
@@ -28,17 +29,24 @@ export default function ComponentPickerModal() {
   const [tickers, setTickers] = useState<TickerConfig[]>(DEFAULT_TICKERS);
   const [clocks, setClocks] = useState<ClockWeatherConfig[]>(DEFAULT_CLOCKS);
   const [queues, setQueues] = useState<QueueDisplayConfig[]>(DEFAULT_QUEUES);
-  const [albums, setAlbums] = useState<PhotoAlbum[]>(DEFAULT_ALBUMS);
+  const [albums, setAlbums] = useState<PhotoAlbum[]>([]);
+  const [albumsError, setAlbumsError] = useState('');
 
   useEffect(() => {
     let isMounted = true;
     async function loadBackendComponents() {
       try {
-        const [qRes, tRes, cRes, wRes] = await Promise.all([
+        const [qRes, tRes, cRes, wRes, albumList] = await Promise.all([
           invokeApi<any>('/api/grpc/studio/queue/ListQueueDisplays', {}).catch(() => null),
           invokeApi<any>('/api/grpc/studio/ticker/ListTickers', {}).catch(() => null),
           invokeApi<any>('/api/grpc/studio/clock/ListClocks', {}).catch(() => null),
           invokeApi<any>('/api/grpc/studio/webview/ListWebviews', {}).catch(() => null),
+          getAlbums().catch((error: unknown) => {
+            if (isMounted) {
+              setAlbumsError(error instanceof Error ? error.message : 'Gagal memuat album.');
+            }
+            return [];
+          }),
         ]);
 
         if (!isMounted) return;
@@ -59,6 +67,7 @@ export default function ComponentPickerModal() {
         if (wRes?.itemsList?.length) {
           setWebviews(wRes.itemsList.map((item: any) => ({ ...item, id: ensureUuid(item.id) })));
         }
+        setAlbums(albumList);
       } catch (e) {
         console.warn('Gagal memuat komponen dari backend', e);
       }
@@ -494,6 +503,10 @@ export default function ComponentPickerModal() {
 
           {activeTab === 'album' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
+              {albumsError && <p role="alert" style={{ gridColumn: '1 / -1', color: 'var(--accent-rose)' }}>{albumsError}</p>}
+              {!albumsError && albums.length === 0 && (
+                <p style={{ gridColumn: '1 / -1', color: 'var(--text-muted)' }}>Belum ada album foto.</p>
+              )}
               {albums.map((item: PhotoAlbum) => (
                 <div
                   key={item.id}

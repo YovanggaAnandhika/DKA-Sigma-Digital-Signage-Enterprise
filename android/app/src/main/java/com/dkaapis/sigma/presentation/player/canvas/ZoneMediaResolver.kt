@@ -4,7 +4,10 @@ import com.dkaapis.sigma.data.repository.MediaStorageRepositoryImpl
 import com.dkaapis.sigma.domain.model.LayerZone
 import com.dkaapis.sigma.domain.model.Manifest
 import com.dkaapis.sigma.domain.model.MediaType
+import com.dkaapis.sigma.domain.model.LayerBlock
+import com.dkaapis.sigma.presentation.renderers.model.AlbumSlidePayload
 import com.dkaapis.sigma.presentation.renderers.model.VideoPlaylistItem
+import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
 import java.nio.charset.StandardCharsets
@@ -13,6 +16,29 @@ import java.nio.charset.StandardCharsets
  * Penyelesai media (video / gambar) untuk blok konten zona signage
  */
 class ZoneMediaResolver {
+
+    fun resolveAlbum(
+        block: LayerBlock,
+        storageRepo: MediaStorageRepositoryImpl
+    ): List<AlbumSlidePayload> {
+        val json = runCatching { JSONObject(block.widgetDataJson ?: "{}") }.getOrDefault(JSONObject())
+        val defaultDuration = json.optInt("slideDurationSeconds", 4).coerceAtLeast(1)
+        val photos = json.optJSONArray("photos") ?: return emptyList()
+
+        return (0 until photos.length()).mapNotNull { index ->
+            val photo = photos.optJSONObject(index) ?: return@mapNotNull null
+            val mediaId = photo.optString("mediaItemId").ifBlank { photo.optString("media_item_id") }
+            if (mediaId.isBlank()) return@mapNotNull null
+            val file = storageRepo.getLocalFileForAsset(mediaId) ?: return@mapNotNull null
+            AlbumSlidePayload(
+                file = file,
+                title = photo.optString("title"),
+                promoBadge = photo.optString("promoBadge", photo.optString("promo_badge")),
+                priceTag = photo.optString("priceTag", photo.optString("price_tag")),
+                durationSeconds = photo.optInt("durationSeconds", defaultDuration).coerceAtLeast(1)
+            )
+        }
+    }
 
     fun resolveMedia(
         zone: LayerZone,

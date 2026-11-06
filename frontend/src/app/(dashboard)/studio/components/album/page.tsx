@@ -5,10 +5,13 @@ import Link from 'next/link';
 import { Images, Plus, Search, Eye, Edit, Trash2, X, Sparkles, Play, Pause, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
 import { modal } from '@/components/ui/ModalDialog';
-import { PhotoAlbum, ALBUM_STORAGE_KEY, DEFAULT_ALBUMS } from './types';
+import { getAlbums, deleteAlbum } from '@/lib/services';
+import { PhotoAlbum } from './types';
 
 export default function AlbumPage() {
-  const [albums, setAlbums] = useState<PhotoAlbum[]>(DEFAULT_ALBUMS);
+  const [albums, setAlbums] = useState<PhotoAlbum[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -19,17 +22,10 @@ export default function AlbumPage() {
   const [isPlaying, setIsPlaying] = useState(true);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(ALBUM_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          setAlbums(parsed);
-        }
-      } else {
-        localStorage.setItem(ALBUM_STORAGE_KEY, JSON.stringify(DEFAULT_ALBUMS));
-      }
-    } catch {}
+    getAlbums()
+      .then(setAlbums)
+      .catch((loadError: unknown) => setError(loadError instanceof Error ? loadError.message : 'Gagal memuat album.'))
+      .finally(() => setLoading(false));
   }, []);
 
   // Slideshow timer
@@ -49,11 +45,12 @@ export default function AlbumPage() {
       confirmText: 'Hapus Album',
     });
     if (!ok) return;
-    const updated = albums.filter((a) => a.id !== id);
-    setAlbums(updated);
     try {
-      localStorage.setItem(ALBUM_STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
+      await deleteAlbum(id);
+      setAlbums((current) => current.filter((album) => album.id !== id));
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Gagal menghapus album.');
+    }
   };
 
   const filtered = albums.filter(
@@ -118,7 +115,11 @@ export default function AlbumPage() {
               </tr>
             </thead>
             <tbody>
-              {paginated.length === 0 ? (
+              {loading ? (
+                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Memuat album...</td></tr>
+              ) : error ? (
+                <tr><td colSpan={6} role="alert" style={{ textAlign: 'center', padding: '40px', color: 'var(--accent-rose)' }}>{error}</td></tr>
+              ) : paginated.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                     Belum ada album foto tersimpan. Klik tombol Buat Album Baru untuk menambahkan.

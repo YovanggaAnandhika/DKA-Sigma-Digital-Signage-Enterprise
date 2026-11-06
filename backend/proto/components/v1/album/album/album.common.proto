@@ -10,6 +10,7 @@ message AddAlbumPhotoInput {
   int32 order_index = 2;
   string caption = 3;
   int32 duration_seconds = 4;
+  string price_tag = 5;
 }
 
 message AlbumDetail {

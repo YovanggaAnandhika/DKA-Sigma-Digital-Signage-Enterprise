@@ -52,6 +52,7 @@ class ManifestProtoMapper {
                                 block.hasClockId() && block.clockId.isNotBlank() -> ZoneWidgetType.CLOCK
                                 block.hasTickerId() && block.tickerId.isNotBlank() -> ZoneWidgetType.TICKER
                                 block.hasWebviewId() && block.webviewId.isNotBlank() -> ZoneWidgetType.WEBVIEW
+                                block.hasAlbumId() && block.albumId.isNotBlank() -> ZoneWidgetType.ALBUM
                                 else -> ZoneWidgetType.NONE
                             },
                             widgetDataJson = if (block.hasWidgetDataJson()) block.widgetDataJson else null,

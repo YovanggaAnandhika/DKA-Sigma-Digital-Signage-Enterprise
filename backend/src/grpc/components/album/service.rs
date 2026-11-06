@@ -41,6 +41,20 @@ struct AlbumPhotoRow {
     promo_badge: Option<String>,
     price_tag: String,
     created_at: chrono::DateTime<chrono::Utc>,
+    media_name: String,
+    original_filename: String,
+    file_path: String,
+    public_url: String,
+    file_size_bytes: i64,
+    mime_type: String,
+    sha256_hash: String,
+    media_type: String,
+    width: i32,
+    height: i32,
+    duration_seconds: i32,
+    thumbnail_url: Option<String>,
+    media_created_at: chrono::DateTime<chrono::Utc>,
+    media_updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 pub struct AlbumServiceImpl {
@@ -64,10 +78,14 @@ impl AlbumServiceImpl {
 
         let photos = sqlx::query_as::<_, AlbumPhotoRow>(
             r#"
-            SELECT id, album_id, media_item_id, position, promo_badge, price_tag, created_at
-            FROM components_album_photos
-            WHERE album_id = $1
-            ORDER BY position ASC, created_at ASC
+            SELECT p.id, p.album_id, p.media_item_id, p.position, p.promo_badge, p.price_tag, p.created_at,
+                   m.name AS media_name, m.original_filename, m.file_path, m.public_url, m.file_size_bytes,
+                   m.mime_type, m.sha256_hash, m.media_type, m.width, m.height, m.duration_seconds,
+                   m.thumbnail_url, m.created_at AS media_created_at, m.updated_at AS media_updated_at
+            FROM components_album_photos p
+            JOIN studio_media_items m ON m.id = p.media_item_id
+            WHERE p.album_id = $1
+            ORDER BY p.position ASC, p.created_at ASC
             "#
         )
         .bind(id)
@@ -75,15 +93,41 @@ impl AlbumServiceImpl {
         .await
         .map_err(|e| Status::internal(e.to_string()))?
         .into_iter()
-        .map(|p| AlbumPhoto {
-            id: p.id.to_string(),
-            album_id: p.album_id.to_string(),
-            media_item_id: p.media_item_id.to_string(),
-            order_index: p.position,
-            caption: p.promo_badge.unwrap_or_default(),
-            duration_seconds: album.slide_duration_seconds,
-            created_at: p.created_at.to_rfc3339(),
-            media_item: None,
+        .map(|p| {
+            let media_type = match p.media_type.to_lowercase().as_str() {
+                "image" => crate::grpc::proto::studio::v1::media::MediaType::Image as i32,
+                "video" => crate::grpc::proto::studio::v1::media::MediaType::Video as i32,
+                "web" => crate::grpc::proto::studio::v1::media::MediaType::Web as i32,
+                "audio" => crate::grpc::proto::studio::v1::media::MediaType::Audio as i32,
+                _ => crate::grpc::proto::studio::v1::media::MediaType::Unspecified as i32,
+            };
+            AlbumPhoto {
+                id: p.id.to_string(),
+                album_id: p.album_id.to_string(),
+                media_item_id: p.media_item_id.to_string(),
+                order_index: p.position,
+                caption: p.promo_badge.unwrap_or_default(),
+                duration_seconds: album.slide_duration_seconds,
+                created_at: p.created_at.to_rfc3339(),
+                media_item: Some(crate::grpc::proto::studio::v1::media::MediaItem {
+                    id: p.media_item_id.to_string(),
+                    name: p.media_name,
+                    original_filename: p.original_filename,
+                    file_path: p.file_path,
+                    public_url: p.public_url,
+                    file_size_bytes: p.file_size_bytes,
+                    mime_type: p.mime_type,
+                    sha256_hash: p.sha256_hash,
+                    media_type,
+                    width: p.width,
+                    height: p.height,
+                    duration_seconds: p.duration_seconds,
+                    thumbnail_url: p.thumbnail_url.unwrap_or_default(),
+                    created_at: p.media_created_at.to_rfc3339(),
+                    updated_at: p.media_updated_at.to_rfc3339(),
+                }),
+                price_tag: p.price_tag,
+            }
         })
         .collect();
 
@@ -107,9 +151,13 @@ impl AlbumServiceTrait for AlbumServiceImpl {
         request: Request<CreateAlbumRequest>,
     ) -> Result<Response<AlbumDetail>, Status> {
         let req = request.into_inner();
+        if req.name.trim().is_empty() {
+            return Err(Status::invalid_argument("Album name is required"));
+        }
         let album_id = Uuid::new_v4();
         let transition = if req.transition_effect.is_empty() { "ken-burns".to_string() } else { req.transition_effect };
         let slide_duration = if req.slide_duration_seconds > 0 { req.slide_duration_seconds } else { 5 };
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
 
         sqlx::query(
             r#"
@@ -122,30 +170,31 @@ impl AlbumServiceTrait for AlbumServiceImpl {
         .bind(&req.description)
         .bind(&transition)
         .bind(slide_duration)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
         for p in req.photos {
-            if let Ok(mid) = Uuid::from_str(&p.media_item_id) {
-                let pid = Uuid::new_v4();
-                sqlx::query(
-                    r#"
-                    INSERT INTO components_album_photos (id, album_id, media_item_id, position, promo_badge, price_tag)
-                    VALUES ($1, $2, $3, $4, $5, '')
-                    "#
-                )
-                .bind(pid)
-                .bind(album_id)
-                .bind(mid)
-                .bind(p.order_index)
-                .bind(&p.caption)
-                .execute(&self.pool)
-                .await
-                .ok();
-            }
+            let media_id = Uuid::from_str(&p.media_item_id)
+                .map_err(|_| Status::invalid_argument("Invalid media_item_id"))?;
+            sqlx::query(
+                r#"
+                INSERT INTO components_album_photos (id, album_id, media_item_id, position, promo_badge, price_tag)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                "#
+            )
+            .bind(Uuid::new_v4())
+            .bind(album_id)
+            .bind(media_id)
+            .bind(p.order_index)
+            .bind(&p.caption)
+            .bind(&p.price_tag)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
         }
 
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
         self.fetch_album_detail(album_id).await.map(Response::new)
     }
 
@@ -174,9 +223,7 @@ impl AlbumServiceTrait for AlbumServiceImpl {
 
         let mut items = Vec::new();
         for r in rows {
-            if let Ok(a) = self.fetch_album_detail(r.0).await {
-                items.push(a);
-            }
+            items.push(self.fetch_album_detail(r.0).await?);
         }
 
         Ok(Response::new(ListAlbumsResponse {
@@ -197,7 +244,8 @@ impl AlbumServiceTrait for AlbumServiceImpl {
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id).map_err(|_| Status::invalid_argument("Invalid id"))?;
 
-        sqlx::query(
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let result = sqlx::query(
             r#"
             UPDATE components_albums
             SET name = COALESCE(NULLIF($2, ''), name),
@@ -213,38 +261,40 @@ impl AlbumServiceTrait for AlbumServiceImpl {
         .bind(&req.description)
         .bind(&req.transition_effect)
         .bind(req.slide_duration_seconds)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
-
-        if !req.photos.is_empty() {
-            sqlx::query("DELETE FROM components_album_photos WHERE album_id = $1")
-                .bind(id)
-                .execute(&self.pool)
-                .await
-                .ok();
-
-            for p in req.photos {
-                if let Ok(mid) = Uuid::from_str(&p.media_item_id) {
-                    let pid = Uuid::new_v4();
-                    sqlx::query(
-                        r#"
-                        INSERT INTO components_album_photos (id, album_id, media_item_id, position, promo_badge, price_tag)
-                        VALUES ($1, $2, $3, $4, $5, '')
-                        "#
-                    )
-                    .bind(pid)
-                    .bind(id)
-                    .bind(mid)
-                    .bind(p.order_index)
-                    .bind(&p.caption)
-                    .execute(&self.pool)
-                    .await
-                    .ok();
-                }
-            }
+        if result.rows_affected() == 0 {
+            return Err(Status::not_found("Album not found"));
         }
 
+        sqlx::query("DELETE FROM components_album_photos WHERE album_id = $1")
+            .bind(id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        for p in req.photos {
+            let media_id = Uuid::from_str(&p.media_item_id)
+                .map_err(|_| Status::invalid_argument("Invalid media_item_id"))?;
+            sqlx::query(
+                r#"
+                INSERT INTO components_album_photos (id, album_id, media_item_id, position, promo_badge, price_tag)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                "#
+            )
+            .bind(Uuid::new_v4())
+            .bind(id)
+            .bind(media_id)
+            .bind(p.order_index)
+            .bind(&p.caption)
+            .bind(&p.price_tag)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        }
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
         self.fetch_album_detail(id).await.map(Response::new)
     }
 
@@ -276,7 +326,7 @@ impl AlbumPhotoServiceTrait for AlbumPhotoServiceImpl {
         sqlx::query(
             r#"
             INSERT INTO components_album_photos (id, album_id, media_item_id, position, promo_badge, price_tag)
-            VALUES ($1, $2, $3, $4, $5, '')
+            VALUES ($1, $2, $3, $4, $5, $6)
             "#
         )
         .bind(pid)
@@ -284,6 +334,7 @@ impl AlbumPhotoServiceTrait for AlbumPhotoServiceImpl {
         .bind(media_id)
         .bind(req.order_index)
         .bind(&req.caption)
+        .bind(&req.price_tag)
         .execute(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -297,6 +348,7 @@ impl AlbumPhotoServiceTrait for AlbumPhotoServiceImpl {
             duration_seconds: 5,
             created_at: chrono::Utc::now().to_rfc3339(),
             media_item: None,
+            price_tag: req.price_tag,
         }))
     }
 
@@ -313,4 +365,3 @@ impl AlbumPhotoServiceTrait for AlbumPhotoServiceImpl {
         Ok(Response::new(DeleteAlbumPhotoResponse { success: true }))
     }
 }
-

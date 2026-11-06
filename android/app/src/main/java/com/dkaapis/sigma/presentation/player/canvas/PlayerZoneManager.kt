@@ -5,6 +5,7 @@ import com.dkaapis.sigma.domain.model.LayerZone
 import com.dkaapis.sigma.domain.model.ZoneWidgetType
 import com.dkaapis.sigma.presentation.player.canvas.model.ZoneRenderContextPayload
 import com.dkaapis.sigma.presentation.renderers.ClockZoneRenderer
+import com.dkaapis.sigma.presentation.renderers.AlbumZoneRenderer
 import com.dkaapis.sigma.presentation.renderers.ImageZoneRenderer
 import com.dkaapis.sigma.presentation.renderers.VideoZoneRenderer
 import kotlinx.coroutines.CoroutineScope
@@ -23,6 +24,7 @@ class PlayerZoneManager {
 
     private val videoRenderers = mutableListOf<VideoZoneRenderer>()
     private val clockRenderers = mutableListOf<ClockZoneRenderer>()
+    private val albumRenderers = mutableListOf<AlbumZoneRenderer>()
     private var timelineJob: Job? = null
 
     fun renderManifest(
@@ -63,6 +65,12 @@ class PlayerZoneManager {
                     parent = zoneView,
                     block = widgetBlock,
                     onClockCreated = { clockRenderers.add(it) },
+                    onAlbumCreated = { albumRenderers.add(it) },
+                    albumSlides = if (widgetBlock.widgetType == ZoneWidgetType.ALBUM) {
+                        mediaResolver.resolveAlbum(widgetBlock, payload.storageRepo)
+                    } else {
+                        emptyList()
+                    },
                     onQueueCreated = payload.onQueueReady,
                     onDuckingChanged = payload.onDuckingChanged,
                     onQueueTapNext = payload.onQueueTapNext
@@ -98,10 +106,12 @@ class PlayerZoneManager {
 
     fun pausePlayback() {
         videoRenderers.forEach { it.pause() }
+        albumRenderers.forEach { it.pause() }
     }
 
     fun resumePlayback() {
         videoRenderers.forEach { it.resume() }
+        albumRenderers.forEach { it.resume() }
     }
 
     fun getVideoRenderers(): List<VideoZoneRenderer> = videoRenderers
@@ -113,6 +123,8 @@ class PlayerZoneManager {
         videoRenderers.clear()
         clockRenderers.forEach { it.release() }
         clockRenderers.clear()
+        albumRenderers.forEach { it.release() }
+        albumRenderers.clear()
     }
 
     companion object {

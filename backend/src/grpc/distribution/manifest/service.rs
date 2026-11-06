@@ -26,7 +26,8 @@ impl ManifestServiceImpl {
         ticker_id: Option<Uuid>,
         clock_id: Option<Uuid>,
         webview_id: Option<Uuid>,
-    ) -> Option<String> {
+        album_id: Option<Uuid>,
+    ) -> Result<Option<String>, Status> {
         if let Some(qid) = queue_id {
             let queue_service = crate::grpc::components::queue::service::QueueServiceImpl::new(pool.clone());
             if let Ok(detail) = queue_service.fetch_display_detail(qid).await {
@@ -111,8 +112,60 @@ impl ManifestServiceImpl {
                     "countersList": counters_arr,
                     "audios": audios_arr
                 });
-                return Some(json_val.to_string());
+                return Ok(Some(json_val.to_string()));
             }
+        }
+
+        if let Some(aid) = album_id {
+            #[derive(sqlx::FromRow)]
+            struct AlbumManifestPhoto {
+                media_item_id: Uuid,
+                name: String,
+                promo_badge: Option<String>,
+                price_tag: String,
+                position: i32,
+            }
+
+            let Some((name, description, transition_effect, slide_duration_seconds)) =
+                sqlx::query_as::<_, (String, String, String, i32)>(
+                    "SELECT name, description, transition_effect, slide_duration_seconds FROM components_albums WHERE id = $1"
+                )
+                .bind(aid)
+                .fetch_optional(pool)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?
+            else {
+                return Err(Status::not_found("Album not found"));
+            };
+            let photos = sqlx::query_as::<_, AlbumManifestPhoto>(
+                r#"
+                SELECT p.media_item_id, m.name, p.promo_badge, p.price_tag, p.position
+                FROM components_album_photos p
+                JOIN studio_media_items m ON m.id = p.media_item_id
+                WHERE p.album_id = $1
+                ORDER BY p.position ASC, p.created_at ASC
+                "#
+            )
+            .bind(aid)
+            .fetch_all(pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+            return Ok(Some(serde_json::json!({
+                "id": aid.to_string(),
+                "name": name,
+                "description": description,
+                "transitionEffect": transition_effect,
+                "slideDurationSeconds": slide_duration_seconds,
+                "photos": photos.into_iter().map(|photo| serde_json::json!({
+                    "mediaItemId": photo.media_item_id.to_string(),
+                    "title": photo.name,
+                    "promoBadge": photo.promo_badge,
+                    "priceTag": photo.price_tag,
+                    "position": photo.position,
+                    "durationSeconds": slide_duration_seconds,
+                })).collect::<Vec<_>>(),
+            }).to_string()));
         }
 
         if let Some(tid) = ticker_id {
@@ -153,7 +206,7 @@ impl ManifestServiceImpl {
                     "borderColor": row.border_color,
                     "borderRadius": row.border_radius,
                 });
-                return Some(json_val.to_string());
+                return Ok(Some(json_val.to_string()));
             }
         }
 
@@ -195,7 +248,7 @@ impl ManifestServiceImpl {
                     "timeFontSize": row.time_font_size,
                     "dateFontSize": row.date_font_size,
                 });
-                return Some(json_val.to_string());
+                return Ok(Some(json_val.to_string()));
             }
         }
 
@@ -226,14 +279,17 @@ impl ManifestServiceImpl {
                     "bypassCache": row.bypass_cache,
                     "orientation": row.orientation,
                 });
-                return Some(json_val.to_string());
+                return Ok(Some(json_val.to_string()));
             }
         }
 
-        None
+        Ok(None)
     }
 
-    async fn map_compiled_manifest(pool: &DbPool, dto: CompiledManifestDto) -> CompiledManifest {
+    async fn map_compiled_manifest(
+        pool: &DbPool,
+        dto: CompiledManifestDto,
+    ) -> Result<CompiledManifest, Status> {
         let mut layers = Vec::new();
         for z in dto.layers {
             let mut blocks = Vec::new();
@@ -276,7 +332,8 @@ impl ManifestServiceImpl {
                     b.block.ticker_id,
                     b.block.clock_id,
                     b.block.webview_id,
-                ).await;
+                    b.block.album_id,
+                ).await?;
 
                 blocks.push(LayerPlaylist {
                     id: b.block.id.to_string(),
@@ -389,7 +446,7 @@ impl ManifestServiceImpl {
             }
         });
 
-        CompiledManifest {
+        Ok(CompiledManifest {
             manifest_id: dto.manifest_id.to_string(),
             device_id: dto.device_id.to_string(),
             version_hash: dto.version_hash,
@@ -399,7 +456,7 @@ impl ManifestServiceImpl {
             total_download_size_bytes: dto.total_download_size_bytes,
             is_canary: dto.is_canary,
             power_schedule,
-        }
+        })
     }
 }
 
@@ -444,7 +501,7 @@ impl ManifestServiceTrait for ManifestServiceImpl {
             .map_err(Status::from)?;
 
         let manifest = match sync_res.manifest {
-            Some(dto) => Some(Self::map_compiled_manifest(&self.pool, dto).await),
+            Some(dto) => Some(Self::map_compiled_manifest(&self.pool, dto).await?),
             None => None,
         };
 

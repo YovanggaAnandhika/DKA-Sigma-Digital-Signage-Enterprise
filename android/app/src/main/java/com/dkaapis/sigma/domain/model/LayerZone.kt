@@ -5,7 +5,8 @@ enum class ZoneWidgetType {
     CLOCK,
     TICKER,
     QUEUE,
-    WEBVIEW
+    WEBVIEW,
+    ALBUM
 }
 
 data class LayerPlaylistItem(
