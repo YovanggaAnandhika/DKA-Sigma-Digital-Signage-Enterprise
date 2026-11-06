@@ -206,7 +206,7 @@ export default function DailyRundownPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <Link
-            href="/studio/schedules"
+            href="/studio/schedules/calendar"
             className="btn btn-outline"
             style={{
               width: 38,
