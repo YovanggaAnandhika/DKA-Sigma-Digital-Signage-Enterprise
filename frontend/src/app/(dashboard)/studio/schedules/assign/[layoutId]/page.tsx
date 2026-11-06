@@ -43,6 +43,7 @@ export default function AssignSchedulePage() {
   const [scheduleName, setScheduleName] = useState('');
   const [deviceIds, setDeviceIds] = useState<string[]>([]);
   const [groupIds, setGroupIds] = useState<string[]>([]);
+  const [dateMode, setDateMode] = useState<'range' | 'unlimited'>('range');
   const [startDate, setStartDate] = useState(() => localDateString(new Date()));
   const [endDate, setEndDate] = useState(() => localDateString(new Date()));
   const [startTime, setStartTime] = useState('00:00');
@@ -108,7 +109,7 @@ export default function AssignSchedulePage() {
       setError('Pilih setidaknya satu player atau kelompok player.');
       return;
     }
-    if (endDate < startDate) {
+    if (dateMode === 'range' && endDate < startDate) {
       setError('Tanggal akhir harus sama dengan atau sesudah tanggal mulai.');
       return;
     }
@@ -126,7 +127,7 @@ export default function AssignSchedulePage() {
         startTime: `${startTime}:00`,
         endTime: `${endTime}:00`,
         startDate,
-        endDate: recurring ? endDate : startDate,
+        endDate: dateMode === 'unlimited' ? undefined : (recurring ? endDate : startDate),
         daysOfWeek: (recurring ? days : [weekdayForDate(startDate)]).join(','),
         deviceIds,
         displayGroupIds: groupIds,
@@ -154,10 +155,24 @@ export default function AssignSchedulePage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, width: '100%', maxWidth: 1120, margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, width: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <Link href="/studio/layouts/data" className="btn btn-outline" style={{ padding: 9 }} aria-label="Kembali ke layout">
-          <ArrowLeft size={17} />
+        <Link
+          href="/studio/layouts/data"
+          className="btn btn-outline"
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: '50%',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 0,
+          }}
+          aria-label="Kembali ke layout"
+          title="Kembali ke Layout"
+        >
+          <ArrowLeft size={18} />
         </Link>
         <div>
           <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.5rem', fontWeight: 800 }}>Buat Rundown Operasional</h1>
@@ -167,30 +182,90 @@ export default function AssignSchedulePage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 18, alignItems: 'start' }}>
+      <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 20, alignItems: 'start', width: '100%' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <section className="card-elevated" style={{ padding: 20 }}>
             <h2 style={{ margin: '0 0 14px', color: 'var(--text-primary)', fontSize: '1rem' }}>Jadwal dan periode</h2>
-            <label style={{ display: 'block', marginBottom: 12, color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>
+            <label style={{ display: 'block', marginBottom: 14, color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>
               Nama rundown
               <input className="form-input" value={currentSchedule?.name || scheduleName} onChange={(e) => setScheduleName(e.target.value)} required maxLength={150} disabled={selectedScheduleIds.length === 1} style={{ display: 'block', marginTop: 6 }} />
               {selectedScheduleIds.length === 1 && <span style={{ display: 'block', marginTop: 5, color: 'var(--text-muted)', fontSize: '0.72rem' }}>Event akan ditambahkan ke rundown yang sudah ada.</span>}
             </label>
 
+            {/* Selector: Rentang Tanggal vs Unlimited */}
+            <div style={{ marginBottom: 14 }}>
+              <span style={{ display: 'block', marginBottom: 8, color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>
+                Masa Berlaku Penayangan
+              </span>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setDateMode('range')}
+                  className="btn btn-outline"
+                  style={{
+                    padding: '7px 14px',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    borderColor: dateMode === 'range' ? 'var(--primary-500)' : 'var(--border-subtle)',
+                    backgroundColor: dateMode === 'range' ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
+                    color: dateMode === 'range' ? 'var(--primary-400)' : 'var(--text-secondary)',
+                  }}
+                >
+                  Tetapkan Mulai & Selesai
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDateMode('unlimited')}
+                  className="btn btn-outline"
+                  style={{
+                    padding: '7px 14px',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    borderColor: dateMode === 'unlimited' ? 'var(--primary-500)' : 'var(--border-subtle)',
+                    backgroundColor: dateMode === 'unlimited' ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
+                    color: dateMode === 'unlimited' ? 'var(--primary-400)' : 'var(--text-secondary)',
+                  }}
+                >
+                  Tanpa Batas Akhir (Unlimited)
+                </button>
+              </div>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <label style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>
-                Dari tanggal
+                {dateMode === 'unlimited' ? 'Mulai dari tanggal' : 'Dari tanggal'}
                 <input type="date" className="form-input" value={startDate} onChange={(e) => {
                   const nextStartDate = e.target.value;
                   setStartDate(nextStartDate);
-                  if (recurring && endDate < nextStartDate) setEndDate(nextStartDate);
-                  if (!recurring) setEndDate(e.target.value);
+                  if (dateMode === 'range' && recurring && endDate < nextStartDate) setEndDate(nextStartDate);
+                  if (dateMode === 'range' && !recurring) setEndDate(e.target.value);
                 }} required style={{ display: 'block', marginTop: 6 }} />
               </label>
-              <label style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>
-                Sampai tanggal
-                <input type="date" className="form-input" value={recurring ? endDate : startDate} min={startDate} disabled={!recurring} onChange={(e) => setEndDate(e.target.value)} required style={{ display: 'block', marginTop: 6 }} />
-              </label>
+
+              {dateMode === 'range' ? (
+                <label style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>
+                  Sampai tanggal
+                  <input type="date" className="form-input" value={recurring ? endDate : startDate} min={startDate} disabled={!recurring} onChange={(e) => setEndDate(e.target.value)} required style={{ display: 'block', marginTop: 6 }} />
+                </label>
+              ) : (
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>
+                  Sampai tanggal
+                  <div
+                    style={{
+                      marginTop: 6,
+                      padding: '10px 12px',
+                      borderRadius: 8,
+                      border: '1px dashed rgba(59, 130, 246, 0.35)',
+                      backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                      color: 'var(--primary-400)',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Selamanya (Unlimited / Tanpa Batas Akhir)
+                  </div>
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
@@ -207,7 +282,7 @@ export default function AssignSchedulePage() {
             <label style={{ display: 'flex', gap: 9, alignItems: 'center', marginTop: 16, color: 'var(--text-primary)', fontSize: '0.85rem', fontWeight: 600 }}>
               <input type="checkbox" checked={recurring} onChange={(e) => {
                 setRecurring(e.target.checked);
-                if (!e.target.checked) setEndDate(startDate);
+                if (!e.target.checked && dateMode === 'range') setEndDate(startDate);
               }} />
               Ulangi pada hari tertentu setiap minggu
             </label>
@@ -229,7 +304,7 @@ export default function AssignSchedulePage() {
               </div>
             )}
             <p style={{ margin: '10px 0 0', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-              Waktu mengikuti zona waktu lokal player. Jadwal berulang hanya dibuat pada hari terpilih di dalam rentang tanggal.
+              Waktu mengikuti zona waktu lokal player. {dateMode === 'unlimited' ? 'Jadwal akan terus aktif selamanya mengikuti hari dan jam yang dipilih.' : 'Jadwal berulang hanya dibuat pada hari terpilih di dalam rentang tanggal.'}
             </p>
           </section>
 
@@ -286,7 +361,9 @@ export default function AssignSchedulePage() {
               <Clock3 size={15} /> {startTime}–{endTime}
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '8px 0 0' }}>
-              {startDate} sampai {recurring ? endDate : startDate}
+              {dateMode === 'unlimited'
+                ? `Mulai ${startDate} (Tanpa Batas Akhir / Unlimited)`
+                : `${startDate} sampai ${recurring ? endDate : startDate}`}
               {recurring ? ` · ${days.map((value) => weekDays[value - 1].short).join(', ')}` : ' · Satu kali'}
             </p>
             {selectedScheduleIds.length === 1 && (
