@@ -68,9 +68,6 @@ pub struct LayerBlockDto {
     pub playlist: Option<crate::modules::studio::playlist::model::PlaylistWithItemsDto>,
 }
 
-pub type LayerPlaylistEntity = LayerBlockEntity;
-pub type LayerPlaylistDto = LayerBlockDto;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LayerWithBlocksDto {
     #[serde(flatten)]
@@ -111,26 +108,4 @@ pub struct UpdateLayerDto {
     pub border_radius: Option<i32>,
     pub border_color: Option<String>,
     pub border_width: Option<i32>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct CreateLayerBlockDto {
-    pub layer_id: Uuid,
-    pub playlist_id: Option<Uuid>,
-    pub media_item_id: Option<Uuid>,
-    pub start_time_seconds: i32,
-    pub duration_seconds: i32,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct UpdateLayerBlockDto {
-    pub start_time_seconds: Option<i32>,
-    pub duration_seconds: Option<i32>,
-    pub trim_start_seconds: Option<i32>,
-    pub trim_end_seconds: Option<i32>,
-    pub transition_id: Option<Uuid>,
-    pub visual_filter_id: Option<Uuid>,
-    pub order_index: Option<i32>,
-    pub is_muted: Option<bool>,
-    pub volume_level: Option<i32>,
 }

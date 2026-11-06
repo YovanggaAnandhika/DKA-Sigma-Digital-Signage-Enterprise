@@ -5,20 +5,6 @@ use uuid::Uuid;
 pub struct DeviceRepository;
 
 impl DeviceRepository {
-    pub async fn find_by_hardware_fingerprint(
-        pool: &DbPool,
-        fingerprint: &str,
-    ) -> Result<Option<DeviceEntity>, sqlx::Error> {
-        let device = sqlx::query_as::<_, DeviceEntity>(
-            "SELECT * FROM hardware_devices WHERE hardware_fingerprint = $1",
-        )
-        .bind(fingerprint)
-        .fetch_optional(pool)
-        .await?;
-
-        Ok(device)
-    }
-
     pub async fn register(
         pool: &DbPool,
         dto: RegisterDeviceDto,

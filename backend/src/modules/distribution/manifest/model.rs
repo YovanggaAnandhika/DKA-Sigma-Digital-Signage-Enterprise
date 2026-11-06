@@ -1,5 +1,4 @@
 use crate::modules::studio::layer::layer::model::LayerWithBlocksDto;
-use crate::modules::studio::playlist::model::PlaylistWithItemsDto;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
