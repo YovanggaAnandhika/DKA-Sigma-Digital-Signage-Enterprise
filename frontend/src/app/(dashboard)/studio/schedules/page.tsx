@@ -201,6 +201,32 @@ export default function SchedulesPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {schedules.length > 0 && (
+            <button
+              onClick={handleDeleteAll}
+              disabled={deleting}
+              className="btn btn-outline"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                color: 'var(--accent-rose)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                cursor: 'pointer',
+                fontSize: '0.8125rem',
+                fontWeight: 700,
+                transition: 'all 0.2s ease',
+              }}
+              title="Hapus SEMUA jadwal tayang (Clear All)"
+            >
+              <Trash size={15} />
+              <span>Clear All Jadwal</span>
+            </button>
+          )}
+
           <button
             onClick={() => setEmergencyOpen(true)}
             style={{
@@ -404,67 +430,53 @@ export default function SchedulesPage() {
           />
         </div>
 
-        {/* Action Buttons: Icon Only for Select Delete & Hapus Semua */}
+        {/* Action Buttons: Clear All & Select Delete */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            onClick={handleDeleteSelected}
-            disabled={selectedIds.length === 0 || deleting}
-            className="btn btn-outline"
-            style={{
-              padding: '9px 12px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-              color: selectedIds.length > 0 ? 'var(--accent-rose)' : 'var(--text-muted)',
-              borderColor: selectedIds.length > 0 ? 'rgba(239, 68, 68, 0.4)' : undefined,
-              backgroundColor: selectedIds.length > 0 ? 'rgba(239, 68, 68, 0.12)' : undefined,
-              cursor: selectedIds.length === 0 || deleting ? 'not-allowed' : 'pointer',
-              opacity: selectedIds.length === 0 ? 0.45 : 1,
-              transition: 'all 0.2s ease',
-            }}
-            title={selectedIds.length > 0 ? `Hapus ${selectedIds.length} jadwal terpilih (Select Delete)` : 'Pilih jadwal untuk dihapus (Select Delete)'}
-          >
-            <Trash2 size={16} />
-            {selectedIds.length > 0 && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '-6px',
-                  right: '-6px',
-                  backgroundColor: 'var(--accent-rose)',
-                  color: '#fff',
-                  fontSize: '0.6875rem',
-                  fontWeight: 700,
-                  borderRadius: '10px',
-                  padding: '1px 5px',
-                  lineHeight: 1.2,
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                }}
-              >
-                {selectedIds.length}
-              </span>
-            )}
-          </button>
+          {selectedIds.length > 0 && (
+            <button
+              onClick={handleDeleteSelected}
+              disabled={deleting}
+              className="btn btn-outline"
+              style={{
+                padding: '8px 12px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: 'var(--accent-rose)',
+                borderColor: 'rgba(239, 68, 68, 0.4)',
+                backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                transition: 'all 0.2s ease',
+              }}
+              title={`Hapus ${selectedIds.length} jadwal terpilih`}
+            >
+              <Trash2 size={15} />
+              <span>Hapus Terpilih ({selectedIds.length})</span>
+            </button>
+          )}
 
           <button
             onClick={handleDeleteAll}
             disabled={schedules.length === 0 || deleting}
             className="btn btn-outline"
             style={{
-              padding: '9px 12px',
+              padding: '8px 12px',
               display: 'inline-flex',
               alignItems: 'center',
-              justifyContent: 'center',
+              gap: '6px',
               color: schedules.length > 0 ? 'var(--accent-rose)' : 'var(--text-muted)',
               borderColor: schedules.length > 0 ? 'rgba(239, 68, 68, 0.4)' : undefined,
               cursor: schedules.length === 0 || deleting ? 'not-allowed' : 'pointer',
               opacity: schedules.length === 0 ? 0.45 : 1,
+              fontSize: '0.8125rem',
+              fontWeight: 600,
               transition: 'all 0.2s ease',
             }}
-            title="Hapus Semua Jadwal"
+            title="Hapus Semua Jadwal Tayang"
           >
-            <Trash size={16} />
+            <Trash size={15} />
+            <span>Clear All</span>
           </button>
         </div>
       </div>

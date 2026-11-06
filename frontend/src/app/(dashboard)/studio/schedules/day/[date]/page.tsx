@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, CalendarDays, Clock, Monitor, Users, Eye, RefreshCw, Layers, Search, ArrowRight } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Clock, Monitor, Users, Eye, RefreshCw, Layers, Search, ArrowRight, Trash2, Trash } from 'lucide-react';
 import { api, Device, DisplayGroup } from '@/lib/services';
 import type { Schedule } from '@/lib/services/studio/schedule.types';
 
@@ -43,6 +43,8 @@ export default function DailyRundownPage() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [displayGroups, setDisplayGroups] = useState<DisplayGroup[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loadError, setLoadError] = useState('');
   const [search, setSearch] = useState('');
 
@@ -135,6 +137,68 @@ export default function DailyRundownPage() {
     );
   }, [schedules, dateKey, targetDate, search]);
 
+  const uniqueScheduleIdsOnDay = useMemo(() => {
+    return [...new Set(dayTasks.map((t) => t.schedule.id))];
+  }, [dayTasks]);
+
+  const handleToggleSelectAll = () => {
+    if (uniqueScheduleIdsOnDay.length === 0) return;
+    if (selectedIds.length === uniqueScheduleIdsOnDay.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(uniqueScheduleIdsOnDay);
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Hapus jadwal "${name}"?`)) return;
+    try {
+      await api.deleteSchedule(id);
+      setSelectedIds((prev) => prev.filter((i) => i !== id));
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Gagal menghapus jadwal');
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Hapus ${selectedIds.length} jadwal terpilih?`)) return;
+
+    try {
+      setDeleting(true);
+      await Promise.all(selectedIds.map((id) => api.deleteSchedule(id)));
+      setSelectedIds([]);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Gagal menghapus jadwal terpilih');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleClearAllDay = async () => {
+    if (uniqueScheduleIdsOnDay.length === 0) return;
+    if (!confirm(`Apakah Anda yakin ingin menghapus SEMUA (${uniqueScheduleIdsOnDay.length}) jadwal yang aktif pada tanggal ini?\nTindakan ini tidak dapat dibatalkan!`)) return;
+
+    try {
+      setDeleting(true);
+      await Promise.all(uniqueScheduleIdsOnDay.map((id) => api.deleteSchedule(id)));
+      setSelectedIds([]);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Gagal membersihkan jadwal harian');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
@@ -179,6 +243,28 @@ export default function DailyRundownPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {uniqueScheduleIdsOnDay.length > 0 && (
+            <button
+              onClick={handleClearAllDay}
+              disabled={deleting}
+              className="btn btn-outline"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
+                color: 'var(--accent-rose)',
+                borderColor: 'rgba(239, 68, 68, 0.35)',
+                backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                fontSize: '0.8125rem',
+                fontWeight: 700,
+              }}
+              title="Hapus semua jadwal yang aktif pada tanggal ini (Clear All)"
+            >
+              <Trash size={15} />
+              <span>Clear All Hari Ini</span>
+            </button>
+          )}
           <button onClick={loadData} className="btn btn-outline" style={{ padding: '8px 12px' }} title="Segarkan data">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -200,7 +286,7 @@ export default function DailyRundownPage() {
         </div>
       )}
 
-      {/* Search & Filter Bar */}
+      {/* Search & Bulk Action Bar */}
       <div className="card-elevated" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
           <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
@@ -213,8 +299,34 @@ export default function DailyRundownPage() {
             style={{ paddingLeft: '36px' }}
           />
         </div>
-        <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-          Total Tugas: <span style={{ color: 'var(--primary-400)' }}>{dayTasks.length}</span>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+            Total Tugas: <span style={{ color: 'var(--primary-400)' }}>{dayTasks.length}</span>
+          </div>
+
+          {selectedIds.length > 0 && (
+            <button
+              onClick={handleDeleteSelected}
+              disabled={deleting}
+              className="btn btn-outline"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 12px',
+                color: 'var(--accent-rose)',
+                borderColor: 'rgba(239, 68, 68, 0.4)',
+                backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+              }}
+              title={`Hapus ${selectedIds.length} jadwal terpilih`}
+            >
+              <Trash2 size={14} />
+              <span>Hapus Terpilih ({selectedIds.length})</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -224,6 +336,15 @@ export default function DailyRundownPage() {
           <table className="data-table">
             <thead>
               <tr>
+                <th style={{ width: '42px', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={uniqueScheduleIdsOnDay.length > 0 && selectedIds.length === uniqueScheduleIdsOnDay.length}
+                    onChange={handleToggleSelectAll}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-500)' }}
+                    title="Pilih Semua Jadwal Hari Ini"
+                  />
+                </th>
                 <th>NAMA RUNDOWN / JADWAL</th>
                 <th>TEMPLATE LAYOUT</th>
                 <th>JAM TAYANG AKTIF</th>
@@ -236,7 +357,7 @@ export default function DailyRundownPage() {
             <tbody>
               {dayTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
                       <CalendarDays size={32} style={{ opacity: 0.35 }} />
                       <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>
@@ -255,9 +376,18 @@ export default function DailyRundownPage() {
                   const targets = scheduleTargets.get(schedule.id);
                   const displayLabels = targets?.displays || [];
                   const groupLabels = targets?.groups || [];
+                  const isSelected = selectedIds.includes(schedule.id);
 
                   return (
-                    <tr key={`${schedule.id}-${event.id || index}`}>
+                    <tr key={`${schedule.id}-${event.id || index}`} style={{ backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.08)' : undefined }}>
+                      <td style={{ textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelect(schedule.id)}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--primary-500)' }}
+                        />
+                      </td>
                       <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
                         <Link
                           href={`/studio/schedules/${schedule.id}`}
@@ -284,12 +414,6 @@ export default function DailyRundownPage() {
                           <Layers size={13} />
                           {event.layoutName || 'Layout Template'}
                         </span>
-                      </td>
-                      <td>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                          <Clock size={13} style={{ color: 'var(--text-muted)' }} />
-                          <span>{event.startTime ? event.startTime.slice(0, 5) : '00:00'} – {event.endTime ? event.endTime.slice(0, 5) : '23:59'}</span>
-                        </div>
                       </td>
                       <td>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '320px' }}>
@@ -342,15 +466,25 @@ export default function DailyRundownPage() {
                         {formatDays(event.daysOfWeek)}
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        <Link
-                          href={`/studio/schedules/${schedule.id}`}
-                          className="btn btn-outline"
-                          style={{ padding: '6px 10px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
-                          title="Lihat Detail Jadwal"
-                        >
-                          <Eye size={13} />
-                          <span style={{ fontSize: '0.75rem' }}>Detail</span>
-                        </Link>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <Link
+                            href={`/studio/schedules/${schedule.id}`}
+                            className="btn btn-outline"
+                            style={{ padding: '6px 10px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                            title="Lihat Detail Jadwal"
+                          >
+                            <Eye size={13} />
+                            <span style={{ fontSize: '0.75rem' }}>Detail</span>
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(schedule.id, schedule.name)}
+                            className="btn btn-danger"
+                            style={{ padding: '6px 8px' }}
+                            title="Hapus Jadwal Ini"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -363,4 +497,3 @@ export default function DailyRundownPage() {
     </div>
   );
 }
-
