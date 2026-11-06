@@ -5,18 +5,13 @@ use uuid::Uuid;
 
 use crate::grpc::proto::studio::v1::layer::{
     layer_service_server::LayerService as LayerServiceTrait,
-    CreateLayerRequest, DeleteLayerRequest,
+    CreateLayerRequest, DeleteLayerRequest, DeleteLayerResponse,
     GetLayerRequest, Layer as ProtoLayer, LayerPlaylist,
-    LayerPlaylistItemOverride,
-    CreateLayerBlockRequest, UpdateLayerBlockRequest, DeleteLayerBlockRequest,
-    ListLayersResponse, DeleteLayerResponse,
-    UpdateLayerRequest,
+    LayerPlaylistItemOverride, UpdateLayerRequest,
 };
-use crate::grpc::proto::studio::v1::media::MediaItem as ProtoMediaItem;
-use crate::grpc::proto::studio::v1::playlist::playlist::Playlist as ProtoPlaylist;
 
 use crate::modules::studio::layer::layer::{
-    model::{CreateLayerDto, LayerBlockDto, UpdateLayerDto, CreateLayerBlockDto, UpdateLayerBlockDto},
+    model::{CreateLayerDto, LayerBlockDto, UpdateLayerDto},
     services::LayerService,
 };
 

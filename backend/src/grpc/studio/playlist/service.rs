@@ -12,7 +12,7 @@ use crate::grpc::proto::studio::v1::playlist::playlist::{
 use crate::grpc::proto::studio::v1::playlist::item::{
     playlist_item_service_server::PlaylistItemService as PlaylistItemServiceTrait,
     PlaylistItem, AddPlaylistItemRequest, UpdatePlaylistItemRequest,
-    RemovePlaylistItemRequest, RemovePlaylistItemResponse, ReorderPlaylistItemsRequest,
+    RemovePlaylistItemRequest, RemovePlaylistItemResponse,
 };
 
 #[derive(Clone)]

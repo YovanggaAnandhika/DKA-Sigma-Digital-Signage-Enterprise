@@ -1,5 +1,5 @@
 use super::model::{
-    LiveCommandType, PushCommandDto, PushCommandResultDto, ServerCommandMessage,
+    PushCommandDto, PushCommandResultDto, ServerCommandMessage,
 };
 use super::repositories::StreamRepository;
 use crate::common::AppError;

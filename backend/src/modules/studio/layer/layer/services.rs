@@ -1,5 +1,5 @@
 use super::model::{
-    CreateLayerDto, LayerEntity, UpdateLayerDto, LayerBlockEntity, LayerPlaylistItemOverrideEntity
+    CreateLayerDto, LayerEntity, UpdateLayerDto,
 };
 use super::repositories::LayerRepository;
 use crate::db::DbPool;

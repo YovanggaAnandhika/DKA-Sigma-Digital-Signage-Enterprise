@@ -1,4 +1,4 @@
-use sqlx::{FromRow, PgPool};
+use sqlx::FromRow;
 use tonic::{Request, Status};
 use uuid::Uuid;
 

@@ -2,7 +2,6 @@ use tonic::{Request, Response, Status};
 use uuid::Uuid;
 use crate::db::DbPool;
 use crate::modules::hardware::device::model::{DeviceEntity, HeartbeatDto, PairDeviceDto, RegisterDeviceDto, UpdateDeviceDto};
-use crate::modules::hardware::device::repositories::DeviceRepository;
 use crate::modules::hardware::device::services::DeviceService;
 use crate::grpc::proto::hardware::v1::device::{
     device_service_server::DeviceService as DeviceServiceTrait,

@@ -12,7 +12,6 @@ use crate::grpc::proto::studio::v1::layout::{
     DeleteLayoutHistoryRequest, DeleteLayoutHistoryResponse,
 };
 use crate::grpc::proto::common::v1::orientation::Orientation as ProtoOrientation;
-use crate::grpc::proto::studio::v1::layer::Layer as ProtoLayer;
 
 use crate::modules::studio::layout::{
     model::{CreateLayoutDto, LayoutWithLayersDto, UpdateLayoutDto},

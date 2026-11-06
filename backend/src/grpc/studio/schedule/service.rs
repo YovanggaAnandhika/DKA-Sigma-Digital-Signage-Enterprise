@@ -12,7 +12,7 @@ use crate::grpc::proto::studio::v1::schedule::schedule::{
 };
 use crate::modules::studio::schedule::model::{
     AddScheduleEventDto, CreateScheduleDto, ScheduleEntity, ScheduleEventEntity,
-    ScheduleWithEventsDto, UpdateScheduleDto,
+    UpdateScheduleDto,
 };
 use crate::modules::studio::schedule::services::ScheduleService;
 use tonic::{Request, Response, Status};

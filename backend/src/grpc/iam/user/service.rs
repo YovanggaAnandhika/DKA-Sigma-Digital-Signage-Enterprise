@@ -2,7 +2,6 @@ use tonic::{Request, Response, Status};
 use uuid::Uuid;
 use crate::db::DbPool;
 use crate::config::Config;
-use crate::common::AppError;
 use crate::modules::iam::user::model::{CreateUserDto, LoginDto, UpdateUserDto, UserEntity};
 use crate::modules::iam::user::services::UserService;
 use crate::modules::iam::user::repositories::UserRepository;

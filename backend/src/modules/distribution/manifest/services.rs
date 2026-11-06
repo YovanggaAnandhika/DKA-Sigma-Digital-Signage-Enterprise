@@ -16,7 +16,6 @@ use chrono::{Datelike, Utc};
 use chrono_tz::Tz;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
-use std::str::FromStr;
 use uuid::Uuid;
 
 fn latest_assigned_schedule(

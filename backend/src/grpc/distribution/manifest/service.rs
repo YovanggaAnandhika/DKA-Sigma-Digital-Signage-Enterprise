@@ -1,7 +1,7 @@
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 use crate::db::DbPool;
-use crate::modules::distribution::manifest::model::{CompiledManifestDto, ManifestAssetDto};
+use crate::modules::distribution::manifest::model::CompiledManifestDto;
 use crate::modules::distribution::manifest::services::ManifestService;
 use crate::grpc::proto::distribution::v1::manifest::{
     manifest_service_server::ManifestService as ManifestServiceTrait,
