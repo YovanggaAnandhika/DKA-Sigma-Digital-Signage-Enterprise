@@ -100,7 +100,7 @@ export default function EmergencyBroadcastModal({ isOpen, onClose }: EmergencyBr
     }}>
       <div style={{
         width: '100%',
-        maxWidth: '560px',
+        maxWidth: '680px',
         backgroundColor: 'var(--bg-surface)',
         borderRadius: 'var(--radius-lg)',
         border: '1px solid rgba(244, 63, 94, 0.35)',
