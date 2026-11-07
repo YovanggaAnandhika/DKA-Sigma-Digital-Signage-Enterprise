@@ -439,12 +439,15 @@ impl QueueServiceImpl {
 }
 
 #[tonic::async_trait]
-#[tonic::async_trait]
 impl QueueDisplayServiceTrait for QueueServiceImpl {
     async fn create_queue_display(
         &self,
         request: Request<CreateQueueDisplayRequest>,
     ) -> Result<Response<QueueDisplayDetail>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_queue")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok()).unwrap_or_else(|| Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
+        let branch_id = claims.branch_id.as_deref().and_then(|b| Uuid::parse_str(b).ok());
+        let user_id = Uuid::parse_str(&claims.sub).ok();
         let req = request.into_inner();
         let display_id = Uuid::new_v4();
 
@@ -458,15 +461,19 @@ impl QueueDisplayServiceTrait for QueueServiceImpl {
         sqlx::query(
             r#"
             INSERT INTO components_queue_displays (
-                id, name, prefix, canvas_width, canvas_height, background_color,
+                id, corporation_id, branch_id, created_by_user_id,
+                name, prefix, canvas_width, canvas_height, background_color,
                 background_image_url, theme_preset, auto_recall_enabled,
                 opacity, overlay_color, overlay_opacity,
                 sector_type, ticket_label, counter_label,
                 tts_template_call, tts_template_recall, tts_template_break
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
             "#,
         )
         .bind(display_id)
+        .bind(corp_id)
+        .bind(branch_id)
+        .bind(user_id)
         .bind(&req.name)
         .bind(if req.prefix.is_empty() { "A" } else { &req.prefix })
         .bind(if req.canvas_width > 0 { req.canvas_width } else { 1920 })
@@ -533,11 +540,17 @@ impl QueueDisplayServiceTrait for QueueServiceImpl {
             let cid = Uuid::from_str(&c.id).unwrap_or_else(|_| Uuid::new_v4());
             sqlx::query(
                 r#"
-                INSERT INTO components_queue_counters (id, queue_display_id, counter_number, counter_name, operator_name, is_active)
-                VALUES ($1, $2, $3, $4, $5, $6)
+                INSERT INTO components_queue_counters (
+                    id, corporation_id, branch_id, created_by_user_id,
+                    queue_display_id, counter_number, counter_name, operator_name, is_active
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 "#,
             )
             .bind(cid)
+            .bind(corp_id)
+            .bind(branch_id)
+            .bind(user_id)
             .bind(display_id)
             .bind(c.counter_number)
             .bind(&c.counter_name)
@@ -554,11 +567,17 @@ impl QueueDisplayServiceTrait for QueueServiceImpl {
             let mid = Uuid::from_str(&a.media_item_id).ok();
             sqlx::query(
                 r#"
-                INSERT INTO components_queue_audios (id, queue_display_id, name, audio_type, media_item_id, file_url, volume_percent, is_active)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                INSERT INTO components_queue_audios (
+                    id, corporation_id, branch_id, created_by_user_id,
+                    queue_display_id, name, audio_type, media_item_id, file_url, volume_percent, is_active
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                 "#,
             )
             .bind(aid)
+            .bind(corp_id)
+            .bind(branch_id)
+            .bind(user_id)
             .bind(display_id)
             .bind(&a.name)
             .bind(&a.audio_type)
@@ -587,21 +606,39 @@ impl QueueDisplayServiceTrait for QueueServiceImpl {
         &self,
         request: Request<ListQueueDisplaysRequest>,
     ) -> Result<Response<ListQueueDisplaysResponse>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_view_queue")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
         let req = request.into_inner();
         let search_pattern = format!("%{}%", req.search);
 
-        let rows = sqlx::query_as::<_, (Uuid,)>(
-            r#"
-            SELECT id FROM components_queue_displays
-            WHERE name ILIKE $1 OR prefix ILIKE $1
-            ORDER BY created_at DESC
-            LIMIT 50
-            "#,
-        )
-        .bind(&search_pattern)
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|e| Status::internal(e.to_string()))?;
+        let rows = if let Some(cid) = corp_id {
+            sqlx::query_as::<_, (Uuid,)>(
+                r#"
+                SELECT id FROM components_queue_displays
+                WHERE corporation_id = $1 AND (name ILIKE $2 OR prefix ILIKE $2)
+                ORDER BY created_at DESC
+                LIMIT 50
+                "#,
+            )
+            .bind(cid)
+            .bind(&search_pattern)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+        } else {
+            sqlx::query_as::<_, (Uuid,)>(
+                r#"
+                SELECT id FROM components_queue_displays
+                WHERE name ILIKE $1 OR prefix ILIKE $1
+                ORDER BY created_at DESC
+                LIMIT 50
+                "#,
+            )
+            .bind(&search_pattern)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+        };
 
         let mut items = Vec::new();
         for r in rows {
@@ -625,9 +662,22 @@ impl QueueDisplayServiceTrait for QueueServiceImpl {
         &self,
         request: Request<UpdateQueueDisplayRequest>,
     ) -> Result<Response<QueueDisplayDetail>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_queue")?;
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid queue display id"))?;
+
+        let (display_corp_id, display_branch_id): (Uuid, Option<Uuid>) = sqlx::query_as(
+            "SELECT corporation_id, branch_id FROM components_queue_displays WHERE id = $1"
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?
+        .unwrap_or_else(|| {
+            let default_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok()).unwrap_or_else(|| Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
+            (default_id, None)
+        });
 
         sqlx::query(
             r#"
@@ -734,8 +784,11 @@ impl QueueDisplayServiceTrait for QueueServiceImpl {
                 let cid = Uuid::from_str(&c.id).unwrap_or_else(|_| Uuid::new_v4());
                 let saved_id = sqlx::query_scalar::<_, Uuid>(
                     r#"
-                    INSERT INTO components_queue_counters (id, queue_display_id, counter_number, counter_name, operator_name, is_active)
-                    VALUES ($1, $2, $3, $4, $5, $6)
+                    INSERT INTO components_queue_counters (
+                        id, corporation_id, branch_id, queue_display_id,
+                        counter_number, counter_name, operator_name, is_active
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                     ON CONFLICT (id) DO UPDATE
                     SET counter_number = EXCLUDED.counter_number,
                         counter_name = EXCLUDED.counter_name,
@@ -747,6 +800,8 @@ impl QueueDisplayServiceTrait for QueueServiceImpl {
                     "#,
                 )
                 .bind(cid)
+                .bind(display_corp_id)
+                .bind(display_branch_id)
                 .bind(id)
                 .bind(c.counter_number)
                 .bind(&c.counter_name)
@@ -792,11 +847,16 @@ impl QueueDisplayServiceTrait for QueueServiceImpl {
                 let mid = Uuid::from_str(&a.media_item_id).ok();
                 sqlx::query(
                     r#"
-                    INSERT INTO components_queue_audios (id, queue_display_id, name, audio_type, media_item_id, file_url, volume_percent, is_active)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    INSERT INTO components_queue_audios (
+                        id, corporation_id, branch_id, queue_display_id,
+                        name, audio_type, media_item_id, file_url, volume_percent, is_active
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                     "#,
                 )
                 .bind(aid)
+                .bind(display_corp_id)
+                .bind(display_branch_id)
                 .bind(id)
                 .bind(&a.name)
                 .bind(&a.audio_type)
@@ -1040,13 +1100,26 @@ impl QueueCounterServiceTrait for QueueServiceImpl {
         let display_id = Uuid::from_str(&req.queue_display_id).map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
         let cid = Uuid::new_v4();
 
+        let (disp_corp_id, disp_branch_id): (Uuid, Option<Uuid>) = sqlx::query_as(
+            "SELECT corporation_id, branch_id FROM components_queue_displays WHERE id = $1"
+        )
+        .bind(display_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| Status::not_found(format!("Queue display not found: {}", e)))?;
+
         sqlx::query(
             r#"
-            INSERT INTO components_queue_counters (id, queue_display_id, counter_number, counter_name, operator_name, is_active)
-            VALUES ($1, $2, $3, $4, $5, true)
+            INSERT INTO components_queue_counters (
+                id, corporation_id, branch_id, queue_display_id,
+                counter_number, counter_name, operator_name, is_active
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, true)
             "#,
         )
         .bind(cid)
+        .bind(disp_corp_id)
+        .bind(disp_branch_id)
         .bind(display_id)
         .bind(req.counter_number)
         .bind(&req.counter_name)
@@ -1226,15 +1299,17 @@ impl QueueTicketServiceTrait for QueueServiceImpl {
         let req = request.into_inner();
         let display_id = Uuid::from_str(&req.queue_display_id).map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
 
+        let (display_prefix, disp_corp_id, disp_branch_id): (String, Uuid, Option<Uuid>) = sqlx::query_as(
+            "SELECT prefix, corporation_id, branch_id FROM components_queue_displays WHERE id = $1"
+        )
+        .bind(display_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?
+        .ok_or_else(|| Status::not_found("Queue display not found"))?;
+
         let prefix = if req.prefix.is_empty() {
-            sqlx::query_as::<_, (String,)>("SELECT prefix FROM components_queue_displays WHERE id = $1")
-                .bind(display_id)
-                .fetch_optional(&self.pool)
-                .await
-                .ok()
-                .flatten()
-                .map(|p| p.0)
-                .unwrap_or_else(|| "A".to_string())
+            display_prefix
         } else {
             req.prefix
         };
@@ -1257,11 +1332,16 @@ impl QueueTicketServiceTrait for QueueServiceImpl {
 
         sqlx::query(
             r#"
-            INSERT INTO components_queue_tickets (id, queue_display_id, ticket_number, prefix, sequence_number, status)
-            VALUES ($1, $2, $3, $4, $5, 'waiting')
+            INSERT INTO components_queue_tickets (
+                id, corporation_id, branch_id, queue_display_id,
+                ticket_number, prefix, sequence_number, status
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, 'waiting')
             "#,
         )
         .bind(tid)
+        .bind(disp_corp_id)
+        .bind(disp_branch_id)
         .bind(display_id)
         .bind(&ticket_num)
         .bind(&prefix)
@@ -1325,8 +1405,8 @@ impl QueueTicketServiceTrait for QueueServiceImpl {
         let (tid, tnum, tprefix, tseq) = match next_ticket {
             Some(t) => t,
             None => {
-                let display_row: (String, i32) = sqlx::query_as(
-                    "SELECT prefix, current_sequence FROM components_queue_displays WHERE id = $1",
+                let display_row: (String, i32, Uuid, Option<Uuid>) = sqlx::query_as(
+                    "SELECT prefix, current_sequence, corporation_id, branch_id FROM components_queue_displays WHERE id = $1",
                 )
                 .bind(display_id)
                 .fetch_optional(&self.pool)
@@ -1353,11 +1433,16 @@ impl QueueTicketServiceTrait for QueueServiceImpl {
 
                 sqlx::query(
                     r#"
-                    INSERT INTO components_queue_tickets (id, queue_display_id, counter_id, ticket_number, prefix, sequence_number, status, called_at)
-                    VALUES ($1, $2, $3, $4, $5, $6, 'called', NOW())
+                    INSERT INTO components_queue_tickets (
+                        id, corporation_id, branch_id, queue_display_id, counter_id,
+                        ticket_number, prefix, sequence_number, status, called_at
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'called', NOW())
                     "#,
                 )
                 .bind(new_tid)
+                .bind(display_row.2)
+                .bind(display_row.3)
                 .bind(display_id)
                 .bind(counter_id)
                 .bind(&ticket_num)
@@ -1484,11 +1569,13 @@ impl QueueTicketServiceTrait for QueueServiceImpl {
         let curr_seq: i32 = curr_num.chars().filter(|c| c.is_ascii_digit()).collect::<String>().parse().unwrap_or(1);
         let prev_seq = std::cmp::max(1, curr_seq - 1);
 
-        let (prefix,): (String,) = sqlx::query_as("SELECT prefix FROM components_queue_displays WHERE id = $1")
-            .bind(display_id)
-            .fetch_one(&self.pool)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let (prefix, disp_corp_id, disp_branch_id): (String, Uuid, Option<Uuid>) = sqlx::query_as(
+            "SELECT prefix, corporation_id, branch_id FROM components_queue_displays WHERE id = $1",
+        )
+        .bind(display_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
         let prefix = if prefix.is_empty() { "A".to_string() } else { prefix };
         let prev_ticket_num = format!("{}-{:03}", prefix, prev_seq);
 
@@ -1518,9 +1605,17 @@ impl QueueTicketServiceTrait for QueueServiceImpl {
             None => {
                 let new_id = Uuid::new_v4();
                 sqlx::query(
-                    "INSERT INTO components_queue_tickets (id, queue_display_id, counter_id, ticket_number, prefix, sequence_number, status, called_at) VALUES ($1, $2, $3, $4, $5, $6, 'called', $7)",
+                    r#"
+                    INSERT INTO components_queue_tickets (
+                        id, corporation_id, branch_id, queue_display_id, counter_id,
+                        ticket_number, prefix, sequence_number, status, called_at
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'called', $9)
+                    "#,
                 )
                 .bind(new_id)
+                .bind(disp_corp_id)
+                .bind(disp_branch_id)
                 .bind(display_id)
                 .bind(counter_id)
                 .bind(&prev_ticket_num)

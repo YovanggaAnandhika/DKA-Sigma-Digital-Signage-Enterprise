@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS components_queue_layout_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    corporation_id UUID NOT NULL REFERENCES system_corporations(id) ON DELETE CASCADE,
+    corporation_id UUID REFERENCES system_corporations(id) ON DELETE CASCADE,
     queue_display_id UUID NOT NULL REFERENCES components_queue_displays(id) ON DELETE CASCADE,
     item_type VARCHAR(50) NOT NULL,
     name VARCHAR(100) NOT NULL,
@@ -17,6 +17,10 @@ CREATE TABLE IF NOT EXISTS components_queue_layout_items (
     template_content TEXT,
     config JSONB DEFAULT '{}'::jsonb,
     is_visible BOOLEAN NOT NULL DEFAULT TRUE,
+    opacity NUMERIC(3, 2) NOT NULL DEFAULT 1.0,
+    border_radius INT NOT NULL DEFAULT 0,
+    border_color VARCHAR(30) NOT NULL DEFAULT 'transparent',
+    border_width INT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

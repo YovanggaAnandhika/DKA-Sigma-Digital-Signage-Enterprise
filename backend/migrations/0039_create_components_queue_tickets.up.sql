@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS components_queue_tickets (
     branch_id UUID REFERENCES system_branches(id) ON DELETE SET NULL,
     queue_display_id UUID NOT NULL REFERENCES components_queue_displays(id) ON DELETE CASCADE,
     ticket_number VARCHAR(20) NOT NULL,
+    prefix VARCHAR(10) NOT NULL DEFAULT 'A',
+    sequence_number INT NOT NULL DEFAULT 1,
     status VARCHAR(20) NOT NULL DEFAULT 'waiting',
     counter_id UUID REFERENCES components_queue_counters(id) ON DELETE SET NULL,
     called_at TIMESTAMPTZ,

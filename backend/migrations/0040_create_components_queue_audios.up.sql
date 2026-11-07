@@ -3,11 +3,15 @@ CREATE TABLE IF NOT EXISTS components_queue_audios (
     corporation_id UUID NOT NULL REFERENCES system_corporations(id) ON DELETE CASCADE,
     branch_id UUID REFERENCES system_branches(id) ON DELETE SET NULL,
     queue_display_id UUID NOT NULL REFERENCES components_queue_displays(id) ON DELETE CASCADE,
-    sound_type VARCHAR(50) NOT NULL DEFAULT 'chime',
-    file_url TEXT NOT NULL,
+    name VARCHAR(100) NOT NULL DEFAULT 'Audio Chime',
+    audio_type VARCHAR(50) NOT NULL DEFAULT 'chime',
     media_item_id UUID REFERENCES studio_media_items(id) ON DELETE SET NULL,
+    file_url TEXT,
+    volume_percent INT NOT NULL DEFAULT 100,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_by_user_id UUID REFERENCES iam_users(id) ON DELETE SET NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_queue_audios_corp ON components_queue_audios(corporation_id);
