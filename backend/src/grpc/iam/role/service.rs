@@ -41,16 +41,21 @@ impl RoleServiceTrait for RoleServiceImpl {
         &self,
         request: Request<CreateRoleRequest>,
     ) -> Result<Response<Role>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_iam")?;
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_iam")?;
         let req = request.into_inner();
 
         let perm_ids = req.permission_ids.into_iter().filter_map(|s| Uuid::parse_str(&s).ok()).collect::<Vec<_>>();
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+        let user_id = Uuid::parse_str(&claims.sub).ok();
 
         let dto = CreateRoleDto {
+            corporation_id: corp_id,
+            branch_id: None,
             name: req.name,
             slug: req.slug,
             description: if req.description.is_empty() { None } else { Some(req.description) },
             permission_ids: if perm_ids.is_empty() { None } else { Some(perm_ids) },
+            created_by_user_id: user_id,
         };
 
         let role = RoleService::create_role(&self.pool, dto)

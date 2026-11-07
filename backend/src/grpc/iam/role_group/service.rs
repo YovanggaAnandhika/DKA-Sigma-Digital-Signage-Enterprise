@@ -40,16 +40,22 @@ impl RoleGroupServiceTrait for RoleGroupServiceImpl {
         &self,
         request: Request<CreateRoleGroupRequest>,
     ) -> Result<Response<RoleGroup>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_iam")?;
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_iam")?;
         let req = request.into_inner();
 
         let role_ids = req.role_ids.into_iter().filter_map(|s| Uuid::parse_str(&s).ok()).collect::<Vec<_>>();
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+        let user_id = Uuid::parse_str(&claims.sub).ok();
 
         let dto = CreateRoleGroupDto {
+            corporation_id: corp_id,
+            branch_id: None,
             name: req.name,
             slug: req.slug,
             description: if req.description.is_empty() { None } else { Some(req.description) },
             role_ids: if role_ids.is_empty() { None } else { Some(role_ids) },
+            permission_ids: None,
+            created_by_user_id: user_id,
         };
 
         let group = RoleGroupService::create_role_group(&self.pool, dto)

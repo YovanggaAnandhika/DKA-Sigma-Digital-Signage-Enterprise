@@ -48,4 +48,20 @@ pub struct Claims {
     pub email: String,
     pub permissions: Vec<String>, // list of "can_*" codes
     pub exp: i64,
+    #[serde(default)]
+    pub corporation_id: Option<String>,
+    #[serde(default)]
+    pub branch_id: Option<String>,
+    #[serde(default)]
+    pub is_superadmin: bool,
+    #[serde(default)]
+    pub impersonated_corporation_id: Option<String>,
+}
+
+impl Claims {
+    pub fn active_corporation_id(&self) -> Option<&str> {
+        self.impersonated_corporation_id
+            .as_deref()
+            .or(self.corporation_id.as_deref())
+    }
 }

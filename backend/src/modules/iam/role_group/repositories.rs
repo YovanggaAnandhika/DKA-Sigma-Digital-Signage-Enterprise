@@ -10,17 +10,22 @@ impl RoleGroupRepository {
         dto: CreateRoleGroupDto,
     ) -> Result<RoleGroupEntity, sqlx::Error> {
         let mut tx = pool.begin().await?;
+        let default_corp = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+        let corp_id = dto.corporation_id.unwrap_or(default_corp);
 
         let group = sqlx::query_as::<_, RoleGroupEntity>(
             r#"
-            INSERT INTO iam_role_groups (name, slug, description)
-            VALUES ($1, $2, $3)
-            RETURNING id, name, slug, description, created_at, updated_at
+            INSERT INTO iam_role_groups (corporation_id, branch_id, name, slug, description, created_by_user_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, corporation_id, branch_id, name, slug, description, created_by_user_id, created_at, updated_at
             "#,
         )
+        .bind(corp_id)
+        .bind(dto.branch_id)
         .bind(dto.name)
         .bind(dto.slug)
         .bind(dto.description)
+        .bind(dto.created_by_user_id)
         .fetch_one(&mut *tx)
         .await?;
 
@@ -40,8 +45,47 @@ impl RoleGroupRepository {
             }
         }
 
+        if let Some(perm_ids) = dto.permission_ids {
+            for perm_id in perm_ids {
+                sqlx::query(
+                    r#"
+                    INSERT INTO iam_role_group_permissions (role_group_id, permission_id)
+                    VALUES ($1, $2)
+                    ON CONFLICT DO NOTHING
+                    "#,
+                )
+                .bind(group.id)
+                .bind(perm_id)
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
+
         tx.commit().await?;
         Ok(group)
+    }
+
+    pub async fn assign_permissions(
+        pool: &DbPool,
+        role_group_id: Uuid,
+        permission_ids: Vec<Uuid>,
+    ) -> Result<(), sqlx::Error> {
+        let mut tx = pool.begin().await?;
+        for perm_id in permission_ids {
+            sqlx::query(
+                r#"
+                INSERT INTO iam_role_group_permissions (role_group_id, permission_id)
+                VALUES ($1, $2)
+                ON CONFLICT DO NOTHING
+                "#,
+            )
+            .bind(role_group_id)
+            .bind(perm_id)
+            .execute(&mut *tx)
+            .await?;
+        }
+        tx.commit().await?;
+        Ok(())
     }
 
     pub async fn find_by_id(
@@ -50,7 +94,7 @@ impl RoleGroupRepository {
     ) -> Result<Option<RoleGroupEntity>, sqlx::Error> {
         let group = sqlx::query_as::<_, RoleGroupEntity>(
             r#"
-            SELECT id, name, slug, description, created_at, updated_at
+            SELECT id, corporation_id, branch_id, name, slug, description, created_by_user_id, created_at, updated_at
             FROM iam_role_groups
             WHERE id = $1
             "#,
@@ -62,10 +106,29 @@ impl RoleGroupRepository {
         Ok(group)
     }
 
+    pub async fn find_by_slug(
+        pool: &DbPool,
+        slug: &str,
+    ) -> Result<Option<RoleGroupEntity>, sqlx::Error> {
+        let group = sqlx::query_as::<_, RoleGroupEntity>(
+            r#"
+            SELECT id, corporation_id, branch_id, name, slug, description, created_by_user_id, created_at, updated_at
+            FROM iam_role_groups
+            WHERE slug = $1
+            LIMIT 1
+            "#,
+        )
+        .bind(slug)
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(group)
+    }
+
     pub async fn find_all(pool: &DbPool) -> Result<Vec<RoleGroupEntity>, sqlx::Error> {
         let groups = sqlx::query_as::<_, RoleGroupEntity>(
             r#"
-            SELECT id, name, slug, description, created_at, updated_at
+            SELECT id, corporation_id, branch_id, name, slug, description, created_by_user_id, created_at, updated_at
             FROM iam_role_groups
             ORDER BY name ASC
             "#,
@@ -91,7 +154,7 @@ impl RoleGroupRepository {
                 description = COALESCE($3, description),
                 updated_at = NOW()
             WHERE id = $1
-            RETURNING id, name, slug, description, created_at, updated_at
+            RETURNING id, corporation_id, branch_id, name, slug, description, created_by_user_id, created_at, updated_at
             "#,
         )
         .bind(id)

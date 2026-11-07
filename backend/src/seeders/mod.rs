@@ -1,5 +1,6 @@
 use sqlx::PgPool;
 use tracing::info;
+use uuid::Uuid;
 
 use crate::modules::iam::permission::model::CreatePermissionDto;
 use crate::modules::iam::permission::repositories::PermissionRepository;
@@ -7,35 +8,143 @@ use crate::modules::iam::permission::services::PermissionService;
 use crate::modules::iam::role::model::CreateRoleDto;
 use crate::modules::iam::role::repositories::RoleRepository;
 use crate::modules::iam::role::services::RoleService;
+use crate::modules::iam::role_group::model::CreateRoleGroupDto;
+use crate::modules::iam::role_group::repositories::RoleGroupRepository;
+use crate::modules::iam::role_group::services::RoleGroupService;
 use crate::modules::iam::user::model::CreateUserDto;
 use crate::modules::iam::user::repositories::UserRepository;
 use crate::modules::iam::user::services::UserService;
 
 pub async fn seed_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
-    info!("Starting database seeding (System Defaults, Lookups, Accounts & Roles)...");
+    info!("Starting database seeding (Corporations, Branches, Permissions, Roles, Groups & Lookups)...");
 
-    // 1. Seed System Lookups & Templates
-    seed_lookups(pool).await?;
+    // 1. Seed Default Corporation & Branch
+    let default_corp_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+    let default_branch_id = Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
 
-    // 2. Seed Permissions
+    info!("Seeding default corporation...");
+    sqlx::query(
+        r#"
+        INSERT INTO system_corporations (
+            id, name, slug, description, active_until, max_screens, max_branches, subscription_tier, is_active
+        )
+        VALUES (
+            $1, 'Default Corporation', 'default-corp', 'Main default corporate tenant',
+            '2099-12-31 23:59:59+00'::timestamptz, 100, 50, 'enterprise', true
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            name = EXCLUDED.name,
+            active_until = EXCLUDED.active_until,
+            max_screens = EXCLUDED.max_screens,
+            max_branches = EXCLUDED.max_branches,
+            subscription_tier = EXCLUDED.subscription_tier,
+            updated_at = NOW();
+        "#,
+    )
+    .bind(default_corp_id)
+    .execute(pool)
+    .await?;
+
+    info!("Seeding default branch...");
+    sqlx::query(
+        r#"
+        INSERT INTO system_branches (
+            id, corporation_id, name, code, address, is_active
+        )
+        VALUES (
+            $1, $2, 'Kantor Pusat (HQ)', 'HQ', 'Headquarters Central Office', true
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            name = EXCLUDED.name,
+            code = EXCLUDED.code,
+            address = EXCLUDED.address,
+            updated_at = NOW();
+        "#,
+    )
+    .bind(default_branch_id)
+    .bind(default_corp_id)
+    .execute(pool)
+    .await?;
+
+    // 2. Seed System Lookups & Templates
+    seed_lookups(pool, default_corp_id, default_branch_id).await?;
+
+    // 3. Seed Comprehensive 45+ Permissions
     let permissions = vec![
-        ("can_view_dashboard", "View Dashboard", "Access and view main telemetry dashboard", "system"),
-        ("can_manage_devices", "Manage Devices", "Pair, rename, reboot, and delete display devices", "hardware"),
-        ("can_view_devices", "View Devices", "View fleet status and telemetry", "hardware"),
-        ("can_manage_layouts", "Manage Layouts", "Create, edit, and arrange display layouts & zones", "studio"),
-        ("can_view_layouts", "View Layouts", "View existing layouts and preview canvases", "studio"),
-        ("can_manage_playlists", "Manage Playlists", "Create playlists and order media items", "studio"),
-        ("can_view_playlists", "View Playlists", "View playlists and duration timing", "studio"),
-        ("can_manage_media", "Manage Media", "Upload, convert, and delete media files", "studio"),
-        ("can_view_media", "View Media", "Browse media library", "studio"),
-        ("can_manage_distribution", "Manage Distribution", "Deploy layouts to displays and manage canary rollouts", "distribution"),
-        ("can_manage_schedules", "Manage Schedules", "Create and edit playback schedules", "studio"),
-        ("can_view_schedules", "View Schedules", "View playback schedules", "studio"),
+        // System & Tenancy
+        ("can_all_access", "Superadmin All Access", "Bypass all permission checks across the platform", "system"),
+        ("can_impersonate_corporation", "Impersonate Corporation", "Switch tenant context and operate as another corporation", "system"),
+        ("can_manage_corporations", "Manage Corporations", "Create, edit, suspend and configure corporate tenants", "system"),
+        ("can_view_corporations", "View Corporations", "View list of corporate tenants and subscription statuses", "system"),
+        ("can_manage_branches", "Manage Branches", "Create, edit, and organize branch locations", "system"),
+        ("can_view_branches", "View Branches", "View branch locations and site details", "system"),
+        ("can_view_dashboard", "View Dashboard", "Access and view operational metrics & telemetry dashboard", "system"),
+
+        // IAM
+        ("can_manage_users", "Manage Users", "Create, edit, invite, and deactivate user accounts", "iam"),
+        ("can_view_users", "View Users", "View tenant user directories and profiles", "iam"),
+        ("can_manage_roles", "Manage Roles", "Create and modify roles and permission policies", "iam"),
+        ("can_view_roles", "View Roles", "View roles and access assignments", "iam"),
+        ("can_manage_role_groups", "Manage Role Groups", "Create and manage flexible role groups", "iam"),
+        ("can_view_role_groups", "View Role Groups", "View role groups", "iam"),
         ("can_manage_iam", "Manage IAM", "Manage users, roles, and access control permissions", "iam"),
+
+        // Hardware & Displays
+        ("can_manage_devices", "Manage Devices", "Pair, rename, reboot, capture screenshots, and configure displays", "hardware"),
+        ("can_view_devices", "View Devices", "View fleet status, online indicators, and telemetry", "hardware"),
+        ("can_pair_devices", "Pair Devices", "Approve and pair new Android signage hardware", "hardware"),
+        ("can_manage_display_groups", "Manage Display Groups", "Create and assign displays to display groups", "hardware"),
+        ("can_view_display_groups", "View Display Groups", "View display grouping structure", "hardware"),
+
+        // Studio & Layout
+        ("can_manage_layouts", "Manage Layouts", "Create, edit, duplicate, and publish visual layouts", "studio"),
+        ("can_view_layouts", "View Layouts", "View layout designs and preview canvases", "studio"),
+        ("can_manage_layers", "Manage Layers", "Add, arrange, and configure layout layers & zones", "studio"),
+        ("can_view_layers", "View Layers", "Inspect layout layer compositions", "studio"),
+        ("can_manage_playlists", "Manage Playlists", "Create playlists and order playlist items", "studio"),
+        ("can_view_playlists", "View Playlists", "View playlists and duration timing", "studio"),
+        ("can_manage_media", "Manage Media", "Upload, convert, tag, and delete media assets", "studio"),
+        ("can_view_media", "View Media", "Browse media library and inspect asset details", "studio"),
+        ("can_manage_schedules", "Manage Schedules", "Configure calendar schedules, recurring events & overrides", "studio"),
+        ("can_view_schedules", "View Schedules", "View playback timetable and event schedules", "studio"),
+
+        // Components & Dynamic Widgets
+        ("can_manage_tickers", "Manage Tickers", "Create and update running text ticker feeds", "components"),
+        ("can_view_tickers", "View Tickers", "View ticker items and news tickers", "components"),
+        ("can_manage_clocks", "Manage Clocks", "Configure clock, date, and prayer time widgets", "components"),
+        ("can_view_clocks", "View Clocks", "View clock widgets", "components"),
+        ("can_manage_webviews", "Manage Webviews", "Configure embedded web content and URL integrations", "components"),
+        ("can_view_webviews", "View Webviews", "View webview widgets", "components"),
+        ("can_manage_albums", "Manage Albums", "Manage photo galleries and promotional photo albums", "components"),
+        ("can_view_albums", "View Albums", "View photo albums", "components"),
+
+        // Smart Queue System
+        ("can_manage_queue", "Manage Queue", "Configure queue displays, sectors, counters, and call policies", "queue"),
+        ("can_view_queue", "View Queue", "View queue monitor and live counter statuses", "queue"),
+        ("can_operate_counter", "Operate Counter", "Call tickets, recall, advance, and transfer queue numbers", "queue"),
+        ("can_view_counter", "View Counter", "View queue counter interface", "queue"),
+        ("can_manage_queue_display", "Manage Queue Display", "Design and position queue display canvas widgets", "queue"),
+        ("can_view_queue_display", "View Queue Display", "Preview queue display screens", "queue"),
+        ("can_manage_queue_audio", "Manage Queue Audio", "Configure audio chimes, voice announcer & TTS presets", "queue"),
+        ("can_view_queue_audio", "View Queue Audio", "Inspect audio announcements and TTS voice configuration", "queue"),
+
+        // IoT & Hardware Buttons
+        ("can_manage_iot", "Manage IoT", "Register ESP32/Arduino queue buttons and configure button bindings", "iot"),
+        ("can_view_iot", "View IoT", "View IoT device health, ping telemetry, and button press events", "iot"),
+
+        // Distribution & Rollout
+        ("can_manage_distribution", "Manage Distribution", "Deploy layouts, dispatch sync signals, and manage canary stages", "distribution"),
+        ("can_view_distribution", "View Distribution", "View deployment history, canary groups, and delivery logs", "distribution"),
+
+        // Telemetry & Analytics
+        ("can_view_analytics", "View Analytics", "Inspect playback audit logs, uptime statistics, and proof-of-play reports", "analytics"),
+        ("can_export_analytics", "Export Analytics", "Export analytics data, playback reports, and telemetry to CSV/PDF", "analytics"),
     ];
 
     info!("Seeding permissions...");
-    let mut perm_ids = Vec::new();
+    let mut perm_map = std::collections::HashMap::new();
+    let mut all_perm_ids = Vec::new();
+
     for (code, name, desc, module) in permissions {
         let perm_id = match PermissionRepository::find_by_code(pool, code).await? {
             Some(existing) => existing.id,
@@ -48,53 +157,182 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Erro
                 }).await?.id
             }
         };
-        perm_ids.push(perm_id);
+        perm_map.insert(code.to_string(), perm_id);
+        all_perm_ids.push(perm_id);
     }
 
-    // 3. Seed System Roles
-    info!("Seeding roles...");
+    // Helper closure to resolve list of codes to Vec<Uuid>
+    let resolve_perms = |codes: &[&str]| -> Vec<Uuid> {
+        codes.iter().filter_map(|c| perm_map.get(*c).copied()).collect()
+    };
+
+    // 4. Seed System Roles (Corporate Scoped)
+    info!("Seeding system roles...");
     let superadmin_id = match RoleRepository::find_by_slug(pool, "superadmin").await? {
         Some(existing) => {
-            RoleService::assign_permissions(pool, existing.id, perm_ids).await?;
+            RoleService::assign_permissions(pool, existing.id, all_perm_ids.clone()).await?;
             existing.id
         }
         None => {
             RoleService::create_role(pool, CreateRoleDto {
+                corporation_id: Some(default_corp_id),
+                branch_id: None,
                 name: "Super Administrator".to_string(),
                 slug: "superadmin".to_string(),
-                description: Some("Full platform access to all signage operations and settings".to_string()),
-                permission_ids: Some(perm_ids),
+                description: Some("Full platform access to all signage operations, tenancies, and settings".to_string()),
+                permission_ids: Some(all_perm_ids.clone()),
+                created_by_user_id: None,
             }).await?.id
         }
     };
 
     if RoleRepository::find_by_slug(pool, "content-manager").await?.is_none() {
+        let content_perms = resolve_perms(&[
+            "can_view_dashboard", "can_view_layouts", "can_manage_layouts",
+            "can_view_layers", "can_manage_layers", "can_view_playlists", "can_manage_playlists",
+            "can_view_media", "can_manage_media", "can_view_schedules", "can_manage_schedules",
+            "can_view_tickers", "can_manage_tickers", "can_view_clocks", "can_manage_clocks",
+            "can_view_webviews", "can_manage_webviews", "can_view_albums", "can_manage_albums",
+        ]);
         RoleService::create_role(pool, CreateRoleDto {
+            corporation_id: Some(default_corp_id),
+            branch_id: None,
             name: "Content Manager".to_string(),
             slug: "content-manager".to_string(),
             description: Some("Can design layouts, manage media, and configure playlists".to_string()),
-            permission_ids: None,
+            permission_ids: Some(content_perms),
+            created_by_user_id: None,
         }).await?;
     }
 
     if RoleRepository::find_by_slug(pool, "device-operator").await?.is_none() {
+        let device_perms = resolve_perms(&[
+            "can_view_dashboard", "can_view_devices", "can_manage_devices", "can_pair_devices",
+            "can_view_display_groups", "can_view_queue", "can_view_queue_display", "can_view_iot",
+        ]);
         RoleService::create_role(pool, CreateRoleDto {
+            corporation_id: Some(default_corp_id),
+            branch_id: None,
             name: "Device Operator".to_string(),
             slug: "device-operator".to_string(),
             description: Some("Can view device fleet telemetry and pair displays".to_string()),
-            permission_ids: None,
+            permission_ids: Some(device_perms),
+            created_by_user_id: None,
         }).await?;
     }
 
-    // 4. Seed Default Superadmin User
+    // 5. Seed Flexible Role Groups (Directly bound to permission lists for flexible RBAC)
+    info!("Seeding flexible role groups with direct permission mappings...");
+
+    // Group 1: Retail & Branch Operations
+    let retail_ops_perms = resolve_perms(&[
+        "can_view_dashboard", "can_view_devices", "can_view_layouts", "can_view_playlists",
+        "can_view_schedules", "can_view_queue", "can_operate_counter", "can_view_counter",
+        "can_view_queue_display", "can_view_iot",
+    ]);
+    match RoleGroupRepository::find_by_slug(pool, "retail-ops").await? {
+        Some(group) => {
+            RoleGroupRepository::assign_permissions(pool, group.id, retail_ops_perms).await?;
+        }
+        None => {
+            RoleGroupService::create_role_group(pool, CreateRoleGroupDto {
+                corporation_id: Some(default_corp_id),
+                branch_id: None,
+                name: "Retail & Branch Operations".to_string(),
+                slug: "retail-ops".to_string(),
+                description: Some("Operational access for branch supervisors, queue managers, and store displays".to_string()),
+                role_ids: None,
+                permission_ids: Some(retail_ops_perms),
+                created_by_user_id: None,
+            }).await?;
+        }
+    }
+
+    // Group 2: Studio & Content Creative
+    let studio_creative_perms = resolve_perms(&[
+        "can_view_dashboard", "can_view_layouts", "can_manage_layouts",
+        "can_view_layers", "can_manage_layers", "can_view_playlists", "can_manage_playlists",
+        "can_view_media", "can_manage_media", "can_view_schedules", "can_manage_schedules",
+        "can_view_tickers", "can_manage_tickers", "can_view_clocks", "can_manage_clocks",
+        "can_view_webviews", "can_manage_webviews", "can_view_albums", "can_manage_albums",
+        "can_view_queue_display", "can_manage_queue_display",
+    ]);
+    match RoleGroupRepository::find_by_slug(pool, "studio-creative").await? {
+        Some(group) => {
+            RoleGroupRepository::assign_permissions(pool, group.id, studio_creative_perms).await?;
+        }
+        None => {
+            RoleGroupService::create_role_group(pool, CreateRoleGroupDto {
+                corporation_id: Some(default_corp_id),
+                branch_id: None,
+                name: "Studio & Content Creative".to_string(),
+                slug: "studio-creative".to_string(),
+                description: Some("Creative team access to layout designer, playlists, media studio, and widgets".to_string()),
+                role_ids: None,
+                permission_ids: Some(studio_creative_perms),
+                created_by_user_id: None,
+            }).await?;
+        }
+    }
+
+    // Group 3: Field Display & IoT Technician
+    let field_tech_perms = resolve_perms(&[
+        "can_view_dashboard", "can_view_devices", "can_manage_devices", "can_pair_devices",
+        "can_view_display_groups", "can_manage_display_groups", "can_view_iot", "can_manage_iot",
+        "can_view_queue_audio", "can_manage_queue_audio",
+    ]);
+    match RoleGroupRepository::find_by_slug(pool, "field-tech").await? {
+        Some(group) => {
+            RoleGroupRepository::assign_permissions(pool, group.id, field_tech_perms).await?;
+        }
+        None => {
+            RoleGroupService::create_role_group(pool, CreateRoleGroupDto {
+                corporation_id: Some(default_corp_id),
+                branch_id: None,
+                name: "Field Display & IoT Technician".to_string(),
+                slug: "field-tech".to_string(),
+                description: Some("Hardware installers, Android display fleet administrators, and IoT queue button engineers".to_string()),
+                role_ids: None,
+                permission_ids: Some(field_tech_perms),
+                created_by_user_id: None,
+            }).await?;
+        }
+    }
+
+    // Group 4: Cashier & Counter Operator
+    let counter_operator_perms = resolve_perms(&[
+        "can_view_queue", "can_operate_counter", "can_view_counter",
+    ]);
+    match RoleGroupRepository::find_by_slug(pool, "counter-operator").await? {
+        Some(group) => {
+            RoleGroupRepository::assign_permissions(pool, group.id, counter_operator_perms).await?;
+        }
+        None => {
+            RoleGroupService::create_role_group(pool, CreateRoleGroupDto {
+                corporation_id: Some(default_corp_id),
+                branch_id: None,
+                name: "Cashier & Counter Operator".to_string(),
+                slug: "counter-operator".to_string(),
+                description: Some("Dedicated access for counter staff, call buttons, and cashier service desks".to_string()),
+                role_ids: None,
+                permission_ids: Some(counter_operator_perms),
+                created_by_user_id: None,
+            }).await?;
+        }
+    }
+
+    // 6. Seed Default Superadmin User
     if UserRepository::find_by_email(pool, "superadmin@example.com").await?.is_none() {
         info!("Seeding default administrator user...");
         let _admin = UserService::create_user(pool, CreateUserDto {
+            corporation_id: Some(default_corp_id),
+            branch_id: Some(default_branch_id),
             email: "superadmin@example.com".to_string(),
             password: "superadmin".to_string(),
             full_name: "Master Signage Admin".to_string(),
             role_ids: Some(vec![superadmin_id]),
             role_group_ids: None,
+            created_by_user_id: None,
         }).await?;
     }
 
@@ -102,7 +340,7 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Erro
     Ok(())
 }
 
-async fn seed_lookups(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
+async fn seed_lookups(pool: &PgPool, default_corp_id: Uuid, default_branch_id: Uuid) -> Result<(), Box<dyn std::error::Error>> {
     info!("Seeding system orientations...");
     sqlx::query(
         r#"
@@ -196,27 +434,32 @@ async fn seed_lookups(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
     info!("Seeding default queue display and layout items...");
     sqlx::query(
         r#"
-        INSERT INTO components_queue_displays (id, name, prefix, canvas_width, canvas_height, background_color, theme_preset)
-        VALUES ('76a3e570-9807-40a5-ad74-e7bb28e382dc', 'Layar Antrian Baru', 'A', 1920, 1080, '#0f172a', 'medical-green')
-        ON CONFLICT (id) DO NOTHING;
+        INSERT INTO components_queue_displays (id, corporation_id, branch_id, name, prefix, canvas_width, canvas_height, background_color, theme_preset)
+        VALUES ('76a3e570-9807-40a5-ad74-e7bb28e382dc', $1, $2, 'Layar Antrian Baru', 'A', 1920, 1080, '#0f172a', 'medical-green')
+        ON CONFLICT (id) DO UPDATE SET
+            corporation_id = EXCLUDED.corporation_id,
+            branch_id = EXCLUDED.branch_id;
         "#,
     )
+    .bind(default_corp_id)
+    .bind(default_branch_id)
     .execute(pool)
     .await?;
 
     sqlx::query(
         r##"
         INSERT INTO components_queue_layout_items (
-            id, queue_display_id, item_type, name, x, y, width, height, z_index,
+            id, corporation_id, queue_display_id, item_type, name, x, y, width, height, z_index,
             background_color, text_color, font_size, font_weight, text_align,
             template_content, config, is_visible
         )
         VALUES
-            ('11111111-1111-1111-1111-111111111101', '76a3e570-9807-40a5-ad74-e7bb28e382dc', 'text_label', 'Judul Antrian', 60, 60, 1800, 70, 1, 'transparent', '#10b981', 36, '800', 'center', '$queue_name$', '{}'::jsonb, true),
-            ('11111111-1111-1111-1111-111111111102', '76a3e570-9807-40a5-ad74-e7bb28e382dc', 'ticket_number', 'Nomor Antrian Panggilan', 360, 190, 1200, 440, 2, 'transparent', '#10b981', 150, '900', 'center', '$queue_number$', '{"pulseOnCall": true}'::jsonb, true),
-            ('11111111-1111-1111-1111-111111111103', '76a3e570-9807-40a5-ad74-e7bb28e382dc', 'counter_loket', 'Label Loket', 710, 680, 500, 90, 3, '#059669', '#ffffff', 32, '800', 'center', '$queue_counter$', '{"borderRadius": 14, "badge": "LOKET TUJUAN"}'::jsonb, true),
-            ('11111111-1111-1111-1111-111111111104', '76a3e570-9807-40a5-ad74-e7bb28e382dc', 'marquee', 'Running Text Footer', 0, 990, 1920, 90, 4, '#064e3b', '#ffffff', 24, 'bold', 'left', 'PENGUMUMAN: Silakan menuju $queue_counter$ saat nomor $queue_number$ dipanggil. Terima kasih.', '{"speed": "normal", "direction": "left", "badge": "INFORMASI", "badgeColor": "#10b981"}'::jsonb, true)
+            ('11111111-1111-1111-1111-111111111101', $1, '76a3e570-9807-40a5-ad74-e7bb28e382dc', 'text_label', 'Judul Antrian', 60, 60, 1800, 70, 1, 'transparent', '#10b981', 36, '800', 'center', '$queue_name$', '{}'::jsonb, true),
+            ('11111111-1111-1111-1111-111111111102', $1, '76a3e570-9807-40a5-ad74-e7bb28e382dc', 'ticket_number', 'Nomor Antrian Panggilan', 360, 190, 1200, 440, 2, 'transparent', '#10b981', 150, '900', 'center', '$queue_number$', '{"pulseOnCall": true}'::jsonb, true),
+            ('11111111-1111-1111-1111-111111111103', $1, '76a3e570-9807-40a5-ad74-e7bb28e382dc', 'counter_loket', 'Label Loket', 710, 680, 500, 90, 3, '#059669', '#ffffff', 32, '800', 'center', '$queue_counter$', '{"borderRadius": 14, "badge": "LOKET TUJUAN"}'::jsonb, true),
+            ('11111111-1111-1111-1111-111111111104', $1, '76a3e570-9807-40a5-ad74-e7bb28e382dc', 'marquee', 'Running Text Footer', 0, 990, 1920, 90, 4, '#064e3b', '#ffffff', 24, 'bold', 'left', 'PENGUMUMAN: Silakan menuju $queue_counter$ saat nomor $queue_number$ dipanggil. Terima kasih.', '{"speed": "normal", "direction": "left", "badge": "INFORMASI", "badgeColor": "#10b981"}'::jsonb, true)
         ON CONFLICT (id) DO UPDATE SET
+            corporation_id = EXCLUDED.corporation_id,
             x = EXCLUDED.x,
             y = EXCLUDED.y,
             width = EXCLUDED.width,
@@ -228,6 +471,7 @@ async fn seed_lookups(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
             config = EXCLUDED.config;
         "##,
     )
+    .bind(default_corp_id)
     .execute(pool)
     .await?;
 

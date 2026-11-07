@@ -7,17 +7,22 @@ pub struct RoleRepository;
 impl RoleRepository {
     pub async fn create(pool: &DbPool, dto: CreateRoleDto) -> Result<RoleEntity, sqlx::Error> {
         let mut tx = pool.begin().await?;
+        let default_corp = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+        let corp_id = dto.corporation_id.unwrap_or(default_corp);
 
         let role = sqlx::query_as::<_, RoleEntity>(
             r#"
-            INSERT INTO iam_roles (name, slug, description)
-            VALUES ($1, $2, $3)
-            RETURNING id, name, slug, description, is_system, created_at, updated_at
+            INSERT INTO iam_roles (corporation_id, branch_id, name, slug, description, created_by_user_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, corporation_id, branch_id, name, slug, description, is_system, created_by_user_id, created_at, updated_at
             "#,
         )
+        .bind(corp_id)
+        .bind(dto.branch_id)
         .bind(dto.name)
         .bind(dto.slug)
         .bind(dto.description)
+        .bind(dto.created_by_user_id)
         .fetch_one(&mut *tx)
         .await?;
 
@@ -44,7 +49,7 @@ impl RoleRepository {
     pub async fn find_by_id(pool: &DbPool, id: Uuid) -> Result<Option<RoleEntity>, sqlx::Error> {
         let role = sqlx::query_as::<_, RoleEntity>(
             r#"
-            SELECT id, name, slug, description, is_system, created_at, updated_at
+            SELECT id, corporation_id, branch_id, name, slug, description, is_system, created_by_user_id, created_at, updated_at
             FROM iam_roles
             WHERE id = $1
             "#,
@@ -59,9 +64,10 @@ impl RoleRepository {
     pub async fn find_by_slug(pool: &DbPool, slug: &str) -> Result<Option<RoleEntity>, sqlx::Error> {
         let role = sqlx::query_as::<_, RoleEntity>(
             r#"
-            SELECT id, name, slug, description, is_system, created_at, updated_at
+            SELECT id, corporation_id, branch_id, name, slug, description, is_system, created_by_user_id, created_at, updated_at
             FROM iam_roles
             WHERE slug = $1
+            LIMIT 1
             "#,
         )
         .bind(slug)
@@ -74,7 +80,7 @@ impl RoleRepository {
     pub async fn find_all(pool: &DbPool) -> Result<Vec<RoleEntity>, sqlx::Error> {
         let roles = sqlx::query_as::<_, RoleEntity>(
             r#"
-            SELECT id, name, slug, description, is_system, created_at, updated_at
+            SELECT id, corporation_id, branch_id, name, slug, description, is_system, created_by_user_id, created_at, updated_at
             FROM iam_roles
             ORDER BY name ASC
             "#,
@@ -100,7 +106,7 @@ impl RoleRepository {
                 description = COALESCE($3, description),
                 updated_at = NOW()
             WHERE id = $1
-            RETURNING id, name, slug, description, is_system, created_at, updated_at
+            RETURNING id, corporation_id, branch_id, name, slug, description, is_system, created_by_user_id, created_at, updated_at
             "#,
         )
         .bind(id)

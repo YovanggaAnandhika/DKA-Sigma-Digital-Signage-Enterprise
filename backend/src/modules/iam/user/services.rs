@@ -58,11 +58,16 @@ impl UserService {
         let permissions = PermissionRepository::get_user_permissions(pool, user.id).await?;
 
         let exp = (Utc::now() + Duration::hours(config.jwt_expiration_hours)).timestamp();
+        let is_superadmin = permissions.iter().any(|p| p == "can_all_access") || user.email == "superadmin@example.com";
         let claims = Claims {
             sub: user.id.to_string(),
             email: user.email.clone(),
             permissions: permissions.clone(),
             exp,
+            corporation_id: Some(user.corporation_id.to_string()),
+            branch_id: user.branch_id.map(|b| b.to_string()),
+            is_superadmin,
+            impersonated_corporation_id: None,
         };
 
         let token = encode(

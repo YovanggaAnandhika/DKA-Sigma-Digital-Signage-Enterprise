@@ -77,18 +77,23 @@ impl UserServiceTrait for UserServiceImpl {
         &self,
         request: Request<CreateUserRequest>,
     ) -> Result<Response<User>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_iam")?;
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_iam")?;
         let req = request.into_inner();
 
         let role_ids = req.role_ids.into_iter().filter_map(|s| Uuid::parse_str(&s).ok()).collect::<Vec<_>>();
         let role_group_ids = req.role_group_ids.into_iter().filter_map(|s| Uuid::parse_str(&s).ok()).collect::<Vec<_>>();
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+        let user_id = Uuid::parse_str(&claims.sub).ok();
 
         let dto = CreateUserDto {
+            corporation_id: corp_id,
+            branch_id: None,
             email: req.email,
             password: req.password,
             full_name: req.full_name,
             role_ids: if role_ids.is_empty() { None } else { Some(role_ids) },
             role_group_ids: if role_group_ids.is_empty() { None } else { Some(role_group_ids) },
+            created_by_user_id: user_id,
         };
 
         let user = UserService::create_user(&self.pool, dto)

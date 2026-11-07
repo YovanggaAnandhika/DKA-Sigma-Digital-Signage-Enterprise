@@ -11,17 +11,22 @@ impl UserRepository {
         password_hash: String,
     ) -> Result<UserEntity, sqlx::Error> {
         let mut tx = pool.begin().await?;
+        let default_corp = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+        let corp_id = dto.corporation_id.unwrap_or(default_corp);
 
         let user = sqlx::query_as::<_, UserEntity>(
             r#"
-            INSERT INTO iam_users (email, password_hash, full_name)
-            VALUES ($1, $2, $3)
-            RETURNING id, email, password_hash, full_name, is_active, created_at, updated_at
+            INSERT INTO iam_users (corporation_id, branch_id, email, password_hash, full_name, created_by_user_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, corporation_id, branch_id, email, password_hash, full_name, is_active, created_by_user_id, created_at, updated_at
             "#,
         )
+        .bind(corp_id)
+        .bind(dto.branch_id)
         .bind(dto.email)
         .bind(password_hash)
         .bind(dto.full_name)
+        .bind(dto.created_by_user_id)
         .fetch_one(&mut *tx)
         .await?;
 
@@ -64,7 +69,7 @@ impl UserRepository {
     pub async fn find_by_id(pool: &DbPool, id: Uuid) -> Result<Option<UserEntity>, sqlx::Error> {
         let user = sqlx::query_as::<_, UserEntity>(
             r#"
-            SELECT id, email, password_hash, full_name, is_active, created_at, updated_at
+            SELECT id, corporation_id, branch_id, email, password_hash, full_name, is_active, created_by_user_id, created_at, updated_at
             FROM iam_users
             WHERE id = $1
             "#,
@@ -79,7 +84,7 @@ impl UserRepository {
     pub async fn find_by_email(pool: &DbPool, email: &str) -> Result<Option<UserEntity>, sqlx::Error> {
         let user = sqlx::query_as::<_, UserEntity>(
             r#"
-            SELECT id, email, password_hash, full_name, is_active, created_at, updated_at
+            SELECT id, corporation_id, branch_id, email, password_hash, full_name, is_active, created_by_user_id, created_at, updated_at
             FROM iam_users
             WHERE email = $1
             "#,
@@ -94,7 +99,7 @@ impl UserRepository {
     pub async fn find_all(pool: &DbPool) -> Result<Vec<UserEntity>, sqlx::Error> {
         let users = sqlx::query_as::<_, UserEntity>(
             r#"
-            SELECT id, email, password_hash, full_name, is_active, created_at, updated_at
+            SELECT id, corporation_id, branch_id, email, password_hash, full_name, is_active, created_by_user_id, created_at, updated_at
             FROM iam_users
             ORDER BY created_at DESC
             "#,
@@ -120,7 +125,7 @@ impl UserRepository {
                 is_active = COALESCE($3, is_active),
                 updated_at = NOW()
             WHERE id = $1
-            RETURNING id, email, password_hash, full_name, is_active, created_at, updated_at
+            RETURNING id, corporation_id, branch_id, email, password_hash, full_name, is_active, created_by_user_id, created_at, updated_at
             "#,
         )
         .bind(id)
@@ -187,7 +192,7 @@ impl UserRepository {
     pub async fn get_user_roles(pool: &DbPool, user_id: Uuid) -> Result<Vec<crate::modules::iam::role::model::RoleEntity>, sqlx::Error> {
         sqlx::query_as::<_, crate::modules::iam::role::model::RoleEntity>(
             r#"
-            SELECT r.id, r.name, r.slug, r.description, r.is_system, r.created_at, r.updated_at
+            SELECT r.id, r.corporation_id, r.branch_id, r.name, r.slug, r.description, r.is_system, r.created_by_user_id, r.created_at, r.updated_at
             FROM iam_roles r
             JOIN iam_user_roles ur ON ur.role_id = r.id
             WHERE ur.user_id = $1
@@ -201,7 +206,7 @@ impl UserRepository {
     pub async fn get_user_role_groups(pool: &DbPool, user_id: Uuid) -> Result<Vec<crate::modules::iam::role_group::model::RoleGroupEntity>, sqlx::Error> {
         sqlx::query_as::<_, crate::modules::iam::role_group::model::RoleGroupEntity>(
             r#"
-            SELECT rg.id, rg.name, rg.slug, rg.description, rg.created_at, rg.updated_at
+            SELECT rg.id, rg.corporation_id, rg.branch_id, rg.name, rg.slug, rg.description, rg.created_by_user_id, rg.created_at, rg.updated_at
             FROM iam_role_groups rg
             JOIN iam_user_role_groups urg ON urg.role_group_id = rg.id
             WHERE urg.user_id = $1

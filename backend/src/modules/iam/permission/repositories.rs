@@ -116,7 +116,8 @@ impl PermissionRepository {
         pool: &DbPool,
         user_id: Uuid,
     ) -> Result<Vec<String>, sqlx::Error> {
-        // Collect permissions directly assigned through user_roles AND indirectly through user_role_groups
+        // Collect permissions directly assigned through user_roles, indirectly through role groups,
+        // and directly via iam_role_group_permissions
         let rows = sqlx::query_scalar::<_, String>(
             r#"
             SELECT DISTINCT p.code
@@ -130,6 +131,12 @@ impl PermissionRepository {
             JOIN iam_role_permissions rp ON rp.permission_id = p.id
             JOIN iam_role_group_roles rgr ON rgr.role_id = rp.role_id
             JOIN iam_user_role_groups urg ON urg.role_group_id = rgr.role_group_id
+            WHERE urg.user_id = $1
+            UNION
+            SELECT DISTINCT p.code
+            FROM iam_permissions p
+            JOIN iam_role_group_permissions rgp ON rgp.permission_id = p.id
+            JOIN iam_user_role_groups urg ON urg.role_group_id = rgp.role_group_id
             WHERE urg.user_id = $1
             "#,
         )
