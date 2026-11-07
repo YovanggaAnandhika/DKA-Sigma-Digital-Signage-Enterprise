@@ -175,11 +175,15 @@ export function getStoredSession() {
 export function saveSession(session: any): void {
   if (typeof window !== 'undefined') {
     localStorage.setItem('dkasigma_session', JSON.stringify(session));
+    // Clear any leftover impersonation on new login to guarantee authentic scope
+    iamModule.clearImpersonatedCorporation();
   }
 }
 
 export function clearSession(): void {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('dkasigma_session');
+    // Ensure all tenant impersonation state is completely wiped on logout
+    iamModule.clearImpersonatedCorporation();
   }
 }
