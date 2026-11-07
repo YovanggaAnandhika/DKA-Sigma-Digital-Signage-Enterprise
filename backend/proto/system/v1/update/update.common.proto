@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package signage.system.v1.update;
+
+message AppRelease {
+  string id = 1;
+  int32 version_code = 2;
+  string version_name = 3;
+  string apk_file_url = 4;
+  int64 file_size_bytes = 5;
+  string sha256_hash = 6;
+  string release_notes = 7;
+  bool is_force_update = 8;
+  int32 min_supported_version_code = 9;
+  bool is_active = 10;
+  string created_at = 11;
+}
+
+message CreateAppReleaseRequest {
+  int32 version_code = 1;
+  string version_name = 2;
+  string apk_file_url = 3;
+  int64 file_size_bytes = 4;
+  string sha256_hash = 5;
+  string release_notes = 6;
+  bool is_force_update = 7;
+  int32 min_supported_version_code = 8;
+}
+
+message GetLatestReleaseRequest {
+  optional int32 current_version_code = 1;
+}
+
+message ListAppReleasesRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  optional bool only_active = 3;
+}
+
+message ListAppReleasesResponse {
+  repeated AppRelease items = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message DeleteAppReleaseRequest {
+  string id = 1;
+}
+
+message DeleteAppReleaseResponse {
+  bool success = 1;
+}
+
+message ToggleAppReleaseActiveRequest {
+  string id = 1;
+  bool is_active = 2;
+}
+
+message CheckDeviceAppUpdateRequest {
+  string device_id = 1;
+  int32 current_version_code = 2;
+  string current_version_name = 3;
+}
+
+message CheckDeviceAppUpdateResponse {
+  bool update_available = 1;
+  optional AppRelease latest_release = 2;
+  bool is_force_update = 3;
+}
+

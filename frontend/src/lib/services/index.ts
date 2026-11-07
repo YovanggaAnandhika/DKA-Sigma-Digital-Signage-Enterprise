@@ -10,17 +10,20 @@ export * from './iam';
 export * from './hardware';
 export * from './studio';
 export * from './common';
+export * from './system';
 
 // Re-export domain namespaces for direct modular consumption:
 import * as iamModule from './iam';
 import * as hardwareModule from './hardware';
 import * as studioModule from './studio';
 import * as commonModule from './common';
+import * as systemModule from './system';
 
 export const iam = iamModule;
 export const hardware = hardwareModule;
 export const studio = studioModule;
 export const common = commonModule;
+export const system = systemModule;
 
 // Unified namespace backward-compatible export
 export const api = {

@@ -14,6 +14,7 @@ import {
   Layers,
   Cpu,
   Building,
+  Smartphone,
 } from 'lucide-react';
 import { useSidebar } from './SidebarProvider';
 
@@ -132,6 +133,15 @@ const navGroups: NavGroup[] = [
         color: '#ea580c',
         rgb: '234, 88, 12',
         gradient: 'linear-gradient(135deg, #f97316 0%, #c2410c 100%)',
+      },
+      {
+        name: 'Pembaruan APK',
+        desc: 'Distribusi OTA & Kiosk',
+        href: '/system/apk',
+        icon: Smartphone,
+        color: '#0284c7',
+        rgb: '2, 132, 199',
+        gradient: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
       },
     ],
   },

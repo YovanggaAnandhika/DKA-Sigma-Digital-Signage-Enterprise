@@ -149,6 +149,13 @@ pub mod proto {
             }
         }
     }
+    pub mod system {
+        pub mod v1 {
+            pub mod update {
+                tonic::include_proto!("signage.system.v1.update");
+            }
+        }
+    }
 }
 
 // Subfolder domains mirroring proto & modules:
@@ -161,6 +168,7 @@ pub mod iot;
 pub mod middleware;
 pub mod speech;
 pub mod studio;
+pub mod system;
 
 #[macro_export]
 macro_rules! register_grpc_services {
@@ -171,6 +179,7 @@ macro_rules! register_grpc_services {
         let router = crate::register_components_services!(router, $pool, $stream_manager);
         let router = crate::register_iot_services!(router, $pool, $stream_manager);
         let router = crate::register_distribution_services!(router, $pool, $stream_manager);
+        let router = crate::register_system_services!(router, $pool);
         let router = router.add_service(
             crate::grpc::proto::speech::v1::tts::tts_service_server::TtsServiceServer::new(
                 crate::grpc::speech::tts::service::TtsServiceImpl::new($pool.clone())

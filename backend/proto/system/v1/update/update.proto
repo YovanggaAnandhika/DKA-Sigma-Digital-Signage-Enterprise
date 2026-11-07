@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package signage.system.v1.update;
+
+import "system/v1/update/update.common.proto";
+
+service AppUpdateService {
+  rpc GetLatestAppRelease(GetLatestReleaseRequest) returns (AppRelease);
+  rpc ListAppReleases(ListAppReleasesRequest) returns (ListAppReleasesResponse);
+  rpc CreateAppRelease(CreateAppReleaseRequest) returns (AppRelease);
+  rpc DeleteAppRelease(DeleteAppReleaseRequest) returns (DeleteAppReleaseResponse);
+  rpc ToggleAppReleaseActive(ToggleAppReleaseActiveRequest) returns (AppRelease);
+  rpc CheckDeviceAppUpdate(CheckDeviceAppUpdateRequest) returns (CheckDeviceAppUpdateResponse);
+}
+
