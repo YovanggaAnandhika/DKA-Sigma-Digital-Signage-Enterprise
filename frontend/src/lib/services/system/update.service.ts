@@ -14,6 +14,25 @@ export interface AppRelease {
   createdAt: string;
 }
 
+export interface DeviceReleaseStatus {
+  deviceId: string;
+  deviceName: string;
+  branchName: string;
+  ipAddress: string;
+  currentAppVersion: string;
+  isUpdated: boolean;
+  isOnline: boolean;
+  lastSeenAt: string;
+}
+
+export interface AppReleaseDetail {
+  release: AppRelease;
+  totalDevices: number;
+  updatedDevicesCount: number;
+  outdatedDevicesCount: number;
+  devices: DeviceReleaseStatus[];
+}
+
 export async function listAppReleases(params?: {
   page?: number;
   pageSize?: number;
@@ -41,6 +60,24 @@ export async function getLatestAppRelease(currentVersionCode?: number): Promise<
   return invokeApi<AppRelease>('/api/grpc/system/update/GetLatestAppRelease', { currentVersionCode });
 }
 
+export async function getAppRelease(id: string): Promise<AppReleaseDetail> {
+  const res = await invokeApi<{
+    release: AppRelease;
+    totalDevices: number;
+    updatedDevicesCount: number;
+    outdatedDevicesCount: number;
+    devicesList?: DeviceReleaseStatus[];
+  }>('/api/grpc/system/update/GetAppRelease', { id });
+
+  return {
+    release: res.release,
+    totalDevices: res.totalDevices || 0,
+    updatedDevicesCount: res.updatedDevicesCount || 0,
+    outdatedDevicesCount: res.outdatedDevicesCount || 0,
+    devices: res.devicesList || [],
+  };
+}
+
 export async function createAppRelease(data: {
   versionCode: number;
   versionName: string;
@@ -61,4 +98,3 @@ export async function deleteAppRelease(id: string): Promise<{ success: boolean }
 export async function toggleAppReleaseActive(id: string, isActive: boolean): Promise<AppRelease> {
   return invokeApi<AppRelease>('/api/grpc/system/update/ToggleAppReleaseActive', { id, isActive });
 }
-

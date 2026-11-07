@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Smartphone,
   Upload,
@@ -18,6 +19,7 @@ import {
 import { system, AppRelease } from '@/lib/services';
 
 export default function ApkManagementPage() {
+  const router = useRouter();
   const [releases, setReleases] = useState<AppRelease[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -367,10 +369,19 @@ export default function ApkManagementPage() {
                 {releases.map((release) => (
                   <tr
                     key={release.id}
+                    onClick={() => router.push(`/system/apk/${release.id}`)}
                     style={{
                       borderBottom: '1px solid var(--border-subtle)',
                       transition: 'background-color 0.15s ease',
+                      cursor: 'pointer',
                     }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--hover-surface)';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                    }}
+                    title={`Klik untuk melihat detail rilis v${release.versionName} & sebaran layar`}
                   >
                     <td style={{ padding: '14px 18px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -408,7 +419,10 @@ export default function ApkManagementPage() {
                           {release.sha256Hash.substring(0, 8)}...{release.sha256Hash.substring(release.sha256Hash.length - 8)}
                         </code>
                         <button
-                          onClick={() => handleCopyHash(release.sha256Hash)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyHash(release.sha256Hash);
+                          }}
                           className="btn btn-outline"
                           style={{ width: '26px', height: '26px', padding: 0, borderRadius: '6px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                           title="Salin Hash SHA-256"
@@ -452,7 +466,10 @@ export default function ApkManagementPage() {
 
                     <td style={{ padding: '14px 18px' }}>
                       <button
-                        onClick={() => handleToggleActive(release)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleActive(release);
+                        }}
                         disabled={togglingId === release.id}
                         style={{
                           background: 'none',
@@ -491,6 +508,9 @@ export default function ApkManagementPage() {
                         <a
                           href={release.apkFileUrl}
                           download={`dka-signage-v${release.versionName}.apk`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
                           style={{
                             width: '32px',
                             height: '32px',
@@ -509,7 +529,10 @@ export default function ApkManagementPage() {
                           <Download size={14} />
                         </a>
                         <button
-                          onClick={() => handleDelete(release.id, release.versionName)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(release.id, release.versionName);
+                          }}
                           disabled={deletingId === release.id}
                           style={{
                             width: '32px',

@@ -31,6 +31,29 @@ message GetLatestReleaseRequest {
   optional int32 current_version_code = 1;
 }
 
+message GetAppReleaseRequest {
+  string id = 1;
+}
+
+message DeviceReleaseStatus {
+  string device_id = 1;
+  string device_name = 2;
+  string branch_name = 3;
+  string ip_address = 4;
+  string current_app_version = 5;
+  bool is_updated = 6;
+  bool is_online = 7;
+  string last_seen_at = 8;
+}
+
+message AppReleaseDetailResponse {
+  AppRelease release = 1;
+  int32 total_devices = 2;
+  int32 updated_devices_count = 3;
+  int32 outdated_devices_count = 4;
+  repeated DeviceReleaseStatus devices = 5;
+}
+
 message ListAppReleasesRequest {
   int32 page = 1;
   int32 page_size = 2;
@@ -68,4 +91,3 @@ message CheckDeviceAppUpdateResponse {
   optional AppRelease latest_release = 2;
   bool is_force_update = 3;
 }
-
