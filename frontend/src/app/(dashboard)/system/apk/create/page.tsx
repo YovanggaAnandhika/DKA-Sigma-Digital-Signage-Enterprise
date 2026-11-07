@@ -119,7 +119,7 @@ export default function CreateApkReleasePage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '800px', margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
       {/* Top Bar with Circular Icon-Only Back Button */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         <Link
