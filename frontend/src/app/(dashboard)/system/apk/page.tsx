@@ -287,41 +287,84 @@ export default function ApkManagementPage() {
           </div>
         )}
 
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--hover-surface)', color: 'var(--text-muted)' }}>
-                <th style={{ padding: '12px 18px', fontWeight: 600 }}>Versi & Build</th>
-                <th style={{ padding: '12px 18px', fontWeight: 600 }}>Ukuran Berkas</th>
-                <th style={{ padding: '12px 18px', fontWeight: 600 }}>Integritas (SHA-256)</th>
-                <th style={{ padding: '12px 18px', fontWeight: 600 }}>Mode Distribusi</th>
-                <th style={{ padding: '12px 18px', fontWeight: 600 }}>Status Aktif</th>
-                <th style={{ padding: '12px 18px', fontWeight: 600 }}>Tanggal Unggah</th>
-                <th style={{ padding: '12px 18px', fontWeight: 600, textAlign: 'right' }}>Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={7} style={{ padding: '36px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 10px' }} />
-                    <p style={{ margin: 0 }}>Memuat daftar berkas APK...</p>
-                  </td>
+        {loading ? (
+          <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 10px' }} />
+            <p style={{ margin: 0 }}>Memuat daftar berkas APK...</p>
+          </div>
+        ) : releases.length === 0 ? (
+          <div
+            style={{
+              padding: '64px 24px',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '14px',
+            }}
+          >
+            <div
+              style={{
+                width: '60px',
+                height: '60px',
+                borderRadius: '16px',
+                backgroundColor: 'rgba(2, 132, 199, 0.12)',
+                border: '1px solid rgba(2, 132, 199, 0.25)',
+                color: '#0284c7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Smartphone size={30} />
+            </div>
+            <div>
+              <h3 style={{ margin: '0 0 6px', fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-primary)' }}>
+                Belum Ada Rilis APK Terdaftar
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: '460px', lineHeight: 1.5 }}>
+                Unggah berkas binary APK pertama untuk mendistribusikan pembaruan Over-the-Air (OTA) ke seluruh perangkat player Android.
+              </p>
+            </div>
+            <Link
+              href="/system/apk/create"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 22px',
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                color: '#ffffff',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                textDecoration: 'none',
+                boxShadow: '0 4px 14px rgba(2, 132, 199, 0.35)',
+                transition: 'all 0.2s ease',
+                marginTop: '8px',
+              }}
+            >
+              <Upload size={16} />
+              <span>Unggah APK Sekarang</span>
+            </Link>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--hover-surface)', color: 'var(--text-muted)' }}>
+                  <th style={{ padding: '12px 18px', fontWeight: 600 }}>Versi & Build</th>
+                  <th style={{ padding: '12px 18px', fontWeight: 600 }}>Ukuran Berkas</th>
+                  <th style={{ padding: '12px 18px', fontWeight: 600 }}>Integritas (SHA-256)</th>
+                  <th style={{ padding: '12px 18px', fontWeight: 600 }}>Mode Distribusi</th>
+                  <th style={{ padding: '12px 18px', fontWeight: 600 }}>Status Aktif</th>
+                  <th style={{ padding: '12px 18px', fontWeight: 600 }}>Tanggal Unggah</th>
+                  <th style={{ padding: '12px 18px', fontWeight: 600, textAlign: 'right' }}>Aksi</th>
                 </tr>
-              ) : releases.length === 0 ? (
-                <tr>
-                  <td colSpan={7} style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    <Smartphone size={36} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-                    <p style={{ margin: '0 0 12px', fontWeight: 600, color: 'var(--text-primary)' }}>Belum ada rilis APK terdaftar</p>
-                    <p style={{ margin: '0 0 16px', fontSize: '0.8rem' }}>Unggah berkas binary APK pertama untuk mendistribusikan pembaruan ke seluruh player Android.</p>
-                    <Link href="/system/apk/create" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '10px', textDecoration: 'none' }}>
-                      <Upload size={16} />
-                      <span>Unggah APK Sekarang</span>
-                    </Link>
-                  </td>
-                </tr>
-              ) : (
-                releases.map((release) => (
+              </thead>
+              <tbody>
+                {releases.map((release) => (
                   <tr
                     key={release.id}
                     style={{
@@ -448,7 +491,6 @@ export default function ApkManagementPage() {
                         <a
                           href={release.apkFileUrl}
                           download={`dka-signage-v${release.versionName}.apk`}
-                          className="btn btn-outline"
                           style={{
                             width: '32px',
                             height: '32px',
@@ -457,7 +499,10 @@ export default function ApkManagementPage() {
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center',
+                            border: '1px solid var(--border-subtle)',
+                            backgroundColor: 'var(--bg-surface)',
                             color: 'var(--text-primary)',
+                            textDecoration: 'none',
                           }}
                           title="Unduh Berkas APK"
                         >
@@ -466,7 +511,6 @@ export default function ApkManagementPage() {
                         <button
                           onClick={() => handleDelete(release.id, release.versionName)}
                           disabled={deletingId === release.id}
-                          className="btn btn-outline"
                           style={{
                             width: '32px',
                             height: '32px',
@@ -475,8 +519,10 @@ export default function ApkManagementPage() {
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center',
+                            border: '1px solid rgba(239, 68, 68, 0.2)',
+                            backgroundColor: 'rgba(239, 68, 68, 0.08)',
                             color: '#ef4444',
-                            borderColor: 'rgba(239, 68, 68, 0.2)',
+                            cursor: 'pointer',
                           }}
                           title="Hapus Rilis"
                         >
@@ -485,13 +531,12 @@ export default function ApkManagementPage() {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-
