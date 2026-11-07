@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldAlert, ArrowRight, Monitor } from 'lucide-react';
 import { loginWithGrpc, saveSession } from '@/lib/auth';
+
+const REMEMBERED_EMAIL_KEY = 'hndsigma_remembered_email';
 
 interface LoginFormProps {
   setIsExiting: (val: boolean) => void;
@@ -11,14 +13,32 @@ interface LoginFormProps {
 export default function LoginForm({ setIsExiting }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberEmail, setRememberEmail] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    try {
+      const savedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY);
+      if (savedEmail) {
+        setEmail(savedEmail);
+        setRememberEmail(true);
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setLoading(true);
     try {
+      if (rememberEmail) {
+        localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+      } else {
+        localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+      }
       const session = await loginWithGrpc(email, password);
       saveSession(session);
       setIsExiting(true);
@@ -85,18 +105,21 @@ export default function LoginForm({ setIsExiting }: LoginFormProps) {
           </div>
         )}
 
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Username */}
+        <form onSubmit={handleLogin} method="post" action="/login" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Email */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151' }}>
-              Username
+            <label htmlFor="email" style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151' }}>
+              Email
             </label>
             <input
+              id="email"
+              name="email"
               type="email"
               required
+              autoComplete="username email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Masukkan username"
+              placeholder="nama@perusahaan.com"
               style={{
                 width: '100%', padding: '12px 16px',
                 fontSize: '0.9375rem',
@@ -119,12 +142,15 @@ export default function LoginForm({ setIsExiting }: LoginFormProps) {
 
           {/* Password */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151' }}>
+            <label htmlFor="password" style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151' }}>
               Password
             </label>
             <input
+              id="password"
+              name="password"
               type="password"
               required
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
@@ -146,6 +172,35 @@ export default function LoginForm({ setIsExiting }: LoginFormProps) {
                 e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
               }}
             />
+          </div>
+
+          {/* Remember Email Checkbox */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '-4px' }}>
+            <label
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                userSelect: 'none',
+                fontSize: '0.875rem',
+                color: '#475569',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={rememberEmail}
+                onChange={(e) => setRememberEmail(e.target.checked)}
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '4px',
+                  accentColor: '#1d4ed8',
+                  cursor: 'pointer',
+                }}
+              />
+              <span>Ingat email saya</span>
+            </label>
           </div>
 
           {/* Submit */}
