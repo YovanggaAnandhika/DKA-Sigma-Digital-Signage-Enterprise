@@ -34,12 +34,15 @@ export function getGrpcClient<T>(ClientClass: new (address: string, credentials:
 }
 
 /**
- * Helper to get authorization metadata if needed
+ * Helper to get authorization and tenant impersonation metadata if needed
  */
-export function getGrpcMetadata(token?: string): grpc.Metadata {
+export function getGrpcMetadata(token?: string, corporationId?: string): grpc.Metadata {
   const metadata = new grpc.Metadata();
   if (token) {
     metadata.add('authorization', `Bearer ${token}`);
+  }
+  if (corporationId) {
+    metadata.add('x-corporation-id', corporationId);
   }
   return metadata;
 }
@@ -58,6 +61,20 @@ export function getTokenFromRequest(req: Request): string | undefined {
     if (tokenQuery) return tokenQuery;
   } catch (_) {}
   return undefined;
+}
+
+/**
+ * Helper to extract corporation impersonation ID from request
+ */
+export function getCorporationIdFromRequest(req: Request): string | undefined {
+  return req.headers.get('x-corporation-id') || undefined;
+}
+
+/**
+ * Convenience helper to build full metadata (token + tenant) directly from request
+ */
+export function getGrpcMetadataFromRequest(req: Request): grpc.Metadata {
+  return getGrpcMetadata(getTokenFromRequest(req), getCorporationIdFromRequest(req));
 }
 
 

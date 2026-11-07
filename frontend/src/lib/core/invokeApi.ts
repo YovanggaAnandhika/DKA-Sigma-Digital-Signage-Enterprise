@@ -7,6 +7,10 @@ export async function invokeApi<T>(endpoint: string, payload: any): Promise<T> {
         const session = JSON.parse(raw);
         if (session && session.token) headers['authorization'] = `Bearer ${session.token}`;
       }
+      const impersonatedCorp = localStorage.getItem('dkasigma_impersonated_corp_id');
+      if (impersonatedCorp) {
+        headers['x-corporation-id'] = impersonatedCorp;
+      }
     } catch {}
   }
   

@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Sun, Moon, LogOut, Menu, X, ChevronDown, ShieldCheck, Sparkles } from 'lucide-react';
+import { Sun, Moon, LogOut, Menu, X, ChevronDown, ShieldCheck, Sparkles, ShieldAlert } from 'lucide-react';
 import { useSidebar } from './SidebarProvider';
 import { useTheme } from './ThemeProvider';
 import { getStoredSession, clearSession, UserSession } from '../lib/auth';
+import { api, ImpersonatedCorporation } from '../lib/services';
 import { useRouter } from 'next/navigation';
 
 export function Navbar() {
@@ -12,11 +13,26 @@ export function Navbar() {
   const { theme, toggleTheme } = useTheme();
   const [profileOpen, setProfileOpen] = useState(false);
   const [session, setSession] = useState<UserSession | null>(null);
+  const [impersonatedCorp, setImpersonatedCorp] = useState<ImpersonatedCorporation | null>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   useEffect(() => {
     setSession(getStoredSession());
+
+    const syncImpersonation = () => {
+      const current = api.getImpersonatedCorporation();
+      // If someone set default-corp as impersonated, clear it
+      if (current?.slug === 'default-corp' || current?.id === '00000000-0000-0000-0000-000000000001') {
+        api.clearImpersonatedCorporation();
+        setImpersonatedCorp(null);
+      } else {
+        setImpersonatedCorp(current);
+      }
+    };
+    syncImpersonation();
+    window.addEventListener('dkasigma_impersonation_change', syncImpersonation);
+    return () => window.removeEventListener('dkasigma_impersonation_change', syncImpersonation);
   }, []);
 
   useEffect(() => {
@@ -121,6 +137,56 @@ export function Navbar() {
             ONLINE
           </span>
         </div>
+
+        {impersonatedCorp && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '5px 14px',
+              borderRadius: '24px',
+              backgroundColor: 'rgba(245, 158, 11, 0.14)',
+              border: '1px solid rgba(245, 158, 11, 0.45)',
+              boxShadow: '0 2px 8px rgba(245, 158, 11, 0.12)',
+            }}
+          >
+            <ShieldAlert size={15} style={{ color: '#d97706', flexShrink: 0 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.725rem', textTransform: 'uppercase', fontWeight: 800, color: '#b45309', letterSpacing: '0.04em' }}>
+                Impersonasi:
+              </span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                {impersonatedCorp.name}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                api.clearImpersonatedCorporation();
+                window.location.reload();
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '2px 8px',
+                marginLeft: '4px',
+                borderRadius: '12px',
+                backgroundColor: 'rgba(245, 158, 11, 0.25)',
+                border: '1px solid rgba(245, 158, 11, 0.4)',
+                color: '#d97706',
+                cursor: 'pointer',
+                fontSize: '0.725rem',
+                fontWeight: 700,
+                transition: 'all 0.15s ease',
+              }}
+              title="Keluar dari mode impersonasi dan kembali ke akun utama superadmin"
+            >
+              <span>Keluar</span>
+              <X size={12} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Right Controls */}

@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package signage.iam.v1.branch;
+
+import "common/v1/types.proto";
+
+message Branch {
+  string id = 1;
+  string corporation_id = 2;
+  string name = 3;
+  string code = 4;
+  string address = 5;
+  bool is_active = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message CreateBranchRequest {
+  string corporation_id = 1;
+  string name = 2;
+  string code = 3;
+  string address = 4;
+}
+
+message GetBranchRequest {
+  string id = 1;
+}
+
+message ListBranchesRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string corporation_id = 2;
+  string search = 3;
+}
+
+message ListBranchesResponse {
+  repeated Branch items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateBranchRequest {
+  string id = 1;
+  string name = 2;
+  string code = 3;
+  string address = 4;
+  bool is_active = 5;
+}
+
+message DeleteBranchRequest {
+  string id = 1;
+}
+
+message DeleteBranchResponse {
+  bool success = 1;
+}
+

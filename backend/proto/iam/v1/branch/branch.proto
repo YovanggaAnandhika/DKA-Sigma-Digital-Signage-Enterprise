@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package signage.iam.v1.branch;
+
+import "iam/v1/branch/branch.common.proto";
+
+service BranchService {
+  rpc CreateBranch(CreateBranchRequest) returns (Branch);
+  rpc GetBranch(GetBranchRequest) returns (Branch);
+  rpc ListBranches(ListBranchesRequest) returns (ListBranchesResponse);
+  rpc UpdateBranch(UpdateBranchRequest) returns (Branch);
+  rpc DeleteBranch(DeleteBranchRequest) returns (DeleteBranchResponse);
+}
+

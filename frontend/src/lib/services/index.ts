@@ -52,6 +52,22 @@ export const api = {
   deleteUser: iamModule.deleteUser,
   login: iamModule.login,
 
+  // IAM - Corporation & Branch & Impersonation
+  getCorporations: iamModule.getCorporations,
+  getCorporation: iamModule.getCorporation,
+  createCorporation: iamModule.createCorporation,
+  updateCorporation: iamModule.updateCorporation,
+  deleteCorporation: iamModule.deleteCorporation,
+  getImpersonatedCorporation: iamModule.getImpersonatedCorporation,
+  setImpersonatedCorporation: iamModule.setImpersonatedCorporation,
+  clearImpersonatedCorporation: iamModule.clearImpersonatedCorporation,
+
+  getBranches: iamModule.getBranches,
+  getBranch: iamModule.getBranch,
+  createBranch: iamModule.createBranch,
+  updateBranch: iamModule.updateBranch,
+  deleteBranch: iamModule.deleteBranch,
+
   // Hardware
   getDevices: hardwareModule.getDevices,
   getDevice: hardwareModule.getDevice,

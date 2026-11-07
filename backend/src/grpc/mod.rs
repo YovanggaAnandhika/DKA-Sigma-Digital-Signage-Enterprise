@@ -13,6 +13,12 @@ pub mod proto {
     }
     pub mod iam {
         pub mod v1 {
+            pub mod corporation {
+                tonic::include_proto!("signage.iam.v1.corporation");
+            }
+            pub mod branch {
+                tonic::include_proto!("signage.iam.v1.branch");
+            }
             pub mod permission {
                 tonic::include_proto!("signage.iam.v1.permission");
             }

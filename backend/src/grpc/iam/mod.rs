@@ -1,3 +1,5 @@
+pub mod branch;
+pub mod corporation;
 pub mod permission;
 pub mod role;
 pub mod role_group;
@@ -7,6 +9,12 @@ pub mod user;
 macro_rules! register_iam_services {
     ($router:expr, $pool:expr, $config:expr) => {
         $router
+            .add_service(crate::grpc::proto::iam::v1::corporation::corporation_service_server::CorporationServiceServer::new(
+                crate::grpc::iam::corporation::service::CorporationServiceImpl::new($pool.clone())
+            ))
+            .add_service(crate::grpc::proto::iam::v1::branch::branch_service_server::BranchServiceServer::new(
+                crate::grpc::iam::branch::service::BranchServiceImpl::new($pool.clone())
+            ))
             .add_service(crate::grpc::proto::iam::v1::permission::permission_service_server::PermissionServiceServer::new(
                 crate::grpc::iam::permission::service::PermissionServiceImpl::new($pool.clone())
             ))

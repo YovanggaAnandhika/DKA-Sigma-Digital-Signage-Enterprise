@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package signage.iam.v1.corporation;
+
+import "iam/v1/corporation/corporation.common.proto";
+
+service CorporationService {
+  rpc CreateCorporation(CreateCorporationRequest) returns (Corporation);
+  rpc GetCorporation(GetCorporationRequest) returns (Corporation);
+  rpc GetCorporationBySlug(GetCorporationBySlugRequest) returns (Corporation);
+  rpc ListCorporations(ListCorporationsRequest) returns (ListCorporationsResponse);
+  rpc UpdateCorporation(UpdateCorporationRequest) returns (Corporation);
+  rpc DeleteCorporation(DeleteCorporationRequest) returns (DeleteCorporationResponse);
+}
+

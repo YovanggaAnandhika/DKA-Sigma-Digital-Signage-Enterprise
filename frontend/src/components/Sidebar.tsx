@@ -13,6 +13,7 @@ import {
   CalendarDays,
   Layers,
   Cpu,
+  Building,
 } from 'lucide-react';
 import { useSidebar } from './SidebarProvider';
 
@@ -55,6 +56,7 @@ const navGroups: NavGroup[] = [
   {
     heading: 'SISTEM & AKSES',
     items: [
+      { name: 'Identitas', desc: 'Perusahaan & Cabang', href: '/iam/identity', icon: Building },
       { name: 'Hak Akses & Peran', desc: 'Pengaturan Akun & Peran', href: '/iam/roles', icon: ShieldCheck },
     ],
   },

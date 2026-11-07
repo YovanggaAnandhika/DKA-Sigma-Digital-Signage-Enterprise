@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package signage.iam.v1.corporation;
+
+import "common/v1/types.proto";
+
+message Corporation {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  string description = 4;
+  string active_until = 5;
+  int32 max_screens = 6;
+  int32 max_branches = 7;
+  string subscription_tier = 8;
+  bool is_active = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+message CreateCorporationRequest {
+  string name = 1;
+  string slug = 2;
+  string description = 3;
+  string active_until = 4;
+  int32 max_screens = 5;
+  int32 max_branches = 6;
+  string subscription_tier = 7;
+}
+
+message GetCorporationRequest {
+  string id = 1;
+}
+
+message GetCorporationBySlugRequest {
+  string slug = 1;
+}
+
+message ListCorporationsRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+}
+
+message ListCorporationsResponse {
+  repeated Corporation items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateCorporationRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string active_until = 4;
+  int32 max_screens = 5;
+  int32 max_branches = 6;
+  string subscription_tier = 7;
+  bool is_active = 8;
+}
+
+message DeleteCorporationRequest {
+  string id = 1;
+}
+
+message DeleteCorporationResponse {
+  bool success = 1;
+}
+
