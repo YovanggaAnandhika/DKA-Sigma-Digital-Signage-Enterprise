@@ -13,13 +13,17 @@ impl ScheduleRepository {
         pool: &DbPool,
         dto: CreateScheduleDto,
     ) -> Result<ScheduleEntity, sqlx::Error> {
+        let corp_id = dto.corporation_id.unwrap_or_else(|| Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
         let schedule = sqlx::query_as::<_, ScheduleEntity>(
             r#"
-            INSERT INTO studio_schedules (name, description)
-            VALUES ($1, $2)
+            INSERT INTO studio_schedules (corporation_id, branch_id, created_by_user_id, name, description)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
             "#,
         )
+        .bind(corp_id)
+        .bind(dto.branch_id)
+        .bind(dto.created_by_user_id)
         .bind(dto.name)
         .bind(dto.description)
         .fetch_one(pool)
@@ -51,12 +55,21 @@ impl ScheduleRepository {
         }
     }
 
-    pub async fn find_all(pool: &DbPool) -> Result<Vec<ScheduleEntity>, sqlx::Error> {
-        let schedules = sqlx::query_as::<_, ScheduleEntity>(
-            "SELECT * FROM studio_schedules ORDER BY created_at DESC",
-        )
-        .fetch_all(pool)
-        .await?;
+    pub async fn find_all(pool: &DbPool, corporation_id: Option<Uuid>) -> Result<Vec<ScheduleEntity>, sqlx::Error> {
+        let schedules = if let Some(corp_id) = corporation_id {
+            sqlx::query_as::<_, ScheduleEntity>(
+                "SELECT * FROM studio_schedules WHERE corporation_id = $1 ORDER BY created_at DESC",
+            )
+            .bind(corp_id)
+            .fetch_all(pool)
+            .await?
+        } else {
+            sqlx::query_as::<_, ScheduleEntity>(
+                "SELECT * FROM studio_schedules ORDER BY created_at DESC",
+            )
+            .fetch_all(pool)
+            .await?
+        };
 
         Ok(schedules)
     }

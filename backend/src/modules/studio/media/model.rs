@@ -6,6 +6,8 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct MediaEntity {
     pub id: Uuid,
+    pub corporation_id: Uuid,
+    pub branch_id: Option<Uuid>,
     pub name: String,
     pub original_filename: String,
     pub file_path: String,
@@ -18,12 +20,16 @@ pub struct MediaEntity {
     pub height: i32,
     pub duration_seconds: i32,
     pub thumbnail_url: Option<String>,
+    pub created_by_user_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct CreateMediaDto {
+    pub corporation_id: Uuid,
+    pub branch_id: Option<Uuid>,
+    pub created_by_user_id: Option<Uuid>,
     pub name: String,
     pub original_filename: String,
     pub file_path: String,

@@ -170,9 +170,13 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         &self,
         request: Request<CreateScheduleRequest>,
     ) -> Result<Response<Schedule>, Status> {
-        let _claims =
+        let claims =
             crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
         let req = request.into_inner();
+        let corp_id = claims.active_corporation_id().and_then(|s| Uuid::parse_str(s).ok());
+        let branch_id = claims.branch_id.as_deref().and_then(|s| Uuid::parse_str(s).ok());
+        let user_id = Uuid::parse_str(&claims.sub).ok();
+
         let dto = CreateScheduleDto {
             name: req.name,
             description: if req.description.is_empty() {
@@ -180,6 +184,9 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
             } else {
                 Some(req.description)
             },
+            corporation_id: corp_id,
+            branch_id,
+            created_by_user_id: user_id,
         };
 
         let schedule = ScheduleService::create_schedule(&self.pool, dto)
@@ -211,8 +218,9 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         &self,
         request: Request<ListSchedulesRequest>,
     ) -> Result<Response<ListSchedulesResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_view_schedules")?;
-        let schedules = ScheduleService::list_schedules(&self.pool)
+        let claims = crate::grpc::middleware::require_permission(&request, "can_view_schedules")?;
+        let corp_id = claims.active_corporation_id().and_then(|s| Uuid::parse_str(s).ok());
+        let schedules = ScheduleService::list_schedules(&self.pool, corp_id)
             .await
             .map_err(Status::from)?;
 

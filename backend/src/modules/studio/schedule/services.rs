@@ -32,8 +32,8 @@ impl ScheduleService {
         Ok(schedule)
     }
 
-    pub async fn list_schedules(pool: &DbPool) -> Result<Vec<ScheduleEntity>, AppError> {
-        let schedules = ScheduleRepository::find_all(pool)
+    pub async fn list_schedules(pool: &DbPool, corporation_id: Option<Uuid>) -> Result<Vec<ScheduleEntity>, AppError> {
+        let schedules = ScheduleRepository::find_all(pool, corporation_id)
             .await
             .map_err(AppError::Database)?;
         Ok(schedules)

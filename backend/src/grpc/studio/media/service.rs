@@ -97,7 +97,10 @@ impl MediaServiceTrait for MediaServiceImpl {
         &self,
         request: Request<CreateMediaRequest>,
     ) -> Result<Response<MediaItem>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_media")?;
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_media")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok()).unwrap_or_else(|| Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
+        let branch_id = claims.branch_id.as_deref().and_then(|b| Uuid::parse_str(b).ok());
+        let user_id = Uuid::parse_str(&claims.sub).ok();
         let req = request.into_inner();
 
         let media_type_str = match req.media_type() {
@@ -109,6 +112,9 @@ impl MediaServiceTrait for MediaServiceImpl {
         };
 
         let dto = CreateMediaDto {
+            corporation_id: corp_id,
+            branch_id,
+            created_by_user_id: user_id,
             name: req.name,
             original_filename: req.original_filename,
             file_path: req.file_path,
@@ -150,8 +156,9 @@ impl MediaServiceTrait for MediaServiceImpl {
         &self,
         request: Request<ListMediaRequest>,
     ) -> Result<Response<ListMediaResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_view_media")?;
-        let media_list = MediaService::list_media(&self.pool)
+        let claims = crate::grpc::middleware::require_permission(&request, "can_view_media")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+        let media_list = MediaService::list_media(&self.pool, corp_id)
             .await
             .map_err(Status::from)?;
 

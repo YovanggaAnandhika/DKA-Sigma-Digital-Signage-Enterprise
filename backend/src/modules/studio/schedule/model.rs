@@ -6,8 +6,11 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ScheduleEntity {
     pub id: Uuid,
+    pub corporation_id: Option<Uuid>,
+    pub branch_id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
+    pub created_by_user_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -38,6 +41,9 @@ pub struct ScheduleWithEventsDto {
 pub struct CreateScheduleDto {
     pub name: String,
     pub description: Option<String>,
+    pub corporation_id: Option<Uuid>,
+    pub branch_id: Option<Uuid>,
+    pub created_by_user_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]

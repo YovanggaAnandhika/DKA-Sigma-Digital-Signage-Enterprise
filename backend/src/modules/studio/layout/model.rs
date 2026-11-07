@@ -9,14 +9,17 @@ use crate::modules::studio::layer::layer::model::LayerWithBlocksDto;
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct LayoutEntity {
     pub id: Uuid,
+    pub corporation_id: Option<Uuid>,
+    pub branch_id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
     pub resolution_id: Option<Uuid>,
     pub canvas_width: i32,
     pub canvas_height: i32,
-    pub orientation_id: Uuid,
-    pub background_color: String,
+    pub orientation_id: Option<Uuid>,
+    pub background_color: Option<String>,
     pub background_image_url: Option<String>,
+    pub created_by_user_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -39,6 +42,9 @@ pub struct CreateLayoutDto {
     pub background_color: Option<String>,
     pub background_image_url: Option<String>,
     pub resolution_id: Option<Uuid>,
+    pub corporation_id: Option<Uuid>,
+    pub branch_id: Option<Uuid>,
+    pub created_by_user_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]

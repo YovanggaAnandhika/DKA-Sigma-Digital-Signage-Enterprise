@@ -110,7 +110,7 @@ impl DeviceServiceTrait for DeviceServiceImpl {
         &self,
         request: Request<PairDeviceRequest>,
     ) -> Result<Response<PairDeviceResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
         let req = request.into_inner();
 
         let device_id = if !req.device_id.is_empty() {
@@ -128,12 +128,18 @@ impl DeviceServiceTrait for DeviceServiceImpl {
 
         let default_layout_id = req.default_layout_id.as_deref().and_then(|s| Uuid::parse_str(s).ok());
         let canary_group_id = req.canary_group_id.as_deref().and_then(|s| Uuid::parse_str(s).ok());
+        let corp_id = claims.active_corporation_id().and_then(|s| Uuid::parse_str(s).ok());
+        let branch_id = claims.branch_id.as_deref().and_then(|s| Uuid::parse_str(s).ok());
+        let user_id = Uuid::parse_str(&claims.sub).ok();
 
         let dto = PairDeviceDto {
             device_id,
             device_name: req.device_name,
             default_layout_id,
             canary_group_id,
+            corporation_id: corp_id,
+            branch_id,
+            created_by_user_id: user_id,
         };
 
         let res = DeviceService::pair_device(&self.pool, dto)
@@ -297,8 +303,9 @@ impl DeviceServiceTrait for DeviceServiceImpl {
         &self,
         request: Request<ListDevicesRequest>,
     ) -> Result<Response<ListDevicesResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
-        let devices = DeviceService::list_devices(&self.pool)
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
+        let corp_id = claims.active_corporation_id().and_then(|s| Uuid::parse_str(s).ok());
+        let devices = DeviceService::list_devices(&self.pool, corp_id)
             .await
             .map_err(Status::from)?;
 

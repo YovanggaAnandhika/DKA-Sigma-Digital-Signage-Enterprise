@@ -6,9 +6,12 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct PlaylistEntity {
     pub id: Uuid,
+    pub corporation_id: Option<Uuid>,
+    pub branch_id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
     pub is_shuffle: bool,
+    pub created_by_user_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -52,6 +55,9 @@ pub struct CreatePlaylistDto {
     pub name: String,
     pub description: Option<String>,
     pub is_shuffle: Option<bool>,
+    pub corporation_id: Option<Uuid>,
+    pub branch_id: Option<Uuid>,
+    pub created_by_user_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]

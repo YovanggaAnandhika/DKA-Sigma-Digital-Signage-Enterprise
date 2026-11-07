@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS studio_playlists (
     branch_id UUID REFERENCES system_branches(id) ON DELETE SET NULL,
     name VARCHAR(150) NOT NULL,
     description TEXT,
+    is_shuffle BOOLEAN NOT NULL DEFAULT FALSE,
     created_by_user_id UUID REFERENCES iam_users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

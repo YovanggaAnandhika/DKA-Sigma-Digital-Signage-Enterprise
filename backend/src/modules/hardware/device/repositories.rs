@@ -174,6 +174,9 @@ impl DeviceRepository {
         token_hash: &str,
         default_layout_id: Option<Uuid>,
         canary_group_id: Option<Uuid>,
+        corporation_id: Option<Uuid>,
+        branch_id: Option<Uuid>,
+        created_by_user_id: Option<Uuid>,
     ) -> Result<DeviceEntity, sqlx::Error> {
         let mut tx = pool.begin().await?;
 
@@ -186,6 +189,9 @@ impl DeviceRepository {
                 device_token_hash = $3,
                 current_layout_id = COALESCE($4, current_layout_id),
                 canary_group_id = COALESCE($5, canary_group_id),
+                corporation_id = COALESCE($6, corporation_id),
+                branch_id = COALESCE($7, branch_id),
+                created_by_user_id = COALESCE($8, created_by_user_id),
                 updated_at = NOW()
             WHERE id = $1
             RETURNING *
@@ -196,17 +202,23 @@ impl DeviceRepository {
         .bind(token_hash)
         .bind(default_layout_id)
         .bind(canary_group_id)
+        .bind(corporation_id)
+        .bind(branch_id)
+        .bind(created_by_user_id)
         .fetch_one(&mut *tx)
         .await?;
 
         sqlx::query(
             r#"
-            INSERT INTO hardware_device_pairings (device_id, pairing_code, status, paired_at, device_token)
-            VALUES ($1, 'APPROVED', 'paired', NOW(), $2)
+            INSERT INTO hardware_device_pairings (device_id, pairing_code, status, paired_at, device_token, corporation_id, branch_id, approved_by_user_id)
+            VALUES ($1, 'APPROVED', 'paired', NOW(), $2, $3, $4, $5)
             "#,
         )
         .bind(device_id)
         .bind(raw_token)
+        .bind(corporation_id)
+        .bind(branch_id)
+        .bind(created_by_user_id)
         .execute(&mut *tx)
         .await?;
 
@@ -320,12 +332,21 @@ impl DeviceRepository {
         Ok(())
     }
 
-    pub async fn find_all(pool: &DbPool) -> Result<Vec<DeviceEntity>, sqlx::Error> {
-        let devices = sqlx::query_as::<_, DeviceEntity>(
-            "SELECT * FROM hardware_devices ORDER BY is_online DESC, name ASC",
-        )
-        .fetch_all(pool)
-        .await?;
+    pub async fn find_all(pool: &DbPool, corporation_id: Option<Uuid>) -> Result<Vec<DeviceEntity>, sqlx::Error> {
+        let devices = if let Some(corp_id) = corporation_id {
+            sqlx::query_as::<_, DeviceEntity>(
+                "SELECT * FROM hardware_devices WHERE corporation_id = $1 ORDER BY is_online DESC, name ASC",
+            )
+            .bind(corp_id)
+            .fetch_all(pool)
+            .await?
+        } else {
+            sqlx::query_as::<_, DeviceEntity>(
+                "SELECT * FROM hardware_devices ORDER BY is_online DESC, name ASC",
+            )
+            .fetch_all(pool)
+            .await?
+        };
 
         Ok(devices)
     }

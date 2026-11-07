@@ -339,10 +339,10 @@ impl ManifestService {
         let mut hasher = Sha256::new();
         hasher.update(
             format!(
-                "{}:{}:{:?}:{}:{}:{}",
+                "{}:{}:{}:{}:{}:{}",
                 effective_layout_id,
-                layout.background_color,
-                layout.background_image_url,
+                layout.background_color.as_deref().unwrap_or("#000000"),
+                layout.background_image_url.as_deref().unwrap_or(""),
                 layout.canvas_width,
                 layout.canvas_height,
                 enriched_zones.len()
@@ -432,8 +432,8 @@ impl ManifestService {
             layout_name: layout.name,
             canvas_width: layout.canvas_width,
             canvas_height: layout.canvas_height,
-            orientation: layout.orientation_id.to_string(),
-            background_color: layout.background_color,
+            orientation: layout.orientation_id.map(|o| o.to_string()).unwrap_or_default(),
+            background_color: layout.background_color.unwrap_or_else(|| "#000000".to_string()),
             background_image_url: layout.background_image_url,
             resolution_id: layout.resolution_id,
             layers: enriched_zones,

@@ -42,7 +42,7 @@ impl LayoutServiceImpl {
                 created_at: o.created_at.to_rfc3339(),
                 updated_at: o.updated_at.to_rfc3339(),
             }),
-            background_color: dto.layout.background_color,
+            background_color: dto.layout.background_color.unwrap_or_else(|| "#000000".to_string()),
             background_image_url: dto.layout.background_image_url.unwrap_or_default(),
             created_at: dto.layout.created_at.to_rfc3339(),
             updated_at: dto.layout.updated_at.to_rfc3339(),
@@ -61,8 +61,12 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         &self,
         request: Request<CreateLayoutRequest>,
     ) -> Result<Response<ProtoLayout>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
+        let corp_id = claims.active_corporation_id().and_then(|s| Uuid::from_str(s).ok());
+        let branch_id = claims.branch_id.as_deref().and_then(|s| Uuid::from_str(s).ok());
+        let user_id = Uuid::from_str(&claims.sub).ok();
+
         let orientation_id = if req.orientation_id.is_empty() {
             let orientation_value = if req.canvas_width >= req.canvas_height { "landscape" } else { "portrait" };
             let record = sqlx::query_as::<_, (Uuid,)>(
@@ -88,6 +92,9 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             background_color: if req.background_color.is_empty() { None } else { Some(req.background_color) },
             background_image_url: if req.background_image_url.is_empty() { None } else { Some(req.background_image_url) },
             resolution_id,
+            corporation_id: corp_id,
+            branch_id,
+            created_by_user_id: user_id,
         };
 
         let layout = LayoutService::create_layout(&self.pool, dto)
@@ -150,8 +157,9 @@ impl LayoutServiceTrait for LayoutServiceImpl {
         &self,
         request: Request<ListLayoutsRequest>,
     ) -> Result<Response<ListLayoutsResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_view_layouts")?;
-        let layouts = LayoutService::list_layouts(&self.pool)
+        let claims = crate::grpc::middleware::require_permission(&request, "can_view_layouts")?;
+        let corp_id = claims.active_corporation_id().and_then(|s| Uuid::from_str(s).ok());
+        let layouts = LayoutService::list_layouts(&self.pool, corp_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 

@@ -9,13 +9,17 @@ impl MediaRepository {
         let media = sqlx::query_as::<_, MediaEntity>(
             r#"
             INSERT INTO studio_media_items (
+                corporation_id, branch_id, created_by_user_id,
                 name, original_filename, file_path, public_url, file_size_bytes,
                 mime_type, sha256_hash, media_type, width, height, duration_seconds, thumbnail_url
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             RETURNING *
             "#,
         )
+        .bind(dto.corporation_id)
+        .bind(dto.branch_id)
+        .bind(dto.created_by_user_id)
         .bind(dto.name)
         .bind(dto.original_filename)
         .bind(dto.file_path)
@@ -43,12 +47,24 @@ impl MediaRepository {
         Ok(media)
     }
 
-    pub async fn find_all(pool: &DbPool) -> Result<Vec<MediaEntity>, sqlx::Error> {
-        let items = sqlx::query_as::<_, MediaEntity>(
-            "SELECT * FROM studio_media_items ORDER BY created_at DESC",
-        )
-        .fetch_all(pool)
-        .await?;
+    pub async fn find_all(pool: &DbPool, corporation_id: Option<Uuid>) -> Result<Vec<MediaEntity>, sqlx::Error> {
+        let items = match corporation_id {
+            Some(corp_id) => {
+                sqlx::query_as::<_, MediaEntity>(
+                    "SELECT * FROM studio_media_items WHERE corporation_id = $1 ORDER BY created_at DESC",
+                )
+                .bind(corp_id)
+                .fetch_all(pool)
+                .await?
+            }
+            None => {
+                sqlx::query_as::<_, MediaEntity>(
+                    "SELECT * FROM studio_media_items ORDER BY created_at DESC",
+                )
+                .fetch_all(pool)
+                .await?
+            }
+        };
 
         Ok(items)
     }

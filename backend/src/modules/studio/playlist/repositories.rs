@@ -12,13 +12,17 @@ impl PlaylistRepository {
         pool: &DbPool,
         dto: CreatePlaylistDto,
     ) -> Result<PlaylistEntity, sqlx::Error> {
+        let corp_id = dto.corporation_id.unwrap_or_else(|| Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
         let playlist = sqlx::query_as::<_, PlaylistEntity>(
             r#"
-            INSERT INTO studio_playlists (name, description, is_shuffle)
-            VALUES ($1, $2, $3)
+            INSERT INTO studio_playlists (corporation_id, branch_id, created_by_user_id, name, description, is_shuffle)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
             "#,
         )
+        .bind(corp_id)
+        .bind(dto.branch_id)
+        .bind(dto.created_by_user_id)
         .bind(dto.name)
         .bind(dto.description)
         .bind(dto.is_shuffle.unwrap_or(false))
@@ -42,12 +46,21 @@ impl PlaylistRepository {
         Ok(playlist)
     }
 
-    pub async fn find_all(pool: &DbPool) -> Result<Vec<PlaylistEntity>, sqlx::Error> {
-        let playlists = sqlx::query_as::<_, PlaylistEntity>(
-            "SELECT * FROM studio_playlists ORDER BY name ASC",
-        )
-        .fetch_all(pool)
-        .await?;
+    pub async fn find_all(pool: &DbPool, corporation_id: Option<Uuid>) -> Result<Vec<PlaylistEntity>, sqlx::Error> {
+        let playlists = if let Some(corp_id) = corporation_id {
+            sqlx::query_as::<_, PlaylistEntity>(
+                "SELECT * FROM studio_playlists WHERE corporation_id = $1 ORDER BY name ASC",
+            )
+            .bind(corp_id)
+            .fetch_all(pool)
+            .await?
+        } else {
+            sqlx::query_as::<_, PlaylistEntity>(
+                "SELECT * FROM studio_playlists ORDER BY name ASC",
+            )
+            .fetch_all(pool)
+            .await?
+        };
 
         Ok(playlists)
     }

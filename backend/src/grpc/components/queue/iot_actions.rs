@@ -90,8 +90,9 @@ impl QueueServiceImpl {
                    b.ticket_prefix, b.counter_id, c.counter_name
             FROM components_queue_iot_bindings b
             JOIN components_queue_displays q ON q.id = b.queue_display_id
+            JOIN iot_devices d ON d.id = b.iot_device_id
             LEFT JOIN components_queue_counters c ON c.id = b.counter_id
-            WHERE b.iot_device_id = $1
+            WHERE b.iot_device_id = $1 AND d.is_approved = TRUE AND (d.corporation_id IS NULL OR d.corporation_id = q.corporation_id)
             ORDER BY q.name
             "#,
         )

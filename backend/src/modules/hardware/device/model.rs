@@ -6,6 +6,8 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct DeviceEntity {
     pub id: Uuid,
+    pub corporation_id: Option<Uuid>,
+    pub branch_id: Option<Uuid>,
     pub name: String,
     pub is_paired: bool,
     #[serde(skip_serializing)]
@@ -33,6 +35,7 @@ pub struct DeviceEntity {
     pub sleep_time: Option<NaiveTime>,
     pub wake_time: Option<NaiveTime>,
     pub power_schedule_enabled: bool,
+    pub created_by_user_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -56,6 +59,9 @@ pub struct PairDeviceDto {
     pub device_name: Option<String>,
     pub default_layout_id: Option<Uuid>,
     pub canary_group_id: Option<Uuid>,
+    pub corporation_id: Option<Uuid>,
+    pub branch_id: Option<Uuid>,
+    pub created_by_user_id: Option<Uuid>,
 }
 
 #[derive(Debug, Serialize)]

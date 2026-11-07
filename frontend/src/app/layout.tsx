@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { DialogProvider } from '@/components/ui/ModalDialog';
+import { ImpersonationProvider } from '@/context/ImpersonationContext';
 
 export const metadata: Metadata = {
   title: 'HNDSigma | Modern Retail Digital Signage Platform',
@@ -18,7 +19,9 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <DialogProvider>
-            {children}
+            <ImpersonationProvider>
+              {children}
+            </ImpersonationProvider>
           </DialogProvider>
         </ThemeProvider>
       </body>

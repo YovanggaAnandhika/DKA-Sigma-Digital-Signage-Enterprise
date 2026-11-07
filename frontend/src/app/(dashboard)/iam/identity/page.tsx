@@ -25,12 +25,13 @@ import {
   ImpersonatedCorporation,
 } from '@/lib/services';
 import { getStoredSession, UserSession } from '@/lib/auth';
+import { useImpersonation } from '@/context/ImpersonationContext';
 import { modal } from '@/components/ui/ModalDialog';
 
 export default function IdentityPage() {
   const [activeTab, setActiveTab] = useState<'corporations' | 'branches'>('corporations');
   const [session, setSession] = useState<UserSession | null>(null);
-  const [impersonatedCorp, setImpersonatedCorp] = useState<ImpersonatedCorporation | null>(null);
+  const { impersonatedCorp, startImpersonation, stopImpersonation } = useImpersonation();
 
   // Corporations state
   const [corporations, setCorporations] = useState<Corporation[]>([]);
@@ -43,27 +44,9 @@ export default function IdentityPage() {
   const [selectedCorpFilter, setSelectedCorpFilter] = useState<string>('');
   const [loadingBranches, setLoadingBranches] = useState(true);
 
-  // Sync impersonation state from localStorage
-  const syncImpersonationState = useCallback(() => {
-    const current = api.getImpersonatedCorporation();
-    // Default corporation is superadmin's own tenant, never impersonated
-    if (current?.slug === 'default-corp' || current?.id === '00000000-0000-0000-0000-000000000001') {
-      api.clearImpersonatedCorporation();
-      setImpersonatedCorp(null);
-    } else {
-      setImpersonatedCorp(current);
-    }
-  }, []);
-
   useEffect(() => {
     setSession(getStoredSession());
-    syncImpersonationState();
-    const handleStorageChange = () => syncImpersonationState();
-    window.addEventListener('dkasigma_impersonation_change', handleStorageChange);
-    return () => {
-      window.removeEventListener('dkasigma_impersonation_change', handleStorageChange);
-    };
-  }, [syncImpersonationState]);
+  }, []);
 
   // Load Corporations
   const loadCorporations = useCallback(async () => {
@@ -104,7 +87,7 @@ export default function IdentityPage() {
 
   // Handle Impersonation
   const handleStartImpersonation = (corp: Corporation) => {
-    api.setImpersonatedCorporation({
+    startImpersonation({
       id: corp.id,
       name: corp.name,
       slug: corp.slug,
@@ -117,7 +100,7 @@ export default function IdentityPage() {
   };
 
   const handleStopImpersonation = () => {
-    api.clearImpersonatedCorporation();
+    stopImpersonation();
     modal.alert({
       title: 'Impersonasi Dihentikan',
       message: 'Anda telah kembali ke korporasi default master administrator.',

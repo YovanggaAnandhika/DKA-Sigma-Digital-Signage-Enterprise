@@ -23,11 +23,28 @@ export async function POST(req: NextRequest) {
           // If expiresAt is in unix seconds (less than 10^11), convert to milliseconds
           const expiresAtMs = rawExpiresAt < 100000000000 ? rawExpiresAt * 1000 : rawExpiresAt;
 
+          let corporationId = '';
+          let branchId = '';
+          if (resObj.token) {
+            try {
+              const payloadBase64 = resObj.token.split('.')[1];
+              if (payloadBase64) {
+                const payloadJson = JSON.parse(Buffer.from(payloadBase64, 'base64').toString('utf-8'));
+                corporationId = payloadJson.corporation_id || '';
+                branchId = payloadJson.branch_id || '';
+              }
+            } catch (e) {
+              // fallback
+            }
+          }
+
           const userSession = {
             id: u?.id || '',
             email: u?.email || body.email,
             fullName: u?.fullName || u?.full_name || '',
             token: resObj.token,
+            corporationId,
+            branchId,
             effectivePermissions: u?.effectivePermissionsList || [],
             expiresAt: expiresAtMs || (Date.now() + 24 * 3600 * 1000),
           };

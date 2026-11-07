@@ -9,16 +9,21 @@ pub struct LayoutRepository;
 
 impl LayoutRepository {
     pub async fn create(pool: &DbPool, dto: CreateLayoutDto) -> Result<LayoutEntity, sqlx::Error> {
+        let corp_id = dto.corporation_id.unwrap_or_else(|| Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
         let layout = sqlx::query_as::<_, LayoutEntity>(
             r#"
             INSERT INTO studio_layouts (
+                corporation_id, branch_id, created_by_user_id,
                 name, description, canvas_width, canvas_height, orientation_id,
                 background_color, background_image_url, resolution_id
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             RETURNING *
             "#,
         )
+        .bind(corp_id)
+        .bind(dto.branch_id)
+        .bind(dto.created_by_user_id)
         .bind(dto.name)
         .bind(dto.description)
         .bind(dto.canvas_width.unwrap_or(1920))
@@ -42,12 +47,21 @@ impl LayoutRepository {
         Ok(layout)
     }
 
-    pub async fn find_all(pool: &DbPool) -> Result<Vec<LayoutEntity>, sqlx::Error> {
-        let layouts = sqlx::query_as::<_, LayoutEntity>(
-            "SELECT * FROM studio_layouts ORDER BY name ASC",
-        )
-        .fetch_all(pool)
-        .await?;
+    pub async fn find_all(pool: &DbPool, corporation_id: Option<Uuid>) -> Result<Vec<LayoutEntity>, sqlx::Error> {
+        let layouts = if let Some(corp_id) = corporation_id {
+            sqlx::query_as::<_, LayoutEntity>(
+                "SELECT * FROM studio_layouts WHERE corporation_id = $1 ORDER BY name ASC",
+            )
+            .bind(corp_id)
+            .fetch_all(pool)
+            .await?
+        } else {
+            sqlx::query_as::<_, LayoutEntity>(
+                "SELECT * FROM studio_layouts ORDER BY name ASC",
+            )
+            .fetch_all(pool)
+            .await?
+        };
 
         Ok(layouts)
     }

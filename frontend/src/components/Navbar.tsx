@@ -4,35 +4,22 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Sun, Moon, LogOut, Menu, X, ChevronDown, ShieldCheck, Sparkles, ShieldAlert } from 'lucide-react';
 import { useSidebar } from './SidebarProvider';
 import { useTheme } from './ThemeProvider';
+import { useImpersonation } from '@/context/ImpersonationContext';
 import { getStoredSession, clearSession, UserSession } from '../lib/auth';
-import { api, ImpersonatedCorporation } from '../lib/services';
+import { api } from '../lib/services';
 import { useRouter } from 'next/navigation';
 
 export function Navbar() {
   const { collapsed, toggle } = useSidebar();
   const { theme, toggleTheme } = useTheme();
+  const { impersonatedCorp, stopImpersonation } = useImpersonation();
   const [profileOpen, setProfileOpen] = useState(false);
   const [session, setSession] = useState<UserSession | null>(null);
-  const [impersonatedCorp, setImpersonatedCorp] = useState<ImpersonatedCorporation | null>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   useEffect(() => {
     setSession(getStoredSession());
-
-    const syncImpersonation = () => {
-      const current = api.getImpersonatedCorporation();
-      // If someone set default-corp as impersonated, clear it
-      if (current?.slug === 'default-corp' || current?.id === '00000000-0000-0000-0000-000000000001') {
-        api.clearImpersonatedCorporation();
-        setImpersonatedCorp(null);
-      } else {
-        setImpersonatedCorp(current);
-      }
-    };
-    syncImpersonation();
-    window.addEventListener('dkasigma_impersonation_change', syncImpersonation);
-    return () => window.removeEventListener('dkasigma_impersonation_change', syncImpersonation);
   }, []);
 
   useEffect(() => {
@@ -162,7 +149,7 @@ export function Navbar() {
             </div>
             <button
               onClick={() => {
-                api.clearImpersonatedCorporation();
+                stopImpersonation();
                 window.location.reload();
               }}
               style={{

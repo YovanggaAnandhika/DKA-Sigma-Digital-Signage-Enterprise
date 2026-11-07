@@ -3,6 +3,8 @@ export interface UserSession {
   email: string;
   fullName: string;
   token: string;
+  corporationId?: string;
+  branchId?: string;
   effectivePermissions: string[];
   expiresAt: number;
 }

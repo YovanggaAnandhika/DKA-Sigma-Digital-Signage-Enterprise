@@ -20,17 +20,19 @@ impl LayoutService {
             .await?
             .ok_or_else(|| AppError::NotFound("Layout not found".to_string()))?;
         
-        let orientation = OrientationRepository::find_by_id(pool, layout.orientation_id)
-            .await
-            .ok();
+        let orientation = if let Some(oid) = layout.orientation_id {
+            OrientationRepository::find_by_id(pool, oid).await.ok()
+        } else {
+            None
+        };
 
         let layers = LayoutRepository::get_layers_by_layout_id(pool, layout.id).await?;
 
         Ok(LayoutWithLayersDto { layout, orientation, layers })
     }
 
-    pub async fn list_layouts(pool: &DbPool) -> Result<Vec<LayoutEntity>, AppError> {
-        let layouts = LayoutRepository::find_all(pool).await?;
+    pub async fn list_layouts(pool: &DbPool, corporation_id: Option<Uuid>) -> Result<Vec<LayoutEntity>, AppError> {
+        let layouts = LayoutRepository::find_all(pool, corporation_id).await?;
         Ok(layouts)
     }
 

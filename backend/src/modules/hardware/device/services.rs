@@ -29,6 +29,29 @@ impl DeviceService {
             .await?
             .ok_or_else(|| AppError::NotFound("Device not found".into()))?;
 
+        if let Some(corp_id) = dto.corporation_id {
+            let screen_count: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM hardware_devices WHERE corporation_id = $1 AND is_paired = TRUE"
+            )
+            .bind(corp_id)
+            .fetch_one(pool)
+            .await?;
+
+            let max_screens: i32 = sqlx::query_scalar(
+                "SELECT max_screens FROM system_corporations WHERE id = $1"
+            )
+            .bind(corp_id)
+            .fetch_optional(pool)
+            .await?
+            .unwrap_or(100);
+
+            if screen_count >= max_screens as i64 {
+                return Err(AppError::BadRequest(format!(
+                    "Kuota layar korporasi telah mencapai batas maksimal ({max_screens} layar)"
+                )));
+            }
+        }
+
         let raw_token = Uuid::new_v4().to_string();
         let mut hasher = Sha256::new();
         hasher.update(raw_token.as_bytes());
@@ -42,6 +65,9 @@ impl DeviceService {
             &token_hash,
             dto.default_layout_id,
             dto.canary_group_id,
+            dto.corporation_id,
+            dto.branch_id,
+            dto.created_by_user_id,
         )
         .await?;
 
@@ -100,8 +126,8 @@ impl DeviceService {
             .ok_or_else(|| AppError::NotFound(format!("Device {} not found", id)))
     }
 
-    pub async fn list_devices(pool: &DbPool) -> Result<Vec<DeviceEntity>, AppError> {
-        let devices = DeviceRepository::find_all(pool).await?;
+    pub async fn list_devices(pool: &DbPool, corporation_id: Option<Uuid>) -> Result<Vec<DeviceEntity>, AppError> {
+        let devices = DeviceRepository::find_all(pool, corporation_id).await?;
         Ok(devices)
     }
 

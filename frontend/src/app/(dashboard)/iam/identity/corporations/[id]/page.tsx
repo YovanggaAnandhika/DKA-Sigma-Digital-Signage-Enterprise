@@ -17,14 +17,22 @@ import {
   Plus,
 } from 'lucide-react';
 import { api, Corporation, Branch } from '@/lib/services';
+import { getStoredSession, UserSession } from '@/lib/auth';
 import { modal } from '@/components/ui/ModalDialog';
+import { useImpersonation } from '@/context/ImpersonationContext';
 
 export default function ViewCorporationPage() {
   const params = useParams() as { id: string };
   const router = useRouter();
+  const { impersonatedCorp, startImpersonation, stopImpersonation } = useImpersonation();
+  const [session, setSession] = useState<UserSession | null>(null);
   const [corp, setCorp] = useState<Corporation | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setSession(getStoredSession());
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -48,7 +56,7 @@ export default function ViewCorporationPage() {
 
   const handleStartImpersonation = () => {
     if (!corp) return;
-    api.setImpersonatedCorporation({
+    startImpersonation({
       id: corp.id,
       name: corp.name,
       slug: corp.slug,
@@ -70,7 +78,8 @@ export default function ViewCorporationPage() {
   }
 
   const isDefaultCorp = corp.slug === 'default-corp' || corp.id === '00000000-0000-0000-0000-000000000001';
-  const isCurrentImpersonated = !isDefaultCorp && api.getImpersonatedCorporation()?.id === corp.id;
+  const isOwnCorp = isDefaultCorp || (session?.corporationId ? session.corporationId === corp.id : false);
+  const isCurrentImpersonated = !isOwnCorp && impersonatedCorp?.id === corp.id;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
@@ -155,11 +164,11 @@ export default function ViewCorporationPage() {
 
         {/* Action Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {!isDefaultCorp && (
+          {!isOwnCorp && (
             isCurrentImpersonated ? (
               <button
                 onClick={() => {
-                  api.clearImpersonatedCorporation();
+                  stopImpersonation();
                   modal.alert({ title: 'Impersonasi Dihentikan', message: 'Kembali ke sesi default master.', variant: 'info' });
                 }}
                 className="btn btn-secondary"

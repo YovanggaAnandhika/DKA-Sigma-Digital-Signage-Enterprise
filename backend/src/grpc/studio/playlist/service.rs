@@ -84,13 +84,19 @@ impl PlaylistServiceTrait for PlaylistServiceImpl {
         &self,
         request: Request<CreatePlaylistRequest>,
     ) -> Result<Response<Playlist>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_playlists")?;
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_playlists")?;
         let req = request.into_inner();
+        let corp_id = claims.active_corporation_id().and_then(|s| Uuid::parse_str(s).ok());
+        let branch_id = claims.branch_id.as_deref().and_then(|s| Uuid::parse_str(s).ok());
+        let user_id = Uuid::parse_str(&claims.sub).ok();
 
         let dto = CreatePlaylistDto {
             name: req.name,
             description: if req.description.is_empty() { None } else { Some(req.description) },
             is_shuffle: Some(req.is_shuffle),
+            corporation_id: corp_id,
+            branch_id,
+            created_by_user_id: user_id,
         };
 
         let playlist = PlaylistService::create_playlist(&self.pool, dto)
@@ -124,8 +130,9 @@ impl PlaylistServiceTrait for PlaylistServiceImpl {
         &self,
         request: Request<ListPlaylistsRequest>,
     ) -> Result<Response<ListPlaylistsResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_view_playlists")?;
-        let playlists = PlaylistService::list_playlists(&self.pool)
+        let claims = crate::grpc::middleware::require_permission(&request, "can_view_playlists")?;
+        let corp_id = claims.active_corporation_id().and_then(|s| Uuid::parse_str(s).ok());
+        let playlists = PlaylistService::list_playlists(&self.pool, corp_id)
             .await
             .map_err(Status::from)?;
 

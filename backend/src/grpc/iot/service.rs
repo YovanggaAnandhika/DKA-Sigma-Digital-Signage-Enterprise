@@ -331,15 +331,29 @@ impl IotDeviceServiceTrait for IotDeviceServiceImpl {
         &self,
         request: Request<ListIotDevicesRequest>,
     ) -> Result<Response<ListIotDevicesResponse>, Status> {
-        crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
-        let rows = sqlx::query_as::<_, IotDeviceRow>(
-            "SELECT id, device_uid, name, device_role, pin_mappings, is_active, is_approved, \
-             ip_address, firmware_version, last_seen_at, last_action, created_at, updated_at \
-             FROM iot_devices ORDER BY is_approved, last_seen_at DESC NULLS LAST",
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(db_error)?;
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
+        let corp_id = claims.active_corporation_id().and_then(|s| Uuid::from_str(s).ok());
+        let rows = if let Some(cid) = corp_id {
+            sqlx::query_as::<_, IotDeviceRow>(
+                "SELECT id, device_uid, name, device_role, pin_mappings, is_active, is_approved, \
+                 ip_address, firmware_version, last_seen_at, last_action, created_at, updated_at \
+                 FROM iot_devices WHERE corporation_id = $1 OR corporation_id IS NULL \
+                 ORDER BY is_approved, last_seen_at DESC NULLS LAST",
+            )
+            .bind(cid)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(db_error)?
+        } else {
+            sqlx::query_as::<_, IotDeviceRow>(
+                "SELECT id, device_uid, name, device_role, pin_mappings, is_active, is_approved, \
+                 ip_address, firmware_version, last_seen_at, last_action, created_at, updated_at \
+                 FROM iot_devices ORDER BY is_approved, last_seen_at DESC NULLS LAST",
+            )
+            .fetch_all(&self.pool)
+            .await
+            .map_err(db_error)?
+        };
 
         Ok(Response::new(ListIotDevicesResponse {
             items: rows.into_iter().map(IotDeviceRow::into_proto).collect(),
@@ -350,12 +364,19 @@ impl IotDeviceServiceTrait for IotDeviceServiceImpl {
         &self,
         request: Request<ApproveIotDeviceRequest>,
     ) -> Result<Response<IotDevice>, Status> {
-        crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
+        let corp_id = claims.active_corporation_id().and_then(|s| Uuid::from_str(s).ok());
+        let branch_id = claims.branch_id.as_deref().and_then(|s| Uuid::from_str(s).ok());
+        let user_id = Uuid::from_str(&claims.sub).ok();
+
         let id = Uuid::from_str(&request.into_inner().id)
             .map_err(|_| Status::invalid_argument("Invalid IoT device id"))?;
         let default_mappings = default_pin_mappings();
         let row = sqlx::query_as::<_, IotDeviceRow>(
             "UPDATE iot_devices SET is_approved = true, is_active = true, \
+             corporation_id = COALESCE($3, corporation_id), \
+             branch_id = COALESCE($4, branch_id), \
+             created_by_user_id = COALESCE($5, created_by_user_id), \
              pin_mappings = CASE WHEN pin_mappings = '[]'::jsonb THEN $2 ELSE pin_mappings END, \
              updated_at = NOW() \
              WHERE id = $1 RETURNING id, device_uid, name, device_role, pin_mappings, is_active, \
@@ -363,6 +384,9 @@ impl IotDeviceServiceTrait for IotDeviceServiceImpl {
         )
         .bind(id)
         .bind(default_mappings)
+        .bind(corp_id)
+        .bind(branch_id)
+        .bind(user_id)
         .fetch_optional(&self.pool)
         .await
         .map_err(db_error)?

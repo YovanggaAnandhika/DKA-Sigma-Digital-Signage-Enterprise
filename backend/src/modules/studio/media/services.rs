@@ -21,8 +21,8 @@ impl MediaService {
             .ok_or_else(|| AppError::NotFound(format!("Media item {} not found", id)))
     }
 
-    pub async fn list_media(pool: &DbPool) -> Result<Vec<MediaEntity>, AppError> {
-        let media = MediaRepository::find_all(pool).await?;
+    pub async fn list_media(pool: &DbPool, corporation_id: Option<Uuid>) -> Result<Vec<MediaEntity>, AppError> {
+        let media = MediaRepository::find_all(pool, corporation_id).await?;
         Ok(media)
     }
 

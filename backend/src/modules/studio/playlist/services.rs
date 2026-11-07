@@ -36,8 +36,8 @@ impl PlaylistService {
         })
     }
 
-    pub async fn list_playlists(pool: &DbPool) -> Result<Vec<PlaylistEntity>, AppError> {
-        let playlists = PlaylistRepository::find_all(pool).await?;
+    pub async fn list_playlists(pool: &DbPool, corporation_id: Option<Uuid>) -> Result<Vec<PlaylistEntity>, AppError> {
+        let playlists = PlaylistRepository::find_all(pool, corporation_id).await?;
         Ok(playlists)
     }
 
