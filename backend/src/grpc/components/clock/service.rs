@@ -29,24 +29,24 @@ struct ClockRow {
     updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-impl From<ClockRow> for Clock {
-    fn from(r: ClockRow) -> Self {
+impl ClockRow {
+    fn into_proto(self) -> Clock {
         Clock {
-            id: r.id.to_string(),
-            name: r.name,
-            city: r.city,
-            show_seconds: r.show_seconds,
-            is_24_hour: r.is_24_hour,
-            theme: r.theme,
-            background_color: r.background_color,
-            text_color: r.text_color,
-            subtitle_color: r.subtitle_color,
-            border_color: r.border_color,
-            border_radius: r.border_radius,
-            time_font_size: r.time_font_size,
-            date_font_size: r.date_font_size,
-            created_at: r.created_at.to_rfc3339(),
-            updated_at: r.updated_at.to_rfc3339(),
+            id: self.id.to_string(),
+            name: self.name,
+            city: self.city,
+            show_seconds: self.show_seconds,
+            is_24_hour: self.is_24_hour,
+            theme: self.theme,
+            background_color: self.background_color,
+            text_color: self.text_color,
+            subtitle_color: self.subtitle_color,
+            border_color: self.border_color,
+            border_radius: self.border_radius,
+            time_font_size: self.time_font_size,
+            date_font_size: self.date_font_size,
+            created_at: self.created_at.to_rfc3339(),
+            updated_at: self.updated_at.to_rfc3339(),
         }
     }
 }
@@ -110,7 +110,7 @@ impl ClockServiceTrait for ClockServiceImpl {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(Clock::from(row)))
+        Ok(Response::new(row.into_proto()))
     }
 
     async fn get_clock(
@@ -127,7 +127,7 @@ impl ClockServiceTrait for ClockServiceImpl {
         .map_err(|e| Status::internal(e.to_string()))?
         .ok_or_else(|| Status::not_found("Clock not found"))?;
 
-        Ok(Response::new(Clock::from(row)))
+        Ok(Response::new(row.into_proto()))
     }
 
     async fn list_clocks(
@@ -153,7 +153,7 @@ impl ClockServiceTrait for ClockServiceImpl {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        let items = rows.into_iter().map(Clock::from).collect();
+        let items = rows.into_iter().map(ClockRow::into_proto).collect();
 
         Ok(Response::new(ListClocksResponse {
             items,
@@ -212,7 +212,7 @@ impl ClockServiceTrait for ClockServiceImpl {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(Clock::from(row)))
+        Ok(Response::new(row.into_proto()))
     }
 
     async fn delete_clock(

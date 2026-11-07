@@ -29,24 +29,24 @@ struct TickerRow {
     updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-impl From<TickerRow> for Ticker {
-    fn from(r: TickerRow) -> Self {
+impl TickerRow {
+    fn into_proto(self) -> Ticker {
         Ticker {
-            id: r.id.to_string(),
-            name: r.name,
-            badge: r.badge,
-            messages: r.messages,
-            speed: r.speed,
-            theme: r.theme,
-            font_size: r.font_size,
-            background_color: r.background_color,
-            text_color: r.text_color,
-            badge_background_color: r.badge_background_color,
-            badge_text_color: r.badge_text_color,
-            border_color: r.border_color,
-            border_radius: r.border_radius,
-            created_at: r.created_at.to_rfc3339(),
-            updated_at: r.updated_at.to_rfc3339(),
+            id: self.id.to_string(),
+            name: self.name,
+            badge: self.badge,
+            messages: self.messages,
+            speed: self.speed,
+            theme: self.theme,
+            font_size: self.font_size,
+            background_color: self.background_color,
+            text_color: self.text_color,
+            badge_background_color: self.badge_background_color,
+            badge_text_color: self.badge_text_color,
+            border_color: self.border_color,
+            border_radius: self.border_radius,
+            created_at: self.created_at.to_rfc3339(),
+            updated_at: self.updated_at.to_rfc3339(),
         }
     }
 }
@@ -107,7 +107,7 @@ impl TickerServiceTrait for TickerServiceImpl {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(Ticker::from(row)))
+        Ok(Response::new(row.into_proto()))
     }
 
     async fn get_ticker(
@@ -124,7 +124,7 @@ impl TickerServiceTrait for TickerServiceImpl {
         .map_err(|e| Status::internal(e.to_string()))?
         .ok_or_else(|| Status::not_found("Ticker not found"))?;
 
-        Ok(Response::new(Ticker::from(row)))
+        Ok(Response::new(row.into_proto()))
     }
 
     async fn list_tickers(
@@ -150,7 +150,7 @@ impl TickerServiceTrait for TickerServiceImpl {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        let items = rows.into_iter().map(Ticker::from).collect();
+        let items = rows.into_iter().map(TickerRow::into_proto).collect();
 
         Ok(Response::new(ListTickersResponse {
             items,
@@ -209,7 +209,7 @@ impl TickerServiceTrait for TickerServiceImpl {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(Ticker::from(row)))
+        Ok(Response::new(row.into_proto()))
     }
 
     async fn delete_ticker(

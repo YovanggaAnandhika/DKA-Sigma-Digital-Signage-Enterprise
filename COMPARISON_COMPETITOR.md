@@ -60,30 +60,34 @@ Dokumen ini menyajikan analisis objektif mengenai **kelebihan (kekuatan kompetit
 
 Meskipun unggul dalam performa dan integrasi hardware, HNDSigma memiliki beberapa area yang masih tertinggal dibanding ekosistem kompetitor global:
 
-### 1. Ketiadaan Ekosistem App Store / Pre-built Widgets
+### 1. Ketiadaan Ekosistem App Store / Pre-built Widgets [BELUM — Rencana Fase 2 & 3]
 - **Kondisi Kompetitor**: ScreenCloud dan Yodeck memiliki ratusan integrasi widget instan siap pakai: Google Slides, Canva, Microsoft PowerBI, Social Media Wall (Instagram, Twitter), Live Weather radar, Zoom Rooms, Menu Board POS auto-sync, dan RSS News Feed terverifikasi.
-- **Kondisi HNDSigma**: Baru mendukung komponen dasar: Video, Jam & Tanggal, Cuaca, Webview, Running Text (Ticker), Album Foto, dan Antrean Ritel. Konten dinamis dari pihak ketiga harus di-embed manual melalui komponen Webview.
+- **Kondisi HNDSigma**: Baru mendukung komponen dasar: Video, Jam & Tanggal, Cuaca, Webview, Running Text (Ticker), Album Foto, dan Antrean Ritel. Konten dinamis dari pihak ketiga harus di-embed manual melalui komponen Webview. *(Direncanakan pada Fase 2 & 3: Live Streaming HLS/CCTV Host & Embed, RSS News Feed, Advanced Widgets)*.
 
-### 2. Keterbatasan Ekosistem Platform Player (Baru Mendukung Android)
+### 2. Keterbatasan Ekosistem Platform Player (Baru Mendukung Android) [BELUM]
 - **Kondisi Kompetitor**:
   - BrightSign memiliki hardware appliance kelas militer yang tahan panas dan debu ekstrim (fanless SoC).
   - Samsung MagicINFO berjalan langsung di SoC bawaan TV Samsung (Tizen OS) tanpa memerlukan kabel HDMI atau media player eksternal tambahan.
   - ScreenCloud mendukung Android, iOS/iPad, Windows, macOS, ChromeOS, dan Amazon Fire TV.
 - **Kondisi HNDSigma**: Player native saat ini eksklusif untuk **Android TV / Android Tablet**. Belum ada player native untuk Tizen OS (Samsung), webOS (LG), atau Windows Player untuk PC industri.
 
-### 3. Belum Tersedia Remote Desktop / Web VNC Interaktif
+### 3. Belum Tersedia Remote Desktop / Web VNC Interaktif [BELUM — Baru Screenshot Telemetri]
 - **Kondisi Kompetitor**: MagicINFO dan Raydiant memiliki fitur remote control interaktif di CMS (operator bisa mengklik mouse atau menekan tombol D-Pad virtual di browser untuk mengontrol menu Android player di lokasi terpencil).
 - **Kondisi HNDSigma**: Baru mendukung *screenshot capture* satu arah. Fitur interaktif remote touch/VNC masih berstatus rencana dan belum diimplementasikan.
 
-### 4. Sistem Pembaruan Firmware/APK OTA Terpusat Masih Berstatus Rencana
+### 4. Sistem Pembaruan Firmware/APK OTA Terpusat [SUDAH SELESAI ✅]
 - **Kondisi Kompetitor**: BSN.cloud dan MagicINFO dapat memperbarui sistem operasi firmware display dan APK secara massal di latar belakang (*silent zero-touch OTA upgrade*).
-- **Kondisi HNDSigma**: Desain arsitektur telah tertuang di `docs/apk_update_system_plan.md`, namun implementasi tabel release management, gRPC chunking, dan broadcast update silent kiosk Android masih menunggu eksekusi (P2).
+- **Status HNDSigma (SUDAH IMPLEMENTASI)**:
+  - **Database Migration**: `0049_create_system_apk_releases.up.sql` menyimpan metadata versi, hash SHA-256, ukuran file, URL unduhan APK, changelog, dan kebijakan *force update*.
+  - **Backend gRPC (`AppUpdateService`)**: Menyediakan endpoint `GetLatestAppRelease`, `GetAppRelease` (agregasi sebaran layar ter-update vs belum), `ListAppReleases`, `CreateAppRelease`, `DeleteAppRelease`, `ToggleAppReleaseActive`, dan `CheckDeviceAppUpdate` dengan auto-sync versi perangkat di `hardware_devices`.
+  - **Frontend CMS (`/system/apk`)**: Dashboard terpusat untuk unggah rilis APK (`/system/apk/create`), daftar versi, serta halaman rincian rilis (`/system/apk/[id]`) untuk memantau layar mana yang sudah update dan layar yang masih tertinggal.
+  - **Android Player Contract**: Mendukung silent background APK download, checksum validation, dan eksekusi Android PackageInstaller API.
 
-### 5. Analitik Audiens Cerdas Berbasis AI (AI Proof-of-Play & Computer Vision)
+### 5. Analitik Audiens Cerdas Berbasis AI (AI Proof-of-Play & Computer Vision) [BELUM]
 - **Kondisi Kompetitor Enterprise**: MagicINFO AI Analytics dan Raydiant mendukung integrasi kamera sensor untuk mendeteksi demografi penonton (gender, rentang usia, lama tatapan mata / *dwell time*) serta analitik heat-map ritel.
 - **Kondisi HNDSigma**: Pelaporan baru berfokus pada telemetri teknis: log riwayat pemutaran (Proof of Play), status online/offline, utilisasi memori/storage, dan log error player.
 
-### 6. Integrasi Point-of-Sale (POS) & ERP Langsung
+### 6. Integrasi Point-of-Sale (POS) & ERP Langsung [BELUM]
 - **Kondisi Kompetitor**: Platform digital signage ritel modern memiliki plugin dua arah dengan sistem POS restoran (Toast, Square, Clover, Moka POS) untuk otomatis mencoret menu yang *sold out* atau memperbarui harga diskon secara real-time.
 - **Kondisi HNDSigma**: Manajemen harga menu board masih harus diubah manual melalui Layout Designer atau halaman Webview.
 
@@ -99,8 +103,9 @@ Meskipun unggul dalam performa dan integrasi hardware, HNDSigma memiliki beberap
 | **Player TV Komersial Bawaan** | 🔴 Belum (Butuh Android Box) | 🟢 Tizen OS Native | 🔴 Butuh Pi/Box | 🟡 Sebagian TV | 🔴 Butuh Box/PC |
 | **Integrasi Tombol Antrean IoT** | 🟢 **Native (ESP32/Nano)** | 🔴 Tidak Ada | 🔴 Tidak Ada | 🔴 Tidak Ada | 🔴 Tidak Ada |
 | **Panggilan Suara TTS Ritel** | 🟢 **Otomatis (Cloud & Native)** | 🔴 Manual Audio File | 🔴 Manual Audio File | 🔴 Manual Audio File | 🔴 Tidak Ada |
+| **Pembaruan APK OTA Silent Update** | 🟢 **Penuh (Zero-Touch Dashboard)** | 🟢 Ada | 🟢 Ada | 🟢 Ada | 🟡 Sebagian |
 | **Siaran Darurat Real-time** | 🟢 **< 100ms (HTTP/2 Stream)** | 🟢 Mendukung | 🟡 Polling Interval | 🟢 WebSockets | 🟡 Long-polling |
-| **Katalog App/Widget Eksternal** | 🔴 Terbatas (Dasar) | 🟢 Banyak | 🟢 Sangat Lengkap | 🟢 Sangat Lengkap | 🟡 Komunitas |
+| **Katalog App/Widget Eksternal** | 🟡 Sedang Dikembangkan (Live & RSS) | 🟢 Banyak | 🟢 Sangat Lengkap | 🟢 Sangat Lengkap | 🟡 Komunitas |
 | **Remote Screen Mirroring / VNC** | 🔴 Belum Ada (Baru Screenshot) | 🟢 Ada | 🟢 Ada | 🟢 Ada | 🟡 VNC Eksternal |
 | **Lisensi & Biaya Berlangganan** | 🟢 **Gratis / Zero Royalty** | 🔴 Sangat Mahal | 🔴 Subscription | 🔴 Subscription | 🟡 Open-source Core |
 | **Kustomisasi Layout Multi-Zone** | 🟢 **Canvas Bebas + Rollback** | 🟢 Bebas | 🟢 Grid & Free | 🟢 Grid & Free | 🟢 Freeform Regions |
@@ -112,7 +117,7 @@ Meskipun unggul dalam performa dan integrasi hardware, HNDSigma memiliki beberap
 HNDSigma memiliki posisi nilai (*unique value proposition*) yang sangat kuat di segmen **Ritel, Perbankan, Klinik, dan Pelayanan Publik**:
 1. **Diferensiasi Terbesar**: Penggabungan platform **Media Promosi Multi-Zona** dengan **Sistem Panggilan Antrean Fisik IoT** dalam satu sistem terpadu berlatensi ultra-rendah. Di platform lain, pelanggan harus membeli 2 sistem terpisah (signage player + queue machine terpisah).
 2. **Prioritas Pengembangan untuk Mengejar Kompetitor**:
-   - **Prioritas 1**: Menyelesaikan implementasi **APK OTA Silent Update** (`docs/apk_update_system_plan.md`) agar pembaruan player ribuan layar dapat dilakukan dari dashboard tanpa teknisi datang ke toko.
-   - **Prioritas 2**: Memperluas katalog komponen dinamis (misal: integrasi Google Sheets/Excel untuk menu board harga, atau webhook POS ritel).
-   - **Prioritas 3**: Eksplorasi player multi-platform (misal: Web Player berbasis PWA/Tauri untuk hardware PC atau display non-Android).
+   - [x] **Prioritas 1 (SUDAH SELESAI)**: Menyelesaikan implementasi **APK OTA Silent Update** (`backend/migrations/0049_*`, backend gRPC `AppUpdateService`, Next.js `/system/apk`, dan Android PackageInstaller contract) sehingga pembaruan player ribuan layar dapat dipantau dan didistribusikan dari dashboard.
+   - [ ] **Prioritas 2 (SELANJUTNYA)**: Memperluas katalog komponen dinamis: Modul Live Streaming Advance (Host HLS Server & Embed CCTV/RTSP), Komponen RSS News Feed, dan integrasi Google Sheets.
+   - [ ] **Prioritas 3**: Eksplorasi player multi-platform (misal: Web Player berbasis PWA/Tauri untuk hardware PC atau display non-Android) dan Remote VNC interaktif.
 

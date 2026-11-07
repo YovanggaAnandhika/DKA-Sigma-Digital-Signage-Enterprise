@@ -20,16 +20,16 @@ struct ResolutionRow {
     updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-impl From<ResolutionRow> for Resolution {
-    fn from(r: ResolutionRow) -> Self {
+impl ResolutionRow {
+    fn into_proto(self) -> Resolution {
         Resolution {
-            id: r.id.to_string(),
-            name: r.name,
-            width: r.width,
-            height: r.height,
-            aspect_ratio: r.aspect_ratio,
-            created_at: r.created_at.to_rfc3339(),
-            updated_at: r.updated_at.to_rfc3339(),
+            id: self.id.to_string(),
+            name: self.name,
+            width: self.width,
+            height: self.height,
+            aspect_ratio: self.aspect_ratio,
+            created_at: self.created_at.to_rfc3339(),
+            updated_at: self.updated_at.to_rfc3339(),
         }
     }
 }
@@ -57,7 +57,7 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        let items = rows.into_iter().map(Resolution::from).collect();
+        let items = rows.into_iter().map(ResolutionRow::into_proto).collect();
 
         Ok(Response::new(ListResolutionsResponse { items }))
     }
@@ -76,7 +76,7 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
         .map_err(|e| Status::internal(e.to_string()))?
         .ok_or_else(|| Status::not_found("Resolution not found"))?;
 
-        Ok(Response::new(Resolution::from(row)))
+        Ok(Response::new(row.into_proto()))
     }
 
     async fn create_resolution(
@@ -110,7 +110,7 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
             Status::internal(e.to_string())
         })?;
 
-        Ok(Response::new(Resolution::from(row)))
+        Ok(Response::new(row.into_proto()))
     }
 
     async fn update_resolution(
@@ -146,7 +146,7 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
         })?
         .ok_or_else(|| Status::not_found("Resolution not found"))?;
 
-        Ok(Response::new(Resolution::from(row)))
+        Ok(Response::new(row.into_proto()))
     }
 
     async fn delete_resolution(

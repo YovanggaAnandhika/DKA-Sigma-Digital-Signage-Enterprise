@@ -23,18 +23,18 @@ struct WebviewRow {
     updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-impl From<WebviewRow> for Webview {
-    fn from(r: WebviewRow) -> Self {
+impl WebviewRow {
+    fn into_proto(self) -> Webview {
         Webview {
-            id: r.id.to_string(),
-            name: r.name,
-            url: r.url,
-            refresh_interval_seconds: r.refresh_interval_seconds,
-            zoom_scale: r.zoom_scale,
-            bypass_cache: r.bypass_cache,
-            orientation: r.orientation,
-            created_at: r.created_at.to_rfc3339(),
-            updated_at: r.updated_at.to_rfc3339(),
+            id: self.id.to_string(),
+            name: self.name,
+            url: self.url,
+            refresh_interval_seconds: self.refresh_interval_seconds,
+            zoom_scale: self.zoom_scale,
+            bypass_cache: self.bypass_cache,
+            orientation: self.orientation,
+            created_at: self.created_at.to_rfc3339(),
+            updated_at: self.updated_at.to_rfc3339(),
         }
     }
 }
@@ -79,7 +79,7 @@ impl WebviewServiceTrait for WebviewServiceImpl {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(Webview::from(row)))
+        Ok(Response::new(row.into_proto()))
     }
 
     async fn get_webview(
@@ -96,7 +96,7 @@ impl WebviewServiceTrait for WebviewServiceImpl {
         .map_err(|e| Status::internal(e.to_string()))?
         .ok_or_else(|| Status::not_found("Webview not found"))?;
 
-        Ok(Response::new(Webview::from(row)))
+        Ok(Response::new(row.into_proto()))
     }
 
     async fn list_webviews(
@@ -120,7 +120,7 @@ impl WebviewServiceTrait for WebviewServiceImpl {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        let items = rows.into_iter().map(Webview::from).collect();
+        let items = rows.into_iter().map(WebviewRow::into_proto).collect();
 
         Ok(Response::new(ListWebviewsResponse {
             items,
@@ -165,7 +165,7 @@ impl WebviewServiceTrait for WebviewServiceImpl {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(Webview::from(row)))
+        Ok(Response::new(row.into_proto()))
     }
 
     async fn delete_webview(
