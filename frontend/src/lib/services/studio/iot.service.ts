@@ -74,8 +74,8 @@ export function getIotDeviceTelemetry(id: string): Promise<IotDeviceTelemetry> {
   return invokeApi('/api/grpc/iot/device/GetDeviceTelemetry', { id });
 }
 
-export async function approveIotDevice(id: string): Promise<IotDevice> {
-  return invokeApi('/api/grpc/iot/device/ApproveDevice', { id });
+export async function approveIotDevice(id: string, verificationCode: string): Promise<IotDevice> {
+  return invokeApi('/api/grpc/iot/device/ApproveDevice', { id, verificationCode });
 }
 
 export async function updateIotDevice(device: {

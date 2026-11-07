@@ -113,18 +113,22 @@ impl DeviceServiceTrait for DeviceServiceImpl {
         let claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
         let req = request.into_inner();
 
-        let device_id = if !req.device_id.is_empty() {
-            Uuid::parse_str(&req.device_id)
-                .map_err(|_| Status::invalid_argument("ID Device tidak valid"))?
-        } else if let Some(code) = req.pairing_code.as_deref().filter(|s| !s.is_empty()) {
-            let (dev, _) = crate::modules::hardware::device::repositories::DeviceRepository::find_pending_pairing(&self.pool, code)
-                .await
-                .map_err(|e| Status::internal(e.to_string()))?
-                .ok_or_else(|| Status::not_found("Kode pairing tidak valid atau kadaluarsa"))?;
-            dev.id
-        } else {
-            return Err(Status::invalid_argument("device_id diperlukan untuk menyetujui layar"));
-        };
+        let device_id = Uuid::parse_str(&req.device_id)
+            .map_err(|_| Status::invalid_argument("ID Device tidak valid"))?;
+
+        let pairing_code = req.pairing_code.as_deref()
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .ok_or_else(|| Status::invalid_argument("Kode pairing 6-digit fisik wajib dimasukkan untuk menyetujui layar"))?;
+
+        let pending = crate::modules::hardware::device::repositories::DeviceRepository::find_pending_pairing(&self.pool, pairing_code)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::invalid_argument("Kode pairing fisik tidak valid atau telah kedaluwarsa"))?;
+
+        if pending.0.id != device_id {
+            return Err(Status::invalid_argument("Kode pairing fisik tidak cocok dengan layar yang dipilih"));
+        }
 
         let default_layout_id = req.default_layout_id.as_deref().and_then(|s| Uuid::parse_str(s).ok());
         let canary_group_id = req.canary_group_id.as_deref().and_then(|s| Uuid::parse_str(s).ok());

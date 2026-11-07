@@ -18,6 +18,12 @@ export default function DisplayListView() {
   const [isSseConnected, setIsSseConnected] = useState(false);
   const [pairingId, setPairingId] = useState<string | null>(null);
 
+  // Pairing Verification Modal state
+  const [pairingModalDevice, setPairingModalDevice] = useState<Device | null>(null);
+  const [inputPairingCode, setInputPairingCode] = useState('');
+  const [pairingSubmitting, setPairingSubmitting] = useState(false);
+  const [pairingError, setPairingError] = useState('');
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -98,20 +104,34 @@ export default function DisplayListView() {
     };
   }, []);
 
-  const handleAccept = async (d: Device) => {
-    if (!confirm(`Setujui dan aktifkan layar "${d.name}"?`)) return;
+  const handleOpenPairingModal = (d: Device) => {
+    setPairingModalDevice(d);
+    setInputPairingCode('');
+    setPairingError('');
+  };
+
+  const handleConfirmPairing = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!pairingModalDevice) return;
+    const cleanCode = inputPairingCode.trim().toUpperCase();
+    if (!cleanCode) {
+      setPairingError('Silakan masukkan 6-digit kode pairing fisik.');
+      return;
+    }
     try {
-      setPairingId(d.id);
+      setPairingSubmitting(true);
+      setPairingError('');
       await api.pairDevice({
-        deviceId: d.id,
-        pairingCode: d.pairingCode || undefined,
-        deviceName: d.name,
+        deviceId: pairingModalDevice.id,
+        pairingCode: cleanCode,
+        deviceName: pairingModalDevice.name,
       });
+      setPairingModalDevice(null);
       await loadData();
     } catch (err: any) {
-      alert(err.message || 'Gagal menyetujui pairing perangkat');
+      setPairingError(err.message || 'Gagal memverifikasi kode pairing fisik');
     } finally {
-      setPairingId(null);
+      setPairingSubmitting(false);
     }
   };
 
@@ -255,9 +275,10 @@ export default function DisplayListView() {
                               fontFamily: 'monospace',
                               letterSpacing: '0.04em',
                               whiteSpace: 'nowrap',
+                              color: !d.isPaired ? 'var(--text-muted)' : 'inherit',
                             }}
                           >
-                            {d.pairingCode || d.hardwareFingerprint?.substring(0, 10) || d.id.substring(0, 8).toUpperCase()}
+                            {!d.isPaired ? '●●●●●●' : (d.hardwareFingerprint?.substring(0, 10) || d.id.substring(0, 8).toUpperCase())}
                           </span>
                         </TableDataValue>
                       </td>
@@ -296,10 +317,9 @@ export default function DisplayListView() {
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                           {!d.isPaired && (
                             <button
-                              onClick={() => handleAccept(d)}
-                              disabled={pairingId === d.id}
+                              onClick={() => handleOpenPairingModal(d)}
                               className="btn btn-primary"
-                              title="Setujui dan Aktifkan Layar Android"
+                              title="Setujui dan Verifikasi Kode Layar Android"
                               aria-label={`Setujui dan aktifkan layar ${d.name}`}
                             >
                               <CheckCircle2 size={13} />
@@ -340,6 +360,138 @@ export default function DisplayListView() {
           }}
         />
       </div>
+
+      {/* Modal Dialog Verifikasi Kode Pairing Fisik Layar */}
+      {pairingModalDevice && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            backgroundColor: 'rgba(0, 0, 0, 0.72)',
+            backdropFilter: 'blur(3px)',
+          }}
+          onClick={() => !pairingSubmitting && setPairingModalDevice(null)}
+        >
+          <div
+            className="card-elevated"
+            style={{
+              width: '100%',
+              maxWidth: '460px',
+              backgroundColor: 'var(--bg-surface-elevated)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.7)',
+              padding: '24px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '20px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+              <div
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                  color: 'var(--primary-400)',
+                }}
+              >
+                <Tv size={22} />
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0, paddingTop: '2px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                  Verifikasi Kepemilikan Layar
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>
+                  Layar: <b>{pairingModalDevice.name}</b>
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => !pairingSubmitting && setPairingModalDevice(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: '4px',
+                }}
+                aria-label="Tutup"
+              >
+                <CircleX size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmPairing} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                Masukkan <b>6-digit Kode Pairing</b> yang sedang tampil di layar TV fisik untuk mengikat layar ini ke korporasi Anda:
+              </p>
+
+              <div>
+                <input
+                  type="text"
+                  autoFocus
+                  required
+                  value={inputPairingCode}
+                  onChange={(e) => setInputPairingCode(e.target.value.toUpperCase())}
+                  placeholder="CONTOH: K8F2N9"
+                  maxLength={10}
+                  className="form-input"
+                  style={{
+                    fontSize: '1.15rem',
+                    fontWeight: 800,
+                    fontFamily: 'monospace',
+                    letterSpacing: '0.2em',
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                    padding: '12px',
+                  }}
+                  disabled={pairingSubmitting}
+                />
+              </div>
+
+              {pairingError && (
+                <div style={{ color: 'var(--accent-rose)', fontSize: '0.8125rem', fontWeight: 600 }}>
+                  {pairingError}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', paddingTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setPairingModalDevice(null)}
+                  className="btn btn-secondary"
+                  disabled={pairingSubmitting}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={pairingSubmitting || !inputPairingCode.trim()}
+                >
+                  {pairingSubmitting ? 'Memverifikasi...' : 'Verifikasi & Aktifkan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

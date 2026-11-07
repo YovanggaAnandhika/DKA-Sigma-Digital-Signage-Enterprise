@@ -369,8 +369,28 @@ impl IotDeviceServiceTrait for IotDeviceServiceImpl {
         let branch_id = claims.branch_id.as_deref().and_then(|s| Uuid::from_str(s).ok());
         let user_id = Uuid::from_str(&claims.sub).ok();
 
-        let id = Uuid::from_str(&request.into_inner().id)
+        let req = request.into_inner();
+        let id = Uuid::from_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid IoT device id"))?;
+
+        let verification_code = req.verification_code.trim().to_uppercase();
+        if verification_code.is_empty() {
+            return Err(Status::invalid_argument("Kode verifikasi 6-digit fisik MAC Address wajib dimasukkan"));
+        }
+
+        let dev: Option<(String,)> = sqlx::query_as("SELECT device_uid FROM iot_devices WHERE id = $1")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(db_error)?;
+        let device_uid = dev.ok_or_else(|| Status::not_found("IoT device not found"))?.0;
+
+        let clean_uid = device_uid.replace([':', '-', ' '], "").to_uppercase();
+        let clean_code = verification_code.replace([':', '-', ' '], "").to_uppercase();
+        if clean_code.len() < 4 || !clean_uid.ends_with(&clean_code) {
+            return Err(Status::invalid_argument("Kode verifikasi fisik MAC Address tidak cocok dengan perangkat"));
+        }
+
         let default_mappings = default_pin_mappings();
         let row = sqlx::query_as::<_, IotDeviceRow>(
             "UPDATE iot_devices SET is_approved = true, is_active = true, \

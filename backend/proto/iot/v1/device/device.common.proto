@@ -33,6 +33,7 @@ message ListIotDevicesResponse {
 
 message ApproveIotDeviceRequest {
   string id = 1;
+  string verification_code = 2;
 }
 
 message UpdateIotDeviceRequest {

@@ -8,6 +8,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const request = new ApproveIotDeviceRequest();
     request.setId(String(body.id ?? ''));
+    if (body.verificationCode || body.verification_code) {
+      request.setVerificationCode(String(body.verificationCode || body.verification_code));
+    }
     const client = new IotDeviceServiceClient(getGrpcHost(), getGrpcCredentials());
     return await new Promise<NextResponse>((resolve) => {
       client.approveDevice(request, getGrpcMetadata(getTokenFromRequest(req)), (error, response) => {
