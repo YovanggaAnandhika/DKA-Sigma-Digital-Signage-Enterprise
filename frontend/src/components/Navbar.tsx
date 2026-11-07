@@ -166,23 +166,22 @@ export function Navbar() {
                 window.location.reload();
               }}
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '2px 8px',
-                marginLeft: '4px',
-                borderRadius: '12px',
-                backgroundColor: 'rgba(245, 158, 11, 0.25)',
-                border: '1px solid rgba(245, 158, 11, 0.4)',
+                background: 'rgba(245, 158, 11, 0.25)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '18px',
+                height: '18px',
+                padding: 0,
                 color: '#d97706',
                 cursor: 'pointer',
-                fontSize: '0.725rem',
-                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginLeft: '4px',
                 transition: 'all 0.15s ease',
               }}
-              title="Keluar dari mode impersonasi dan kembali ke akun utama superadmin"
+              title="Hentikan impersonasi"
             >
-              <span>Keluar</span>
               <X size={12} />
             </button>
           </div>

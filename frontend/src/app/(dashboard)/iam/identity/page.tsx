@@ -24,10 +24,12 @@ import {
   Branch,
   ImpersonatedCorporation,
 } from '@/lib/services';
+import { getStoredSession, UserSession } from '@/lib/auth';
 import { modal } from '@/components/ui/ModalDialog';
 
 export default function IdentityPage() {
   const [activeTab, setActiveTab] = useState<'corporations' | 'branches'>('corporations');
+  const [session, setSession] = useState<UserSession | null>(null);
   const [impersonatedCorp, setImpersonatedCorp] = useState<ImpersonatedCorporation | null>(null);
 
   // Corporations state
@@ -54,6 +56,7 @@ export default function IdentityPage() {
   }, []);
 
   useEffect(() => {
+    setSession(getStoredSession());
     syncImpersonationState();
     const handleStorageChange = () => syncImpersonationState();
     window.addEventListener('dkasigma_impersonation_change', handleStorageChange);
@@ -345,7 +348,11 @@ export default function IdentityPage() {
                 ) : (
                   corporations.map((corp) => {
                     const activeInfo = formatActiveUntil(corp.activeUntil);
-                    const isCurrentImpersonated = impersonatedCorp?.id === corp.id;
+                    const isOwnCorp =
+                      corp.slug === 'default-corp' ||
+                      corp.id === '00000000-0000-0000-0000-000000000001' ||
+                      (session && (session as any).corporationId === corp.id);
+                    const isCurrentImpersonated = !isOwnCorp && impersonatedCorp?.id === corp.id;
 
                     return (
                       <tr
@@ -455,41 +462,68 @@ export default function IdentityPage() {
 
                         <td style={{ padding: '14px 18px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                            {/* Impersonation Button */}
-                            {isCurrentImpersonated ? (
-                              <button
-                                onClick={handleStopImpersonation}
-                                className="btn btn-secondary"
-                                style={{
-                                  padding: '6px 12px',
-                                  fontSize: '0.775rem',
-                                  color: '#d97706',
-                                  borderColor: 'rgba(245, 158, 11, 0.5)',
-                                  fontWeight: 700,
-                                }}
-                                title="Sedang mengimpersonasi perusahaan ini. Klik untuk berhenti."
-                              >
-                                <Check size={14} />
-                                <span>Aktif</span>
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleStartImpersonation(corp)}
-                                className="btn btn-secondary"
-                                style={{ padding: '6px 12px', fontSize: '0.775rem', fontWeight: 600 }}
-                                title="Login / Switch sebagai perusahaan ini"
-                              >
-                                <ArrowRightLeft size={14} />
-                                <span>Impersonasi</span>
-                              </button>
+                            {/* Impersonation Button (Icon Only, hidden for own corporation) */}
+                            {!isOwnCorp && (
+                              isCurrentImpersonated ? (
+                                <button
+                                  onClick={handleStopImpersonation}
+                                  className="btn btn-secondary"
+                                  style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    padding: 0,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    borderRadius: '8px',
+                                    color: '#d97706',
+                                    borderColor: 'rgba(245, 158, 11, 0.5)',
+                                    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                                  }}
+                                  title={`Sedang mengimpersonasi ${corp.name}. Klik untuk berhenti.`}
+                                  aria-label="Hentikan Impersonasi"
+                                >
+                                  <Check size={15} />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleStartImpersonation(corp)}
+                                  className="btn btn-secondary"
+                                  style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    padding: 0,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    borderRadius: '8px',
+                                    color: 'var(--primary-400)',
+                                    borderColor: 'rgba(59, 130, 246, 0.3)',
+                                    backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                                  }}
+                                  title={`Impersonasi ${corp.name}`}
+                                  aria-label={`Impersonasi ${corp.name}`}
+                                >
+                                  <ArrowRightLeft size={15} />
+                                </button>
+                              )
                             )}
 
                             {/* View Detail Link */}
                             <Link
                               href={`/iam/identity/corporations/${corp.id}`}
                               className="btn btn-secondary"
-                              style={{ padding: '7px' }}
+                              style={{
+                                width: '32px',
+                                height: '32px',
+                                padding: 0,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '8px',
+                              }}
                               title="Lihat Detail Perusahaan"
+                              aria-label="Lihat Detail Perusahaan"
                             >
                               <Eye size={15} />
                             </Link>
@@ -498,19 +532,38 @@ export default function IdentityPage() {
                             <Link
                               href={`/iam/identity/corporations/${corp.id}/edit`}
                               className="btn btn-secondary"
-                              style={{ padding: '7px' }}
+                              style={{
+                                width: '32px',
+                                height: '32px',
+                                padding: 0,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '8px',
+                              }}
                               title="Edit Perusahaan"
+                              aria-label="Edit Perusahaan"
                             >
                               <Edit size={15} />
                             </Link>
 
                             {/* Delete Button */}
-                            {corp.slug !== 'default-corp' && (
+                            {!isOwnCorp && (
                               <button
                                 onClick={() => handleDeleteCorp(corp)}
                                 className="btn btn-secondary"
-                                style={{ padding: '7px', color: 'var(--accent-rose)' }}
+                                style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  padding: 0,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  borderRadius: '8px',
+                                  color: 'var(--accent-rose)',
+                                }}
                                 title="Hapus Perusahaan"
+                                aria-label="Hapus Perusahaan"
                               >
                                 <Trash2 size={15} />
                               </button>
@@ -644,8 +697,17 @@ export default function IdentityPage() {
                             <Link
                               href={`/iam/identity/branches/${b.id}`}
                               className="btn btn-secondary"
-                              style={{ padding: '7px' }}
+                              style={{
+                                width: '32px',
+                                height: '32px',
+                                padding: 0,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '8px',
+                              }}
                               title="Lihat Detail Cabang"
+                              aria-label="Lihat Detail Cabang"
                             >
                               <Eye size={15} />
                             </Link>
@@ -653,8 +715,17 @@ export default function IdentityPage() {
                             <Link
                               href={`/iam/identity/branches/${b.id}/edit`}
                               className="btn btn-secondary"
-                              style={{ padding: '7px' }}
+                              style={{
+                                width: '32px',
+                                height: '32px',
+                                padding: 0,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '8px',
+                              }}
                               title="Edit Cabang"
+                              aria-label="Edit Cabang"
                             >
                               <Edit size={15} />
                             </Link>
@@ -662,8 +733,18 @@ export default function IdentityPage() {
                             <button
                               onClick={() => handleDeleteBranch(b)}
                               className="btn btn-secondary"
-                              style={{ padding: '7px', color: 'var(--accent-rose)' }}
+                              style={{
+                                width: '32px',
+                                height: '32px',
+                                padding: 0,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '8px',
+                                color: 'var(--accent-rose)',
+                              }}
                               title="Hapus Cabang"
+                              aria-label="Hapus Cabang"
                             >
                               <Trash2 size={15} />
                             </button>
