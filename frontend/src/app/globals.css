@@ -959,3 +959,72 @@ main table td:last-child .btn:focus-visible {
     display: none;
   }
 }
+
+/* ==========================================================================
+   MODERN VIBRANT SIDEBAR NAVIGATION
+   Smooth tactile icons with distinct squircle color identities
+   ========================================================================== */
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  border-radius: 12px;
+  text-decoration: none;
+  position: relative;
+  border: 1px solid transparent;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  outline: none;
+}
+
+.sidebar-nav-item:hover {
+  background-color: var(--hover-surface);
+}
+
+.sidebar-icon-squircle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 10px;
+  border: 1px solid var(--item-border);
+  background-color: var(--item-bg);
+  color: var(--item-color);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.22s ease,
+              border-color 0.22s ease,
+              box-shadow 0.22s ease,
+              color 0.22s ease;
+}
+
+.sidebar-nav-item:hover .sidebar-icon-squircle {
+  transform: translateY(-1px) scale(1.06);
+  background-color: var(--item-bg-hover);
+  border-color: var(--item-border-hover);
+  box-shadow: 0 4px 12px var(--item-glow);
+}
+
+.sidebar-nav-item.is-active {
+  background-color: var(--item-active-bg);
+  border-color: var(--item-active-border);
+}
+
+.sidebar-nav-item.is-active .sidebar-icon-squircle {
+  background: var(--item-gradient);
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 14px var(--item-glow), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+
+.sidebar-active-indicator {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3.5px;
+  height: 20px;
+  border-radius: 0 4px 4px 0;
+  background: var(--item-color);
+  box-shadow: 0 0 10px var(--item-glow);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
