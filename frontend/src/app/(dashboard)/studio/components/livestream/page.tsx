@@ -341,13 +341,31 @@ export default function LiveStreamPage() {
               }}
             >
               {previewItem.sourceType === 'YOUTUBE_EMBED' ? (
-                <iframe
-                  src={toYoutubeEmbedUrl(previewItem.sourceUrl, previewItem.isMuted)}
-                  title={previewItem.name}
-                  style={{ width: '100%', height: '100%', border: 'none' }}
-                  allow="autoplay; encrypted-media; picture-in-picture"
-                  allowFullScreen
-                />
+                <div
+                  style={{
+                    position: 'relative',
+                    width: '100%',
+                    height: '100%',
+                    overflow: 'hidden',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <iframe
+                    src={toYoutubeEmbedUrl(previewItem.sourceUrl, previewItem.isMuted)}
+                    title={previewItem.name}
+                    style={{
+                      position: 'absolute',
+                      top: '-14%',
+                      left: 0,
+                      width: '100%',
+                      height: '128%',
+                      border: 'none',
+                      pointerEvents: 'none',
+                    }}
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
               ) : previewItem.sourceType === 'HLS' ? (
                 <video
                   src={previewItem.sourceUrl}

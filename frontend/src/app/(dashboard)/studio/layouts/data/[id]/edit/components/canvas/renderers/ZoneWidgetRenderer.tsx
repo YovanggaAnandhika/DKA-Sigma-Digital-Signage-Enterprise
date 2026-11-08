@@ -403,19 +403,31 @@ export default function ZoneWidgetRenderer({
 
     if (sourceType === 'YOUTUBE_EMBED' && url) {
       return (
-        <iframe
-          src={toYoutubeEmbedUrl(url, ls.isMuted ?? true)}
-          title={ls.name || z.name}
+        <div
           style={{
             position: 'absolute',
             inset: 0,
             width: '100%',
             height: '100%',
-            border: 'none',
-            filter: filterCssString,
-            pointerEvents: isPlaying ? 'auto' : 'none',
+            overflow: 'hidden',
+            pointerEvents: 'none',
           }}
-        />
+        >
+          <iframe
+            src={toYoutubeEmbedUrl(url, ls.isMuted ?? true)}
+            title={ls.name || z.name}
+            style={{
+              position: 'absolute',
+              top: '-14%',
+              left: 0,
+              width: '100%',
+              height: '128%',
+              border: 'none',
+              filter: filterCssString,
+              pointerEvents: 'none',
+            }}
+          />
+        </div>
       );
     }
 

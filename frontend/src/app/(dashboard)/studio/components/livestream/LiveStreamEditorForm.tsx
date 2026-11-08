@@ -503,13 +503,31 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                 </div>
               </div>
             ) : sourceType === 'YOUTUBE_EMBED' ? (
-              <iframe
-                src={toYoutubeEmbedUrl(sourceUrl, isMuted)}
-                title={name || 'YouTube Live Preview'}
-                style={{ width: '100%', height: '100%', border: 'none' }}
-                allow="autoplay; encrypted-media; picture-in-picture"
-                allowFullScreen
-              />
+              <div
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: '100%',
+                  overflow: 'hidden',
+                  pointerEvents: 'none',
+                }}
+              >
+                <iframe
+                  src={toYoutubeEmbedUrl(sourceUrl, isMuted)}
+                  title={name || 'YouTube Live Preview'}
+                  style={{
+                    position: 'absolute',
+                    top: '-14%',
+                    left: 0,
+                    width: '100%',
+                    height: '128%',
+                    border: 'none',
+                    pointerEvents: 'none',
+                  }}
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
             ) : sourceType === 'HLS' ? (
               <video
                 src={sourceUrl.trim()}
