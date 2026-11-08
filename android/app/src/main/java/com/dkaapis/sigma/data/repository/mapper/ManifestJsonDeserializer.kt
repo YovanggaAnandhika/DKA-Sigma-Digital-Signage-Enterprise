@@ -80,6 +80,7 @@ class ManifestJsonDeserializer {
                 b.hasWidgetId("ticker") || typeStr.equals("ticker", true) -> ZoneWidgetType.TICKER
                 b.hasWidgetId("webview") || typeStr.equals("webview", true) -> ZoneWidgetType.WEBVIEW
                 b.hasWidgetId("album") || typeStr.equals("album", true) -> ZoneWidgetType.ALBUM
+                b.hasWidgetId("liveStream") || b.hasWidgetId("live_stream") || typeStr.equals("livestream", true) -> ZoneWidgetType.LIVESTREAM
                 else -> ZoneWidgetType.NONE
             }
             val blockVol = if (b.has("volumeLevel")) b.optInt("volumeLevel", 100) else b.optInt("volume_level", 100)

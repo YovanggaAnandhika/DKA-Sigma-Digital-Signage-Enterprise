@@ -366,7 +366,7 @@ impl ManifestService {
             for b in &z.blocks {
                 hasher.update(
                     format!(
-                        "{}:{}:{:?}:{:?}:{:?}:{:?}:{:?}:{:?}:{:?}:{}:{}:{}",
+                        "{}:{}:{:?}:{:?}:{:?}:{:?}:{:?}:{:?}:{:?}:{:?}:{}:{}:{}",
                         b.block.id,
                         b.block.duration_seconds,
                         b.block.media_item_id,
@@ -376,6 +376,7 @@ impl ManifestService {
                         b.block.clock_id,
                         b.block.webview_id,
                         b.block.album_id,
+                        b.block.live_stream_id,
                         b.block.order_index,
                         b.block.is_muted,
                         b.block.volume_level

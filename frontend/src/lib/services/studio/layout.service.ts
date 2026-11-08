@@ -84,7 +84,7 @@ export async function addMediaBlock(layer_id: string, media_id: string, startTim
 
 export async function addWidgetBlock(
   layer_id: string,
-  widgetType: 'ticker' | 'clock' | 'webview' | 'queue' | 'album',
+  widgetType: 'ticker' | 'clock' | 'webview' | 'queue' | 'album' | 'livestream',
   widgetId: string,
   startTimeSeconds: number,
   durationSeconds: number
@@ -99,6 +99,7 @@ export async function addWidgetBlock(
   else if (widgetType === 'webview') payload.webview_id = widgetId;
   else if (widgetType === 'queue') payload.queue_id = widgetId;
   else if (widgetType === 'album') payload.album_id = widgetId;
+  else if (widgetType === 'livestream') payload.live_stream_id = widgetId;
 
   return await invokeApi<any>('/api/grpc/studio/layer_block/CreateLayerBlock', payload);
 }

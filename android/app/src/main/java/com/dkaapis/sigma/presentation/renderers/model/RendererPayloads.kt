@@ -109,3 +109,34 @@ data class WebviewConfigPayload(
         )
     }
 }
+
+/**
+ * Payload konfigurasi untuk LiveStreamZoneRenderer
+ */
+data class LiveStreamConfigPayload(
+    val name: String = "Live Stream",
+    val streamMode: String = "EXTERNAL_EMBED",
+    val sourceType: String = "HLS",
+    val sourceUrl: String = "",
+    val effectivePlaybackUrl: String = "",
+    val autoReconnect: Boolean = true,
+    val lowLatencyMode: Boolean = true,
+    val isMuted: Boolean = true
+) {
+    companion object {
+        fun fromJson(json: JSONObject): LiveStreamConfigPayload {
+            val rawSource = json.optString("sourceUrl", "")
+            val effective = json.optString("effectivePlaybackUrl", "").ifBlank { rawSource }
+            return LiveStreamConfigPayload(
+                name = json.optString("name", "Live Stream"),
+                streamMode = json.optString("streamMode", "EXTERNAL_EMBED"),
+                sourceType = json.optString("sourceType", "HLS"),
+                sourceUrl = rawSource,
+                effectivePlaybackUrl = effective,
+                autoReconnect = json.optBoolean("autoReconnect", true),
+                lowLatencyMode = json.optBoolean("lowLatencyMode", true),
+                isMuted = json.optBoolean("isMuted", true)
+            )
+        }
+    }
+}

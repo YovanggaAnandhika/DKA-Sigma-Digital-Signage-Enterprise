@@ -8,3 +8,4 @@ export * from './transition.service';
 export * from './visual_filter.service';
 export * from './iot.service';
 export * from './album.service';
+export * from './livestream.service';

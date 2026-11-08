@@ -32,6 +32,7 @@ message LayerPlaylist {
   optional string webview_id = 22;
   optional string queue_id = 23;
   optional string album_id = 24;
+  optional string live_stream_id = 26;
 
   // Computed fields (populated in backend based on relations)
   optional signage.studio.v1.transition.Transition transition = 18;
@@ -48,6 +49,7 @@ message CreateLayerBlockRequest {
   optional string webview_id = 12;
   optional string queue_id = 13;
   optional string album_id = 14;
+  optional string live_stream_id = 18;
   int32 start_time_seconds = 4;
   int32 duration_seconds = 5;
   optional int32 trim_start_seconds = 6;

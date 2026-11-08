@@ -11,6 +11,7 @@ import {
   Ticket,
   MessageSquareText,
   Clock,
+  Radio,
 } from 'lucide-react';
 
 const MODULE_META: Record<string, { title: string; subtitle: string; icon: React.ElementType }> = {
@@ -43,6 +44,11 @@ const MODULE_META: Record<string, { title: string; subtitle: string; icon: React
     title: 'Jam & Cuaca',
     subtitle: 'Widget penunjuk waktu aktual, kalender, dan perkiraan cuaca.',
     icon: Clock,
+  },
+  livestream: {
+    title: 'Siaran Langsung',
+    subtitle: 'Kelola feed RTSP CCTV, HLS (.m3u8), RTMP, YouTube Live, dan Server HLS Relay.',
+    icon: Radio,
   },
 };
 

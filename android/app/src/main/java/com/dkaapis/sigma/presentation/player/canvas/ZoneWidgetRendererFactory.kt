@@ -7,6 +7,7 @@ import com.dkaapis.sigma.domain.model.LayerBlock
 import com.dkaapis.sigma.domain.model.ZoneWidgetType
 import com.dkaapis.sigma.presentation.renderers.ClockZoneRenderer
 import com.dkaapis.sigma.presentation.renderers.AlbumZoneRenderer
+import com.dkaapis.sigma.presentation.renderers.LiveStreamZoneRenderer
 import com.dkaapis.sigma.presentation.renderers.QueueZoneRenderer
 import com.dkaapis.sigma.presentation.renderers.TickerZoneRenderer
 import com.dkaapis.sigma.presentation.renderers.WebviewZoneRenderer
@@ -14,11 +15,12 @@ import com.dkaapis.sigma.presentation.renderers.model.AlbumSlidePayload
 import org.json.JSONObject
 
 import com.dkaapis.sigma.presentation.renderers.model.ClockConfigPayload
+import com.dkaapis.sigma.presentation.renderers.model.LiveStreamConfigPayload
 import com.dkaapis.sigma.presentation.renderers.model.TickerConfigPayload
 import com.dkaapis.sigma.presentation.renderers.model.WebviewConfigPayload
 
 /**
- * Pabrik instansiasi renderer widget dinamis (Jam, Ticker, Queue, Webview)
+ * Pabrik instansiasi renderer widget dinamis (Jam, Ticker, Queue, Webview, LiveStream)
  */
 class ZoneWidgetRendererFactory {
 
@@ -28,6 +30,7 @@ class ZoneWidgetRendererFactory {
         block: LayerBlock,
         onClockCreated: (ClockZoneRenderer) -> Unit,
         onAlbumCreated: (AlbumZoneRenderer) -> Unit,
+        onLiveStreamCreated: (LiveStreamZoneRenderer) -> Unit,
         albumSlides: List<AlbumSlidePayload>,
         onQueueCreated: (QueueZoneRenderer, queueId: String, widgetDataJson: String?) -> Unit,
         onDuckingChanged: (isDucked: Boolean) -> Unit,
@@ -70,6 +73,12 @@ class ZoneWidgetRendererFactory {
                 val transition = runCatching { JSONObject(jsonStr).optString("transitionEffect", "fade") }
                     .getOrDefault("fade")
                 renderer.createView(parent, albumSlides, transition)
+            }
+            ZoneWidgetType.LIVESTREAM -> {
+                val json = runCatching { JSONObject(jsonStr) }.getOrDefault(JSONObject())
+                val renderer = LiveStreamZoneRenderer(activity)
+                onLiveStreamCreated(renderer)
+                renderer.createView(parent, LiveStreamConfigPayload.fromJson(json))
             }
             else -> null
         }

@@ -7,6 +7,7 @@ import com.dkaapis.sigma.presentation.player.canvas.model.ZoneRenderContextPaylo
 import com.dkaapis.sigma.presentation.renderers.ClockZoneRenderer
 import com.dkaapis.sigma.presentation.renderers.AlbumZoneRenderer
 import com.dkaapis.sigma.presentation.renderers.ImageZoneRenderer
+import com.dkaapis.sigma.presentation.renderers.LiveStreamZoneRenderer
 import com.dkaapis.sigma.presentation.renderers.VideoZoneRenderer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -27,6 +28,7 @@ class PlayerZoneManager {
     private val activeVideoZoneIds = mutableSetOf<String>()
     private val clockRenderers = mutableListOf<ClockZoneRenderer>()
     private val albumRenderers = mutableListOf<AlbumZoneRenderer>()
+    private val liveStreamRenderers = mutableListOf<LiveStreamZoneRenderer>()
     private var timelineJob: Job? = null
     private var playbackPaused = false
 
@@ -69,6 +71,7 @@ class PlayerZoneManager {
                     block = widgetBlock,
                     onClockCreated = { clockRenderers.add(it) },
                     onAlbumCreated = { albumRenderers.add(it) },
+                    onLiveStreamCreated = { liveStreamRenderers.add(it) },
                     albumSlides = if (widgetBlock.widgetType == ZoneWidgetType.ALBUM) {
                         mediaResolver.resolveAlbum(widgetBlock, payload.storageRepo)
                     } else {
@@ -116,12 +119,14 @@ class PlayerZoneManager {
         playbackPaused = true
         videoRenderers.forEach { it.pause() }
         albumRenderers.forEach { it.pause() }
+        liveStreamRenderers.forEach { it.pause() }
     }
 
     fun resumePlayback() {
         playbackPaused = false
         activeVideoZoneIds.forEach { zoneId -> videoRenderersByZone[zoneId]?.resume() }
         albumRenderers.forEach { it.resume() }
+        liveStreamRenderers.forEach { it.resume() }
     }
 
     fun getVideoRenderers(): List<VideoZoneRenderer> = videoRenderers
@@ -138,6 +143,8 @@ class PlayerZoneManager {
         clockRenderers.clear()
         albumRenderers.forEach { it.release() }
         albumRenderers.clear()
+        liveStreamRenderers.forEach { it.release() }
+        liveStreamRenderers.clear()
     }
 
     companion object {

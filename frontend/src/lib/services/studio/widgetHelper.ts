@@ -2,7 +2,9 @@ import { DEFAULT_QUEUES, QUEUE_STORAGE_KEY } from '@/app/(dashboard)/studio/comp
 import { DEFAULT_WEBVIEWS, WEBVIEW_STORAGE_KEY } from '@/app/(dashboard)/studio/components/webview/types';
 import { DEFAULT_TICKERS, TICKER_STORAGE_KEY } from '@/app/(dashboard)/studio/components/ticker/types';
 import { DEFAULT_CLOCKS, CLOCK_STORAGE_KEY } from '@/app/(dashboard)/studio/components/clock/types';
+import { DEFAULT_LIVESTREAMS, LIVESTREAM_STORAGE_KEY } from '@/app/(dashboard)/studio/components/livestream/types';
 import { getAlbum } from './album.service';
+import { getLiveStream } from './livestream.service';
 
 export const LEGACY_UUID_MAP: Record<string, string> = {
   'q-1': 'a0000000-0000-0000-0000-000000000001',
@@ -14,6 +16,9 @@ export const LEGACY_UUID_MAP: Record<string, string> = {
   'cw-1': 'd0000000-0000-0000-0000-000000000001',
   'cw-2': 'd0000000-0000-0000-0000-000000000002',
   'album-1': 'e0000000-0000-0000-0000-000000000001',
+  'ls-1': 'f0000000-0000-0000-0000-000000000001',
+  'ls-2': 'f0000000-0000-0000-0000-000000000002',
+  'ls-3': 'f0000000-0000-0000-0000-000000000003',
 };
 
 export function isUuid(id?: string): boolean {
@@ -38,7 +43,7 @@ export function ensureUuid(id: string): string {
 }
 
 export async function resolveWidgetInfo(b: any, prevBlock?: any) {
-  let widgetType: 'webview' | 'ticker' | 'clock' | 'queue' | 'album' | undefined = b.widgetType;
+  let widgetType: 'webview' | 'ticker' | 'clock' | 'queue' | 'album' | 'livestream' | undefined = b.widgetType;
   let widgetId: string | undefined = b.widgetId;
 
   const rawQueueId = b.queueId || b.queue_id;
@@ -46,6 +51,7 @@ export async function resolveWidgetInfo(b: any, prevBlock?: any) {
   const rawClockId = b.clockId || b.clock_id;
   const rawWebviewId = b.webviewId || b.webview_id;
   const rawAlbumId = b.albumId || b.album_id;
+  const rawLiveStreamId = b.liveStreamId || b.live_stream_id;
 
   if (!widgetType) {
     if (rawQueueId) {
@@ -63,6 +69,9 @@ export async function resolveWidgetInfo(b: any, prevBlock?: any) {
     } else if (rawAlbumId) {
       widgetType = 'album';
       widgetId = rawAlbumId;
+    } else if (rawLiveStreamId) {
+      widgetType = 'livestream';
+      widgetId = rawLiveStreamId;
     } else if (prevBlock?.widgetType) {
       widgetType = prevBlock.widgetType;
       widgetId = prevBlock.widgetId;
@@ -79,12 +88,15 @@ export async function resolveWidgetInfo(b: any, prevBlock?: any) {
       clockId: rawClockId || '',
       webviewId: rawWebviewId || '',
       albumId: rawAlbumId || '',
+      liveStreamId: rawLiveStreamId || '',
     };
   }
 
   let widgetData = prevBlock?.widgetData;
   if (!widgetData && widgetType === 'album' && widgetId) {
     widgetData = await getAlbum(widgetId);
+  } else if (!widgetData && widgetType === 'livestream' && widgetId) {
+    widgetData = await getLiveStream(widgetId).catch(() => DEFAULT_LIVESTREAMS[0]);
   } else if (!widgetData && typeof window !== 'undefined') {
     try {
       if (widgetType === 'queue') {
@@ -103,6 +115,10 @@ export async function resolveWidgetInfo(b: any, prevBlock?: any) {
         const stored = localStorage.getItem(CLOCK_STORAGE_KEY);
         const list = stored ? JSON.parse(stored) : DEFAULT_CLOCKS;
         widgetData = list.find((item: any) => item.id === widgetId || ensureUuid(item.id) === widgetId) || list[0] || DEFAULT_CLOCKS[0];
+      } else if (widgetType === 'livestream') {
+        const stored = localStorage.getItem(LIVESTREAM_STORAGE_KEY);
+        const list = stored ? JSON.parse(stored) : DEFAULT_LIVESTREAMS;
+        widgetData = list.find((item: any) => item.id === widgetId || ensureUuid(item.id) === widgetId) || list[0] || DEFAULT_LIVESTREAMS[0];
       }
     } catch {}
   }
@@ -116,5 +132,6 @@ export async function resolveWidgetInfo(b: any, prevBlock?: any) {
     clockId: rawClockId || (widgetType === 'clock' ? widgetId : ''),
     webviewId: rawWebviewId || (widgetType === 'webview' ? widgetId : ''),
     albumId: rawAlbumId || (widgetType === 'album' ? widgetId : ''),
+    liveStreamId: rawLiveStreamId || (widgetType === 'livestream' ? widgetId : ''),
   };
 }

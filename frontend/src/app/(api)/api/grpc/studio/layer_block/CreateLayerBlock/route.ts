@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
     if (body.webview_id || body.webviewId) request.setWebviewId(body.webview_id || body.webviewId);
     if (body.queue_id || body.queueId) request.setQueueId(body.queue_id || body.queueId);
     if (body.album_id || body.albumId) request.setAlbumId(body.album_id || body.albumId);
+    if (body.live_stream_id || body.liveStreamId) request.setLiveStreamId(body.live_stream_id || body.liveStreamId);
     if (body.startTimeSeconds !== undefined) request.setStartTimeSeconds(body.startTimeSeconds);
     if (body.durationSeconds !== undefined) request.setDurationSeconds(body.durationSeconds);
     

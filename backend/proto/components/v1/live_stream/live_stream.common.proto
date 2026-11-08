@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package signage.components.v1.live_stream;
+
+import "common/v1/types.proto";
+
+message LiveStream {
+  string id = 1;
+  string corporation_id = 2;
+  string name = 3;
+  string description = 4;
+  string stream_mode = 5;
+  string source_type = 6;
+  string source_url = 7;
+  string server_hls_endpoint = 8;
+  bool is_relay_active = 9;
+  bool auto_reconnect = 10;
+  bool low_latency_mode = 11;
+  bool is_muted = 12;
+  string poster_image_url = 13;
+  string created_at = 14;
+  string updated_at = 15;
+}
+
+message CreateLiveStreamRequest {
+  string name = 1;
+  string description = 2;
+  string stream_mode = 3;
+  string source_type = 4;
+  string source_url = 5;
+  bool auto_reconnect = 6;
+  bool low_latency_mode = 7;
+  bool is_muted = 8;
+  string poster_image_url = 9;
+}
+
+message GetLiveStreamRequest {
+  string id = 1;
+}
+
+message ListLiveStreamsRequest {
+  signage.common.v1.PaginationRequest pagination = 1;
+  string search = 2;
+}
+
+message ListLiveStreamsResponse {
+  repeated LiveStream items = 1;
+  signage.common.v1.PaginationResponse pagination = 2;
+}
+
+message UpdateLiveStreamRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string stream_mode = 4;
+  string source_type = 5;
+  string source_url = 6;
+  bool auto_reconnect = 7;
+  bool low_latency_mode = 8;
+  bool is_muted = 9;
+  string poster_image_url = 10;
+  bool is_relay_active = 11;
+}
+
+message DeleteLiveStreamRequest {
+  string id = 1;
+}
+
+message DeleteLiveStreamResponse {
+  bool success = 1;
+}
+
+message ToggleRelayHostRequest {
+  string id = 1;
+  bool is_relay_active = 2;
+}
+

@@ -209,10 +209,10 @@ impl LayoutHistoryRepository {
                         duration_seconds, trim_start_seconds, trim_end_seconds,
                         transition_id, visual_filter_id, order_index, is_muted,
                         volume_level, ticker_id, clock_id, webview_id, queue_id,
-                        album_id, created_at, updated_at
+                        album_id, live_stream_id, created_at, updated_at
                     ) VALUES (
                         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-                        $11, $12, $13, $14, $15, $16, $17, $18, NOW(), NOW()
+                        $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW(), NOW()
                     )
                     "#,
                 )
@@ -234,6 +234,7 @@ impl LayoutHistoryRepository {
                 .bind(b.webview_id)
                 .bind(b.queue_id)
                 .bind(b.album_id)
+                .bind(b.live_stream_id)
                 .execute(&mut *tx)
                 .await
                 .map_err(AppError::Database)?;

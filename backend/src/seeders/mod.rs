@@ -117,6 +117,8 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Erro
         ("can_view_webviews", "View Webviews", "View webview widgets", "components"),
         ("can_manage_albums", "Manage Albums", "Manage photo galleries and promotional photo albums", "components"),
         ("can_view_albums", "View Albums", "View photo albums", "components"),
+        ("can_manage_live_streams", "Manage Live Streams", "Configure RTSP, HLS, RTMP, and server relay live streams", "components"),
+        ("can_view_live_streams", "View Live Streams", "View live streaming sources and relay status", "components"),
 
         // Smart Queue System
         ("can_manage_queue", "Manage Queue", "Configure queue displays, sectors, counters, and call policies", "queue"),

@@ -53,6 +53,7 @@ class ManifestProtoMapper {
                                 block.hasTickerId() && block.tickerId.isNotBlank() -> ZoneWidgetType.TICKER
                                 block.hasWebviewId() && block.webviewId.isNotBlank() -> ZoneWidgetType.WEBVIEW
                                 block.hasAlbumId() && block.albumId.isNotBlank() -> ZoneWidgetType.ALBUM
+                                block.hasLiveStreamId() && block.liveStreamId.isNotBlank() -> ZoneWidgetType.LIVESTREAM
                                 else -> ZoneWidgetType.NONE
                             },
                             widgetDataJson = if (block.hasWidgetDataJson()) block.widgetDataJson else null,

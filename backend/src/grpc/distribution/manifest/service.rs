@@ -27,6 +27,7 @@ impl ManifestServiceImpl {
         clock_id: Option<Uuid>,
         webview_id: Option<Uuid>,
         album_id: Option<Uuid>,
+        live_stream_id: Option<Uuid>,
     ) -> Result<Option<String>, Status> {
         if let Some(qid) = queue_id {
             let queue_service = crate::grpc::components::queue::service::QueueServiceImpl::new(pool.clone());
@@ -283,6 +284,52 @@ impl ManifestServiceImpl {
             }
         }
 
+        if let Some(lsid) = live_stream_id {
+            #[derive(sqlx::FromRow)]
+            struct LiveStreamManifestRow {
+                id: Uuid,
+                name: String,
+                description: String,
+                stream_mode: String,
+                source_type: String,
+                source_url: String,
+                server_hls_endpoint: String,
+                is_relay_active: bool,
+                auto_reconnect: bool,
+                low_latency_mode: bool,
+                is_muted: bool,
+                poster_image_url: String,
+            }
+
+            if let Ok(Some(row)) = sqlx::query_as::<_, LiveStreamManifestRow>(
+                "SELECT id, name, description, stream_mode, source_type, source_url, server_hls_endpoint, is_relay_active, auto_reconnect, low_latency_mode, is_muted, poster_image_url FROM components_live_streams WHERE id = $1"
+            )
+            .bind(lsid)
+            .fetch_optional(pool).await {
+                let effective_url = if row.stream_mode == "SERVER_HOSTED_HLS" && row.is_relay_active && !row.server_hls_endpoint.is_empty() {
+                    row.server_hls_endpoint.clone()
+                } else {
+                    row.source_url.clone()
+                };
+                let json_val = serde_json::json!({
+                    "id": row.id.to_string(),
+                    "name": row.name,
+                    "description": row.description,
+                    "streamMode": row.stream_mode,
+                    "sourceType": row.source_type,
+                    "sourceUrl": row.source_url,
+                    "serverHlsEndpoint": row.server_hls_endpoint,
+                    "effectivePlaybackUrl": effective_url,
+                    "isRelayActive": row.is_relay_active,
+                    "autoReconnect": row.auto_reconnect,
+                    "lowLatencyMode": row.low_latency_mode,
+                    "isMuted": row.is_muted,
+                    "posterImageUrl": row.poster_image_url,
+                });
+                return Ok(Some(json_val.to_string()));
+            }
+        }
+
         Ok(None)
     }
 
@@ -333,6 +380,7 @@ impl ManifestServiceImpl {
                     b.block.clock_id,
                     b.block.webview_id,
                     b.block.album_id,
+                    b.block.live_stream_id,
                 ).await?;
 
                 blocks.push(LayerPlaylist {
@@ -356,6 +404,7 @@ impl ManifestServiceImpl {
                     webview_id: b.block.webview_id.map(|id| id.to_string()),
                     queue_id: b.block.queue_id.map(|id| id.to_string()),
                     album_id: b.block.album_id.map(|id| id.to_string()),
+                    live_stream_id: b.block.live_stream_id.map(|id| id.to_string()),
                     created_at: b.block.created_at.to_rfc3339(),
                     item_overrides: b.item_overrides.into_iter().map(|o| {
                         crate::grpc::proto::studio::v1::layer::LayerPlaylistItemOverride {

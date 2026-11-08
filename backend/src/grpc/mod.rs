@@ -89,6 +89,9 @@ pub mod proto {
             pub mod webview {
                 tonic::include_proto!("signage.components.v1.webview");
             }
+            pub mod live_stream {
+                tonic::include_proto!("signage.components.v1.live_stream");
+            }
             pub mod album {
                 pub mod album {
                     tonic::include_proto!("signage.components.v1.album.album");

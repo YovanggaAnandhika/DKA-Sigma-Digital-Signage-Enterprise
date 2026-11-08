@@ -35,6 +35,7 @@ pub struct LayerBlockEntity {
     pub webview_id: Option<Uuid>,
     pub queue_id: Option<Uuid>,
     pub album_id: Option<Uuid>,
+    pub live_stream_id: Option<Uuid>,
     pub start_time_seconds: i32,
     pub duration_seconds: i32,
     pub trim_start_seconds: i32,

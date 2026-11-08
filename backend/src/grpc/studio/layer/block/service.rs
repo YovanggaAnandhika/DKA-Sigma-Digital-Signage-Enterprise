@@ -46,6 +46,7 @@ impl LayerBlockServiceImpl {
             webview_id: block.webview_id.map(|id| id.to_string()),
             queue_id: block.queue_id.map(|id| id.to_string()),
             album_id: block.album_id.map(|id| id.to_string()),
+            live_stream_id: block.live_stream_id.map(|id| id.to_string()),
             created_at: block.created_at.to_rfc3339(),
             item_overrides: vec![], // Populated elsewhere if needed
             transition: None,
@@ -73,6 +74,7 @@ impl LayerBlockServiceTrait for LayerBlockServiceImpl {
         let webview_id = req.webview_id.and_then(|id| Uuid::from_str(&id).ok());
         let queue_id = req.queue_id.and_then(|id| Uuid::from_str(&id).ok());
         let album_id = req.album_id.and_then(|id| Uuid::from_str(&id).ok());
+        let live_stream_id = req.live_stream_id.and_then(|id| Uuid::from_str(&id).ok());
 
         let content_count = [
             playlist_id.is_some(),
@@ -82,6 +84,7 @@ impl LayerBlockServiceTrait for LayerBlockServiceImpl {
             webview_id.is_some(),
             queue_id.is_some(),
             album_id.is_some(),
+            live_stream_id.is_some(),
         ]
         .iter()
         .filter(|&&c| c)
@@ -103,6 +106,7 @@ impl LayerBlockServiceTrait for LayerBlockServiceImpl {
             webview_id,
             queue_id,
             album_id,
+            live_stream_id,
             start_time_seconds: req.start_time_seconds,
             duration_seconds: req.duration_seconds,
             trim_start_seconds: req.trim_start_seconds,

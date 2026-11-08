@@ -81,6 +81,7 @@ impl LayerServiceImpl {
             webview_id: dto.block.webview_id.map(|id| id.to_string()),
             queue_id: dto.block.queue_id.map(|id| id.to_string()),
             album_id: dto.block.album_id.map(|id| id.to_string()),
+            live_stream_id: dto.block.live_stream_id.map(|id| id.to_string()),
             transition: None,
             visual_filter: None,
             widget_data_json: None,

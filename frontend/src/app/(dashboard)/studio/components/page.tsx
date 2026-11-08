@@ -9,6 +9,7 @@ import {
   Images,
   MessageSquareText,
   Clock,
+  Radio,
   ArrowRight,
   Sparkles,
   Layers,
@@ -114,6 +115,20 @@ const MODULES: ComponentModule[] = [
     shadowColor: 'rgba(6, 182, 212, 0.3)',
     features: ['Tema Frosted Glass', 'Pilihan Kota Otomatis', 'Format 12/24 Jam & Detik'],
   },
+  {
+    id: 'livestream',
+    title: 'Siaran Langsung',
+    subtitle: 'Live Streaming & Server HLS Relay',
+    badge: 'Dual-Mode Stream',
+    badgeColor: '#f43f5e',
+    badgeBg: 'rgba(244, 63, 94, 0.12)',
+    description: 'Tayangkan feed RTSP CCTV, HLS (.m3u8), RTMP OBS, atau YouTube Live dengan dukungan Server HLS Relay Origin.',
+    href: '/studio/components/livestream',
+    icon: Radio,
+    gradient: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
+    shadowColor: 'rgba(244, 63, 94, 0.3)',
+    features: ['Server HLS Relay', 'RTSP CCTV & RTMP', 'Low-Latency & Auto-Retry'],
+  },
 ];
 
 export default function ComponentsHubPage() {
@@ -176,7 +191,7 @@ export default function ComponentsHubPage() {
                 }}
               >
                 <Sparkles size={12} />
-                6 Modul Widget
+                {MODULES.length} Modul Widget
               </span>
             </div>
             <p

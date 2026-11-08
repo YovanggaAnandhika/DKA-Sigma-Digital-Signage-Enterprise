@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
-import { RotateCcw, Bell } from 'lucide-react';
+import { RotateCcw, Bell, Radio } from 'lucide-react';
 import { Layer } from '../../../context/LayoutStateContext';
 import { injectQueueVariables, createDefaultQueueLayoutItems } from '@/app/(dashboard)/studio/components/ticket/types';
+import { toYoutubeEmbedUrl } from '@/app/(dashboard)/studio/components/livestream/types';
 
 const Marquee = 'marquee' as any;
 
@@ -392,6 +393,77 @@ export default function ZoneWidgetRenderer({
           filter: filterCssString,
         }}
       />
+    );
+  }
+
+  if (activeBlock.widgetType === 'livestream') {
+    const ls = activeBlock.widgetData || {};
+    const sourceType = ls.sourceType || 'HLS';
+    const url = ls.sourceUrl || '';
+
+    if (sourceType === 'YOUTUBE_EMBED' && url) {
+      return (
+        <iframe
+          src={toYoutubeEmbedUrl(url, ls.isMuted ?? true)}
+          title={ls.name || z.name}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            border: 'none',
+            filter: filterCssString,
+            pointerEvents: isPlaying ? 'auto' : 'none',
+          }}
+        />
+      );
+    }
+
+    if (sourceType === 'HLS' && url) {
+      return (
+        <video
+          src={url}
+          poster={ls.posterImageUrl || undefined}
+          autoPlay
+          muted={ls.isMuted ?? true}
+          loop
+          playsInline
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            filter: filterCssString,
+          }}
+        />
+      );
+    }
+
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundColor: 'var(--bg-primary)',
+          color: 'var(--text-primary)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: `${Math.max(4, Math.round(8 * scale))}px`,
+          padding: `${Math.max(6, Math.round(16 * scale))}px`,
+          textAlign: 'center',
+        }}
+      >
+        <Radio size={Math.max(18, Math.round(32 * scale))} style={{ color: 'var(--accent-rose)' }} />
+        <div style={{ fontWeight: 800, fontSize: `${Math.max(10, Math.round(18 * scale))}px` }}>
+          {ls.name || 'Siaran Langsung'}
+        </div>
+        <div style={{ fontSize: `${Math.max(8, Math.round(12 * scale))}px`, color: 'var(--text-muted)' }}>
+          {sourceType} &bull; {ls.streamMode === 'SERVER_HOSTED_HLS' ? 'Server HLS Relay' : 'Direct Stream'}
+        </div>
+      </div>
     );
   }
 

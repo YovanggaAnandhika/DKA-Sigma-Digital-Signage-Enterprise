@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Globe, Type, Clock, Users, Images, Plus, Sparkles, Check, ListMusic, Search } from 'lucide-react';
+import { X, Globe, Type, Clock, Users, Images, Radio, Plus, Sparkles, Check, ListMusic, Search } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 import { addMediaBlock, addPlaylistBlock, addWidgetBlock, createLayer } from '@/lib/services/studio/layout.service';
 import { DEFAULT_WEBVIEWS, WEBVIEW_STORAGE_KEY, WebViewConfig } from '@/app/(dashboard)/studio/components/webview/types';
@@ -9,10 +9,11 @@ import { DEFAULT_TICKERS, TICKER_STORAGE_KEY, TickerConfig } from '@/app/(dashbo
 import { DEFAULT_CLOCKS, CLOCK_STORAGE_KEY, ClockWeatherConfig } from '@/app/(dashboard)/studio/components/clock/types';
 import { DEFAULT_QUEUES, QUEUE_STORAGE_KEY, QueueDisplayConfig } from '@/app/(dashboard)/studio/components/ticket/types';
 import { PhotoAlbum } from '@/app/(dashboard)/studio/components/album/types';
+import { DEFAULT_LIVESTREAMS, LiveStreamConfig } from '@/app/(dashboard)/studio/components/livestream/types';
 import { ensureUuid } from '@/lib/services/studio/widgetHelper';
 
 import { invokeApi } from '@/lib/core/invokeApi';
-import { getAlbums } from '@/lib/services';
+import { getAlbums, getLiveStreams } from '@/lib/services';
 
 export default function ComponentPickerModal() {
   const {
@@ -24,7 +25,7 @@ export default function ComponentPickerModal() {
     showToast,
   } = useLayoutEditor();
 
-  const [activeTab, setActiveTab] = useState<'playlist' | 'webview' | 'ticker' | 'clock' | 'queue' | 'album'>('playlist');
+  const [activeTab, setActiveTab] = useState<'playlist' | 'webview' | 'ticker' | 'clock' | 'queue' | 'album' | 'livestream'>('playlist');
   const [searchQuery, setSearchQuery] = useState('');
   const [webviews, setWebviews] = useState<WebViewConfig[]>(DEFAULT_WEBVIEWS);
   const [tickers, setTickers] = useState<TickerConfig[]>(DEFAULT_TICKERS);
@@ -32,6 +33,7 @@ export default function ComponentPickerModal() {
   const [queues, setQueues] = useState<QueueDisplayConfig[]>(DEFAULT_QUEUES);
   const [albums, setAlbums] = useState<PhotoAlbum[]>([]);
   const [albumsError, setAlbumsError] = useState('');
+  const [liveStreams, setLiveStreams] = useState<LiveStreamConfig[]>(DEFAULT_LIVESTREAMS);
 
   const query = searchQuery.toLowerCase().trim();
 
@@ -71,11 +73,17 @@ export default function ComponentPickerModal() {
     );
   }, [albums, query]);
 
+  const filteredLiveStreams = useMemo(() => {
+    return liveStreams.filter((item) =>
+      !query || item.name.toLowerCase().includes(query) || item.sourceUrl.toLowerCase().includes(query)
+    );
+  }, [liveStreams, query]);
+
   useEffect(() => {
     let isMounted = true;
     async function loadBackendComponents() {
       try {
-        const [qRes, tRes, cRes, wRes, albumList] = await Promise.all([
+        const [qRes, tRes, cRes, wRes, albumList, streamList] = await Promise.all([
           invokeApi<any>('/api/grpc/studio/queue/ListQueueDisplays', {}).catch(() => null),
           invokeApi<any>('/api/grpc/studio/ticker/ListTickers', {}).catch(() => null),
           invokeApi<any>('/api/grpc/studio/clock/ListClocks', {}).catch(() => null),
@@ -86,6 +94,7 @@ export default function ComponentPickerModal() {
             }
             return [];
           }),
+          getLiveStreams().catch(() => DEFAULT_LIVESTREAMS),
         ]);
 
         if (!isMounted) return;
@@ -107,6 +116,7 @@ export default function ComponentPickerModal() {
           setWebviews(wRes.itemsList.map((item: any) => ({ ...item, id: ensureUuid(item.id) })));
         }
         setAlbums(albumList);
+        if (streamList?.length) setLiveStreams(streamList);
       } catch (e) {
         console.warn('Gagal memuat komponen dari backend', e);
       }
@@ -126,7 +136,7 @@ export default function ComponentPickerModal() {
   };
 
   const handleSelectComponent = async (
-    widgetType: 'webview' | 'ticker' | 'clock' | 'queue' | 'album',
+    widgetType: 'webview' | 'ticker' | 'clock' | 'queue' | 'album' | 'livestream',
     item: any
   ) => {
     const currentBlocks = targetZone.blocksList || [];
@@ -271,6 +281,7 @@ export default function ComponentPickerModal() {
 
   const tabs = [
     { key: 'playlist', label: 'Daftar Putar', icon: ListMusic, count: availablePlaylists.length },
+    { key: 'livestream', label: 'Siaran Langsung', icon: Radio, count: liveStreams.length },
     { key: 'webview', label: 'Web View', icon: Globe, count: webviews.length },
     { key: 'ticker', label: 'Teks Berjalan', icon: Type, count: tickers.length },
     { key: 'clock', label: 'Jam & Cuaca', icon: Clock, count: clocks.length },
@@ -686,6 +697,52 @@ export default function ComponentPickerModal() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {activeTab === 'livestream' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px' }}>
+              {filteredLiveStreams.length === 0 ? (
+                <div style={{ gridColumn: '1 / -1', padding: '48px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <Radio size={36} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+                  <p style={{ fontSize: '0.85rem', fontWeight: 600 }}>{searchQuery ? 'Tidak ada siaran langsung yang cocok.' : 'Belum ada konfigurasi siaran langsung.'}</p>
+                </div>
+              ) : (
+                filteredLiveStreams.map((item: LiveStreamConfig) => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleSelectComponent('livestream', item)}
+                    className="card-elevated hover-card"
+                    style={{
+                      padding: '16px',
+                      cursor: 'pointer',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: 'rgba(244, 63, 94, 0.12)', color: 'var(--accent-rose)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                        <Radio size={18} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.name}
+                        </span>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.sourceType} &bull; {item.streamMode === 'SERVER_HOSTED_HLS' ? 'Server HLS Relay' : 'Direct Embed'}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--border-subtle)' }}>
+                      <span>{item.lowLatencyMode ? 'Low-Latency' : 'Standard'}</span>
+                      <span style={{ color: 'var(--primary-400)', fontWeight: 700 }}>Pilih +</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>

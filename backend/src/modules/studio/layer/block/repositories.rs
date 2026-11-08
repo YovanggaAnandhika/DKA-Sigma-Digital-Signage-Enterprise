@@ -56,6 +56,16 @@ impl LayerBlockRepository {
             .execute(pool)
             .await?;
         }
+        if let Some(lsid) = dto.live_stream_id {
+            sqlx::query(
+                "INSERT INTO components_live_streams (id, name, description, stream_mode, source_type, source_url)
+                 VALUES ($1, 'Live Stream Utama', 'Siaran langsung / CCTV', 'EXTERNAL_EMBED', 'HLS', 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8')
+                 ON CONFLICT (id) DO NOTHING"
+            )
+            .bind(lsid)
+            .execute(pool)
+            .await?;
+        }
 
         let max_order: (Option<i32>,) = sqlx::query_as(
             "SELECT MAX(order_index) FROM studio_layer_blocks WHERE layer_id = $1"
@@ -71,10 +81,10 @@ impl LayerBlockRepository {
         let block = sqlx::query_as::<_, LayerBlockEntity>(
             r#"
             INSERT INTO studio_layer_blocks (
-                layer_id, playlist_id, media_item_id, ticker_id, clock_id, webview_id, queue_id, album_id,
+                layer_id, playlist_id, media_item_id, ticker_id, clock_id, webview_id, queue_id, album_id, live_stream_id,
                 start_time_seconds, duration_seconds, order_index, trim_start_seconds, trim_end_seconds, transition_id, visual_filter_id,
                 is_muted, volume_level
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE($12, 0), $13, $14, $15, $16, $17)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, COALESCE($13, 0), $14, $15, $16, $17, $18)
             RETURNING *
             "#
         )
@@ -86,6 +96,7 @@ impl LayerBlockRepository {
         .bind(dto.webview_id)
         .bind(dto.queue_id)
         .bind(dto.album_id)
+        .bind(dto.live_stream_id)
         .bind(dto.start_time_seconds)
         .bind(dto.duration_seconds)
         .bind(next_order)

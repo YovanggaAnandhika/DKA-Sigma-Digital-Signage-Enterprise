@@ -1,5 +1,6 @@
 pub mod album;
 pub mod clock;
+pub mod live_stream;
 pub mod queue;
 pub mod ticker;
 pub mod webview;
@@ -18,6 +19,9 @@ macro_rules! register_components_services {
             ))
             .add_service(crate::grpc::proto::components::v1::webview::webview_service_server::WebviewServiceServer::new(
                 crate::grpc::components::webview::service::WebviewServiceImpl::new($pool.clone())
+            ))
+            .add_service(crate::grpc::proto::components::v1::live_stream::live_stream_service_server::LiveStreamServiceServer::new(
+                crate::grpc::components::live_stream::service::LiveStreamServiceImpl::new($pool.clone())
             ))
             .add_service(crate::grpc::proto::components::v1::album::album::album_service_server::AlbumServiceServer::new(
                 crate::grpc::components::album::service::AlbumServiceImpl::new($pool.clone())

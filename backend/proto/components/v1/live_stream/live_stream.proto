@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package signage.components.v1.live_stream;
+
+import "components/v1/live_stream/live_stream.common.proto";
+
+service LiveStreamService {
+  rpc CreateLiveStream(CreateLiveStreamRequest) returns (LiveStream);
+  rpc GetLiveStream(GetLiveStreamRequest) returns (LiveStream);
+  rpc ListLiveStreams(ListLiveStreamsRequest) returns (ListLiveStreamsResponse);
+  rpc UpdateLiveStream(UpdateLiveStreamRequest) returns (LiveStream);
+  rpc DeleteLiveStream(DeleteLiveStreamRequest) returns (DeleteLiveStreamResponse);
+  rpc ToggleRelayHost(ToggleRelayHostRequest) returns (LiveStream);
+}
+
