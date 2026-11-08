@@ -336,8 +336,12 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
 
         let data = match tokio::fs::read(&file_path).await {
             Ok(d) => d,
-            Err(e) => {
-                return Err(Status::not_found(format!("Stream segment not ready or not found: {}", e)));
+            Err(_) => {
+                return Ok(Response::new(GetStreamSegmentResponse {
+                    success: false,
+                    content_type: String::new(),
+                    data: Vec::new(),
+                }));
             }
         };
 
