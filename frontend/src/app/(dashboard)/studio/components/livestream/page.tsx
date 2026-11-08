@@ -21,6 +21,7 @@ import {
   toggleLiveStreamRelay,
 } from '@/lib/services';
 import { LiveStreamConfig, toYoutubeEmbedUrl } from './types';
+import HlsPlayer from '@/components/ui/HlsPlayer';
 
 export default function LiveStreamPage() {
   const [streams, setStreams] = useState<LiveStreamConfig[]>([]);
@@ -366,15 +367,21 @@ export default function LiveStreamPage() {
                     allowFullScreen
                   />
                 </div>
+              ) : previewItem.streamMode === 'SERVER_HOSTED_HLS' ? (
+                <HlsPlayer
+                  src={previewItem.serverHlsEndpoint || `/streams/${previewItem.id}/live.m3u8`}
+                  poster={previewItem.posterImageUrl || undefined}
+                  isMuted={previewItem.isMuted}
+                  autoPlay
+                  fallbackTitle="Menunggu Feed Live Stream Server"
+                  fallbackDescription={`Server sedang menyiapkan segmen HLS untuk stream ${previewItem.name}.`}
+                />
               ) : previewItem.sourceType === 'HLS' ? (
-                <video
+                <HlsPlayer
                   src={previewItem.sourceUrl}
                   poster={previewItem.posterImageUrl || undefined}
-                  controls
+                  isMuted={previewItem.isMuted}
                   autoPlay
-                  muted={previewItem.isMuted}
-                  playsInline
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               ) : (
                 <div

@@ -13,6 +13,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { SingleSelect } from '@/components/ui/SingleSelect';
+import HlsPlayer from '@/components/ui/HlsPlayer';
 import {
   createLiveStream,
   getLiveStream,
@@ -628,60 +629,73 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
               position: 'relative',
             }}
           >
-            {!sourceUrl.trim() ? (
-              <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
-                <Radio size={36} style={{ marginBottom: '8px', opacity: 0.5 }} />
-                <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Masukkan URL Sumber Stream</div>
-                <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>
-                  Pratinjau video akan tampil secara otomatis di sini.
+            {sourceType === 'YOUTUBE_EMBED' ? (
+              !sourceUrl.trim() ? (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
+                  <Radio size={36} style={{ marginBottom: '8px', opacity: 0.5 }} />
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Masukkan URL Sumber Stream</div>
+                  <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+                    Pratinjau video akan tampil secara otomatis di sini.
+                  </div>
                 </div>
-              </div>
-            ) : sourceType === 'YOUTUBE_EMBED' ? (
-              <div
-                style={{
-                  position: 'relative',
-                  width: '100%',
-                  height: '100%',
-                  overflow: 'hidden',
-                  pointerEvents: 'none',
-                }}
-              >
-                <iframe
-                  src={toYoutubeEmbedUrl(sourceUrl, isMuted)}
-                  title={name || 'YouTube Live Preview'}
+              ) : (
+                <div
                   style={{
-                    position: 'absolute',
-                    top: '-14%',
-                    left: 0,
+                    position: 'relative',
                     width: '100%',
-                    height: '128%',
-                    border: 'none',
+                    height: '100%',
+                    overflow: 'hidden',
                     pointerEvents: 'none',
                   }}
-                  allow="autoplay; encrypted-media; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-            ) : sourceType === 'HLS' ? (
-              <video
-                src={sourceUrl.trim()}
-                poster={posterImageUrl.trim() || undefined}
-                controls
-                autoPlay
-                muted={isMuted}
-                playsInline
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            ) : streamMode === 'SERVER_HOSTED_HLS' && sourceType === 'RTMP' ? (
-              <div style={{ textAlign: 'center', padding: '32px', maxWidth: '460px' }}>
-                <Tv size={40} style={{ color: 'var(--accent-emerald)', marginBottom: '10px' }} />
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Menunggu Feed Ingest dari OBS Studio
+                >
+                  <iframe
+                    src={toYoutubeEmbedUrl(sourceUrl, isMuted)}
+                    title={name || 'YouTube Live Preview'}
+                    style={{
+                      position: 'absolute',
+                      top: '-14%',
+                      left: 0,
+                      width: '100%',
+                      height: '128%',
+                      border: 'none',
+                      pointerEvents: 'none',
+                    }}
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                  />
                 </div>
-                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.5 }}>
-                  Mulai streaming dari OBS dengan Stream Key <code>{streamKey}</code>. Server signage akan otomatis me-relay video menjadi HLS untuk semua layar signage.
-                </p>
-              </div>
+              )
+            ) : streamMode === 'SERVER_HOSTED_HLS' ? (
+              <HlsPlayer
+                src={`/streams/${streamKey}/live.m3u8`}
+                poster={posterImageUrl.trim() || undefined}
+                isMuted={isMuted}
+                autoPlay
+                fallbackTitle={
+                  sourceType === 'RTMP'
+                    ? 'Menunggu Feed Ingest dari OBS Studio'
+                    : 'Menunggu Feed Live Stream Server'
+                }
+                fallbackDescription={
+                  sourceType === 'RTMP'
+                    ? `Mulai streaming dari OBS dengan Stream Key ${streamKey}. Segmen HLS akan langsung diputar otomatis di sini.`
+                    : 'Server sedang menghubungkan dan mengonversi feed sumber ke HLS.'
+                }
+              />
+            ) : sourceType === 'HLS' ? (
+              !sourceUrl.trim() ? (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
+                  <Radio size={36} style={{ marginBottom: '8px', opacity: 0.5 }} />
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Masukkan URL Sumber HLS</div>
+                </div>
+              ) : (
+                <HlsPlayer
+                  src={sourceUrl.trim()}
+                  poster={posterImageUrl.trim() || undefined}
+                  isMuted={isMuted}
+                  autoPlay
+                />
+              )
             ) : (
               <div style={{ textAlign: 'center', padding: '32px', maxWidth: '460px' }}>
                 <Tv size={40} style={{ color: 'var(--primary-500)', marginBottom: '10px' }} />
