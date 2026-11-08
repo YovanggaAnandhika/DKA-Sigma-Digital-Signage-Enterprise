@@ -7,9 +7,6 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -18,38 +15,26 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import com.dkaapis.sigma.data.local.ServerConfig
 import com.dkaapis.sigma.presentation.renderers.model.LiveStreamConfigPayload
 
+/**
+ * Pure MediaMTX Single-URL Live Stream Zone Renderer for Android Player
+ */
 class LiveStreamZoneRenderer(
     private val context: Context
 ) {
     private var exoPlayer: ExoPlayer? = null
-    private var webView: WebView? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private var released = false
 
-    @SuppressLint("SetJavaScriptEnabled", "UnsafeOptInUsageError")
+    @SuppressLint("UnsafeOptInUsageError")
     fun createView(parent: ViewGroup, payload: LiveStreamConfigPayload): View {
-        val targetUrl = payload.effectivePlaybackUrl.ifBlank { payload.sourceUrl }
-
-        if (payload.sourceType.equals("YOUTUBE_EMBED", ignoreCase = true)) {
-            return WebView(context).apply {
-                webView = this
-                layoutParams = FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-                webViewClient = WebViewClient()
-                settings.apply {
-                    javaScriptEnabled = true
-                    domStorageEnabled = true
-                    mediaPlaybackRequiresUserGesture = false
-                    cacheMode = WebSettings.LOAD_DEFAULT
-                    loadWithOverviewMode = true
-                    useWideViewPort = true
-                }
-                loadUrl(targetUrl)
-            }
+        var targetUrl = payload.effectivePlaybackUrl.ifBlank { payload.sourceUrl }
+        if (targetUrl.startsWith("/")) {
+            val scheme = if (ServerConfig.isTls(context)) "https" else "http"
+            val host = ServerConfig.getHost(context)
+            targetUrl = "$scheme://$host$targetUrl"
         }
 
         val player = ExoPlayer.Builder(context)
@@ -100,12 +85,10 @@ class LiveStreamZoneRenderer(
 
     fun pause() {
         exoPlayer?.pause()
-        webView?.onPause()
     }
 
     fun resume() {
         exoPlayer?.play()
-        webView?.onResume()
     }
 
     fun release() {
@@ -113,8 +96,5 @@ class LiveStreamZoneRenderer(
         mainHandler.removeCallbacksAndMessages(null)
         exoPlayer?.release()
         exoPlayer = null
-        webView?.destroy()
-        webView = null
     }
 }
-

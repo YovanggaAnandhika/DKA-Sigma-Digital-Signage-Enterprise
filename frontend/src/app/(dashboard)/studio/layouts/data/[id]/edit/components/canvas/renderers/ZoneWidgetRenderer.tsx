@@ -4,7 +4,6 @@ import React from 'react';
 import { RotateCcw, Bell, Radio } from 'lucide-react';
 import { Layer } from '../../../context/LayoutStateContext';
 import { injectQueueVariables, createDefaultQueueLayoutItems } from '@/app/(dashboard)/studio/components/ticket/types';
-import { toYoutubeEmbedUrl } from '@/app/(dashboard)/studio/components/livestream/types';
 
 const Marquee = 'marquee' as any;
 
@@ -401,40 +400,12 @@ export default function ZoneWidgetRenderer({
     const sourceType = ls.sourceType || 'HLS';
     const url = ls.sourceUrl || '';
 
-    if (sourceType === 'YOUTUBE_EMBED' && url) {
-      return (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            overflow: 'hidden',
-            pointerEvents: 'none',
-          }}
-        >
-          <iframe
-            src={toYoutubeEmbedUrl(url, ls.isMuted ?? true)}
-            title={ls.name || z.name}
-            style={{
-              position: 'absolute',
-              top: '-14%',
-              left: 0,
-              width: '100%',
-              height: '128%',
-              border: 'none',
-              filter: filterCssString,
-              pointerEvents: 'none',
-            }}
-          />
-        </div>
-      );
-    }
+    const streamEndpoint = ls.serverHlsEndpoint || (ls.id ? `/streams/${ls.id}/live.m3u8` : url);
 
-    if (sourceType === 'HLS' && url) {
+    if (streamEndpoint) {
       return (
         <video
-          src={url}
+          src={streamEndpoint}
           poster={ls.posterImageUrl || undefined}
           autoPlay
           muted={ls.isMuted ?? true}

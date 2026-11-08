@@ -9,15 +9,13 @@ import { SourceModePanelProps } from './types';
 const WhipSourceConfig = dynamic(() => import('../sources/WhipSourceConfig'), { ssr: false });
 const RtmpSourceConfig = dynamic(() => import('../sources/RtmpSourceConfig'), { ssr: false });
 const RtspSourceConfig = dynamic(() => import('../sources/RtspSourceConfig'), { ssr: false });
-const HlsSourceConfig = dynamic(() => import('../sources/HlsSourceConfig'), { ssr: false });
 
-const ALLOWED_RELAY_TYPES: StreamSourceType[] = ['WHIP', 'RTMP', 'RTSP', 'HLS'];
+const ALLOWED_RELAY_TYPES: StreamSourceType[] = ['WHIP', 'RTMP', 'RTSP'];
 
 const PROTOCOL_OPTIONS = [
   { value: 'WHIP', label: 'WHIP (WebRTC Port 80)' },
   { value: 'RTMP', label: 'RTMP (Port 1935)' },
-  { value: 'RTSP', label: 'RTSP (Kamera IP)' },
-  { value: 'HLS', label: 'HLS (Relay Feed)' },
+  { value: 'RTSP', label: 'RTSP (Kamera IP / CCTV)' },
 ];
 
 function generateSecureToken(length = 20): string {
@@ -41,7 +39,6 @@ const SOURCE_REGISTRY: Record<string, React.ComponentType<any>> = {
   WHIP: WhipSourceConfig,
   RTMP: RtmpSourceConfig,
   RTSP: RtspSourceConfig,
-  HLS: HlsSourceConfig,
 };
 
 export default function ServerRelayModePanel({
@@ -65,7 +62,7 @@ export default function ServerRelayModePanel({
   const rtmpServerUrl = `rtmp://${serverHost}:1935/live`;
   const fullRtmpIngestUrl = `${rtmpServerUrl}/${streamKey}`;
 
-  // Isolation check: ensure sourceType is valid for Server Relay mode
+  // Isolation check: ensure sourceType is valid
   useEffect(() => {
     if (!ALLOWED_RELAY_TYPES.includes(sourceType)) {
       onChangeSourceType('WHIP');
@@ -102,7 +99,7 @@ export default function ServerRelayModePanel({
   const ActiveComponent = SOURCE_REGISTRY[sourceType] || WhipSourceConfig;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       <div>
         <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
           Protokol Sumber
@@ -111,14 +108,15 @@ export default function ServerRelayModePanel({
           value={sourceType}
           onChange={handleProtocolChange}
           options={PROTOCOL_OPTIONS}
+          placeholder="Pilih Protokol Ingest MediaMTX"
         />
       </div>
 
-      {/* Render active source component without conditional if-else */}
       <ActiveComponent
-        whipUrl={whipUrl}
-        serverUrl={rtmpServerUrl}
         streamKey={streamKey}
+        serverHost={serverHost}
+        whipUrl={whipUrl}
+        rtmpServerUrl={rtmpServerUrl}
         sourceUrl={sourceUrl}
         onChangeSourceUrl={onChangeSourceUrl}
         requiresAuth={requiresAuth}
@@ -127,11 +125,8 @@ export default function ServerRelayModePanel({
         onChangeUsername={onChangeUsername}
         password={password}
         onChangePassword={onChangePassword}
-        bearerToken={password}
-        onChangeBearerToken={onChangePassword}
         onGenerateToken={handleGenerateToken}
       />
     </div>
   );
 }
-

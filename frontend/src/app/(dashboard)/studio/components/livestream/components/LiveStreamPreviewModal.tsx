@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { X, Tv, Volume2, VolumeX } from 'lucide-react';
-import { LiveStreamConfig, toYoutubeEmbedUrl } from '../types';
+import { LiveStreamConfig } from '../types';
 import type { StreamPlaybackStatus } from '@/components/ui/HlsPlayer';
 
 const HlsPlayer = dynamic(() => import('@/components/ui/HlsPlayer'), {
@@ -65,8 +65,7 @@ export default function LiveStreamPreviewModal({ item, onClose }: LiveStreamPrev
 
   const displayPercent = isMuted ? 0 : Math.round(volume * 100);
 
-  const isHlsManaged = item.streamMode === 'SERVER_HOSTED_HLS' || item.sourceType === 'HLS';
-  const effectiveStatus: StreamPlaybackStatus = isHlsManaged ? playbackStatus : 'LIVE';
+  const effectiveStatus: StreamPlaybackStatus = playbackStatus;
 
   const statusColor =
     effectiveStatus === 'LIVE'
@@ -153,7 +152,7 @@ export default function LiveStreamPreviewModal({ item, onClose }: LiveStreamPrev
               {statusLabel}
             </span>
             <span className="badge badge-neutral" style={{ fontSize: '0.68rem' }}>
-              {item.sourceType === 'YOUTUBE_EMBED' ? 'YOUTUBE' : item.sourceType}
+              {item.sourceType}
             </span>
           </div>
 
@@ -254,76 +253,17 @@ export default function LiveStreamPreviewModal({ item, onClose }: LiveStreamPrev
               justifyContent: 'center',
             }}
           >
-            {item.sourceType === 'YOUTUBE_EMBED' ? (
-              <div
-                style={{
-                  position: 'relative',
-                  width: '100%',
-                  height: '100%',
-                  overflow: 'hidden',
-                  pointerEvents: 'none',
-                }}
-              >
-                <iframe
-                  src={toYoutubeEmbedUrl(item.sourceUrl, isMuted)}
-                  title={item.name}
-                  style={{
-                    position: 'absolute',
-                    top: '-14%',
-                    left: 0,
-                    width: '100%',
-                    height: '128%',
-                    border: 'none',
-                    pointerEvents: 'none',
-                  }}
-                  allow="autoplay; encrypted-media; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-            ) : item.streamMode === 'SERVER_HOSTED_HLS' ? (
-              <HlsPlayer
-                src={item.serverHlsEndpoint || `/streams/${item.id}/live.m3u8`}
-                poster={item.posterImageUrl || undefined}
-                isMuted={isMuted}
-                volume={volume}
-                autoPlay
-                controls={false}
-                fallbackTitle="Stream Off"
-                fallbackDescription={`Siaran ${item.name} sedang tidak aktif.`}
-                onStatusChange={setPlaybackStatus}
-              />
-            ) : item.sourceType === 'HLS' ? (
-              <HlsPlayer
-                src={item.sourceUrl}
-                poster={item.posterImageUrl || undefined}
-                isMuted={isMuted}
-                volume={volume}
-                autoPlay
-                controls={false}
-                fallbackTitle="Stream Off"
-                onStatusChange={setPlaybackStatus}
-              />
-            ) : (
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
-                  padding: '32px',
-                  textAlign: 'center',
-                }}
-              >
-                <Tv size={38} style={{ color: 'var(--primary-500)' }} />
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff' }}>
-                  Siaran {item.sourceType} Siap Ditayangkan
-                </div>
-                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', maxWidth: '460px' }}>
-                  Aliran {item.sourceType} akan diputar langsung pada perangkat layar signage.
-                </div>
-              </div>
-            )}
+            <HlsPlayer
+              src={item.serverHlsEndpoint || `/streams/${item.id}/live.m3u8`}
+              poster={item.posterImageUrl || undefined}
+              isMuted={isMuted}
+              volume={volume}
+              autoPlay
+              controls={false}
+              fallbackTitle="Stream Off"
+              fallbackDescription={`Siaran ${item.name} sedang tidak aktif.`}
+              onStatusChange={setPlaybackStatus}
+            />
           </div>
         </div>
       </div>

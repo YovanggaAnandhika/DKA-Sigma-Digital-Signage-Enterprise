@@ -8,8 +8,6 @@ import {
   ArrowLeft,
   Radio,
   Check,
-  Server,
-  Globe,
 } from 'lucide-react';
 import { SingleSelect } from '@/components/ui/SingleSelect';
 import {
@@ -23,16 +21,9 @@ import {
   StreamSourceType,
 } from './types';
 import StreamSettingsCard from './components/StreamSettingsCard';
-import { SourceModePanelProps } from './components/modes/types';
 
-// Dynamically loaded isolated mode panels
-const DirectEmbedModePanel = dynamic(() => import('./components/modes/DirectEmbedModePanel'), { ssr: false });
-const ServerRelayModePanel = dynamic(() => import('./components/modes/ServerRelayModePanel'), { ssr: false });
-
-const MODE_PANELS: Record<StreamMode, React.ComponentType<SourceModePanelProps>> = {
-  EXTERNAL_EMBED: DirectEmbedModePanel,
-  SERVER_HOSTED_HLS: ServerRelayModePanel,
-};
+// Dynamically loaded MediaMTX Ingest Panel
+const IngestSourcePanel = dynamic(() => import('./components/modes/ServerRelayModePanel'), { ssr: false });
 
 const StreamPreviewMonitor = dynamic(
   () => import('./components/StreamPreviewMonitor'),
@@ -82,14 +73,14 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [streamMode, setStreamMode] = useState<StreamMode>('EXTERNAL_EMBED');
-  const [sourceType, setSourceType] = useState<StreamSourceType>('HLS');
+  const streamMode: StreamMode = 'SERVER_HOSTED_HLS';
+  const [sourceType, setSourceType] = useState<StreamSourceType>('WHIP');
   const [sourceUrl, setSourceUrl] = useState('');
   const [autoReconnect, setAutoReconnect] = useState(true);
   const [lowLatencyMode, setLowLatencyMode] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
   const [posterImageUrl, setPosterImageUrl] = useState('');
-  const [isRelayActive, setIsRelayActive] = useState(true);
+  const isRelayActive = true;
   const [requiresAuth, setRequiresAuth] = useState(false);
   const [ingestUsername, setIngestUsername] = useState('');
   const [ingestPassword, setIngestPassword] = useState('');
@@ -126,14 +117,12 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
       .then((item) => {
         setName(item.name);
         setDescription(item.description);
-        setStreamMode(item.streamMode);
-        setSourceType(item.sourceType);
+        setSourceType((item.sourceType as StreamSourceType) || 'WHIP');
         setSourceUrl(item.sourceUrl);
         setAutoReconnect(item.autoReconnect);
         setLowLatencyMode(item.lowLatencyMode);
         setIsMuted(item.isMuted);
         setPosterImageUrl(item.posterImageUrl);
-        setIsRelayActive(item.isRelayActive);
         setRequiresAuth(item.requiresAuth ?? false);
         setIngestUsername(item.ingestUsername ?? '');
         setIngestPassword(item.ingestPassword ?? '');
@@ -156,9 +145,8 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
           streamMode,
           sourceType,
           sourceUrl: effectiveSourceUrl,
-          serverHlsEndpoint:
-            streamMode === 'SERVER_HOSTED_HLS' ? `/streams/${streamId}/live.m3u8` : '',
-          isRelayActive: streamMode === 'SERVER_HOSTED_HLS' ? isRelayActive : false,
+          serverHlsEndpoint: `/streams/${streamId}/live.m3u8`,
+          isRelayActive,
           autoReconnect,
           lowLatencyMode,
           isMuted,
@@ -188,8 +176,6 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
       setSaving(false);
     }
   };
-
-  const ActiveModePanel = MODE_PANELS[streamMode] || DirectEmbedModePanel;
 
   return (
     <form
@@ -244,7 +230,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                 {isEdit ? 'Ubah Live Stream' : 'Tambah Live Stream'}
               </h1>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1px', margin: 0 }}>
-                Konfigurasi sumber siaran langsung untuk zona layar signage.
+                Konfigurasi siaran langsung terpusat melalui MediaMTX engine.
               </p>
             </div>
           </div>
@@ -312,70 +298,6 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
               />
             </div>
 
-            {/* Dual-Mode Selector */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
-                Mode Streaming
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setStreamMode('EXTERNAL_EMBED')}
-                  style={{
-                    padding: '9px 11px',
-                    borderRadius: '10px',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    backgroundColor:
-                      streamMode === 'EXTERNAL_EMBED' ? 'var(--bg-surface-elevated)' : 'var(--bg-surface)',
-                    border:
-                      streamMode === 'EXTERNAL_EMBED'
-                        ? '2px solid var(--primary-500)'
-                        : '1px solid var(--border-subtle)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.76rem', color: 'var(--text-primary)' }}>
-                    <Globe size={13} style={{ color: 'var(--primary-500)' }} />
-                    <span>Direct Embed</span>
-                  </div>
-                  <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', lineHeight: 1.25 }}>
-                    Koneksi langsung ke sumber
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setStreamMode('SERVER_HOSTED_HLS')}
-                  style={{
-                    padding: '9px 11px',
-                    borderRadius: '10px',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    backgroundColor:
-                      streamMode === 'SERVER_HOSTED_HLS' ? 'var(--bg-surface-elevated)' : 'var(--bg-surface)',
-                    border:
-                      streamMode === 'SERVER_HOSTED_HLS'
-                        ? '2px solid var(--accent-emerald)'
-                        : '1px solid var(--border-subtle)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.76rem', color: 'var(--text-primary)' }}>
-                    <Server size={13} style={{ color: 'var(--accent-emerald)' }} />
-                    <span>Server Relay</span>
-                  </div>
-                  <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', lineHeight: 1.25 }}>
-                    Relay terpusat dari server
-                  </span>
-                </button>
-              </div>
-            </div>
-
             {/* Poster Media Picker */}
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
@@ -389,8 +311,8 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
               />
             </div>
 
-            {/* Isolated Mode Panel (Automatically loaded based on streamMode) */}
-            <ActiveModePanel
+            {/* MediaMTX Ingest Source Panel */}
+            <IngestSourcePanel
               sourceType={sourceType}
               onChangeSourceType={setSourceType}
               sourceUrl={sourceUrl}
@@ -415,28 +337,18 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
           />
         </div>
 
-        {/* Right Live Preview Monitor */}
-        <div
-          style={{
-            padding: '18px 20px',
-            backgroundColor: 'var(--bg-surface)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'stretch',
-          }}
-        >
-          <StreamPreviewMonitor
-            name={name}
-            streamMode={streamMode}
-            sourceType={sourceType}
-            sourceUrl={sourceUrl}
-            streamKey={streamKey}
-            lowLatencyMode={lowLatencyMode}
-            isMuted={isMuted}
-            onToggleMute={setIsMuted}
-            posterImageUrl={posterImageUrl}
-          />
-        </div>
+        {/* Right Uncropped Live Video Monitor Stage */}
+        <StreamPreviewMonitor
+          sourceType={sourceType}
+          sourceUrl={sourceUrl}
+          streamKey={streamKey}
+          serverHost={serverHost}
+          isRelayActive={isRelayActive}
+          lowLatencyMode={lowLatencyMode}
+          autoReconnect={autoReconnect}
+          isMuted={isMuted}
+          posterImageUrl={posterImageUrl}
+        />
       </div>
     </form>
   );

@@ -115,8 +115,8 @@ data class WebviewConfigPayload(
  */
 data class LiveStreamConfigPayload(
     val name: String = "Live Stream",
-    val streamMode: String = "EXTERNAL_EMBED",
-    val sourceType: String = "HLS",
+    val streamMode: String = "SERVER_HOSTED_HLS",
+    val sourceType: String = "WHIP",
     val sourceUrl: String = "",
     val effectivePlaybackUrl: String = "",
     val autoReconnect: Boolean = true,
@@ -126,11 +126,15 @@ data class LiveStreamConfigPayload(
     companion object {
         fun fromJson(json: JSONObject): LiveStreamConfigPayload {
             val rawSource = json.optString("sourceUrl", "")
-            val effective = json.optString("effectivePlaybackUrl", "").ifBlank { rawSource }
+            val streamId = json.optString("id", "")
+            val serverEndpoint = json.optString("serverHlsEndpoint", "")
+            val effective = json.optString("effectivePlaybackUrl", "")
+                .ifBlank { serverEndpoint }
+                .ifBlank { if (streamId.isNotBlank()) "/streams/$streamId/live.m3u8" else rawSource }
             return LiveStreamConfigPayload(
                 name = json.optString("name", "Live Stream"),
-                streamMode = json.optString("streamMode", "EXTERNAL_EMBED"),
-                sourceType = json.optString("sourceType", "HLS"),
+                streamMode = json.optString("streamMode", "SERVER_HOSTED_HLS"),
+                sourceType = json.optString("sourceType", "WHIP"),
                 sourceUrl = rawSource,
                 effectivePlaybackUrl = effective,
                 autoReconnect = json.optBoolean("autoReconnect", true),
