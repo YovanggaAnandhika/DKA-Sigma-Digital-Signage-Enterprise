@@ -54,7 +54,7 @@ services:
       MQTT_USERNAME: ${MQTT_USERNAME:-}
       MQTT_PASSWORD: ${MQTT_PASSWORD:-}
       STREAMER_API_URL: "http://dka-product-sigma-streamer:9997"
-      STREAMER_RTMP_URL: "rtmp://dka-product-sigma-streamer:1935"
+      STREAMER_RTMP_URL: "rtsp://dka-product-sigma-streamer:8554"
       STREAMER_WEBRTC_URL: "http://dka-product-sigma-streamer:8889"
       STREAMER_HLS_URL: "http://dka-product-sigma-streamer:8888"
     volumes:
@@ -82,43 +82,10 @@ services:
       MTX_AUTHINTERNALUSERS_0_PERMISSIONS_2_ACTION: "playback"
       MTX_AUTHINTERNALUSERS_0_PERMISSIONS_3_ACTION: "api"
       MTX_AUTHINTERNALUSERS_0_PERMISSIONS_4_ACTION: "metrics"
-      MTX_AUTHINTERNALUSERS_0_USER: "any"
-      MTX_AUTHINTERNALUSERS_0_PERMISSIONS_0_ACTION: "publish"
-      MTX_AUTHINTERNALUSERS_0_PERMISSIONS_1_ACTION: "read"
-      MTX_AUTHINTERNALUSERS_0_PERMISSIONS_2_ACTION: "playback"
-      MTX_AUTHINTERNALUSERS_0_PERMISSIONS_3_ACTION: "api"
-      MTX_AUTHINTERNALUSERS_0_PERMISSIONS_4_ACTION: "metrics"
       MTX_RTMP: "yes"
       MTX_RTMPADDRESS: ":1935"
-      MTX_SRT: "yes"
-      MTX_SRTADDRESS: ":8890"
-      MTX_WEBRTC: "yes"
-      MTX_WEBRTCADDRESS: ":8889"
-      MTX_WEBRTCALLOWORIGINS: '["*"]'
-      MTX_WEBRTCLOCALUDPADDRESS: ":8189"
-      MTX_WEBRTCLOCALTCPADDRESS: ":8189"
-      MTX_WEBRTCADDITIONALHOSTS: "127.0.0.1,localhost,sigma.dkaapis.test,10.20.30.97"
-      MTX_HLS: "yes"
-      MTX_HLSADDRESS: ":8888"
-      MTX_HLSVARIANT: "mpegts"
-      MTX_HLSSEGMENTCOUNT: "4"
-      MTX_HLSSEGMENTDURATION: "1s"
-      MTX_HLSALLOWORIGINS: '["*"]'
-    networks:
-      - dka-internal
-
-  # Ultra-Low Latency WebRTC (UDP) / SRT / RTMP / HLS Streaming Engine
-  dka-product-sigma-streamer:
-    image: bluenviron/mediamtx:latest-ffmpeg
-    container_name: dka-product-sigma-streamer
-    hostname: dka-product-sigma-streamer
-    restart: always
-    environment:
-      TZ: Asia/Makassar
-      MTX_API: "yes"
-      MTX_APIADDRESS: ":9997"
-      MTX_RTMP: "yes"
-      MTX_RTMPADDRESS: ":1935"
+      MTX_RTSP: "yes"
+      MTX_RTSPADDRESS: ":8554"
       MTX_SRT: "yes"
       MTX_SRTADDRESS: ":8890"
       MTX_WEBRTC: "yes"

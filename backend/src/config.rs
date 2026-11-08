@@ -43,7 +43,7 @@ impl Config {
             streamer_api_url: env::var("STREAMER_API_URL")
                 .unwrap_or_else(|_| "http://dka-product-sigma-streamer:9997".to_string()),
             streamer_rtmp_url: env::var("STREAMER_RTMP_URL")
-                .unwrap_or_else(|_| "rtmp://dka-product-sigma-streamer:1935".to_string()),
+                .unwrap_or_else(|_| "rtsp://dka-product-sigma-streamer:8554".to_string()),
             streamer_hls_url: env::var("STREAMER_HLS_URL")
                 .unwrap_or_else(|_| "http://dka-product-sigma-streamer:8888".to_string()),
         }
