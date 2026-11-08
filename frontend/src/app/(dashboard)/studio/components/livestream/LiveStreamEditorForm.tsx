@@ -13,6 +13,7 @@ import {
   Shield,
   Eye,
   EyeOff,
+  Sparkles,
 } from 'lucide-react';
 import { SingleSelect } from '@/components/ui/SingleSelect';
 import {
@@ -61,6 +62,23 @@ function generateUUID(): string {
     const v = c === 'x' ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
+}
+
+function generateSecureToken(length = 20): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = 'sig_tok_';
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const array = new Uint8Array(length);
+    crypto.getRandomValues(array);
+    for (let i = 0; i < length; i++) {
+      result += chars[array[i] % chars.length];
+    }
+    return result;
+  }
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 }
 
 interface LiveStreamEditorFormProps {
@@ -213,6 +231,10 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
       : []),
   ];
 
+  const handleGenerateToken = () => {
+    setIngestPassword(generateSecureToken());
+  };
+
   // Bottom bar placed neatly underneath the video monitor
   const bottomUrlOrIngestBar =
     streamMode === 'SERVER_HOSTED_HLS' && sourceType === 'RTMP' ? (
@@ -220,6 +242,9 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
         serverUrl={rtmpServerUrl}
         streamKey={streamKey}
         serverHost={serverHost}
+        requiresAuth={requiresAuth}
+        bearerToken={ingestPassword}
+        onGenerateToken={handleGenerateToken}
       />
     ) : (
       <div
@@ -492,7 +517,13 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                   type="button"
                   role="switch"
                   aria-checked={requiresAuth}
-                  onClick={() => setRequiresAuth(!requiresAuth)}
+                  onClick={() => {
+                    const next = !requiresAuth;
+                    setRequiresAuth(next);
+                    if (next && !ingestPassword) {
+                      setIngestPassword(generateSecureToken());
+                    }
+                  }}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -525,7 +556,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '2px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                      Username Ingest
+                      Username (RTMP)
                     </label>
                     <input
                       type="text"
@@ -536,17 +567,39 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                      Password Ingest
-                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                        Password / Token
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleGenerateToken}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          cursor: 'pointer',
+                          fontSize: '0.67rem',
+                          fontWeight: 600,
+                          color: 'var(--primary-400)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                        }}
+                        title="Acak Token / Password Baru"
+                      >
+                        <Sparkles size={11} />
+                        <span>Generate</span>
+                      </button>
+                    </div>
                     <div style={{ position: 'relative' }}>
                       <input
                         type={showPassword ? 'text' : 'password'}
                         value={ingestPassword}
                         onChange={(e) => setIngestPassword(e.target.value)}
-                        placeholder="Password siaran"
+                        placeholder="Token siaran"
                         className="form-input"
-                        style={{ paddingRight: '36px' }}
+                        style={{ paddingRight: '36px', fontFamily: 'monospace' }}
                       />
                       <button
                         type="button"

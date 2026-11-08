@@ -1,18 +1,24 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy, KeyRound, Sparkles } from 'lucide-react';
 
 interface ObsIngestCardProps {
   serverUrl: string;
   streamKey: string;
   serverHost?: string;
+  requiresAuth?: boolean;
+  bearerToken?: string;
+  onGenerateToken?: () => void;
 }
 
 export default function ObsIngestCard({
   serverUrl,
   streamKey,
   serverHost = 'sigma.dkaapis.test',
+  requiresAuth = false,
+  bearerToken = '',
+  onGenerateToken,
 }: ObsIngestCardProps) {
   const [ingestType, setIngestType] = useState<'WHIP' | 'RTMP'>('WHIP');
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -88,48 +94,126 @@ export default function ObsIngestCard({
 
       {/* WHIP View */}
       {ingestType === 'WHIP' ? (
-        <div>
-          <label
-            style={{
-              display: 'block',
-              fontSize: '0.66rem',
-              fontWeight: 700,
-              color: 'var(--text-secondary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.03em',
-              marginBottom: '3px',
-            }}
-          >
-            Server URL (OBS: WHIP)
-          </label>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <input
-              type="text"
-              readOnly
-              value={whipServerUrl}
-              className="form-input"
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: requiresAuth ? '1.2fr 1fr' : '1fr',
+            gap: '8px',
+          }}
+        >
+          <div>
+            <label
               style={{
-                fontFamily: 'monospace',
-                fontSize: '0.74rem',
-                padding: '5px 8px',
-                backgroundColor: 'var(--bg-primary)',
+                display: 'block',
+                fontSize: '0.66rem',
+                fontWeight: 700,
+                color: 'var(--text-secondary)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.03em',
+                marginBottom: '3px',
               }}
-            />
-            <button
-              type="button"
-              onClick={() => handleCopy(whipServerUrl, 'whip_server')}
-              className="btn btn-outline"
-              style={{ padding: '0 9px', gap: '4px', whiteSpace: 'nowrap', fontSize: '0.72rem' }}
-              title="Salin WHIP URL"
             >
-              {copiedField === 'whip_server' ? (
-                <Check size={12} style={{ color: 'var(--accent-emerald)' }} />
-              ) : (
-                <Copy size={12} />
-              )}
-              <span>{copiedField === 'whip_server' ? 'Disalin' : 'Salin'}</span>
-            </button>
+              Server URL (OBS: WHIP)
+            </label>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <input
+                type="text"
+                readOnly
+                value={whipServerUrl}
+                className="form-input"
+                style={{
+                  fontFamily: 'monospace',
+                  fontSize: '0.74rem',
+                  padding: '5px 8px',
+                  backgroundColor: 'var(--bg-primary)',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => handleCopy(whipServerUrl, 'whip_server')}
+                className="btn btn-outline"
+                style={{ padding: '0 9px', gap: '4px', whiteSpace: 'nowrap', fontSize: '0.72rem' }}
+                title="Salin WHIP URL"
+              >
+                {copiedField === 'whip_server' ? (
+                  <Check size={12} style={{ color: 'var(--accent-emerald)' }} />
+                ) : (
+                  <Copy size={12} />
+                )}
+                <span>{copiedField === 'whip_server' ? 'Disalin' : 'Salin'}</span>
+              </button>
+            </div>
           </div>
+
+          {requiresAuth && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
+                <label
+                  style={{
+                    fontSize: '0.66rem',
+                    fontWeight: 700,
+                    color: 'var(--text-secondary)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.03em',
+                  }}
+                >
+                  Bearer Token (OBS)
+                </label>
+                {onGenerateToken && (
+                  <button
+                    type="button"
+                    onClick={onGenerateToken}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      fontSize: '0.65rem',
+                      fontWeight: 600,
+                      color: 'var(--primary-400)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                    title="Generate Token Baru"
+                  >
+                    <Sparkles size={11} />
+                    <span>Generate Token</span>
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <input
+                  type="text"
+                  readOnly
+                  value={bearerToken}
+                  placeholder="Klik Generate Token"
+                  className="form-input"
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: '0.74rem',
+                    padding: '5px 8px',
+                    backgroundColor: 'var(--bg-primary)',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleCopy(bearerToken, 'whip_token')}
+                  disabled={!bearerToken}
+                  className="btn btn-outline"
+                  style={{ padding: '0 9px', gap: '4px', whiteSpace: 'nowrap', fontSize: '0.72rem' }}
+                  title="Salin Bearer Token"
+                >
+                  {copiedField === 'whip_token' ? (
+                    <Check size={12} style={{ color: 'var(--accent-emerald)' }} />
+                  ) : (
+                    <Copy size={12} />
+                  )}
+                  <span>{copiedField === 'whip_token' ? 'Disalin' : 'Salin'}</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         /* RTMP View */
