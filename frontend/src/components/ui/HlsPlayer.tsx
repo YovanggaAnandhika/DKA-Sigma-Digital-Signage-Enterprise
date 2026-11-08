@@ -35,7 +35,7 @@ declare global {
 
 function getAdaptiveStreamProfile(stallCount: number) {
   if (typeof navigator === 'undefined') {
-    return { syncSegments: 2, maxLagSeconds: 3.5, catchUpRate: 1.12 };
+    return { syncSegments: 2, maxLagSeconds: 3.5, hardDropSeconds: 6.5, catchUpRate: 1.12 };
   }
   const conn = navigator.connection;
   const cores = navigator.hardwareConcurrency || 4;
@@ -52,10 +52,10 @@ function getAdaptiveStreamProfile(stallCount: number) {
 
   if (isConstrainedNetwork || isLowEndDevice || stallCount >= 2) {
     // High-stability profile for slow network or constrained device
-    return { syncSegments: 3, maxLagSeconds: 5.5, catchUpRate: 1.06 };
+    return { syncSegments: 3, maxLagSeconds: 4.5, hardDropSeconds: 8.5, catchUpRate: 1.08 };
   }
   // Low-latency profile for fast LAN / 4G+ & capable device
-  return { syncSegments: 1.5, maxLagSeconds: 3.0, catchUpRate: 1.15 };
+  return { syncSegments: 1.5, maxLagSeconds: 2.8, hardDropSeconds: 5.5, catchUpRate: 1.18 };
 }
 
 export default function HlsPlayer({
@@ -82,6 +82,7 @@ export default function HlsPlayer({
   const lastMediaTimeRef = useRef<number>(-1);
   const lastAdvanceAtRef = useRef<number>(Date.now());
   const stallCountRef = useRef<number>(0);
+  const lastHardDropAtRef = useRef<number>(0);
 
   const updateStatus = useCallback(
     (next: StreamPlaybackStatus) => {
@@ -287,8 +288,6 @@ export default function HlsPlayer({
             isStreamOnlineRef.current = true;
             stallCountRef.current = 0;
             startPlayback();
-          } else if (hasFirstFrameRef.current && Date.now() - lastAdvanceAtRef.current > 2800) {
-            updateStatus('BUFFERING');
           }
         } else {
           // 404: OBS stopped -> immediately switch to STREAM OFF
@@ -330,14 +329,31 @@ export default function HlsPlayer({
         updateStatus('LIVE');
       }
 
-      // Gentle playback rate catch-up adapted to network & device profile
-      if (video.seekable && video.seekable.length > 0) {
+      // Two-Tier Live-Edge Sync:
+      // 1) Hard Frame-Drop (jump to live edge - 1.2s) if lag exceeds hardDropSeconds (e.g. tab backgrounded or spike)
+      // 2) Smooth playbackRate catch-up if lag is moderate
+      const now = Date.now();
+      let liveEdge = 0;
+      if (hlsInstanceRef.current && typeof hlsInstanceRef.current.liveSyncPosition === 'number') {
+        liveEdge = hlsInstanceRef.current.liveSyncPosition;
+      } else if (video.seekable && video.seekable.length > 0) {
+        liveEdge = video.seekable.end(video.seekable.length - 1);
+      } else if (video.buffered && video.buffered.length > 0) {
+        liveEdge = video.buffered.end(video.buffered.length - 1);
+      }
+
+      if (liveEdge > 0) {
         const profile = getAdaptiveStreamProfile(stallCountRef.current);
-        const liveEdge = video.seekable.end(video.seekable.length - 1);
         const lag = liveEdge - current;
-        if (lag > profile.maxLagSeconds && video.playbackRate !== profile.catchUpRate) {
+
+        if (lag > profile.hardDropSeconds && now - lastHardDropAtRef.current > 4000) {
+          // Drop stale frames immediately and snap to newest keyframe near live edge
+          lastHardDropAtRef.current = now;
+          video.currentTime = Math.max(0, liveEdge - 1.0);
+          video.playbackRate = 1.0;
+        } else if (lag > profile.maxLagSeconds && video.playbackRate !== profile.catchUpRate) {
           video.playbackRate = profile.catchUpRate;
-        } else if (lag <= 2.0 && video.playbackRate !== 1.0) {
+        } else if (lag <= 1.8 && video.playbackRate !== 1.0) {
           video.playbackRate = 1.0;
         }
       }

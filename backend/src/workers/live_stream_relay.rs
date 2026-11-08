@@ -69,8 +69,8 @@ impl LiveStreamRelayManager {
 
                 let m3u8_path = format!("{}/live.m3u8", stream_dir);
                 let segment_path = format!("{}/live%d.ts", stream_dir);
-                let hls_time = if low_latency { "1" } else { "2" };
-                let hls_list_size = if low_latency { "3" } else { "5" };
+                let hls_time = "2";
+                let hls_list_size = if low_latency { "4" } else { "6" };
 
                 let mut cmd = Command::new("ffmpeg");
                 cmd.arg("-y");
@@ -78,7 +78,7 @@ impl LiveStreamRelayManager {
                 match source_type_s.to_uppercase().as_str() {
                     "RTMP" => {
                         cmd.args([
-                            "-fflags", "nobuffer",
+                            "-fflags", "+nobuffer+discardcorrupt+flush_packets",
                             "-flags", "low_delay",
                             "-listen", "1",
                             "-i", &format!("rtmp://0.0.0.0:1935/live/{}", stream_id),
@@ -97,15 +97,15 @@ impl LiveStreamRelayManager {
                             "-f", "hls",
                             "-hls_time", hls_time,
                             "-hls_list_size", hls_list_size,
-                            "-hls_delete_threshold", "3",
-                            "-hls_flags", "delete_segments+omit_endlist",
+                            "-hls_delete_threshold", "4",
+                            "-hls_flags", "delete_segments+omit_endlist+temp_file+independent_segments",
                             "-hls_segment_filename", &segment_path,
                             &m3u8_path,
                         ]);
                     }
                     "RTSP" => {
                         cmd.args([
-                            "-fflags", "nobuffer",
+                            "-fflags", "+nobuffer+discardcorrupt+flush_packets",
                             "-flags", "low_delay",
                             "-rtsp_transport", "tcp",
                             "-i", &source_url_s,
@@ -124,8 +124,8 @@ impl LiveStreamRelayManager {
                             "-f", "hls",
                             "-hls_time", hls_time,
                             "-hls_list_size", hls_list_size,
-                            "-hls_delete_threshold", "3",
-                            "-hls_flags", "delete_segments+omit_endlist",
+                            "-hls_delete_threshold", "4",
+                            "-hls_flags", "delete_segments+omit_endlist+temp_file+independent_segments",
                             "-hls_segment_filename", &segment_path,
                             &m3u8_path,
                         ]);
@@ -138,8 +138,8 @@ impl LiveStreamRelayManager {
                             "-f", "hls",
                             "-hls_time", hls_time,
                             "-hls_list_size", hls_list_size,
-                            "-hls_delete_threshold", "3",
-                            "-hls_flags", "delete_segments+omit_endlist",
+                            "-hls_delete_threshold", "4",
+                            "-hls_flags", "delete_segments+omit_endlist+temp_file",
                             "-hls_segment_filename", &segment_path,
                             &m3u8_path,
                         ]);
@@ -148,6 +148,7 @@ impl LiveStreamRelayManager {
 
                 cmd.stdout(std::process::Stdio::null());
                 cmd.stderr(std::process::Stdio::piped());
+                cmd.kill_on_drop(true);
 
                 let mut child = match cmd.spawn() {
                     Ok(c) => c,
@@ -205,7 +206,20 @@ impl LiveStreamRelayManager {
         purge_stream_files(&stream_dir).await;
     }
 
+    pub async fn stop_all(&self) {
+        let mut signals = self.stop_signals.lock().await;
+        for (stream_id, stop_tx) in signals.drain() {
+            info!("Shutting down FFmpeg relay supervisor for stream [{}]", stream_id);
+            let _ = stop_tx.send(());
+            let stream_dir = format!("{}/streams/{}", self.upload_dir, stream_id);
+            purge_stream_files(&stream_dir).await;
+        }
+        let _ = Command::new("pkill").args(["-9", "ffmpeg"]).status().await;
+    }
+
     pub async fn sync_active_relays(&self, pool: &PgPool) {
+        // Kill any orphaned ffmpeg processes left from previous cargo-watch runs
+        let _ = Command::new("pkill").args(["-9", "ffmpeg"]).status().await;
         #[derive(sqlx::FromRow)]
         struct ActiveStreamRow {
             id: Uuid,

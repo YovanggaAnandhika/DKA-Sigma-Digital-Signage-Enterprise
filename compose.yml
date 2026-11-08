@@ -17,6 +17,12 @@ services:
         source: ./frontend
         target: /home/app
     command: bun run dev
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS --connect-timeout 1 --max-time 2 http://127.0.0.1:80/up >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     depends_on:
       - dka-product-sigma-backend
     networks:

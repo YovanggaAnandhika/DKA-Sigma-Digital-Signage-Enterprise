@@ -65,10 +65,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let relay_manager = crate::workers::live_stream_relay::LiveStreamRelayManager::new(config.upload_dir.clone());
     relay_manager.sync_active_relays(&pool).await;
+    let relay_manager_shutdown = relay_manager.clone();
 
     let mut router = Server::builder().layer(tower_http::trace::TraceLayer::new_for_grpc());
     let router = crate::register_grpc_services!(router, pool, config, stream_manager, relay_manager);
 
-    router.serve(grpc_addr).await?;
+    router
+        .serve_with_shutdown(grpc_addr, async move {
+            let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                .expect("failed to install SIGTERM handler");
+            tokio::select! {
+                _ = tokio::signal::ctrl_c() => {},
+                _ = sigterm.recv() => {},
+            }
+            info!("Shutdown signal received, terminating active RTMP/HLS relays so encoders disconnect cleanly...");
+            relay_manager_shutdown.stop_all().await;
+        })
+        .await?;
     Ok(())
 }
