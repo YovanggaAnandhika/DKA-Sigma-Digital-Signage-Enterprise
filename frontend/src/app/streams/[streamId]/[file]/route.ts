@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { LiveStreamServiceClient } from '@/lib/api/components/v1/live_stream/live_stream_grpc_pb';
-import { GetStreamSegmentRequest } from '@/lib/api/components/v1/live_stream/live_stream.common_pb';
+import { GetStreamSegmentRequest, GetLiveStreamRequest } from '@/lib/api/components/v1/live_stream/live_stream.common_pb';
 import { getGrpcClient } from '@/lib/core/grpcClient';
 
 export async function GET(
@@ -86,6 +86,33 @@ export async function POST(
     // WHIP Ingestion Proxy (OBS Studio / WebRTC Publishers via standard Port 80 HTTP)
     if (file === 'whip') {
       const authHeader = req.headers.get('authorization') || '';
+
+      // Validate Bearer Token against DB truth
+      const client = getGrpcClient(LiveStreamServiceClient);
+      const grpcReq = new GetLiveStreamRequest();
+      grpcReq.setId(streamId);
+
+      const liveStream = await new Promise<{ requiresAuth: boolean; ingestPassword?: string } | null>((resolve) => {
+        client.getLiveStream(grpcReq, (err, response) => {
+          if (err || !response) return resolve(null);
+          resolve(response.toObject() as any);
+        });
+      });
+
+      if (liveStream?.requiresAuth && liveStream.ingestPassword) {
+        const expectedToken = liveStream.ingestPassword.trim();
+        const providedToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+        if (!providedToken || providedToken !== expectedToken) {
+          return new NextResponse('Unauthorized: Invalid or missing Bearer token', {
+            status: 401,
+            headers: {
+              'WWW-Authenticate': 'Bearer error="invalid_token"',
+              'Access-Control-Allow-Origin': '*',
+            },
+          });
+        }
+      }
+
       const headers: Record<string, string> = { 'Content-Type': 'application/sdp' };
       if (authHeader) headers['Authorization'] = authHeader;
 

@@ -127,7 +127,9 @@ export default function ServerRelayModePanel({
         username={username}
         onChangeUsername={onChangeUsername}
         password={password}
+        bearerToken={password}
         onChangePassword={onChangePassword}
+        onChangeBearerToken={onChangePassword}
         onGenerateToken={handleGenerateToken}
       />
     </div>

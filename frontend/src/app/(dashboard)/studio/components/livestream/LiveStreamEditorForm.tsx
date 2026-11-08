@@ -2,25 +2,21 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import {
   ArrowLeft,
   Radio,
   Check,
+  Save,
+  RotateCcw,
 } from 'lucide-react';
 import { SingleSelect } from '@/components/ui/SingleSelect';
-import {
-  createLiveStream,
-  getLiveStream,
-  updateLiveStream,
-} from '@/lib/services';
 import { getMedia, getMediaDisplayUrl } from '@/lib/services/studio/media.service';
-import {
-  StreamMode,
-  StreamSourceType,
-} from './types';
 import StreamSettingsCard from './components/StreamSettingsCard';
+import {
+  LiveStreamEditorProvider,
+  useLiveStreamEditor,
+} from './context/LiveStreamEditorContext';
 
 // Dynamically loaded MediaMTX Ingest Panel
 const IngestSourcePanel = dynamic(() => import('./components/modes/ServerRelayModePanel'), { ssr: false });
@@ -49,52 +45,38 @@ const StreamPreviewMonitor = dynamic(
   }
 );
 
-function generateUUID(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
 interface LiveStreamEditorFormProps {
   streamId?: string;
 }
 
-export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormProps) {
-  const router = useRouter();
-  const isEdit = Boolean(streamId);
-
-  const [streamKey] = useState<string>(() => streamId || generateUUID());
-  const [serverHost, setServerHost] = useState('sigma.dkaapis.test');
-
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const streamMode: StreamMode = 'SERVER_HOSTED_HLS';
-  const [sourceType, setSourceType] = useState<StreamSourceType>('WHIP');
-  const [sourceUrl, setSourceUrl] = useState('');
-  const [autoReconnect, setAutoReconnect] = useState(true);
-  const [lowLatencyMode, setLowLatencyMode] = useState(true);
-  const [isMuted, setIsMuted] = useState(true);
-  const [posterImageUrl, setPosterImageUrl] = useState('');
-  const isRelayActive = true;
-  const [requiresAuth, setRequiresAuth] = useState(false);
-  const [ingestUsername, setIngestUsername] = useState('');
-  const [ingestPassword, setIngestPassword] = useState('');
-  const [saving, setSaving] = useState(false);
+function LiveStreamEditorContent() {
+  const {
+    streamKey,
+    serverHost,
+    isEdit,
+    draft,
+    setName,
+    setDescription,
+    setSourceType,
+    setSourceUrl,
+    setAutoReconnect,
+    setLowLatencyMode,
+    setIsMuted,
+    setPosterImageUrl,
+    setRequiresAuth,
+    setIngestUsername,
+    setIngestPassword,
+    isDirty,
+    saving,
+    saveSuccess,
+    errorMessage,
+    save,
+    revert,
+  } = useLiveStreamEditor();
 
   const [posterOptions, setPosterOptions] = useState<{ value: string; label: string }[]>([
     { value: '', label: 'Tanpa Poster' },
   ]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.hostname) {
-      setServerHost(window.location.hostname);
-    }
-  }, []);
 
   // Load image assets from Media Library for Poster selection
   useEffect(() => {
@@ -111,70 +93,9 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (!streamId) return;
-    getLiveStream(streamId)
-      .then((item) => {
-        setName(item.name);
-        setDescription(item.description);
-        setSourceType((item.sourceType as StreamSourceType) || 'WHIP');
-        setSourceUrl(item.sourceUrl);
-        setAutoReconnect(item.autoReconnect);
-        setLowLatencyMode(item.lowLatencyMode);
-        setIsMuted(item.isMuted);
-        setPosterImageUrl(item.posterImageUrl);
-        setRequiresAuth(item.requiresAuth ?? false);
-        setIngestUsername(item.ingestUsername ?? '');
-        setIngestPassword(item.ingestPassword ?? '');
-      })
-      .catch(() => router.push('/studio/components/livestream'));
-  }, [streamId, router]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const effectiveSourceUrl = sourceUrl.trim();
-    if (!name.trim() || !effectiveSourceUrl) return;
-
-    setSaving(true);
-    try {
-      if (isEdit && streamId) {
-        await updateLiveStream({
-          id: streamId,
-          name: name.trim(),
-          description: description.trim(),
-          streamMode,
-          sourceType,
-          sourceUrl: effectiveSourceUrl,
-          serverHlsEndpoint: `/streams/${streamId}/live.m3u8`,
-          isRelayActive,
-          autoReconnect,
-          lowLatencyMode,
-          isMuted,
-          posterImageUrl: posterImageUrl.trim(),
-          requiresAuth,
-          ingestUsername: requiresAuth && sourceType !== 'WHIP' ? ingestUsername.trim() : '',
-          ingestPassword: requiresAuth ? ingestPassword.trim() : '',
-        });
-      } else {
-        await createLiveStream({
-          name: name.trim(),
-          description: description.trim(),
-          streamMode,
-          sourceType,
-          sourceUrl: effectiveSourceUrl,
-          autoReconnect,
-          lowLatencyMode,
-          isMuted,
-          posterImageUrl: posterImageUrl.trim(),
-          requiresAuth,
-          ingestUsername: requiresAuth && sourceType !== 'WHIP' ? ingestUsername.trim() : '',
-          ingestPassword: requiresAuth ? ingestPassword.trim() : '',
-        });
-      }
-      router.push('/studio/components/livestream');
-    } finally {
-      setSaving(false);
-    }
+    save();
   };
 
   return (
@@ -187,7 +108,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
         minHeight: 'calc(100vh - 172px)',
       }}
     >
-      {/* Header with Circular Back Button & Top-Right Action Buttons */}
+      {/* Header with Circular Back Button & Top-Right Action Controls */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Link
@@ -236,16 +157,85 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Link href="/studio/components/livestream" className="btn btn-outline" style={{ padding: '8px 16px' }}>
-            Batal
+        {/* Action Buttons: Batal/Kembalikan & Simpan (Terkunci jika tersimpan) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {isDirty && (
+            <button
+              type="button"
+              onClick={revert}
+              className="btn btn-outline"
+              style={{ padding: '8px 14px', gap: '6px', fontSize: '0.78rem' }}
+              title="Batalkan perubahan yang belum disimpan"
+            >
+              <RotateCcw size={14} />
+              <span>Kembalikan</span>
+            </button>
+          )}
+
+          <Link href="/studio/components/livestream" className="btn btn-outline" style={{ padding: '8px 16px', fontSize: '0.78rem' }}>
+            Kembali
           </Link>
-          <button type="submit" disabled={saving} className="btn btn-primary" style={{ padding: '8px 18px' }}>
-            <Check size={16} />
-            <span>{saving ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Simpan Live Stream'}</span>
+
+          <button
+            type="submit"
+            disabled={saving || (!isDirty && isEdit && !saveSuccess)}
+            className="btn btn-primary"
+            style={{
+              padding: '8px 18px',
+              fontSize: '0.78rem',
+              backgroundColor: saveSuccess
+                ? 'var(--accent-emerald)'
+                : !isDirty && isEdit
+                  ? 'var(--bg-surface-elevated)'
+                  : undefined,
+              borderColor: saveSuccess
+                ? 'var(--accent-emerald)'
+                : !isDirty && isEdit
+                  ? 'var(--border-strong)'
+                  : undefined,
+              color: !isDirty && isEdit && !saveSuccess ? 'var(--text-muted)' : undefined,
+              cursor: !isDirty && isEdit && !saveSuccess ? 'default' : 'pointer',
+              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          >
+            {saveSuccess ? (
+              <>
+                <Check size={16} style={{ color: '#ffffff' }} />
+                <span style={{ color: '#ffffff', fontWeight: 700 }}>Tersimpan!</span>
+              </>
+            ) : saving ? (
+              <span>Menyimpan...</span>
+            ) : isDirty || !isEdit ? (
+              <>
+                <Save size={16} />
+                <span>{isEdit ? 'Simpan Perubahan' : 'Simpan Live Stream'}</span>
+              </>
+            ) : (
+              <>
+                <Check size={15} />
+                <span>Tersimpan (Terkunci)</span>
+              </>
+            )}
           </button>
         </div>
       </div>
+
+      {/* Error Banner */}
+      {errorMessage && (
+        <div
+          style={{
+            padding: '10px 14px',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(239, 68, 68, 0.12)',
+            border: '1px solid var(--accent-red)',
+            color: 'var(--accent-red)',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+          }}
+        >
+          {errorMessage}
+        </div>
+      )}
 
       {/* Unified Attached Studio Console Card (Left Configuration Form + Right Live Monitor) */}
       <div
@@ -259,7 +249,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
           padding: 0,
         }}
       >
-        {/* Left Configuration Panel */}
+        {/* Left Configuration Panel (Draft State) */}
         <div
           style={{
             padding: '18px 20px',
@@ -277,7 +267,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
               </label>
               <input
                 type="text"
-                value={name}
+                value={draft.name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Contoh: Kamera Area Lobby Utama"
                 className="form-input"
@@ -291,7 +281,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
               </label>
               <input
                 type="text"
-                value={description}
+                value={draft.description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Contoh: Tayangan langsung area pelayanan"
                 className="form-input"
@@ -304,24 +294,24 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                 Gambar Poster
               </label>
               <SingleSelect
-                value={posterImageUrl}
+                value={draft.posterImageUrl}
                 onChange={(val) => setPosterImageUrl(String(val))}
                 options={posterOptions}
                 placeholder="Pilih dari Pustaka Media"
               />
             </div>
 
-            {/* MediaMTX Ingest Source Panel */}
+            {/* MediaMTX Ingest Source Panel (Updates draft in real time) */}
             <IngestSourcePanel
-              sourceType={sourceType}
+              sourceType={draft.sourceType}
               onChangeSourceType={setSourceType}
-              sourceUrl={sourceUrl}
+              sourceUrl={draft.sourceUrl}
               onChangeSourceUrl={setSourceUrl}
-              requiresAuth={requiresAuth}
+              requiresAuth={draft.requiresAuth}
               onToggleAuth={setRequiresAuth}
-              username={ingestUsername}
+              username={draft.ingestUsername}
               onChangeUsername={setIngestUsername}
-              password={ingestPassword}
+              password={draft.ingestPassword}
               onChangePassword={setIngestPassword}
               streamKey={streamKey}
               serverHost={serverHost}
@@ -330,26 +320,34 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
 
           {/* Bottom Streaming Switches */}
           <StreamSettingsCard
-            lowLatencyMode={lowLatencyMode}
+            lowLatencyMode={draft.lowLatencyMode}
             onToggleLowLatency={setLowLatencyMode}
-            autoReconnect={autoReconnect}
+            autoReconnect={draft.autoReconnect}
             onToggleAutoReconnect={setAutoReconnect}
           />
         </div>
 
-        {/* Right Uncropped Live Video Monitor Stage */}
+        {/* Right Uncropped Live Video Monitor Stage (Real-time Preview from Draft Context) */}
         <StreamPreviewMonitor
-          sourceType={sourceType}
-          sourceUrl={sourceUrl}
+          sourceType={draft.sourceType}
+          sourceUrl={draft.sourceUrl}
           streamKey={streamKey}
           serverHost={serverHost}
-          isRelayActive={isRelayActive}
-          lowLatencyMode={lowLatencyMode}
-          autoReconnect={autoReconnect}
-          isMuted={isMuted}
-          posterImageUrl={posterImageUrl}
+          isRelayActive={true}
+          lowLatencyMode={draft.lowLatencyMode}
+          autoReconnect={draft.autoReconnect}
+          isMuted={draft.isMuted}
+          posterImageUrl={draft.posterImageUrl}
         />
       </div>
     </form>
+  );
+}
+
+export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormProps) {
+  return (
+    <LiveStreamEditorProvider streamId={streamId}>
+      <LiveStreamEditorContent />
+    </LiveStreamEditorProvider>
   );
 }

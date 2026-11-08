@@ -259,27 +259,32 @@ export default function StreamPreviewMonitor({
         {USAGE_GUIDES[sourceType] && (
           <div
             style={{
-              padding: '12px 14px',
-              borderRadius: '9px',
+              padding: '14px 16px',
+              borderRadius: '10px',
               backgroundColor: 'var(--bg-surface-elevated)',
               border: '1px solid var(--border-subtle)',
               display: 'flex',
               flexDirection: 'column',
-              gap: '4px',
+              gap: '6px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Info size={14} style={{ color: 'var(--primary-400)', flexShrink: 0 }} />
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Info size={15} style={{ color: 'var(--primary-500)', flexShrink: 0 }} />
+              <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
                 {USAGE_GUIDES[sourceType].title}
               </span>
             </div>
-            <p style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.45 }}>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
               {USAGE_GUIDES[sourceType].desc}
             </p>
-            <span style={{ fontSize: '0.70rem', color: 'var(--text-muted)', marginTop: '2px', lineHeight: 1.4 }}>
-              💡 <strong>Tips:</strong> {USAGE_GUIDES[sourceType].tip}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '2px' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                Petunjuk:
+              </span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                {USAGE_GUIDES[sourceType].tip}
+              </span>
+            </div>
           </div>
         )}
       </div>

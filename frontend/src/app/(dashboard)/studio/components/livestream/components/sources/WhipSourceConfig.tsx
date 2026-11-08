@@ -4,13 +4,32 @@ import React, { useState } from 'react';
 import { Check, Copy, Eye, EyeOff, Shield, Sparkles } from 'lucide-react';
 import { copyToClipboard } from '@/lib/core/copyToClipboard';
 
+function generateSecureToken(length = 20): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = 'sig_tok_';
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const array = new Uint8Array(length);
+    crypto.getRandomValues(array);
+    for (let i = 0; i < length; i++) {
+      result += chars[array[i] % chars.length];
+    }
+    return result;
+  }
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 interface WhipSourceConfigProps {
   whipUrl: string;
   requiresAuth: boolean;
   onToggleAuth: (val: boolean) => void;
-  bearerToken: string;
-  onChangeBearerToken: (val: string) => void;
-  onGenerateToken: () => void;
+  bearerToken?: string;
+  password?: string;
+  onChangeBearerToken?: (val: string) => void;
+  onChangePassword?: (val: string) => void;
+  onGenerateToken?: () => void;
 }
 
 export default function WhipSourceConfig({
@@ -18,11 +37,35 @@ export default function WhipSourceConfig({
   requiresAuth,
   onToggleAuth,
   bearerToken,
+  password,
   onChangeBearerToken,
+  onChangePassword,
   onGenerateToken,
 }: WhipSourceConfigProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showToken, setShowToken] = useState(false);
+
+  const token = bearerToken ?? password ?? '';
+
+  const handleTokenChange = (val: string) => {
+    onChangeBearerToken?.(val);
+    onChangePassword?.(val);
+  };
+
+  const handleGenerate = () => {
+    if (onGenerateToken) {
+      onGenerateToken();
+    } else {
+      handleTokenChange(generateSecureToken());
+    }
+  };
+
+  const handleToggleAuth = (checked: boolean) => {
+    onToggleAuth(checked);
+    if (checked && !token) {
+      handleGenerate();
+    }
+  };
 
   const handleCopy = async (text: string, field: string) => {
     const success = await copyToClipboard(text);
@@ -96,7 +139,7 @@ export default function WhipSourceConfig({
             type="button"
             role="switch"
             aria-checked={requiresAuth}
-            onClick={() => onToggleAuth(!requiresAuth)}
+            onClick={() => handleToggleAuth(!requiresAuth)}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -133,7 +176,7 @@ export default function WhipSourceConfig({
               </label>
               <button
                 type="button"
-                onClick={onGenerateToken}
+                onClick={handleGenerate}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -156,8 +199,8 @@ export default function WhipSourceConfig({
               <div style={{ position: 'relative', flex: 1 }}>
                 <input
                   type={showToken ? 'text' : 'password'}
-                  value={bearerToken}
-                  onChange={(e) => onChangeBearerToken(e.target.value)}
+                  value={token}
+                  onChange={(e) => handleTokenChange(e.target.value)}
                   placeholder="Token siaran WHIP"
                   className="form-input"
                   style={{
@@ -191,8 +234,8 @@ export default function WhipSourceConfig({
 
               <button
                 type="button"
-                onClick={() => handleCopy(bearerToken, 'token')}
-                disabled={!bearerToken}
+                onClick={() => handleCopy(token, 'token')}
+                disabled={!token}
                 className="btn btn-outline"
                 style={{ padding: '0 12px', gap: '4px', whiteSpace: 'nowrap', fontSize: '0.75rem' }}
                 title="Salin Bearer Token"

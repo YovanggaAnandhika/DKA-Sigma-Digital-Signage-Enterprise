@@ -261,12 +261,41 @@ impl LiveStreamRelayManager {
         });
     }
 
+    pub async fn kick_streamer_publishers(&self, stream_id: &Uuid) {
+        let api_url = format!("{}/v3/webrtcsessions/list", self.streamer_api_url.trim_end_matches('/'));
+        let target_path = format!("live/{}", stream_id);
+
+        if let Ok(resp) = self.http_client.get(&api_url).send().await {
+            #[derive(Deserialize)]
+            struct SessionItem {
+                id: String,
+                path: String,
+                state: String,
+            }
+            #[derive(Deserialize)]
+            struct SessionList {
+                #[serde(default)]
+                items: Vec<SessionItem>,
+            }
+            if let Ok(list) = resp.json::<SessionList>().await {
+                for item in list.items {
+                    if item.path == target_path && item.state == "publish" {
+                        let kick_url = format!("{}/v3/webrtcsessions/kick/{}", self.streamer_api_url.trim_end_matches('/'), item.id);
+                        let _ = self.http_client.post(&kick_url).send().await;
+                        info!("⚡ [LiveStreamRelay] Kicked publisher session [{}] on path [{}]", item.id, target_path);
+                    }
+                }
+            }
+        }
+    }
+
     pub async fn stop_relay(&self, stream_id: &Uuid) {
         let mut signals = self.stop_signals.lock().await;
         if let Some(stop_tx) = signals.remove(stream_id) {
             info!("Stopping relay supervisor for stream [{}]", stream_id);
             let _ = stop_tx.send(());
         }
+        self.kick_streamer_publishers(stream_id).await;
         let stream_dir = format!("{}/streams/{}", self.upload_dir, stream_id);
         purge_stream_files(&stream_dir).await;
     }

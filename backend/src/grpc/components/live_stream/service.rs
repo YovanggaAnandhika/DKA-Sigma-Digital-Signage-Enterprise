@@ -269,6 +269,7 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         .ok_or_else(|| Status::not_found("Live stream not found"))?;
 
         if req.stream_mode == "SERVER_HOSTED_HLS" && req.is_relay_active {
+            self.relay_manager.kick_streamer_publishers(&id).await;
             self.relay_manager
                 .start_relay(id, &req.source_type, &req.source_url, req.low_latency_mode)
                 .await;
