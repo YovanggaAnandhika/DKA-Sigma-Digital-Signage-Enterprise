@@ -7,6 +7,7 @@ interface HlsPlayerProps {
   src: string;
   poster?: string;
   isMuted?: boolean;
+  volume?: number;
   autoPlay?: boolean;
   controls?: boolean;
   className?: string;
@@ -25,12 +26,13 @@ export default function HlsPlayer({
   src,
   poster,
   isMuted = true,
+  volume = 0.8,
   autoPlay = true,
-  controls = true,
+  controls = false,
   className,
   style,
-  fallbackTitle = 'Menunggu Feed Ingest dari OBS Studio',
-  fallbackDescription = 'Pastikan OBS Studio sedang streaming ke alamat RTMP dan Stream Key yang ditentukan.',
+  fallbackTitle = 'Menunggu Siaran OBS Studio',
+  fallbackDescription = 'Pastikan OBS sedang melakukan streaming ke server.',
 }: HlsPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -38,13 +40,14 @@ export default function HlsPlayer({
   const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hlsInstanceRef = useRef<any>(null);
 
-  // Sync muted property directly to DOM element (crucial for Safari/WebKit autoplay)
+  // Sync muted & volume directly to DOM element without reloading stream
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.muted = isMuted;
       videoRef.current.defaultMuted = isMuted;
+      videoRef.current.volume = Math.max(0, Math.min(1, volume));
     }
-  }, [isMuted]);
+  }, [isMuted, volume]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -72,9 +75,9 @@ export default function HlsPlayer({
 
       video.muted = isMuted;
       video.defaultMuted = isMuted;
+      video.volume = Math.max(0, Math.min(1, volume));
       video.playsInline = true;
 
-      // Check if native HLS is supported (Safari on Mac / iOS)
       if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = src;
         video.load();
@@ -85,15 +88,12 @@ export default function HlsPlayer({
               .then(() => {
                 if (!isCancelled) setIsPlaying(true);
               })
-              .catch(() => {
-                // If autoplay blocked or segment loading
-              });
+              .catch(() => {});
           }
         }
         return;
       }
 
-      // Otherwise, use hls.js for Chrome, Firefox, Edge
       function attachHlsJs() {
         if (!window.Hls || !window.Hls.isSupported()) {
           setHasError(true);
@@ -180,7 +180,8 @@ export default function HlsPlayer({
       isCancelled = true;
       cleanup();
     };
-  }, [src, autoPlay, isMuted]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src, autoPlay]);
 
   const handleVideoError = () => {
     setIsPlaying(false);
@@ -218,7 +219,6 @@ export default function HlsPlayer({
     try {
       if (video.seekable && video.seekable.length > 0) {
         const liveEdge = video.seekable.end(video.seekable.length - 1);
-        // If lagging more than 1.5 seconds behind the newest frame, jump to live edge!
         if (liveEdge - video.currentTime > 1.5) {
           video.currentTime = Math.max(0, liveEdge - 0.2);
         }
@@ -240,7 +240,7 @@ export default function HlsPlayer({
         position: 'relative',
         width: '100%',
         height: '100%',
-        backgroundColor: '#000000',
+        backgroundColor: '#090d16',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -249,7 +249,6 @@ export default function HlsPlayer({
       }}
       className={className}
     >
-      {/* Video is always mounted and rendered so WebKit/Safari actively decodes and fires events */}
       <video
         ref={videoRef}
         poster={poster}
@@ -267,13 +266,12 @@ export default function HlsPlayer({
         style={{
           width: '100%',
           height: '100%',
-          objectFit: 'contain',
+          objectFit: 'cover',
           position: 'relative',
           zIndex: 1,
         }}
       />
 
-      {/* Overlay: only visible while video is not yet playing */}
       {!isPlaying && (
         <div
           style={{
@@ -286,63 +284,70 @@ export default function HlsPlayer({
             justifyContent: 'center',
             padding: '24px',
             textAlign: 'center',
-            backgroundColor: 'var(--bg-primary)',
-            color: 'var(--text-secondary)',
+            backgroundColor: '#090d16',
+            color: 'rgba(255,255,255,0.7)',
           }}
         >
           {hasError ? (
             <>
               <div
                 style={{
-                  width: '48px',
-                  height: '48px',
+                  width: '44px',
+                  height: '44px',
                   borderRadius: '50%',
-                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  backgroundColor: 'rgba(239, 68, 68, 0.14)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginBottom: '12px',
+                  marginBottom: '10px',
                 }}
               >
-                <AlertCircle size={24} style={{ color: 'var(--accent-red)' }} />
+                <AlertCircle size={22} style={{ color: 'var(--accent-red)' }} />
               </div>
-              <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+              <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#ffffff', marginBottom: '4px' }}>
                 {fallbackTitle}
               </div>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', maxWidth: '440px', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)', maxWidth: '380px', lineHeight: 1.5, margin: '0 0 14px 0' }}>
                 {fallbackDescription}
               </p>
               <button
                 type="button"
                 onClick={handleManualReload}
                 className="btn btn-outline"
-                style={{ fontSize: '0.75rem', padding: '6px 14px', gap: '6px' }}
+                style={{
+                  fontSize: '0.75rem',
+                  padding: '6px 14px',
+                  gap: '6px',
+                  borderColor: 'rgba(255,255,255,0.2)',
+                  color: '#ffffff',
+                  backgroundColor: 'rgba(255,255,255,0.06)',
+                }}
               >
                 <RefreshCw size={13} />
-                <span>Coba Muat Ulang Pratinjau</span>
+                <span>Muat Ulang</span>
               </button>
             </>
           ) : (
             <>
               <div
                 style={{
-                  width: '48px',
-                  height: '48px',
+                  width: '44px',
+                  height: '44px',
                   borderRadius: '50%',
-                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                  backgroundColor: 'rgba(16, 185, 129, 0.14)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginBottom: '12px',
+                  marginBottom: '10px',
                 }}
               >
-                <Radio size={24} style={{ color: 'var(--accent-emerald)' }} />
+                <Radio size={22} style={{ color: 'var(--accent-emerald)' }} />
               </div>
-              <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                Menghubungkan ke Feed Siaran Langsung...
+              <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#ffffff', marginBottom: '4px' }}>
+                Menghubungkan Siaran...
               </div>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', maxWidth: '420px', lineHeight: 1.5, margin: 0 }}>
-                Menyiapkan segmen HLS otomatis dari server...
+              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)', maxWidth: '360px', lineHeight: 1.5, margin: 0 }}>
+                Menyiapkan aliran video dari server...
               </p>
             </>
           )}

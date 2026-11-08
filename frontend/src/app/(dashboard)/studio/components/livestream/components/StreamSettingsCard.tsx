@@ -16,26 +16,26 @@ export default function StreamSettingsCard({
   onToggleAutoReconnect,
 }: StreamSettingsCardProps) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '4px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
       {/* Low Latency Switch */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '12px 14px',
+          padding: '10px 12px',
           borderRadius: 'var(--radius-md)',
           backgroundColor: 'var(--bg-surface-elevated)',
           border: '1px solid var(--border-subtle)',
-          transition: 'border-color 0.2s ease, background-color 0.2s ease',
+          gap: '8px',
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingRight: '12px' }}>
-          <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-            Mode Low-Latency
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+            Low-Latency
           </span>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-            Buffer minimal untuk siaran langsung real-time
+          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>
+            Buffer minimal
           </span>
         </div>
         <button
@@ -46,8 +46,8 @@ export default function StreamSettingsCard({
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            width: '38px',
-            height: '22px',
+            width: '36px',
+            height: '20px',
             padding: '2px',
             borderRadius: 'var(--radius-full)',
             backgroundColor: lowLatencyMode ? 'var(--primary-500)' : 'var(--bg-surface)',
@@ -59,8 +59,8 @@ export default function StreamSettingsCard({
         >
           <span
             style={{
-              width: '16px',
-              height: '16px',
+              width: '14px',
+              height: '14px',
               borderRadius: '50%',
               backgroundColor: '#ffffff',
               boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)',
@@ -77,19 +77,19 @@ export default function StreamSettingsCard({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '12px 14px',
+          padding: '10px 12px',
           borderRadius: 'var(--radius-md)',
           backgroundColor: 'var(--bg-surface-elevated)',
           border: '1px solid var(--border-subtle)',
-          transition: 'border-color 0.2s ease, background-color 0.2s ease',
+          gap: '8px',
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingRight: '12px' }}>
-          <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-            Auto-Reconnect Otomatis
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+            Auto-Reconnect
           </span>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-            Menyambungkan ulang otomatis jika koneksi jaringan atau kamera terputus
+          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>
+            Sambung otomatis
           </span>
         </div>
         <button
@@ -100,8 +100,8 @@ export default function StreamSettingsCard({
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            width: '38px',
-            height: '22px',
+            width: '36px',
+            height: '20px',
             padding: '2px',
             borderRadius: 'var(--radius-full)',
             backgroundColor: autoReconnect ? 'var(--primary-500)' : 'var(--bg-surface)',
@@ -113,8 +113,8 @@ export default function StreamSettingsCard({
         >
           <span
             style={{
-              width: '16px',
-              height: '16px',
+              width: '14px',
+              height: '14px',
               borderRadius: '50%',
               backgroundColor: '#ffffff',
               boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)',
@@ -127,4 +127,3 @@ export default function StreamSettingsCard({
     </div>
   );
 }
-

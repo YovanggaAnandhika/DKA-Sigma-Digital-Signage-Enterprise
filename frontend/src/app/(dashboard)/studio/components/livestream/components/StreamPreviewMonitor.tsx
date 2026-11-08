@@ -1,11 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Radio, Tv } from 'lucide-react';
+import { Radio, Tv, Volume2, VolumeX } from 'lucide-react';
 import { StreamMode, StreamSourceType, toYoutubeEmbedUrl } from '../types';
 
-// Dynamic lazy load of HlsPlayer: only loaded on-demand in client
 const HlsPlayer = dynamic(() => import('@/components/ui/HlsPlayer'), {
   ssr: false,
   loading: () => (
@@ -16,12 +15,12 @@ const HlsPlayer = dynamic(() => import('@/components/ui/HlsPlayer'), {
         justifyContent: 'center',
         width: '100%',
         height: '100%',
-        backgroundColor: '#000000',
-        color: 'var(--text-muted)',
+        backgroundColor: '#090d16',
+        color: 'rgba(255,255,255,0.5)',
         fontSize: '0.8125rem',
       }}
     >
-      Memuat pemutar video...
+      Memuat pemutar siaran...
     </div>
   ),
 });
@@ -33,6 +32,7 @@ interface StreamPreviewMonitorProps {
   sourceUrl: string;
   streamKey: string;
   isMuted: boolean;
+  onToggleMute: (muted: boolean) => void;
   posterImageUrl?: string;
 }
 
@@ -43,117 +43,235 @@ export default function StreamPreviewMonitor({
   sourceUrl,
   streamKey,
   isMuted,
+  onToggleMute,
   posterImageUrl,
 }: StreamPreviewMonitorProps) {
-  return (
-    <div className="card-elevated" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-            Monitor Pratinjau Siaran
-          </h2>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px', margin: 0 }}>
-            Simulasi tampilan zona Live Stream pada kanvas layar signage.
-          </p>
-        </div>
-        <span className="badge badge-neutral">{sourceType}</span>
-      </div>
+  const [volume, setVolume] = useState<number>(0.8);
 
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = Number(e.target.value) / 100;
+    setVolume(val);
+    if (val === 0 && !isMuted) {
+      onToggleMute(true);
+    } else if (val > 0 && isMuted) {
+      onToggleMute(false);
+    }
+  };
+
+  const displayPercent = isMuted ? 0 : Math.round(volume * 100);
+
+  return (
+    <div
+      className="card-elevated"
+      style={{
+        padding: '20px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '14px',
+        alignSelf: 'start',
+      }}
+    >
+      {/* Top Studio Monitor Control Bar */}
       <div
         style={{
-          width: '100%',
-          aspectRatio: '16 / 9',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          backgroundColor: 'var(--bg-primary)',
-          border: '1px solid var(--border-subtle)',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
+          justifyContent: 'space-between',
+          gap: '12px',
+          flexWrap: 'wrap',
         }}
       >
-        {sourceType === 'YOUTUBE_EMBED' ? (
-          !sourceUrl.trim() ? (
-            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
-              <Radio size={36} style={{ marginBottom: '8px', opacity: 0.5 }} />
-              <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Masukkan URL Sumber Stream</div>
-              <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>
-                Pratinjau video akan tampil secara otomatis di sini.
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span
+            style={{
+              width: '9px',
+              height: '9px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--accent-emerald)',
+              boxShadow: '0 0 8px var(--accent-emerald)',
+              display: 'inline-block',
+            }}
+          />
+          <h2 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+            Monitor Siaran
+          </h2>
+          <span className="badge badge-neutral" style={{ fontSize: '0.68rem' }}>
+            {sourceType === 'YOUTUBE_EMBED' ? 'YOUTUBE' : sourceType}
+          </span>
+        </div>
+
+        {/* Dedicated Volume & Mute Icon Control */}
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '4px 10px 4px 6px',
+            borderRadius: 'var(--radius-full)',
+            backgroundColor: 'var(--bg-surface-elevated)',
+            border: '1px solid var(--border-subtle)',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => onToggleMute(!isMuted)}
+            title={isMuted ? 'Aktifkan Suara' : 'Bisukan Suara'}
+            aria-label={isMuted ? 'Aktifkan Suara' : 'Bisukan Suara'}
+            style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '50%',
+              border: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              backgroundColor: isMuted ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.14)',
+              color: isMuted ? 'var(--accent-red)' : 'var(--accent-emerald)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+          </button>
+
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={displayPercent}
+            onChange={handleVolumeChange}
+            aria-label="Volume Audio"
+            style={{
+              width: '76px',
+              height: '4px',
+              accentColor: isMuted ? 'var(--text-muted)' : 'var(--primary-500)',
+              cursor: 'pointer',
+            }}
+          />
+
+          <span
+            style={{
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              fontFamily: 'monospace',
+              minWidth: '32px',
+              textAlign: 'right',
+              color: isMuted ? 'var(--text-muted)' : 'var(--text-primary)',
+            }}
+          >
+            {isMuted ? 'MUTE' : `${displayPercent}%`}
+          </span>
+        </div>
+      </div>
+
+      {/* Dedicated Broadcast Monitor Frame Bezel */}
+      <div
+        style={{
+          padding: '8px',
+          borderRadius: '16px',
+          backgroundColor: '#0b0f19',
+          border: '2px solid var(--border-strong)',
+          boxShadow: 'inset 0 2px 6px rgba(0, 0, 0, 0.65), 0 12px 24px -8px rgba(0, 0, 0, 0.25)',
+        }}
+      >
+        <div
+          style={{
+            width: '100%',
+            aspectRatio: '16 / 9',
+            borderRadius: '10px',
+            overflow: 'hidden',
+            backgroundColor: '#090d16',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+          }}
+        >
+          {sourceType === 'YOUTUBE_EMBED' ? (
+            !sourceUrl.trim() ? (
+              <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.55)', padding: '24px' }}>
+                <Radio size={32} style={{ marginBottom: '8px', opacity: 0.6 }} />
+                <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#ffffff' }}>
+                  Masukkan URL Siaran
+                </div>
               </div>
-            </div>
-          ) : (
-            <div
-              style={{
-                position: 'relative',
-                width: '100%',
-                height: '100%',
-                overflow: 'hidden',
-                pointerEvents: 'none',
-              }}
-            >
-              <iframe
-                src={toYoutubeEmbedUrl(sourceUrl, isMuted)}
-                title={name || 'YouTube Live Preview'}
+            ) : (
+              <div
                 style={{
-                  position: 'absolute',
-                  top: '-14%',
-                  left: 0,
+                  position: 'relative',
                   width: '100%',
-                  height: '128%',
-                  border: 'none',
+                  height: '100%',
+                  overflow: 'hidden',
                   pointerEvents: 'none',
                 }}
-                allow="autoplay; encrypted-media; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
-          )
-        ) : streamMode === 'SERVER_HOSTED_HLS' ? (
-          <HlsPlayer
-            src={`/streams/${streamKey}/live.m3u8`}
-            poster={posterImageUrl?.trim() || undefined}
-            isMuted={isMuted}
-            autoPlay
-            fallbackTitle={
-              sourceType === 'RTMP'
-                ? 'Menunggu Feed Ingest dari OBS Studio'
-                : 'Menunggu Feed Live Stream Server'
-            }
-            fallbackDescription={
-              sourceType === 'RTMP'
-                ? `Mulai streaming dari OBS dengan Stream Key ${streamKey}. Segmen HLS akan langsung diputar otomatis di sini.`
-                : 'Server sedang menghubungkan dan mengonversi feed sumber ke HLS.'
-            }
-          />
-        ) : sourceType === 'HLS' ? (
-          !sourceUrl.trim() ? (
-            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
-              <Radio size={36} style={{ marginBottom: '8px', opacity: 0.5 }} />
-              <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Masukkan URL Sumber HLS</div>
-            </div>
-          ) : (
+              >
+                <iframe
+                  src={toYoutubeEmbedUrl(sourceUrl, isMuted)}
+                  title={name || 'YouTube Live Preview'}
+                  style={{
+                    position: 'absolute',
+                    top: '-14%',
+                    left: 0,
+                    width: '100%',
+                    height: '128%',
+                    border: 'none',
+                    pointerEvents: 'none',
+                  }}
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            )
+          ) : streamMode === 'SERVER_HOSTED_HLS' ? (
             <HlsPlayer
-              src={sourceUrl.trim()}
-              poster={posterImageUrl?.trim() || undefined}
+              src={`/streams/${streamKey}/live.m3u8`}
+              poster={posterImageUrl || undefined}
               isMuted={isMuted}
+              volume={volume}
               autoPlay
+              controls={false}
+              fallbackTitle={
+                sourceType === 'RTMP'
+                  ? 'Menunggu Siaran OBS Studio'
+                  : 'Menunggu Siaran Server'
+              }
+              fallbackDescription={
+                sourceType === 'RTMP'
+                  ? 'Mulai streaming dari OBS Studio untuk menampilkan tayangan langsung.'
+                  : 'Server sedang menghubungkan aliran video.'
+              }
             />
-          )
-        ) : (
-          <div style={{ textAlign: 'center', padding: '32px', maxWidth: '460px' }}>
-            <Tv size={40} style={{ color: 'var(--primary-500)', marginBottom: '10px' }} />
-            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Feed {sourceType} Siap Dirender di Player Android
+          ) : sourceType === 'HLS' ? (
+            !sourceUrl.trim() ? (
+              <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.55)', padding: '24px' }}>
+                <Radio size={32} style={{ marginBottom: '8px', opacity: 0.6 }} />
+                <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#ffffff' }}>
+                  Masukkan URL HLS
+                </div>
+              </div>
+            ) : (
+              <HlsPlayer
+                src={sourceUrl.trim()}
+                poster={posterImageUrl || undefined}
+                isMuted={isMuted}
+                volume={volume}
+                autoPlay
+                controls={false}
+              />
+            )
+          ) : (
+            <div style={{ textAlign: 'center', padding: '32px', maxWidth: '420px' }}>
+              <Tv size={36} style={{ color: 'var(--primary-500)', marginBottom: '10px' }} />
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff' }}>
+                Siaran {sourceType} Siap Ditayangkan
+              </div>
+              <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)', marginTop: '6px', lineHeight: 1.5 }}>
+                Aliran video akan diputar langsung pada perangkat layar signage.
+              </p>
             </div>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.5 }}>
-              Alamat <code>{sourceUrl}</code> akan diputar secara native oleh Media3 ExoPlayer (RTSP/HLS) pada
-              perangkat Android TV dengan proteksi Auto-Reconnect.
-            </p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
 }
-

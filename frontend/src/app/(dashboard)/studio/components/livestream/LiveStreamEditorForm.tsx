@@ -1,4 +1,4 @@
-  'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -17,6 +17,7 @@ import {
   getLiveStream,
   updateLiveStream,
 } from '@/lib/services';
+import { getMedia, getMediaDisplayUrl } from '@/lib/services/studio/media.service';
 import {
   StreamMode,
   StreamSourceType,
@@ -32,18 +33,18 @@ const StreamPreviewMonitor = dynamic(
       <div
         className="card-elevated"
         style={{
-          padding: '24px',
+          padding: '20px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '16px',
-          minHeight: '380px',
+          gap: '14px',
+          minHeight: '360px',
           alignItems: 'center',
           justifyContent: 'center',
           color: 'var(--text-muted)',
           fontSize: '0.8125rem',
         }}
       >
-        Memuat monitor pratinjau...
+        Memuat monitor siaran...
       </div>
     ),
   }
@@ -83,10 +84,29 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
   const [isRelayActive, setIsRelayActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const [posterOptions, setPosterOptions] = useState<{ value: string; label: string }[]>([
+    { value: '', label: 'Tanpa Poster' },
+  ]);
+
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.hostname) {
       setServerHost(window.location.hostname);
     }
+  }, []);
+
+  // Load image assets from Media Library for Poster selection
+  useEffect(() => {
+    getMedia({ limit: 200 })
+      .then((res) => {
+        const items = (res.data || [])
+          .filter((m) => m.mediaType === 1 || m.mimeType?.startsWith('image/'))
+          .map((m) => ({
+            value: getMediaDisplayUrl(m),
+            label: m.name || m.originalFilename || m.id,
+          }));
+        setPosterOptions([{ value: '', label: 'Tanpa Poster' }, ...items]);
+      })
+      .catch(() => {});
   }, []);
 
   const rtmpServerUrl = `rtmp://${serverHost}:1935/live`;
@@ -170,30 +190,25 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
   };
 
   const sourceTypeOptions = [
-    { value: 'HLS', label: 'HLS (.m3u8)', hint: 'HTTP Live Streaming' },
-    { value: 'RTSP', label: 'RTSP (IP Cam / CCTV)', hint: 'Real-Time Streaming Protocol' },
-    { value: 'RTMP', label: 'RTMP (OBS / Encoder)', hint: 'Real-Time Messaging Protocol' },
+    { value: 'HLS', label: 'HLS' },
+    { value: 'RTSP', label: 'RTSP' },
+    { value: 'RTMP', label: 'RTMP' },
     ...(streamMode === 'EXTERNAL_EMBED'
-      ? [{ value: 'YOUTUBE_EMBED', label: 'YouTube Live / Embed', hint: 'Streaming Publik YouTube' }]
+      ? [{ value: 'YOUTUBE_EMBED', label: 'YouTube Live' }]
       : []),
   ];
 
-  const audioOptions = [
-    { value: 'muted', label: 'Bisukan (Muted)', hint: 'Audio senyap saat pertama kali diputar' },
-    { value: 'unmuted', label: 'Suara Aktif (Unmuted)', hint: 'Audio langsung bersuara di player' },
-  ];
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Header with Circular Back Button */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <Link
           href="/studio/components/livestream"
           className="btn btn-outline"
           style={{
-            width: '42px',
-            minWidth: '42px',
-            height: '42px',
+            width: '40px',
+            minWidth: '40px',
+            height: '40px',
             padding: 0,
             display: 'inline-flex',
             alignItems: 'center',
@@ -210,7 +225,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div
             style={{
-              padding: '10px',
+              padding: '9px',
               borderRadius: '12px',
               backgroundColor: 'var(--bg-surface-elevated)',
               color: 'var(--accent-rose)',
@@ -220,64 +235,64 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
               justifyContent: 'center',
             }}
           >
-            <Radio size={22} />
+            <Radio size={20} />
           </div>
           <div>
-            <h1 style={{ fontSize: '1.375rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
-              {isEdit ? 'Ubah Konfigurasi Live Stream' : 'Tambah Siaran Langsung Baru'}
+            <h1 style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
+              {isEdit ? 'Ubah Live Stream' : 'Tambah Live Stream'}
             </h1>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px', margin: 0 }}>
-              Konfigurasikan sumber siaran langsung (Direct URL atau Server-Hosted HLS Relay) untuk zona layar signage.
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px', margin: 0 }}>
+              Konfigurasi sumber siaran langsung untuk zona layar signage.
             </p>
           </div>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(360px, 460px) 1fr', gap: '24px' }}>
-        {/* Left Configuration Form */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(350px, 440px) 1fr', gap: '20px', alignItems: 'start' }}>
+        {/* Left Compact Configuration Form */}
         <form
           onSubmit={handleSubmit}
           className="card-elevated"
-          style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}
+          style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}
         >
           <div>
-            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-              Nama Siaran / Kamera
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
+              Nama Siaran
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Contoh: Kamera CCTV Area Kasir & Lobby"
+              placeholder="Contoh: Kamera Area Lobby Utama"
               className="form-input"
               required
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
               Keterangan Singkat
             </label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Contoh: Relay terpusat untuk 20 layar cabang"
+              placeholder="Contoh: Tayangan langsung area pelayanan"
               className="form-input"
             />
           </div>
 
           {/* Dual-Mode Selector */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>
-              Mode Arsitektur Streaming
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+              Mode Streaming
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               <button
                 type="button"
                 onClick={() => setStreamMode('EXTERNAL_EMBED')}
                 style={{
-                  padding: '12px',
+                  padding: '10px 12px',
                   borderRadius: '10px',
                   textAlign: 'left',
                   cursor: 'pointer',
@@ -289,15 +304,15 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                       : '1px solid var(--border-subtle)',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '4px',
+                  gap: '3px',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.8125rem', color: 'var(--text-primary)' }}>
-                  <Globe size={15} style={{ color: 'var(--primary-500)' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-primary)' }}>
+                  <Globe size={14} style={{ color: 'var(--primary-500)' }} />
                   <span>Direct Embed</span>
                 </div>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                  Player terhubung langsung ke sumber stream.
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>
+                  Koneksi langsung ke sumber
                 </span>
               </button>
 
@@ -305,10 +320,10 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                 type="button"
                 onClick={() => {
                   setStreamMode('SERVER_HOSTED_HLS');
-                  if (sourceType === 'YOUTUBE_EMBED') setSourceType('RTSP');
+                  if (sourceType === 'YOUTUBE_EMBED') setSourceType('RTMP');
                 }}
                 style={{
-                  padding: '12px',
+                  padding: '10px 12px',
                   borderRadius: '10px',
                   textAlign: 'left',
                   cursor: 'pointer',
@@ -320,23 +335,24 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                       : '1px solid var(--border-subtle)',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '4px',
+                  gap: '3px',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.8125rem', color: 'var(--text-primary)' }}>
-                  <Server size={15} style={{ color: 'var(--accent-emerald)' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-primary)' }}>
+                  <Server size={14} style={{ color: 'var(--accent-emerald)' }} />
                   <span>Server HLS Relay</span>
                 </div>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                  1 koneksi ingest di-relay ke ratusan layar.
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>
+                  Relay terpusat dari server
                 </span>
               </button>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          {/* Protocol & Poster Media Picker */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
                 Protokol Sumber
               </label>
               <SingleSelect
@@ -347,13 +363,14 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                Output Audio Default
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
+                Gambar Poster
               </label>
               <SingleSelect
-                value={isMuted ? 'muted' : 'unmuted'}
-                onChange={(val) => setIsMuted(val === 'muted')}
-                options={audioOptions}
+                value={posterImageUrl}
+                onChange={(val) => setPosterImageUrl(String(val))}
+                options={posterOptions}
+                placeholder="Pilih dari Pustaka Media"
               />
             </div>
           </div>
@@ -361,10 +378,9 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
           {streamMode === 'SERVER_HOSTED_HLS' && sourceType === 'RTMP' ? (
             <ObsIngestCard serverUrl={rtmpServerUrl} streamKey={streamKey} />
           ) : (
-            /* Standard URL Input for RTSP, HLS, or YouTube */
             <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                URL Sumber Stream ({sourceType})
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
+                URL Sumber Stream
               </label>
               <input
                 type="text"
@@ -372,46 +388,13 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                 onChange={(e) => setSourceUrl(e.target.value)}
                 placeholder={placeholderByType[sourceType]}
                 className="form-input"
-                style={{ fontFamily: 'monospace', fontSize: '0.8125rem' }}
+                style={{ fontFamily: 'monospace', fontSize: '0.78rem' }}
                 required
               />
             </div>
           )}
 
-          {streamMode === 'SERVER_HOSTED_HLS' && (
-            <div
-              style={{
-                padding: '12px 14px',
-                borderRadius: '10px',
-                backgroundColor: 'var(--bg-surface-elevated)',
-                border: '1px solid var(--border-subtle)',
-                fontSize: '0.75rem',
-                color: 'var(--text-secondary)',
-              }}
-            >
-              <div style={{ fontWeight: 700, color: 'var(--accent-emerald)', marginBottom: '4px' }}>
-                Endpoint Distribusi HLS Origin Otomatis:
-              </div>
-              <code style={{ color: 'var(--text-primary)' }}>
-                /streams/{streamKey}/live.m3u8
-              </code>
-            </div>
-          )}
-
-          <div>
-            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-              URL Gambar Poster Fallback (Opsional)
-            </label>
-            <input
-              type="text"
-              value={posterImageUrl}
-              onChange={(e) => setPosterImageUrl(e.target.value)}
-              placeholder="https://.../placeholder-offline.jpg"
-              className="form-input"
-            />
-          </div>
-
-          {/* Advanced Streaming Parameters */}
+          {/* Compact Streaming Switches */}
           <StreamSettingsCard
             lowLatencyMode={lowLatencyMode}
             onToggleLowLatency={setLowLatencyMode}
@@ -419,7 +402,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
             onToggleAutoReconnect={setAutoReconnect}
           />
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
             <Link href="/studio/components/livestream" className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>
               Batal
             </Link>
@@ -430,7 +413,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
           </div>
         </form>
 
-        {/* Right Live Preview Monitor (Dynamic Lazy-Loaded) */}
+        {/* Right Live Preview Monitor with Dedicated Frame & Volume/Mute Control */}
         <StreamPreviewMonitor
           name={name}
           streamMode={streamMode}
@@ -438,10 +421,10 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
           sourceUrl={sourceUrl}
           streamKey={streamKey}
           isMuted={isMuted}
+          onToggleMute={setIsMuted}
           posterImageUrl={posterImageUrl}
         />
       </div>
     </div>
   );
 }
-

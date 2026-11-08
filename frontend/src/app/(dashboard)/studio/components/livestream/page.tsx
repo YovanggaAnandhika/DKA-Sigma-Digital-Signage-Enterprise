@@ -11,6 +11,8 @@ import {
   Edit,
   Trash2,
   RefreshCw,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
 import { modal } from '@/components/ui/ModalDialog';
@@ -89,7 +91,7 @@ export default function LiveStreamPage() {
             Manajemen Siaran Langsung & Relay CCTV
           </h2>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Kelola feed kamera RTSP CCTV, HLS (.m3u8), RTMP OBS, YouTube Live, serta server relay.
+            Kelola feed kamera RTSP, HLS, RTMP OBS, YouTube Live, serta server relay.
           </p>
         </div>
 
@@ -221,15 +223,19 @@ export default function LiveStreamPage() {
                     </td>
 
                     <td>
-                      <span
+                      <div
                         style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
                           fontSize: '0.75rem',
                           color: item.isMuted ? 'var(--text-muted)' : 'var(--accent-emerald)',
-                          fontWeight: 500,
+                          fontWeight: 600,
                         }}
                       >
-                        {item.isMuted ? 'Bisukan' : 'Aktif'}
-                      </span>
+                        {item.isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                        <span>{item.isMuted ? 'Bisukan' : 'Aktif'}</span>
+                      </div>
                     </td>
 
                     <td style={{ textAlign: 'right' }}>
