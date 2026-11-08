@@ -339,6 +339,20 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Erro
     }
 
     info!("Database seeding completed successfully!");
+    info!("Seeding default live streams...");
+    sqlx::query(
+        r#"
+        INSERT INTO components_live_streams (id, name, description, stream_mode, source_type, source_url, server_hls_endpoint, is_relay_active, auto_reconnect, low_latency_mode, is_muted)
+        VALUES
+            ('f0000000-0000-0000-0000-000000000001', 'Kamera CCTV Area Kasir & Lobby Utama', 'Relay terpusat 1 feed RTSP kamera IP lokal menjadi HLS untuk seluruh layar cabang.', 'SERVER_HOSTED_HLS', 'RTSP', 'rtsp://192.168.1.50:554/Streaming/Channels/101', '/streams/f0000000-0000-0000-0000-000000000001/live.m3u8', false, true, true, true),
+            ('f0000000-0000-0000-0000-000000000002', 'Siaran Langsung Promo & Event (HLS Direct)', 'Stream video HLS langsung dari CDN untuk penayangan acara peluncuran produk.', 'EXTERNAL_EMBED', 'HLS', 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', '', false, true, true, false),
+            ('f0000000-0000-0000-0000-000000000003', 'Townhall Korporat & Siaran Berita (YouTube Live)', 'Embed langsung siaran YouTube Live dengan pemutaran otomatis tanpa gangguan.', 'EXTERNAL_EMBED', 'YOUTUBE_EMBED', 'https://www.youtube.com/watch?v=jfKfPfyJRdk', '', false, true, false, true)
+        ON CONFLICT (id) DO NOTHING;
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
     Ok(())
 }
 
@@ -474,6 +488,20 @@ async fn seed_lookups(pool: &PgPool, default_corp_id: Uuid, default_branch_id: U
         "##,
     )
     .bind(default_corp_id)
+    .execute(pool)
+    .await?;
+
+    info!("Seeding default live streams...");
+    sqlx::query(
+        r#"
+        INSERT INTO components_live_streams (id, name, description, stream_mode, source_type, source_url, server_hls_endpoint, is_relay_active, auto_reconnect, low_latency_mode, is_muted)
+        VALUES
+            ('f0000000-0000-0000-0000-000000000001', 'Kamera CCTV Area Kasir & Lobby Utama', 'Relay terpusat 1 feed RTSP kamera IP lokal menjadi HLS untuk seluruh layar cabang.', 'SERVER_HOSTED_HLS', 'RTSP', 'rtsp://192.168.1.50:554/Streaming/Channels/101', '/streams/f0000000-0000-0000-0000-000000000001/live.m3u8', false, true, true, true),
+            ('f0000000-0000-0000-0000-000000000002', 'Siaran Langsung Promo & Event (HLS Direct)', 'Stream video HLS langsung dari CDN untuk penayangan acara peluncuran produk.', 'EXTERNAL_EMBED', 'HLS', 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', '', false, true, true, false),
+            ('f0000000-0000-0000-0000-000000000003', 'Townhall Korporat & Siaran Berita (YouTube Live)', 'Embed langsung siaran YouTube Live dengan pemutaran otomatis tanpa gangguan.', 'EXTERNAL_EMBED', 'YOUTUBE_EMBED', 'https://www.youtube.com/watch?v=jfKfPfyJRdk', '', false, true, false, true)
+        ON CONFLICT (id) DO NOTHING;
+        "#,
+    )
     .execute(pool)
     .await?;
 

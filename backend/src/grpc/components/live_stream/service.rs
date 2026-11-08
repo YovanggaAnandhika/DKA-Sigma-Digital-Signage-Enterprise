@@ -244,9 +244,10 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         .bind(req.low_latency_mode)
         .bind(req.is_muted)
         .bind(&req.poster_image_url)
-        .fetch_one(&self.pool)
+        .fetch_optional(&self.pool)
         .await
-        .map_err(|e| Status::internal(e.to_string()))?;
+        .map_err(|e| Status::internal(e.to_string()))?
+        .ok_or_else(|| Status::not_found("Live stream not found"))?;
 
         if req.stream_mode == "SERVER_HOSTED_HLS" && req.is_relay_active {
             self.relay_manager
@@ -302,9 +303,10 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         .bind(id)
         .bind(req.is_relay_active)
         .bind(&endpoint)
-        .fetch_one(&self.pool)
+        .fetch_optional(&self.pool)
         .await
-        .map_err(|e| Status::internal(e.to_string()))?;
+        .map_err(|e| Status::internal(e.to_string()))?
+        .ok_or_else(|| Status::not_found("Live stream not found"))?;
 
         if req.is_relay_active && row.stream_mode == "SERVER_HOSTED_HLS" {
             self.relay_manager
