@@ -133,7 +133,7 @@ impl LiveStreamRelayManager {
 
         let upper_type = source_type.to_uppercase();
 
-        if upper_type == "RTMP" || upper_type == "SRT" || upper_type == "WEBRTC" || upper_type == "RTSP" || upper_type == "WHIP" {
+        if upper_type == "RTMP" || upper_type == "SRT" || upper_type == "WEBRTC" || upper_type == "WHIP" {
             info!(
                 "⏳ [LiveStreamRelay] Zero-disk UDP/WebRTC & RTMP ingest active on dka-product-sigma-streamer for stream [live/{}]",
                 stream_id
@@ -219,8 +219,8 @@ impl LiveStreamRelayManager {
                 };
 
                 info!(
-                    "⏳ [LiveStreamRelay] Ingest listener READY on RTMP port 1935 for stream [{}]",
-                    stream_id
+                    "⏳ [LiveStreamRelay] Relay active for stream [{}] (source: {})",
+                    stream_id, upper_type
                 );
 
                 if let Some(stderr) = child.stderr.take() {
@@ -254,7 +254,7 @@ impl LiveStreamRelayManager {
                             Ok(s) => info!("🔴 [LiveStreamRelay] STOP STREAMING detected for stream [{}] (status: {:?}). Re-opening listener...", stream_id, s),
                             Err(e) => error!("🔴 [LiveStreamRelay] STOP STREAMING error for stream [{}]: {}. Re-opening listener...", stream_id, e),
                         }
-                        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
+                        tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
                     }
                 }
             }
