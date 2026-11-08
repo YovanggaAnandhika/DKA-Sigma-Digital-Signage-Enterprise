@@ -1,48 +1,58 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { MessageSquareText, Plus, Search, Eye, Edit, Trash2, X } from 'lucide-react';
+import { MessageSquareText, Plus, Search, Eye, Edit, Trash2, X, RefreshCw } from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
 import { modal } from '@/components/ui/ModalDialog';
-import { TickerConfig, TICKER_STORAGE_KEY, DEFAULT_TICKERS, THEME_STYLES } from './types';
+import { TickerConfig, THEME_STYLES } from './types';
+import { getTickers, deleteTicker } from '@/lib/services/studio/ticker.service';
 
 const Marquee = 'marquee' as any;
 
 export default function TickerPage() {
-  const [tickers, setTickers] = useState<TickerConfig[]>(DEFAULT_TICKERS);
+  const [tickers, setTickers] = useState<TickerConfig[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [previewTicker, setPreviewTicker] = useState<TickerConfig | null>(null);
 
-  useEffect(() => {
+  const loadData = useCallback(async () => {
+    setLoading(true);
     try {
-      const stored = localStorage.getItem(TICKER_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setTickers(parsed);
-        }
-      } else {
-        localStorage.setItem(TICKER_STORAGE_KEY, JSON.stringify(DEFAULT_TICKERS));
-      }
-    } catch { }
+      const data = await getTickers();
+      setTickers(data);
+    } catch (err) {
+      console.error('Failed to load tickers', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleDelete = async (id: string, name: string) => {
     const ok = await modal.confirm({
       title: 'Hapus Teks Berjalan',
-      message: `Apakah Anda yakin ingin menghapus komponen teks berjalan "${name}"?`,
+      message: `Apakah Anda yakin ingin menghapus komponen teks berjalan "${name}"? Tindakan ini akan menghapusnya dari database.`,
       variant: 'danger',
       confirmText: 'Hapus Teks',
     });
     if (!ok) return;
-    const updated = tickers.filter((t) => t.id !== id);
-    setTickers(updated);
+
     try {
-      localStorage.setItem(TICKER_STORAGE_KEY, JSON.stringify(updated));
-    } catch { }
+      await deleteTicker(id);
+      setTickers((prev) => prev.filter((t) => t.id !== id));
+    } catch (err: any) {
+      await modal.alert({
+        title: 'Gagal Menghapus',
+        message: err?.message || 'Terjadi kesalahan saat menghapus data ticker.',
+        variant: 'danger',
+      });
+    }
   };
 
   const filtered = tickers.filter(
@@ -63,12 +73,21 @@ export default function TickerPage() {
             Komponen Teks Berjalan
           </h2>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Kelola banner pengumuman teks berjalan dengan kustomisasi gaya dan kecepatan.
+            Kelola banner pengumuman teks berjalan dengan kustomisasi gaya dan kecepatan langsung dari database.
           </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Link href="/studio/components/ticker/create" className="btn btn-primary">
+          <button
+            onClick={loadData}
+            className="btn btn-outline"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem' }}
+            title="Muat ulang dari server"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <span>Refresh</span>
+          </button>
+          <Link href="/studio/components/ticker/create" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem' }}>
             <Plus size={16} />
             <span>Tambah Teks Berjalan Baru</span>
           </Link>
@@ -108,7 +127,14 @@ export default function TickerPage() {
               </tr>
             </thead>
             <tbody>
-              {paginated.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                    <RefreshCw size={20} className="animate-spin" style={{ margin: '0 auto 8px' }} />
+                    <div>Memuat teks berjalan dari database...</div>
+                  </td>
+                </tr>
+              ) : paginated.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                     Belum ada teks berjalan tersimpan. Klik tombol Tambah untuk membuat baru.

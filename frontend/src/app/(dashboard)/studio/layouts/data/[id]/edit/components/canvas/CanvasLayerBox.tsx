@@ -95,24 +95,7 @@ export default function CanvasLayerBox({ layer: z, idx, onContextMenu }: CanvasL
       });
     });
 
-    // 2. Sync to localStorage
-    try {
-      const stored = localStorage.getItem('dka_signage_queue_displays');
-      if (stored) {
-        const list = JSON.parse(stored);
-        if (Array.isArray(list)) {
-          const updated = list.map((item: any) => {
-            if (item.id === qId) {
-              return { ...item, currentNumber: newFormatted };
-            }
-            return item;
-          });
-          localStorage.setItem('dka_signage_queue_displays', JSON.stringify(updated));
-        }
-      }
-    } catch (_) {}
-
-    // 3. Play audio chime + Indonesian TTS
+    // 2. Play audio chime + Indonesian TTS
     playCanvasQueueAudio(audios, newFormatted, counterName, false, endCall);
 
     // 4. Broadcast via SSE to Android Player & all connected screens

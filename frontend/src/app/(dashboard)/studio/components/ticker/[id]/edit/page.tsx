@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, MessageSquareText, Plus, Trash2, Check, Save, RefreshCw } from 'lucide-react';
-import { TICKER_STORAGE_KEY, DEFAULT_TICKERS, THEME_STYLES, SPEED_SECONDS, TickerConfig } from '../../types';
+import { THEME_STYLES, SPEED_SECONDS, TickerConfig } from '../../types';
+import { getTicker, updateTicker } from '@/lib/services/studio/ticker.service';
 import { modal } from '@/components/ui/ModalDialog';
 
 const Marquee = 'marquee' as any;
@@ -22,31 +23,36 @@ export default function EditTickerPage() {
   const [theme, setTheme] = useState<'blue' | 'red' | 'dark' | 'emerald' | 'amber'>('blue');
   const [fontSize, setFontSize] = useState(16);
 
+  const [submitting, setSubmitting] = useState(false);
+
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(TICKER_STORAGE_KEY);
-      const items: TickerConfig[] = stored ? JSON.parse(stored) : DEFAULT_TICKERS;
-      const found = items.find((t) => t.id === params.id);
-      if (found) {
+    let isMounted = true;
+    getTicker(params.id)
+      .then((found) => {
+        if (!isMounted) return;
         setName(found.name);
         setBadge(found.badge);
         setMessages(found.messages || []);
         setSpeed(found.speed);
         setTheme(found.theme);
         setFontSize(found.fontSize || 16);
-      } else {
+      })
+      .catch((err) => {
+        if (!isMounted) return;
         modal.alert({
           title: 'Tidak Ditemukan',
-          message: 'Komponen teks berjalan tidak ditemukan.',
+          message: err?.message || 'Komponen teks berjalan tidak ditemukan di database.',
           variant: 'warning',
         });
         router.push('/studio/components/ticker');
-      }
-    } catch {
-      router.push('/studio/components/ticker');
-    } finally {
-      setLoading(false);
-    }
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [params.id, router]);
 
   const handleAddMessage = (e: React.FormEvent) => {
@@ -68,30 +74,30 @@ export default function EditTickerPage() {
     setMessages(messages.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
+    setSubmitting(true);
     try {
-      const stored = localStorage.getItem(TICKER_STORAGE_KEY);
-      const items: TickerConfig[] = stored ? JSON.parse(stored) : DEFAULT_TICKERS;
-      const updated = items.map((t) =>
-        t.id === params.id
-          ? {
-              ...t,
-              name: name.trim(),
-              badge: badge.trim(),
-              messages,
-              speed,
-              theme,
-              fontSize,
-            }
-          : t
-      );
-      localStorage.setItem(TICKER_STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
+      await updateTicker(params.id, {
+        name: name.trim(),
+        badge: badge.trim(),
+        messages,
+        speed,
+        theme,
+        fontSize,
+      });
 
-    router.push('/studio/components/ticker');
+      router.push('/studio/components/ticker');
+    } catch (err: any) {
+      await modal.alert({
+        title: 'Gagal Menyimpan',
+        message: err?.message || 'Terjadi kesalahan saat menyimpan perubahan teks berjalan.',
+        variant: 'danger',
+      });
+      setSubmitting(false);
+    }
   };
 
   const currentTheme = THEME_STYLES[theme] || THEME_STYLES.blue;

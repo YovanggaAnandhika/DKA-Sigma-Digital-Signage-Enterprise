@@ -6,7 +6,6 @@ import {
   QueueCallHistoryItem,
   QueueSector,
   DEFAULT_QUEUES,
-  QUEUE_STORAGE_KEY,
   QUEUE_HISTORY_STORAGE_KEY,
   QueueAudio,
   QueueCounter,
@@ -50,10 +49,10 @@ export function QueueManagementProvider({ children }: { children: React.ReactNod
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
-  // Load call history from localStorage
+  // Load call history from sessionStorage
   useEffect(() => {
     try {
-      const storedHistory = localStorage.getItem(QUEUE_HISTORY_STORAGE_KEY);
+      const storedHistory = sessionStorage.getItem(QUEUE_HISTORY_STORAGE_KEY);
       if (storedHistory) {
         setCallHistory(JSON.parse(storedHistory));
       }
@@ -129,16 +128,10 @@ export function QueueManagementProvider({ children }: { children: React.ReactNod
         });
 
         setQueues(mapped);
-        try {
-          localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(mapped));
-        } catch {}
       }
     } catch (e) {
       console.warn('Failed to fetch queue displays from backend:', e);
-      try {
-        const stored = localStorage.getItem(QUEUE_STORAGE_KEY);
-        if (stored) setQueues(JSON.parse(stored));
-      } catch {}
+      setQueues([]);
     } finally {
       setLoading(false);
     }
@@ -159,13 +152,7 @@ export function QueueManagementProvider({ children }: { children: React.ReactNod
 
     try {
       await deleteQueueDisplay(id);
-      setQueues((prev) => {
-        const updated = prev.filter((q) => q.id !== id);
-        try {
-          localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(updated));
-        } catch {}
-        return updated;
-      });
+      setQueues((prev) => prev.filter((q) => q.id !== id));
       await refreshQueues();
       await modal.alert({
         title: 'Berhasil Dihapus',
@@ -191,7 +178,7 @@ export function QueueManagementProvider({ children }: { children: React.ReactNod
     if (!ok) return;
     setCallHistory([]);
     try {
-      localStorage.removeItem(QUEUE_HISTORY_STORAGE_KEY);
+      sessionStorage.removeItem(QUEUE_HISTORY_STORAGE_KEY);
     } catch {}
   }, []);
 

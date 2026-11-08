@@ -1,10 +1,9 @@
-import { DEFAULT_QUEUES, QUEUE_STORAGE_KEY } from '@/app/(dashboard)/studio/components/ticket/types';
-import { DEFAULT_WEBVIEWS, WEBVIEW_STORAGE_KEY } from '@/app/(dashboard)/studio/components/webview/types';
-import { DEFAULT_TICKERS, TICKER_STORAGE_KEY } from '@/app/(dashboard)/studio/components/ticker/types';
-import { DEFAULT_CLOCKS, CLOCK_STORAGE_KEY } from '@/app/(dashboard)/studio/components/clock/types';
-import { DEFAULT_LIVESTREAMS, LIVESTREAM_STORAGE_KEY } from '@/app/(dashboard)/studio/components/livestream/types';
 import { getAlbum } from './album.service';
 import { getLiveStream } from './livestream.service';
+import { getWebview } from './webview.service';
+import { getTicker } from './ticker.service';
+import { getClock } from './clock.service';
+import { getQueueDisplay } from './queue.service';
 
 export const LEGACY_UUID_MAP: Record<string, string> = {
   'q-1': 'a0000000-0000-0000-0000-000000000001',
@@ -53,29 +52,29 @@ export async function resolveWidgetInfo(b: any, prevBlock?: any) {
   const rawAlbumId = b.albumId || b.album_id;
   const rawLiveStreamId = b.liveStreamId || b.live_stream_id;
 
-  if (!widgetType) {
-    if (rawQueueId) {
-      widgetType = 'queue';
-      widgetId = rawQueueId;
-    } else if (rawTickerId) {
-      widgetType = 'ticker';
-      widgetId = rawTickerId;
-    } else if (rawClockId) {
-      widgetType = 'clock';
-      widgetId = rawClockId;
-    } else if (rawWebviewId) {
-      widgetType = 'webview';
-      widgetId = rawWebviewId;
-    } else if (rawAlbumId) {
-      widgetType = 'album';
-      widgetId = rawAlbumId;
-    } else if (rawLiveStreamId) {
-      widgetType = 'livestream';
-      widgetId = rawLiveStreamId;
-    } else if (prevBlock?.widgetType) {
-      widgetType = prevBlock.widgetType;
-      widgetId = prevBlock.widgetId;
-    }
+  if (rawQueueId) {
+    widgetType = 'queue';
+    widgetId = rawQueueId;
+  } else if (rawTickerId) {
+    widgetType = 'ticker';
+    widgetId = rawTickerId;
+  } else if (rawClockId) {
+    widgetType = 'clock';
+    widgetId = rawClockId;
+  } else if (rawWebviewId) {
+    widgetType = 'webview';
+    widgetId = rawWebviewId;
+  } else if (rawAlbumId) {
+    widgetType = 'album';
+    widgetId = rawAlbumId;
+  } else if (rawLiveStreamId) {
+    widgetType = 'livestream';
+    widgetId = rawLiveStreamId;
+  }
+
+  // Ensure UUID format
+  if (widgetId && !isUuid(widgetId)) {
+    widgetId = ensureUuid(widgetId);
   }
 
   if (!widgetType) {
@@ -93,34 +92,24 @@ export async function resolveWidgetInfo(b: any, prevBlock?: any) {
   }
 
   let widgetData = prevBlock?.widgetData;
-  if (!widgetData && widgetType === 'album' && widgetId) {
-    widgetData = await getAlbum(widgetId);
-  } else if (!widgetData && widgetType === 'livestream' && widgetId) {
-    widgetData = await getLiveStream(widgetId).catch(() => DEFAULT_LIVESTREAMS[0]);
-  } else if (!widgetData && typeof window !== 'undefined') {
+  if (!widgetData && widgetId) {
     try {
-      if (widgetType === 'queue') {
-        const stored = localStorage.getItem(QUEUE_STORAGE_KEY);
-        const list = stored ? JSON.parse(stored) : DEFAULT_QUEUES;
-        widgetData = list.find((item: any) => item.id === widgetId || ensureUuid(item.id) === widgetId) || list[0] || DEFAULT_QUEUES[0];
-      } else if (widgetType === 'webview') {
-        const stored = localStorage.getItem(WEBVIEW_STORAGE_KEY);
-        const list = stored ? JSON.parse(stored) : DEFAULT_WEBVIEWS;
-        widgetData = list.find((item: any) => item.id === widgetId || ensureUuid(item.id) === widgetId) || list[0] || DEFAULT_WEBVIEWS[0];
-      } else if (widgetType === 'ticker') {
-        const stored = localStorage.getItem(TICKER_STORAGE_KEY);
-        const list = stored ? JSON.parse(stored) : DEFAULT_TICKERS;
-        widgetData = list.find((item: any) => item.id === widgetId || ensureUuid(item.id) === widgetId) || list[0] || DEFAULT_TICKERS[0];
-      } else if (widgetType === 'clock') {
-        const stored = localStorage.getItem(CLOCK_STORAGE_KEY);
-        const list = stored ? JSON.parse(stored) : DEFAULT_CLOCKS;
-        widgetData = list.find((item: any) => item.id === widgetId || ensureUuid(item.id) === widgetId) || list[0] || DEFAULT_CLOCKS[0];
+      if (widgetType === 'album') {
+        widgetData = await getAlbum(widgetId);
       } else if (widgetType === 'livestream') {
-        const stored = localStorage.getItem(LIVESTREAM_STORAGE_KEY);
-        const list = stored ? JSON.parse(stored) : DEFAULT_LIVESTREAMS;
-        widgetData = list.find((item: any) => item.id === widgetId || ensureUuid(item.id) === widgetId) || list[0] || DEFAULT_LIVESTREAMS[0];
+        widgetData = await getLiveStream(widgetId).catch(() => null);
+      } else if (widgetType === 'webview') {
+        widgetData = await getWebview(widgetId).catch(() => null);
+      } else if (widgetType === 'ticker') {
+        widgetData = await getTicker(widgetId).catch(() => null);
+      } else if (widgetType === 'clock') {
+        widgetData = await getClock(widgetId).catch(() => null);
+      } else if (widgetType === 'queue') {
+        widgetData = await getQueueDisplay(widgetId).catch(() => null);
       }
-    } catch {}
+    } catch {
+      widgetData = null;
+    }
   }
 
   return {

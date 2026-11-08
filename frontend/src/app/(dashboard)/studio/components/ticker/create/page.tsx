@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, MessageSquareText, Plus, Trash2, Check } from 'lucide-react';
-import { TICKER_STORAGE_KEY, DEFAULT_TICKERS, THEME_STYLES, SPEED_SECONDS, TickerConfig } from '../types';
+import { THEME_STYLES, SPEED_SECONDS, TickerConfig } from '../types';
+import { createTicker } from '@/lib/services/studio/ticker.service';
 import { modal } from '@/components/ui/ModalDialog';
 
 export default function CreateTickerPage() {
@@ -39,29 +40,32 @@ export default function CreateTickerPage() {
     setMessages(messages.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const newTicker: TickerConfig = {
-      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `c0000000-0000-0000-0000-${Date.now().toString().padStart(12, '0')}`,
-      name: name.trim(),
-      badge: badge.trim(),
-      messages,
-      speed,
-      theme,
-      fontSize,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-
+    setSubmitting(true);
     try {
-      const stored = localStorage.getItem(TICKER_STORAGE_KEY);
-      const existing: TickerConfig[] = stored ? JSON.parse(stored) : DEFAULT_TICKERS;
-      const updated = [newTicker, ...existing];
-      localStorage.setItem(TICKER_STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
+      await createTicker({
+        name: name.trim(),
+        badge: badge.trim(),
+        messages,
+        speed,
+        theme,
+        fontSize,
+      });
 
-    router.push('/studio/components/ticker');
+      router.push('/studio/components/ticker');
+    } catch (err: any) {
+      await modal.alert({
+        title: 'Gagal Menyimpan',
+        message: err?.message || 'Terjadi kesalahan saat menyimpan teks berjalan ke database.',
+        variant: 'danger',
+      });
+      setSubmitting(false);
+    }
   };
 
   const currentTheme = THEME_STYLES[theme];

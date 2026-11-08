@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Clock, Check, CloudSun, Calendar, MapPin, Droplets, Wind } from 'lucide-react';
-import { CLOCK_STORAGE_KEY, DEFAULT_CLOCKS, CITY_PRESETS, ClockWeatherConfig } from '../types';
+import { CITY_PRESETS, ClockWeatherConfig } from '../types';
+import { createClock } from '@/lib/services/studio/clock.service';
+import { modal } from '@/components/ui/ModalDialog';
 
 export default function CreateClockWeatherPage() {
   const router = useRouter();
@@ -22,28 +24,31 @@ export default function CreateClockWeatherPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const newWidget: ClockWeatherConfig = {
-      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `d0000000-0000-0000-0000-${Date.now().toString().padStart(12, '0')}`,
-      name: name.trim(),
-      city,
-      showSeconds,
-      is24Hour,
-      theme,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-
+    setSubmitting(true);
     try {
-      const stored = localStorage.getItem(CLOCK_STORAGE_KEY);
-      const existing: ClockWeatherConfig[] = stored ? JSON.parse(stored) : DEFAULT_CLOCKS;
-      const updated = [newWidget, ...existing];
-      localStorage.setItem(CLOCK_STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
+      await createClock({
+        name: name.trim(),
+        city,
+        showSeconds,
+        is24Hour,
+        theme,
+      });
 
-    router.push('/studio/components/clock');
+      router.push('/studio/components/clock');
+    } catch (err: any) {
+      await modal.alert({
+        title: 'Gagal Menyimpan',
+        message: err?.message || 'Terjadi kesalahan saat menyimpan widget jam ke database.',
+        variant: 'danger',
+      });
+      setSubmitting(false);
+    }
   };
 
   const weather = CITY_PRESETS[city] || CITY_PRESETS['Makassar'];

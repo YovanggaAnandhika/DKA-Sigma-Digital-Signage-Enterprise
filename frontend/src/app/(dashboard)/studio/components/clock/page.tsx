@@ -1,33 +1,37 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Clock, Plus, Search, Eye, Edit, Trash2, X, CloudSun, Calendar, MapPin, Droplets, Wind } from 'lucide-react';
+import { Clock, Plus, Search, Eye, Edit, Trash2, X, CloudSun, Calendar, MapPin, Droplets, Wind, RefreshCw } from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
 import { modal } from '@/components/ui/ModalDialog';
-import { ClockWeatherConfig, CLOCK_STORAGE_KEY, DEFAULT_CLOCKS, CITY_PRESETS } from './types';
+import { ClockWeatherConfig, CITY_PRESETS } from './types';
+import { getClocks, deleteClock } from '@/lib/services/studio/clock.service';
 
 export default function ClockPage() {
-  const [items, setItems] = useState<ClockWeatherConfig[]>(DEFAULT_CLOCKS);
+  const [items, setItems] = useState<ClockWeatherConfig[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [previewItem, setPreviewItem] = useState<ClockWeatherConfig | null>(null);
   const [time, setTime] = useState<Date>(new Date());
 
-  useEffect(() => {
+  const loadData = useCallback(async () => {
+    setLoading(true);
     try {
-      const stored = localStorage.getItem(CLOCK_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setItems(parsed);
-        }
-      } else {
-        localStorage.setItem(CLOCK_STORAGE_KEY, JSON.stringify(DEFAULT_CLOCKS));
-      }
-    } catch {}
+      const data = await getClocks();
+      setItems(data);
+    } catch (err) {
+      console.error('Failed to load clocks', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -37,16 +41,22 @@ export default function ClockPage() {
   const handleDelete = async (id: string, name: string) => {
     const ok = await modal.confirm({
       title: 'Hapus Widget Jam & Cuaca',
-      message: `Apakah Anda yakin ingin menghapus widget jam & cuaca "${name}"?`,
+      message: `Apakah Anda yakin ingin menghapus widget jam & cuaca "${name}"? Tindakan ini akan menghapusnya dari database.`,
       variant: 'danger',
       confirmText: 'Hapus Widget',
     });
     if (!ok) return;
-    const updated = items.filter((i) => i.id !== id);
-    setItems(updated);
+
     try {
-      localStorage.setItem(CLOCK_STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
+      await deleteClock(id);
+      setItems((prev) => prev.filter((i) => i.id !== id));
+    } catch (err: any) {
+      await modal.alert({
+        title: 'Gagal Menghapus',
+        message: err?.message || 'Terjadi kesalahan saat menghapus widget jam.',
+        variant: 'danger',
+      });
+    }
   };
 
   const filtered = items.filter(
@@ -63,17 +73,26 @@ export default function ClockPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-            Komponen Jam & Prakiraan Cuaca
+            Widget Jam Digital & Cuaca
           </h2>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Widget penunjuk waktu digital real-time, tanggal bahasa Indonesia, serta informasi perkiraan cuaca kota ritel.
+            Kelola tampilan jam digital real-time dan prakiraan cuaca otomatis untuk zona layar signage.
           </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Link href="/studio/components/clock/create" className="btn btn-primary">
+          <button
+            onClick={loadData}
+            className="btn btn-outline"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem' }}
+            title="Muat ulang dari server"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <span>Refresh</span>
+          </button>
+          <Link href="/studio/components/clock/create" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem' }}>
             <Plus size={16} />
-            <span>Tambah Widget Jam Baru</span>
+            <span>Tambah Widget Baru</span>
           </Link>
         </div>
       </div>
@@ -102,8 +121,8 @@ export default function ClockPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Nama Widget</th>
-                <th>Kota Penunjuk</th>
+                <th>Nama Komponen</th>
+                <th>Lokasi Kota</th>
                 <th>Format Jam</th>
                 <th>Detik</th>
                 <th>Tema Tampilan</th>
@@ -111,7 +130,14 @@ export default function ClockPage() {
               </tr>
             </thead>
             <tbody>
-              {paginated.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                    <RefreshCw size={20} className="animate-spin" style={{ margin: '0 auto 8px' }} />
+                    <div>Memuat widget jam dari database...</div>
+                  </td>
+                </tr>
+              ) : paginated.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                     Belum ada widget jam tersimpan. Klik tombol Tambah untuk membuat baru.
@@ -126,44 +152,41 @@ export default function ClockPage() {
                       </Link>
                     </td>
                     <td>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--primary-400)' }}>
-                        <MapPin size={12} /> {item.city}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <MapPin size={13} style={{ color: 'var(--primary-400)' }} />
+                        <span>{item.city}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                          fontSize: '0.6875rem',
+                          fontWeight: 600,
+                          backgroundColor: 'var(--bg-surface-elevated)',
+                          color: 'var(--text-secondary)',
+                          border: '1px solid var(--border-subtle)',
+                        }}
+                      >
+                        {item.is24Hour ? '24 Jam' : '12 Jam (AM/PM)'}
                       </span>
                     </td>
                     <td>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        {item.is24Hour ? '24-Jam (14:30)' : '12-Jam (02:30 PM)'}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '0.75rem', color: item.showSeconds ? 'var(--accent-emerald)' : 'var(--text-muted)' }}>
-                        {item.showSeconds ? 'Aktif (:SS)' : 'Nonaktif'}
+                      <span style={{ fontSize: '0.8125rem', color: item.showSeconds ? 'var(--accent-emerald)' : 'var(--text-muted)' }}>
+                        {item.showSeconds ? 'Aktif' : 'Tersembunyi'}
                       </span>
                     </td>
                     <td>
                       <span
                         style={{
                           padding: '2px 8px',
-                          borderRadius: '6px',
+                          borderRadius: '9999px',
                           fontSize: '0.6875rem',
-                          fontWeight: 700,
-                          textTransform: 'uppercase',
-                          backgroundColor:
-                            item.theme === 'glass'
-                              ? 'rgba(59, 130, 246, 0.15)'
-                              : item.theme === 'emerald'
-                              ? 'rgba(16, 185, 129, 0.15)'
-                              : item.theme === 'gold'
-                              ? 'rgba(245, 158, 11, 0.15)'
-                              : 'rgba(255, 255, 255, 0.1)',
-                          color:
-                            item.theme === 'glass'
-                              ? 'var(--primary-400)'
-                              : item.theme === 'emerald'
-                              ? 'var(--accent-emerald)'
-                              : item.theme === 'gold'
-                              ? '#fbbf24'
-                              : 'var(--text-primary)',
+                          fontWeight: 600,
+                          backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                          color: 'var(--primary-400)',
+                          textTransform: 'capitalize',
                         }}
                       >
                         {item.theme}
@@ -183,7 +206,7 @@ export default function ClockPage() {
                           href={`/studio/components/clock/${item.id}/edit`}
                           className="btn btn-secondary"
                           style={{ padding: '5px 8px' }}
-                          title="Edit Widget Jam"
+                          title="Edit Widget"
                         >
                           <Edit size={14} />
                         </Link>
@@ -216,14 +239,14 @@ export default function ClockPage() {
         />
       </div>
 
-      {/* Modal Preview Live Clock */}
+      {/* Modal Preview Widget */}
       {previewItem && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
             backgroundColor: 'rgba(0,0,0,0.8)',
-            backdropFilter: 'blur(8px)',
+            backdropFilter: 'blur(6px)',
             zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
@@ -235,9 +258,9 @@ export default function ClockPage() {
             className="card-elevated"
             style={{
               width: '100%',
-              maxWidth: '680px',
+              maxWidth: '520px',
               backgroundColor: 'var(--bg-surface)',
-              borderRadius: '20px',
+              borderRadius: '16px',
               border: '1px solid var(--border-subtle)',
               overflow: 'hidden',
               display: 'flex',
@@ -258,88 +281,76 @@ export default function ClockPage() {
               </button>
             </div>
 
-            {/* Stage */}
-            <div style={{ padding: '40px 24px', backgroundColor: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* Widget Stage */}
+            <div style={{ padding: '32px 24px', backgroundColor: 'var(--bg-primary)', display: 'flex', justifyContent: 'center' }}>
               {(() => {
-                const weather = CITY_PRESETS[previewItem.city] || CITY_PRESETS['Makassar'];
+                const weather = CITY_PRESETS[previewItem.city] || CITY_PRESETS.Makassar;
                 const hours = previewItem.is24Hour
-                  ? String(time.getHours()).padStart(2, '0')
-                  : String(time.getHours() % 12 || 12).padStart(2, '0');
-                const minutes = String(time.getMinutes()).padStart(2, '0');
-                const seconds = String(time.getSeconds()).padStart(2, '0');
+                  ? time.getHours().toString().padStart(2, '0')
+                  : ((time.getHours() % 12) || 12).toString().padStart(2, '0');
+                const minutes = time.getMinutes().toString().padStart(2, '0');
+                const seconds = time.getSeconds().toString().padStart(2, '0');
                 const ampm = time.getHours() >= 12 ? 'PM' : 'AM';
-
-                const formattedDate = time.toLocaleDateString('id-ID', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                });
 
                 return (
                   <div
                     style={{
                       width: '100%',
-                      maxWidth: '440px',
-                      borderRadius: '24px',
-                      padding: '28px',
-                      background:
-                        previewItem.theme === 'glass'
-                          ? 'var(--bg-surface-elevated)'
-                          : previewItem.theme === 'emerald'
-                          ? 'linear-gradient(135deg, #064e3b 0%, #022c22 100%)'
-                          : previewItem.theme === 'gold'
-                          ? 'linear-gradient(135deg, #78350f 0%, #451a03 100%)'
-                          : 'var(--bg-surface)',
-                      border: '1px solid var(--border-subtle)',
-                      boxShadow: 'var(--card-shadow)',
-                      backdropFilter: 'blur(12px)',
-                      color: previewItem.theme === 'emerald' || previewItem.theme === 'gold' ? '#ffffff' : 'var(--text-primary)',
+                      maxWidth: '380px',
+                      padding: '24px',
+                      borderRadius: '16px',
+                      background: previewItem.theme === 'glass' ? 'rgba(30, 41, 59, 0.7)' : previewItem.theme === 'emerald' ? 'linear-gradient(135deg, #064e3b, #022c22)' : 'linear-gradient(135deg, #1e1b4b, #0f172a)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      color: '#ffffff',
+                      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '16px',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', fontWeight: 700, color: '#93c5fd' }}>
-                        <MapPin size={16} />
-                        <span>{weather.city}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem', opacity: 0.9 }}>
+                        <MapPin size={14} />
+                        <span>{previewItem.city}</span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem', color: '#fbbf24', fontWeight: 600 }}>
-                        <CloudSun size={18} />
-                        <span>{weather.condition}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem', opacity: 0.9 }}>
+                        <Calendar size={14} />
+                        <span>{time.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '3.75rem', fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '4px' }}>
+                      <span style={{ fontSize: '3rem', fontWeight: 800, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
                         {hours}:{minutes}
                       </span>
                       {previewItem.showSeconds && (
-                        <span style={{ fontSize: '1.75rem', fontWeight: 700, color: '#94a3b8' }}>
+                        <span style={{ fontSize: '1.25rem', fontWeight: 600, opacity: 0.7, fontVariantNumeric: 'tabular-nums' }}>
                           :{seconds}
                         </span>
                       )}
                       {!previewItem.is24Hour && (
-                        <span style={{ fontSize: '1rem', fontWeight: 800, color: '#38bdf8', marginLeft: '4px' }}>
+                        <span style={{ fontSize: '0.875rem', fontWeight: 700, marginLeft: '6px', opacity: 0.8 }}>
                           {ampm}
                         </span>
                       )}
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', color: '#cbd5e1', marginBottom: '20px' }}>
-                      <Calendar size={14} color="#94a3b8" />
-                      <span>{formattedDate}</span>
-                    </div>
-
-                    <div style={{ paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ fontSize: '2rem', fontWeight: 800 }}>
-                        {weather.temp}°C
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <CloudSun size={24} style={{ color: '#f59e0b' }} />
+                        <div>
+                          <div style={{ fontSize: '1rem', fontWeight: 700 }}>{weather.temp}°C</div>
+                          <div style={{ fontSize: '0.6875rem', opacity: 0.8 }}>{weather.condition}</div>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '14px', fontSize: '0.75rem', color: '#94a3b8' }}>
+
+                      <div style={{ display: 'flex', gap: '12px', fontSize: '0.6875rem', opacity: 0.8 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Droplets size={12} color="#38bdf8" />
+                          <Droplets size={12} />
                           <span>{weather.humidity}%</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Wind size={12} color="#34d399" />
+                          <Wind size={12} />
                           <span>{weather.windSpeed} km/h</span>
                         </div>
                       </div>

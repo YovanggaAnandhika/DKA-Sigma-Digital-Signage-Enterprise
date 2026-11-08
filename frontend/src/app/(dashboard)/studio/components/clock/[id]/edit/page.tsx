@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Clock, Check, CloudSun, Calendar, MapPin, Droplets, Wind, Save, RefreshCw } from 'lucide-react';
-import { CLOCK_STORAGE_KEY, DEFAULT_CLOCKS, CITY_PRESETS, ClockWeatherConfig } from '../../types';
+import { CITY_PRESETS, ClockWeatherConfig } from '../../types';
+import { getClock, updateClock } from '@/lib/services/studio/clock.service';
 import { modal } from '@/components/ui/ModalDialog';
 
 export default function EditClockWeatherPage() {
@@ -19,26 +20,31 @@ export default function EditClockWeatherPage() {
   const [theme, setTheme] = useState<'glass' | 'dark' | 'emerald' | 'gold'>('glass');
   const [time, setTime] = useState<Date>(new Date());
 
+  const [submitting, setSubmitting] = useState(false);
+
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(CLOCK_STORAGE_KEY);
-      const items: ClockWeatherConfig[] = stored ? JSON.parse(stored) : DEFAULT_CLOCKS;
-      const found = items.find((c) => c.id === params.id);
-      if (found) {
+    let isMounted = true;
+    getClock(params.id)
+      .then((found) => {
+        if (!isMounted) return;
         setName(found.name);
         setCity(found.city);
         setShowSeconds(found.showSeconds);
         setIs24Hour(found.is24Hour);
         setTheme(found.theme);
-      } else {
-        alert('Widget jam & cuaca tidak ditemukan.');
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        alert(err?.message || 'Widget jam & cuaca tidak ditemukan di database.');
         router.push('/studio/components/clock');
-      }
-    } catch {
-      router.push('/studio/components/clock');
-    } finally {
-      setLoading(false);
-    }
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [params.id, router]);
 
   useEffect(() => {
@@ -46,29 +52,29 @@ export default function EditClockWeatherPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
+    setSubmitting(true);
     try {
-      const stored = localStorage.getItem(CLOCK_STORAGE_KEY);
-      const items: ClockWeatherConfig[] = stored ? JSON.parse(stored) : DEFAULT_CLOCKS;
-      const updated = items.map((c) =>
-        c.id === params.id
-          ? {
-              ...c,
-              name: name.trim(),
-              city,
-              showSeconds,
-              is24Hour,
-              theme,
-            }
-          : c
-      );
-      localStorage.setItem(CLOCK_STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
+      await updateClock(params.id, {
+        name: name.trim(),
+        city,
+        showSeconds,
+        is24Hour,
+        theme,
+      });
 
-    router.push('/studio/components/clock');
+      router.push('/studio/components/clock');
+    } catch (err: any) {
+      await modal.alert({
+        title: 'Gagal Menyimpan',
+        message: err?.message || 'Terjadi kesalahan saat menyimpan perubahan widget jam.',
+        variant: 'danger',
+      });
+      setSubmitting(false);
+    }
   };
 
   const weather = CITY_PRESETS[city] || CITY_PRESETS['Makassar'];

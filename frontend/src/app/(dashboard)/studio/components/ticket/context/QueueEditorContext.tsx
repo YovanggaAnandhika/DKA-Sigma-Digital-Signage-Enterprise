@@ -8,7 +8,6 @@ import {
   QueueCounter,
   QueueAudio,
   QueueSector,
-  QUEUE_STORAGE_KEY,
   DEFAULT_QUEUES,
   createDefaultQueueLayoutItems,
 } from '../types';
@@ -218,7 +217,7 @@ export function QueueEditorProvider({
 
     let isMounted = true;
 
-    // Load from backend first, with localStorage as fallback
+    // Load from backend server
     getQueueDisplay(initialId)
       .then((res) => {
         if (!isMounted) return;
@@ -298,42 +297,22 @@ export function QueueEditorProvider({
           return;
         }
 
-        // Fallback to local storage if backend returned empty
-        fallbackToLocalStorage();
-      })
-      .catch(() => {
-        if (!isMounted) return;
-        fallbackToLocalStorage();
-      });
-
-    function fallbackToLocalStorage() {
-      try {
-        const stored = localStorage.getItem(QUEUE_STORAGE_KEY);
-        const items: QueueDisplayConfig[] = stored ? JSON.parse(stored) : DEFAULT_QUEUES;
-        const found = items.find((q) => q.id === initialId);
-
-        if (found) {
-          setQueue(found);
-          const numPart = parseInt((found.currentNumber || 'A-001').replace(/[^0-9]/g, ''), 10) || 1;
-          setSimulator({
-            currentSeq: numPart,
-            currentNumber: found.currentNumber || 'A-001',
-            currentCounter: found.currentCounter || 'LOKET 01',
-            isChiming: false,
-          });
-          setLoading(false);
-        } else {
-          modal.alert({
-            title: 'Tidak Ditemukan',
-            message: 'Layar antrian tidak ditemukan di server maupun penyimpanan lokal.',
-            variant: 'warning',
-          });
-          router.push('/studio/components/ticket');
-        }
-      } catch {
+        modal.alert({
+          title: 'Tidak Ditemukan',
+          message: 'Layar antrian tidak ditemukan di server.',
+          variant: 'warning',
+        });
         router.push('/studio/components/ticket');
-      }
-    }
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        modal.alert({
+          title: 'Gagal Memuat',
+          message: err?.message || 'Gagal memuat konfigurasi layar antrian dari server.',
+          variant: 'danger',
+        });
+        router.push('/studio/components/ticket');
+      });
 
     return () => {
       isMounted = false;
@@ -519,10 +498,6 @@ export function QueueEditorProvider({
 
     setSaving(true);
     try {
-      const stored = localStorage.getItem(QUEUE_STORAGE_KEY);
-      let items: QueueDisplayConfig[] = stored ? JSON.parse(stored) : [];
-      if (!Array.isArray(items)) items = [];
-
       const formattedAudios = (queue.audios || []).map((a) => ({
         ...a,
         isActive: queue.audioChimeEnabled ? (a.isActive ?? true) : false,
@@ -537,7 +512,6 @@ export function QueueEditorProvider({
       };
 
       if (isNew) {
-        items.unshift(payload);
         const res = await createQueueDisplay({
           name: payload.name,
           prefix: payload.prefix,
@@ -561,7 +535,6 @@ export function QueueEditorProvider({
           payload.id = res.id;
         }
       } else {
-        items = items.map((q) => (q.id === payload.id ? payload : q));
         await updateQueueDisplay(payload.id, {
           name: payload.name,
           prefix: payload.prefix,
@@ -582,8 +555,6 @@ export function QueueEditorProvider({
           audios: formattedAudios,
         });
       }
-
-      localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(items));
 
       await modal.alert({
         title: 'Tersimpan',

@@ -354,10 +354,10 @@ export default function TabEditorControllTab() {
         timestamp: Date.now(),
         callType,
       };
-      const stored = localStorage.getItem(QUEUE_HISTORY_STORAGE_KEY);
+      const stored = sessionStorage.getItem(QUEUE_HISTORY_STORAGE_KEY);
       const historyList: QueueCallHistoryItem[] = stored ? JSON.parse(stored) : [];
       const updated = [newItem, ...historyList].slice(0, 50);
-      localStorage.setItem(QUEUE_HISTORY_STORAGE_KEY, JSON.stringify(updated));
+      sessionStorage.setItem(QUEUE_HISTORY_STORAGE_KEY, JSON.stringify(updated));
     } catch {}
   };
 
