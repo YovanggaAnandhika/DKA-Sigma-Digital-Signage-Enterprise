@@ -224,18 +224,22 @@ export default function StreamPreviewMonitor({
       {/* Dedicated Broadcast Monitor Frame Bezel */}
       <div
         style={{
-          padding: '6px',
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '8px',
           borderRadius: '14px',
           backgroundColor: '#0b0f19',
           border: '2px solid var(--border-strong)',
           boxShadow: 'inset 0 2px 6px rgba(0, 0, 0, 0.65), 0 8px 20px -8px rgba(0, 0, 0, 0.25)',
+          minHeight: 0,
         }}
       >
         <div
           style={{
             width: '100%',
             aspectRatio: '16 / 9',
-            maxHeight: '340px',
             borderRadius: '9px',
             overflow: 'hidden',
             backgroundColor: '#090d16',

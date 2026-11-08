@@ -236,62 +236,82 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
     );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      {/* Header with Circular Back Button */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <Link
-          href="/studio/components/livestream"
-          className="btn btn-outline"
-          style={{
-            width: '38px',
-            minWidth: '38px',
-            height: '38px',
-            padding: 0,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '50%',
-            border: '1px solid var(--border-subtle)',
-          }}
-          aria-label="Kembali ke Daftar Live Stream"
-          title="Kembali ke Daftar Live Stream"
-        >
-          <ArrowLeft size={17} />
-        </Link>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div
+    <form
+      onSubmit={handleSubmit}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '14px',
+        minHeight: 'calc(100vh - 172px)',
+      }}
+    >
+      {/* Header with Circular Back Button & Top-Right Action Buttons */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Link
+            href="/studio/components/livestream"
+            className="btn btn-outline"
             style={{
-              padding: '8px',
-              borderRadius: '10px',
-              backgroundColor: 'var(--bg-surface-elevated)',
-              color: 'var(--accent-rose)',
-              border: '1px solid var(--border-subtle)',
-              display: 'flex',
+              width: '38px',
+              minWidth: '38px',
+              height: '38px',
+              padding: 0,
+              display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
+              borderRadius: '50%',
+              border: '1px solid var(--border-subtle)',
             }}
+            aria-label="Kembali ke Daftar Live Stream"
+            title="Kembali ke Daftar Live Stream"
           >
-            <Radio size={18} />
+            <ArrowLeft size={17} />
+          </Link>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div
+              style={{
+                padding: '8px',
+                borderRadius: '10px',
+                backgroundColor: 'var(--bg-surface-elevated)',
+                color: 'var(--accent-rose)',
+                border: '1px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Radio size={18} />
+            </div>
+            <div>
+              <h1 style={{ fontSize: '1.15rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
+                {isEdit ? 'Ubah Live Stream' : 'Tambah Live Stream'}
+              </h1>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1px', margin: 0 }}>
+                Konfigurasi sumber siaran langsung untuk zona layar signage.
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 style={{ fontSize: '1.15rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
-              {isEdit ? 'Ubah Live Stream' : 'Tambah Live Stream'}
-            </h1>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1px', margin: 0 }}>
-              Konfigurasi sumber siaran langsung untuk zona layar signage.
-            </p>
-          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Link href="/studio/components/livestream" className="btn btn-outline" style={{ padding: '8px 16px' }}>
+            Batal
+          </Link>
+          <button type="submit" disabled={saving} className="btn btn-primary" style={{ padding: '8px 18px' }}>
+            <Check size={16} />
+            <span>{saving ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Simpan Live Stream'}</span>
+          </button>
         </div>
       </div>
 
       {/* Unified Attached Studio Console Card (Left Form + Right Monitor & Bottom URL/Ingest Bar) */}
-      <form
-        onSubmit={handleSubmit}
+      <div
         className="card-elevated"
         style={{
+          flex: 1,
           display: 'grid',
-          gridTemplateColumns: 'minmax(330px, 390px) 1fr',
+          gridTemplateColumns: 'minmax(340px, 400px) 1fr',
           alignItems: 'stretch',
           overflow: 'hidden',
           padding: 0,
@@ -308,7 +328,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
             gap: '12px',
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
                 Nama Siaran
@@ -428,25 +448,15 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                 />
               </div>
             </div>
-
-            {/* Compact Streaming Switches */}
-            <StreamSettingsCard
-              lowLatencyMode={lowLatencyMode}
-              onToggleLowLatency={setLowLatencyMode}
-              autoReconnect={autoReconnect}
-              onToggleAutoReconnect={setAutoReconnect}
-            />
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', paddingTop: '6px' }}>
-            <Link href="/studio/components/livestream" className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>
-              Batal
-            </Link>
-            <button type="submit" disabled={saving} className="btn btn-primary" style={{ flex: 2, justifyContent: 'center' }}>
-              <Check size={16} />
-              <span>{saving ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Simpan Live Stream'}</span>
-            </button>
-          </div>
+          {/* Bottom Streaming Switches aligned with Right Ingest Bar */}
+          <StreamSettingsCard
+            lowLatencyMode={lowLatencyMode}
+            onToggleLowLatency={setLowLatencyMode}
+            autoReconnect={autoReconnect}
+            onToggleAutoReconnect={setAutoReconnect}
+          />
         </div>
 
         {/* Right Attached Live Preview Monitor + Bottom URL/Ingest Bar */}
@@ -472,7 +482,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
             bottomSlot={bottomUrlOrIngestBar}
           />
         </div>
-      </form>
-    </div>
+      </div>
+    </form>
   );
 }
