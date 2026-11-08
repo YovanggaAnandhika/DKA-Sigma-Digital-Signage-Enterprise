@@ -35,9 +35,16 @@ export default function HlsPlayer({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [hasError, setHasError] = useState<boolean>(false);
-  const [retrying, setRetrying] = useState<boolean>(false);
   const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hlsInstanceRef = useRef<any>(null);
+
+  // Sync muted property directly to DOM element (crucial for Safari/WebKit autoplay)
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.muted = isMuted;
+      videoRef.current.defaultMuted = isMuted;
+    }
+  }, [isMuted]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -63,19 +70,25 @@ export default function HlsPlayer({
       const video = videoRef.current;
       if (!video || !src) return;
 
-      // Check if native HLS is supported (Safari Mac/iOS, etc.)
+      video.muted = isMuted;
+      video.defaultMuted = isMuted;
+      video.playsInline = true;
+
+      // Check if native HLS is supported (Safari on Mac / iOS)
       if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = src;
         video.load();
         if (autoPlay) {
-          video
-            .play()
-            .then(() => {
-              if (!isCancelled) setIsPlaying(true);
-            })
-            .catch(() => {
-              // Autoplay policy or media not yet ready
-            });
+          const playPromise = video.play();
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => {
+                if (!isCancelled) setIsPlaying(true);
+              })
+              .catch(() => {
+                // If autoplay blocked or segment loading
+              });
+          }
         }
         return;
       }
@@ -112,10 +125,8 @@ export default function HlsPlayer({
             }
             switch (data.type) {
               case window.Hls.ErrorTypes.NETWORK_ERROR:
-                // Retry loading source on network/404 errors
                 retryTimerRef.current = setTimeout(() => {
                   if (!isCancelled) {
-                    setRetrying(true);
                     hls.loadSource(src);
                     hls.startLoad();
                   }
@@ -149,7 +160,6 @@ export default function HlsPlayer({
           };
           document.head.appendChild(script);
         } else {
-          // Script already added, wait briefly
           const interval = setInterval(() => {
             if (window.Hls) {
               clearInterval(interval);
@@ -167,15 +177,13 @@ export default function HlsPlayer({
       isCancelled = true;
       cleanup();
     };
-  }, [src, autoPlay]);
+  }, [src, autoPlay, isMuted]);
 
   const handleVideoError = () => {
     setIsPlaying(false);
     setHasError(true);
-    // Auto retry in 2.5 seconds if native player failed (e.g., segments still generating)
     if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
     retryTimerRef.current = setTimeout(() => {
-      setRetrying((prev) => !prev);
       const video = videoRef.current;
       if (video && src && video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = `${src.split('?')[0]}?_t=${Date.now()}`;
@@ -201,6 +209,11 @@ export default function HlsPlayer({
     }
   };
 
+  const markPlaying = () => {
+    setIsPlaying(true);
+    setHasError(false);
+  };
+
   return (
     <div
       style={{
@@ -216,6 +229,7 @@ export default function HlsPlayer({
       }}
       className={className}
     >
+      {/* Video is always mounted and rendered so WebKit/Safari actively decodes and fires events */}
       <video
         ref={videoRef}
         poster={poster}
@@ -223,26 +237,29 @@ export default function HlsPlayer({
         autoPlay={autoPlay}
         controls={controls}
         playsInline
-        onPlaying={() => {
-          setIsPlaying(true);
-          setHasError(false);
+        onPlaying={markPlaying}
+        onCanPlay={markPlaying}
+        onLoadedData={markPlaying}
+        onTimeUpdate={(e) => {
+          if (e.currentTarget.currentTime > 0) markPlaying();
         }}
-        onCanPlay={() => setIsPlaying(true)}
         onError={handleVideoError}
         style={{
           width: '100%',
           height: '100%',
           objectFit: 'contain',
-          display: isPlaying ? 'block' : 'none',
+          position: 'relative',
+          zIndex: 1,
         }}
       />
 
-      {/* Placeholder / Connecting state while video is not yet playing */}
+      {/* Overlay: only visible while video is not yet playing */}
       {!isPlaying && (
         <div
           style={{
             position: 'absolute',
             inset: 0,
+            zIndex: 2,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
