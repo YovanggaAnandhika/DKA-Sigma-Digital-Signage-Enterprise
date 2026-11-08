@@ -10,13 +10,7 @@ import {
   Edit,
   Trash2,
   X,
-  Server,
-  Globe,
   RefreshCw,
-  Zap,
-  Volume2,
-  VolumeX,
-  Activity,
   Tv,
 } from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
@@ -91,13 +85,13 @@ export default function LiveStreamPage() {
             Manajemen Siaran Langsung & Relay CCTV
           </h2>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Kelola feed kamera RTSP CCTV, HLS (.m3u8), RTMP OBS, YouTube Live, serta distribusi Server HLS Relay.
+            Kelola feed kamera RTSP CCTV, HLS (.m3u8), RTMP OBS, YouTube Live, serta server relay.
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button onClick={loadStreams} className="btn btn-outline" title="Segarkan Data">
-            <RefreshCw size={15} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button onClick={loadStreams} className="btn btn-secondary" title="Segarkan Data">
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             <span>Segarkan</span>
           </button>
           <Link href="/studio/components/livestream/create" className="btn btn-primary">
@@ -107,80 +101,9 @@ export default function LiveStreamPage() {
         </div>
       </div>
 
-      {/* Dual-Mode Architecture Overview Banner */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '14px',
-        }}
-      >
-        <div
-          className="card-elevated"
-          style={{
-            padding: '16px 18px',
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '12px',
-            borderLeft: '3px solid var(--primary-500)',
-          }}
-        >
-          <div
-            style={{
-              padding: '9px',
-              borderRadius: '10px',
-              backgroundColor: 'var(--bg-surface-elevated)',
-              color: 'var(--primary-500)',
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            <Globe size={18} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Mode 1: External Embed / Direct Source
-            </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '3px', lineHeight: 1.5 }}>
-              Player membuka langsung URL stream tujuan (HLS publik, RTSP lokal, atau YouTube Live Embed). Ideal untuk 1–4 layar per jaringan.
-            </p>
-          </div>
-        </div>
-
-        <div
-          className="card-elevated"
-          style={{
-            padding: '16px 18px',
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '12px',
-            borderLeft: '3px solid var(--accent-emerald)',
-          }}
-        >
-          <div
-            style={{
-              padding: '9px',
-              borderRadius: '10px',
-              backgroundColor: 'var(--bg-surface-elevated)',
-              color: 'var(--accent-emerald)',
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            <Server size={18} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-              Mode 2: Server-Hosted HLS & Relay Origin
-            </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '3px', lineHeight: 1.5 }}>
-              Server menarik 1 koneksi tunggal dari kamera CCTV/OBS lalu mendistribusikan endpoint HLS ringan ke ratusan layar tanpa membebani kamera.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Search Bar */}
-      <div className="card-elevated" style={{ padding: '14px 18px' }}>
-        <div style={{ position: 'relative', width: '100%' }}>
+      <div className="card-elevated" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
           <Search
             size={16}
             style={{
@@ -193,7 +116,7 @@ export default function LiveStreamPage() {
           />
           <input
             type="text"
-            placeholder="Cari berdasarkan nama siaran, protokol, atau alamat URL stream..."
+            placeholder="Cari siaran langsung berdasarkan nama, keterangan, atau URL..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -206,73 +129,57 @@ export default function LiveStreamPage() {
       </div>
 
       {/* Data Table */}
-      <div className="card-elevated" style={{ padding: 0, overflow: 'hidden' }}>
-        <div className="table-container">
+      <div className="card-elevated" style={{ overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
           <table className="data-table">
             <thead>
               <tr>
-                <th>NAMA SIARAN LANGSUNG</th>
-                <th>MODE DISTRIBUSI</th>
-                <th>SUMBER & ENDPOINT</th>
-                <th>PROTEKSI & LATENSI</th>
-                <th style={{ textAlign: 'right' }}>AKSI</th>
+                <th>Nama Siaran</th>
+                <th>Keterangan</th>
+                <th>Mode Streaming</th>
+                <th>Tipe Sumber</th>
+                <th>Status Audio</th>
+                <th style={{ textAlign: 'right' }}>Aksi</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                     Memuat daftar siaran langsung...
                   </td>
                 </tr>
               ) : paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                     Belum ada konfigurasi Live Stream ditemukan.
                   </td>
                 </tr>
               ) : (
                 paginated.map((item) => (
                   <tr key={item.id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div
-                          style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '10px',
-                            backgroundColor: 'var(--bg-surface-elevated)',
-                            border: '1px solid var(--border-subtle)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'var(--accent-rose)',
-                            flexShrink: 0,
-                          }}
-                        >
-                          <Radio size={18} />
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{item.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                            {item.description || 'Siaran langsung multi-zona'}
-                          </div>
-                        </div>
-                      </div>
+                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <Link
+                        href={`/studio/components/livestream/${item.id}/edit`}
+                        style={{ textDecoration: 'none', color: 'inherit' }}
+                      >
+                        {item.name}
+                      </Link>
+                    </td>
+
+                    <td style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
+                      {item.description || '-'}
                     </td>
 
                     <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
                         <span
                           className={`badge ${
                             item.streamMode === 'SERVER_HOSTED_HLS' ? 'badge-success' : 'badge-neutral'
                           }`}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                         >
-                          {item.streamMode === 'SERVER_HOSTED_HLS' ? <Server size={12} /> : <Globe size={12} />}
-                          {item.streamMode === 'SERVER_HOSTED_HLS' ? 'Server HLS Relay' : 'External Direct'}
+                          {item.streamMode === 'SERVER_HOSTED_HLS' ? 'Server HLS Relay' : 'Direct External'}
                         </span>
-
                         {item.streamMode === 'SERVER_HOSTED_HLS' && (
                           <button
                             type="button"
@@ -280,73 +187,45 @@ export default function LiveStreamPage() {
                             onClick={() => handleToggleRelay(item)}
                             className="btn btn-outline"
                             style={{
-                              padding: '3px 8px',
+                              padding: '2px 8px',
                               fontSize: '0.6875rem',
                               height: 'auto',
-                              gap: '5px',
                               borderColor: item.isRelayActive ? 'var(--accent-emerald)' : 'var(--border-subtle)',
                               color: item.isRelayActive ? 'var(--accent-emerald)' : 'var(--text-muted)',
                             }}
                           >
-                            <Activity size={11} />
-                            <span>{item.isRelayActive ? 'Relay Aktif (Klik Matikan)' : 'Relay Nonaktif (Aktifkan)'}</span>
+                            {item.isRelayActive ? 'Relay Aktif' : 'Relay Nonaktif'}
                           </button>
                         )}
                       </div>
                     </td>
 
                     <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span className="badge badge-neutral" style={{ fontSize: '0.6875rem', fontWeight: 700 }}>
-                            {item.sourceType}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: '0.75rem',
-                              fontFamily: 'monospace',
-                              color: 'var(--text-secondary)',
-                              maxWidth: '260px',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                            title={item.sourceUrl}
-                          >
-                            {item.sourceUrl}
-                          </span>
-                        </div>
-                        {item.streamMode === 'SERVER_HOSTED_HLS' && item.serverHlsEndpoint && (
-                          <div
-                            style={{
-                              fontSize: '0.7rem',
-                              fontFamily: 'monospace',
-                              color: 'var(--accent-emerald)',
-                            }}
-                          >
-                            Origin: {item.serverHlsEndpoint}
-                          </div>
-                        )}
-                      </div>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                          fontSize: '0.6875rem',
+                          fontWeight: 700,
+                          backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                          color: 'var(--primary-400)',
+                          border: '1px solid rgba(59, 130, 246, 0.3)',
+                        }}
+                      >
+                        {item.sourceType}
+                      </span>
                     </td>
 
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                        {item.lowLatencyMode && (
-                          <span className="badge badge-neutral" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                            <Zap size={11} /> Low-Latency
-                          </span>
-                        )}
-                        {item.autoReconnect && (
-                          <span className="badge badge-neutral" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                            <RefreshCw size={11} /> Auto-Retry
-                          </span>
-                        )}
-                        <span className="badge badge-neutral" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          {item.isMuted ? <VolumeX size={11} /> : <Volume2 size={11} />}
-                          {item.isMuted ? 'Bisukan' : 'Audio Aktif'}
-                        </span>
-                      </div>
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          color: item.isMuted ? 'var(--text-muted)' : 'var(--accent-emerald)',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {item.isMuted ? 'Bisukan' : 'Aktif'}
+                      </span>
                     </td>
 
                     <td style={{ textAlign: 'right' }}>
@@ -354,23 +233,23 @@ export default function LiveStreamPage() {
                         <button
                           onClick={() => setPreviewItem(item)}
                           className="btn btn-outline"
-                          style={{ padding: '6px 10px' }}
+                          style={{ padding: '5px 8px' }}
                           title="Pratinjau Siaran"
                         >
                           <Eye size={14} />
                         </button>
                         <Link
                           href={`/studio/components/livestream/${item.id}/edit`}
-                          className="btn btn-outline"
-                          style={{ padding: '6px 10px' }}
-                          title="Ubah Konfigurasi"
+                          className="btn btn-secondary"
+                          style={{ padding: '5px 8px' }}
+                          title="Edit Konfigurasi"
                         >
                           <Edit size={14} />
                         </Link>
                         <button
                           onClick={() => handleDelete(item.id, item.name)}
-                          className="btn btn-outline"
-                          style={{ padding: '6px 10px', color: 'var(--accent-rose)' }}
+                          className="btn btn-danger"
+                          style={{ padding: '5px 8px' }}
                           title="Hapus Stream"
                         >
                           <Trash2 size={14} />
