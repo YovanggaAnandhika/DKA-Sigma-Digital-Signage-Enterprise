@@ -268,8 +268,6 @@ export default function HlsPlayer({
     let isCancelled = false;
     const localMatch = src.match(/^\/streams\/([^/]+)\//);
 
-    // When lowLatencyMode is OFF (High Definition / Original Quality mode), use HLS instead of WebRTC
-    // so the player receives the unscaled, un-reencoded original 1080p High-Profile stream from OBS.
     if (!localMatch) {
       isStreamOnlineRef.current = true;
       startHlsPlayback();
@@ -279,50 +277,8 @@ export default function HlsPlayer({
       };
     }
 
-    if (!lowLatencyMode) {
-      const probeHls = async () => {
-        if (isCancelled) return;
-        if (
-          isStreamOnlineRef.current &&
-          statusRef.current === 'LIVE' &&
-          Date.now() - lastAdvanceAtRef.current < 2500
-        ) {
-          return;
-        }
-        try {
-          const res = await fetch(`${src.split('?')[0]}?_t=${Date.now()}`, {
-            method: 'GET',
-            cache: 'no-store',
-          });
-          if (isCancelled) return;
-          if (res.ok) {
-            if (!isStreamOnlineRef.current) {
-              isStreamOnlineRef.current = true;
-              stallCountRef.current = 0;
-              startHlsPlayback();
-            }
-          } else if (isStreamOnlineRef.current || statusRef.current !== 'OFFLINE') {
-            isStreamOnlineRef.current = false;
-            stallCountRef.current = 0;
-            stopAndResetVideo();
-            updateStatus('OFFLINE');
-          }
-        } catch {
-          // ignore
-        }
-      };
-      probeHls();
-      const hlsTimer = setInterval(probeHls, 1800);
-      return () => {
-        isCancelled = true;
-        clearInterval(hlsTimer);
-        isStreamOnlineRef.current = false;
-        stopAndResetVideo();
-      };
-    }
-
     const streamId = localMatch[1];
-    const whepUrl = `/streams/${streamId}/whep`;
+    const whepUrl = `/streams/${streamId}/whep?mode=${lowLatencyMode ? 'll' : 'hd'}`;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
     const connectWebRtc = async () => {

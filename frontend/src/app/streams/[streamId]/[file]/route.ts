@@ -82,14 +82,25 @@ export async function POST(
     const streamerBase =
       process.env.HND_STREAMER_INTERNAL_URL || 'http://dka-product-sigma-streamer:8889';
     const base = streamerBase.replace(/\/$/, '');
+    const mode = req.nextUrl.searchParams.get('mode');
+    const primaryPrefix = mode === 'hd' ? 'hd/live' : 'webrtc/live';
 
-    // Try normalized 0-B-frame + Opus path (`webrtc/live/<streamId>/whep`) first, then fallback to raw (`live/<streamId>/whep`)
-    let upstream = await fetch(`${base}/webrtc/live/${streamId}/whep`, {
+    // Try selected WebRTC tier first (`hd/live/<streamId>` or `webrtc/live/<streamId>`), then fallback
+    let upstream = await fetch(`${base}/${primaryPrefix}/${streamId}/whep`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/sdp' },
       body: sdpOffer,
       cache: 'no-store',
     });
+
+    if (!upstream.ok && mode === 'hd') {
+      upstream = await fetch(`${base}/webrtc/live/${streamId}/whep`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/sdp' },
+        body: sdpOffer,
+        cache: 'no-store',
+      });
+    }
 
     if (!upstream.ok) {
       upstream = await fetch(`${base}/live/${streamId}/whep`, {
