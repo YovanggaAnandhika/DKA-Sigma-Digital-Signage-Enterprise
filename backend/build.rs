@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=proto");
+    println!("cargo:rerun-if-changed=migrations");
 
     let proto_dir = Path::new("proto");
     let mut proto_files = Vec::new();

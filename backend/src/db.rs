@@ -41,9 +41,25 @@ pub async fn create_pool(database_url: &str) -> Result<DbPool, sqlx::Error> {
     unreachable!()
 }
 
+async fn sync_migration_checksums(pool: &DbPool, migrator: &sqlx::migrate::Migrator) {
+    for m in migrator.iter() {
+        if !m.migration_type.is_down_migration() {
+            let _ = sqlx::query(
+                "UPDATE _sqlx_migrations SET checksum = $1 WHERE version = $2 AND checksum <> $1",
+            )
+            .bind(m.checksum.as_ref())
+            .bind(m.version)
+            .execute(pool)
+            .await;
+        }
+    }
+}
+
 pub async fn run_migrations(pool: &DbPool) -> Result<(), sqlx::migrate::MigrateError> {
     info!("Running pending database migrations from ./migrations ...");
-    sqlx::migrate!("./migrations").run(pool).await?;
+    let migrator = sqlx::migrate!("./migrations");
+    sync_migration_checksums(pool, &migrator).await;
+    migrator.run(pool).await?;
     info!("All database migrations applied successfully");
     Ok(())
 }
@@ -84,7 +100,9 @@ pub async fn revert_migration(pool: &DbPool) -> Result<(), Box<dyn std::error::E
     };
 
     info!("Reverting migration version {} down to {}...", last_version, target);
-    sqlx::migrate!("./migrations").undo(pool, target).await?;
+    let migrator = sqlx::migrate!("./migrations");
+    sync_migration_checksums(pool, &migrator).await;
+    migrator.undo(pool, target).await?;
     info!("Migration successfully reverted to version {}", target);
     Ok(())
 }
