@@ -175,11 +175,11 @@ pub mod system;
 
 #[macro_export]
 macro_rules! register_grpc_services {
-    ($router:expr, $pool:expr, $config:expr, $stream_manager:expr) => {{
+    ($router:expr, $pool:expr, $config:expr, $stream_manager:expr, $relay_manager:expr) => {{
         let router = crate::register_hardware_services!($router, $pool);
         let router = crate::register_iam_services!(router, $pool, $config);
         let router = crate::register_studio_services!(router, $pool);
-        let router = crate::register_components_services!(router, $pool, $stream_manager);
+        let router = crate::register_components_services!(router, $pool, $stream_manager, $relay_manager);
         let router = crate::register_iot_services!(router, $pool, $stream_manager);
         let router = crate::register_distribution_services!(router, $pool, $stream_manager);
         let router = crate::register_system_services!(router, $pool);

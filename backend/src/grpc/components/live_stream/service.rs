@@ -7,7 +7,7 @@ use crate::grpc::proto::components::v1::live_stream::{
     live_stream_service_server::LiveStreamService as LiveStreamServiceTrait,
     CreateLiveStreamRequest, GetLiveStreamRequest, ListLiveStreamsRequest, ListLiveStreamsResponse,
     UpdateLiveStreamRequest, DeleteLiveStreamRequest, DeleteLiveStreamResponse,
-    ToggleRelayHostRequest, LiveStream,
+    ToggleRelayHostRequest, GetStreamSegmentRequest, GetStreamSegmentResponse, LiveStream,
 };
 use crate::grpc::proto::common::v1::PaginationResponse;
 
@@ -52,13 +52,16 @@ impl LiveStreamRow {
     }
 }
 
+use crate::workers::live_stream_relay::LiveStreamRelayManager;
+
 pub struct LiveStreamServiceImpl {
     pub pool: PgPool,
+    pub relay_manager: LiveStreamRelayManager,
 }
 
 impl LiveStreamServiceImpl {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(pool: PgPool, relay_manager: LiveStreamRelayManager) -> Self {
+        Self { pool, relay_manager }
     }
 }
 
@@ -122,6 +125,12 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         .fetch_one(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
+
+        if is_relay_active {
+            self.relay_manager
+                .start_relay(id, &source_type, &req.source_url, req.low_latency_mode)
+                .await;
+        }
 
         Ok(Response::new(row.into_proto()))
     }
@@ -239,6 +248,14 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
+        if req.stream_mode == "SERVER_HOSTED_HLS" && req.is_relay_active {
+            self.relay_manager
+                .start_relay(id, &req.source_type, &req.source_url, req.low_latency_mode)
+                .await;
+        } else {
+            self.relay_manager.stop_relay(&id).await;
+        }
+
         Ok(Response::new(row.into_proto()))
     }
 
@@ -248,6 +265,8 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
     ) -> Result<Response<DeleteLiveStreamResponse>, Status> {
         let id = Uuid::from_str(&request.into_inner().id)
             .map_err(|_| Status::invalid_argument("Invalid live stream id"))?;
+
+        self.relay_manager.stop_relay(&id).await;
 
         sqlx::query("DELETE FROM components_live_streams WHERE id = $1")
             .bind(id)
@@ -287,6 +306,51 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
+        if req.is_relay_active && row.stream_mode == "SERVER_HOSTED_HLS" {
+            self.relay_manager
+                .start_relay(id, &row.source_type, &row.source_url, row.low_latency_mode)
+                .await;
+        } else {
+            self.relay_manager.stop_relay(&id).await;
+        }
+
         Ok(Response::new(row.into_proto()))
+    }
+
+    async fn get_stream_segment(
+        &self,
+        request: Request<GetStreamSegmentRequest>,
+    ) -> Result<Response<GetStreamSegmentResponse>, Status> {
+        let req = request.into_inner();
+        let stream_id = Uuid::from_str(&req.stream_id)
+            .map_err(|_| Status::invalid_argument("Invalid stream id"))?;
+
+        let file_name = std::path::Path::new(&req.file_name)
+            .file_name()
+            .and_then(|f| f.to_str())
+            .ok_or_else(|| Status::invalid_argument("Invalid file name"))?;
+
+        let file_path = format!("{}/streams/{}/{}", self.relay_manager.upload_dir(), stream_id, file_name);
+
+        let data = match tokio::fs::read(&file_path).await {
+            Ok(d) => d,
+            Err(e) => {
+                return Err(Status::not_found(format!("Stream segment not ready or not found: {}", e)));
+            }
+        };
+
+        let content_type = if file_name.ends_with(".m3u8") {
+            "application/vnd.apple.mpegurl"
+        } else if file_name.ends_with(".ts") {
+            "video/MP2T"
+        } else {
+            "application/octet-stream"
+        };
+
+        Ok(Response::new(GetStreamSegmentResponse {
+            success: true,
+            content_type: content_type.to_string(),
+            data,
+        }))
     }
 }

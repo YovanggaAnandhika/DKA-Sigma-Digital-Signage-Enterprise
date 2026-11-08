@@ -10,6 +10,7 @@ import {
   Server,
   Globe,
   Tv,
+  Copy,
 } from 'lucide-react';
 import { SingleSelect } from '@/components/ui/SingleSelect';
 import {
@@ -23,6 +24,17 @@ import {
   toYoutubeEmbedUrl,
 } from './types';
 
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 interface LiveStreamEditorFormProps {
   streamId?: string;
 }
@@ -30,6 +42,10 @@ interface LiveStreamEditorFormProps {
 export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormProps) {
   const router = useRouter();
   const isEdit = Boolean(streamId);
+
+  const [streamKey] = useState<string>(() => streamId || generateUUID());
+  const [serverHost, setServerHost] = useState('sigma.dkaapis.test');
+  const [copiedField, setCopiedField] = useState<'server' | 'key' | null>(null);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -42,6 +58,29 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
   const [posterImageUrl, setPosterImageUrl] = useState('');
   const [isRelayActive, setIsRelayActive] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hostname) {
+      setServerHost(window.location.hostname);
+    }
+  }, []);
+
+  const rtmpServerUrl = `rtmp://${serverHost}:1935/live`;
+  const fullRtmpIngestUrl = `${rtmpServerUrl}/${streamKey}`;
+
+  useEffect(() => {
+    if (streamMode === 'SERVER_HOSTED_HLS' && sourceType === 'RTMP') {
+      setSourceUrl(fullRtmpIngestUrl);
+    }
+  }, [streamMode, sourceType, fullRtmpIngestUrl]);
+
+  const handleCopy = (text: string, field: 'server' | 'key') => {
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+    }
+  };
 
   useEffect(() => {
     if (!streamId) return;
@@ -63,7 +102,12 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !sourceUrl.trim()) return;
+    const effectiveSourceUrl =
+      streamMode === 'SERVER_HOSTED_HLS' && sourceType === 'RTMP'
+        ? fullRtmpIngestUrl
+        : sourceUrl.trim();
+
+    if (!name.trim() || !effectiveSourceUrl) return;
 
     setSaving(true);
     try {
@@ -74,7 +118,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
           description: description.trim(),
           streamMode,
           sourceType,
-          sourceUrl: sourceUrl.trim(),
+          sourceUrl: effectiveSourceUrl,
           serverHlsEndpoint:
             streamMode === 'SERVER_HOSTED_HLS' ? `/streams/${streamId}/live.m3u8` : '',
           isRelayActive: streamMode === 'SERVER_HOSTED_HLS' ? isRelayActive : false,
@@ -89,7 +133,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
           description: description.trim(),
           streamMode,
           sourceType,
-          sourceUrl: sourceUrl.trim(),
+          sourceUrl: effectiveSourceUrl,
           autoReconnect,
           lowLatencyMode,
           isMuted,
@@ -298,20 +342,110 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
             </div>
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-              URL Sumber Stream ({sourceType})
-            </label>
-            <input
-              type="text"
-              value={sourceUrl}
-              onChange={(e) => setSourceUrl(e.target.value)}
-              placeholder={placeholderByType[sourceType]}
-              className="form-input"
-              style={{ fontFamily: 'monospace', fontSize: '0.8125rem' }}
-              required
-            />
-          </div>
+          {streamMode === 'SERVER_HOSTED_HLS' && sourceType === 'RTMP' ? (
+            /* OBS Ingest Parameters Card: No manual URL typing required! */
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                padding: '16px',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Parameter Ingest OBS Studio
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    Salin parameter berikut ke OBS Studio (Settings → Stream → Service: Custom).
+                  </div>
+                </div>
+                <span className="badge badge-success" style={{ fontSize: '0.6875rem' }}>
+                  Ingest Siap
+                </span>
+              </div>
+
+              {/* Server URL Row */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Server RTMP
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    readOnly
+                    value={rtmpServerUrl}
+                    className="form-input"
+                    style={{ fontFamily: 'monospace', fontSize: '0.8125rem', backgroundColor: 'var(--bg-primary)' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(rtmpServerUrl, 'server')}
+                    className="btn btn-outline"
+                    style={{ padding: '0 12px', gap: '6px', whiteSpace: 'nowrap' }}
+                    title="Salin URL Server"
+                  >
+                    {copiedField === 'server' ? (
+                      <Check size={14} style={{ color: 'var(--accent-emerald)' }} />
+                    ) : (
+                      <Copy size={14} />
+                    )}
+                    <span>{copiedField === 'server' ? 'Tersalin' : 'Salin'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Stream Key Row (Pure UUID) */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Stream Key (Murni UUID)
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    readOnly
+                    value={streamKey}
+                    className="form-input"
+                    style={{ fontFamily: 'monospace', fontSize: '0.8125rem', backgroundColor: 'var(--bg-primary)' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(streamKey, 'key')}
+                    className="btn btn-outline"
+                    style={{ padding: '0 12px', gap: '6px', whiteSpace: 'nowrap' }}
+                    title="Salin Stream Key UUID"
+                  >
+                    {copiedField === 'key' ? (
+                      <Check size={14} style={{ color: 'var(--accent-emerald)' }} />
+                    ) : (
+                      <Copy size={14} />
+                    )}
+                    <span>{copiedField === 'key' ? 'Tersalin' : 'Salin'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Standard URL Input for RTSP, HLS, or YouTube */
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                URL Sumber Stream ({sourceType})
+              </label>
+              <input
+                type="text"
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
+                placeholder={placeholderByType[sourceType]}
+                className="form-input"
+                style={{ fontFamily: 'monospace', fontSize: '0.8125rem' }}
+                required
+              />
+            </div>
+          )}
 
           {streamMode === 'SERVER_HOSTED_HLS' && (
             <div
@@ -328,7 +462,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                 Endpoint Distribusi HLS Origin Otomatis:
               </div>
               <code style={{ color: 'var(--text-primary)' }}>
-                /streams/{streamId || '<auto-uuid>'}/live.m3u8
+                /streams/{streamKey}/live.m3u8
               </code>
             </div>
           )}
@@ -538,6 +672,16 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                 playsInline
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
+            ) : streamMode === 'SERVER_HOSTED_HLS' && sourceType === 'RTMP' ? (
+              <div style={{ textAlign: 'center', padding: '32px', maxWidth: '460px' }}>
+                <Tv size={40} style={{ color: 'var(--accent-emerald)', marginBottom: '10px' }} />
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Menunggu Feed Ingest dari OBS Studio
+                </div>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.5 }}>
+                  Mulai streaming dari OBS dengan Stream Key <code>{streamKey}</code>. Server signage akan otomatis me-relay video menjadi HLS untuk semua layar signage.
+                </p>
+              </div>
             ) : (
               <div style={{ textAlign: 'center', padding: '32px', maxWidth: '460px' }}>
                 <Tv size={40} style={{ color: 'var(--primary-500)', marginBottom: '10px' }} />

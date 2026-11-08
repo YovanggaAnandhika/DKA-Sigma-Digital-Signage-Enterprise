@@ -7,7 +7,7 @@ pub mod webview;
 
 #[macro_export]
 macro_rules! register_components_services {
-    ($router:expr, $pool:expr, $stream_manager:expr) => {{
+    ($router:expr, $pool:expr, $stream_manager:expr, $relay_manager:expr) => {{
         let queue_service = crate::grpc::components::queue::service::QueueServiceImpl::with_stream_manager($pool.clone(), $stream_manager.clone());
 
         $router
@@ -21,7 +21,7 @@ macro_rules! register_components_services {
                 crate::grpc::components::webview::service::WebviewServiceImpl::new($pool.clone())
             ))
             .add_service(crate::grpc::proto::components::v1::live_stream::live_stream_service_server::LiveStreamServiceServer::new(
-                crate::grpc::components::live_stream::service::LiveStreamServiceImpl::new($pool.clone())
+                crate::grpc::components::live_stream::service::LiveStreamServiceImpl::new($pool.clone(), $relay_manager.clone())
             ))
             .add_service(crate::grpc::proto::components::v1::album::album::album_service_server::AlbumServiceServer::new(
                 crate::grpc::components::album::service::AlbumServiceImpl::new($pool.clone())
