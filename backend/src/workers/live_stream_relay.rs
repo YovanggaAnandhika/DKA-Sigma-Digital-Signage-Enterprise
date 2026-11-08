@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::{oneshot, Mutex};
 use tracing::{error, info};
@@ -76,7 +77,6 @@ impl LiveStreamRelayManager {
     }
 
     /// Background monitor that polls internal Docker MediaMTX API (`STREAMER_API_URL/v3/paths/list`)
-    /// to log real-time START STREAMING and STOP STREAMING events for WebRTC/UDP/SRT/RTMP feeds.
     fn spawn_streamer_monitor(&self) {
         let api_url = format!("{}/v3/paths/list", self.streamer_api_url.trim_end_matches('/'));
         let client = self.http_client.clone();
@@ -98,7 +98,7 @@ impl LiveStreamRelayManager {
                                 current_ready.insert(item.name.clone());
                                 if !active_paths.contains(&item.name) {
                                     info!(
-                                        "🟢 [LiveStreamRelay] START STREAMING detected on path [{}] (WebRTC UDP / RTMP ready)",
+                                        "🟢 [LiveStreamRelay] WebRTC UDP Egress READY on streamer path [{}]",
                                         item.name
                                     );
                                 }
@@ -108,7 +108,7 @@ impl LiveStreamRelayManager {
                         for old_path in &active_paths {
                             if !current_ready.contains(old_path) {
                                 info!(
-                                    "🔴 [LiveStreamRelay] STOP STREAMING detected on path [{}] (feed disconnected)",
+                                    "🔴 [LiveStreamRelay] WebRTC UDP Egress STOPPED on streamer path [{}]",
                                     old_path
                                 );
                             }
@@ -133,8 +133,7 @@ impl LiveStreamRelayManager {
 
         let upper_type = source_type.to_uppercase();
 
-        // Direct ingest (RTMP / SRT / WEBRTC) is handled directly in-memory by dka-product-sigma-streamer (MediaMTX)
-        if upper_type == "RTMP" || upper_type == "SRT" || upper_type == "WEBRTC" {
+        if upper_type == "RTMP" || upper_type == "SRT" || upper_type == "WEBRTC" || upper_type == "RTSP" {
             info!(
                 "⏳ [LiveStreamRelay] Zero-disk UDP/WebRTC & RTMP ingest active on dka-product-sigma-streamer for stream [live/{}]",
                 stream_id
@@ -142,7 +141,6 @@ impl LiveStreamRelayManager {
             return;
         }
 
-        // For external pull sources (e.g. RTSP IP Camera), pull and push into internal Docker streamer via RTMP
         let (stop_tx, mut stop_rx) = oneshot::channel::<()>();
         {
             let mut signals = self.stop_signals.lock().await;
@@ -150,7 +148,7 @@ impl LiveStreamRelayManager {
         }
 
         let source_url_s = source_url.to_string();
-        let target_rtmp = format!(
+        let target_rtsp = format!(
             "{}/live/{}",
             self.streamer_rtmp_url.trim_end_matches('/'),
             stream_id
@@ -158,8 +156,8 @@ impl LiveStreamRelayManager {
 
         tokio::spawn(async move {
             info!(
-                "Relay pull supervisor started for stream [{}] ({}) -> {}",
-                stream_id, upper_type, target_rtmp
+                "Relay WebRTC-transcoder supervisor started for stream [{}] ({}) -> {}",
+                stream_id, upper_type, target_rtsp
             );
 
             loop {
@@ -170,48 +168,93 @@ impl LiveStreamRelayManager {
                     "-flags", "low_delay",
                 ]);
 
-                if upper_type == "RTSP" {
-                    cmd.args(["-rtsp_transport", "tcp"]);
+                if upper_type == "RTMP" {
+                    cmd.args([
+                        "-listen", "1",
+                        "-i", &format!("rtmp://0.0.0.0:1935/live/{}", stream_id),
+                    ]);
+                } else if upper_type == "RTSP" {
+                    cmd.args([
+                        "-rtsp_transport", "tcp",
+                        "-i", &source_url_s,
+                    ]);
+                } else {
+                    cmd.args(["-i", &source_url_s]);
                 }
 
+                // WebRTC-compliant Baseline H.264 (0 B-frames: -bf 0) + Opus audio over RTSP into MediaMTX
                 cmd.args([
-                    "-i", &source_url_s,
                     "-c:v", "libx264",
                     "-preset", "ultrafast",
                     "-tune", "zerolatency",
-                    "-vf", "scale='min(1280,iw)':-2",
+                    "-profile:v", "baseline",
+                    "-bf", "0",
+                    "-vf", "scale='min(1280,iw)':-2,format=yuv420p",
                     "-b:v", "1800k",
                     "-maxrate", "2200k",
-                    "-bufsize", "2200k",
+                    "-bufsize", "1100k",
                     "-g", "30",
                     "-keyint_min", "30",
                     "-sc_threshold", "0",
-                    "-c:a", "aac",
-                    "-b:a", "128k",
-                    "-f", "flv",
-                    &target_rtmp,
+                    "-c:a", "libopus",
+                    "-b:a", "96k",
+                    "-ar", "48000",
+                    "-ac", "2",
+                    "-f", "rtsp",
+                    "-rtsp_transport", "tcp",
+                    &target_rtsp,
                 ]);
 
                 cmd.stdout(std::process::Stdio::null());
-                cmd.stderr(std::process::Stdio::null());
+                cmd.stderr(std::process::Stdio::piped());
                 cmd.kill_on_drop(true);
 
                 let mut child = match cmd.spawn() {
                     Ok(c) => c,
                     Err(e) => {
-                        error!("Failed to spawn FFmpeg puller for stream [{}]: {}", stream_id, e);
-                        tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+                        error!("Failed to spawn FFmpeg WebRTC relay for stream [{}]: {}", stream_id, e);
+                        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
                         continue;
                     }
                 };
+
+                info!(
+                    "⏳ [LiveStreamRelay] Ingest listener READY on RTMP port 1935 for stream [{}]",
+                    stream_id
+                );
+
+                if let Some(stderr) = child.stderr.take() {
+                    let stream_id_clone = stream_id;
+                    tokio::spawn(async move {
+                        let mut reader = BufReader::new(stderr).lines();
+                        let mut start_logged = false;
+                        while let Ok(Some(line)) = reader.next_line().await {
+                            if !start_logged
+                                && (line.contains("Input #0")
+                                    || line.contains("Stream #0:0")
+                                    || line.contains("Output #0"))
+                            {
+                                start_logged = true;
+                                info!(
+                                    "🟢 [LiveStreamRelay] START STREAMING detected for stream [{}] (normalizing to 0-B-frame H264 + Opus for WebRTC UDP)",
+                                    stream_id_clone
+                                );
+                            }
+                        }
+                    });
+                }
 
                 tokio::select! {
                     _ = &mut stop_rx => {
                         let _ = child.kill().await;
                         break;
                     }
-                    _ = child.wait() => {
-                        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                    status = child.wait() => {
+                        match status {
+                            Ok(s) => info!("🔴 [LiveStreamRelay] STOP STREAMING detected for stream [{}] (status: {:?}). Re-opening listener...", stream_id, s),
+                            Err(e) => error!("🔴 [LiveStreamRelay] STOP STREAMING error for stream [{}]: {}. Re-opening listener...", stream_id, e),
+                        }
+                        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
                     }
                 }
             }
@@ -221,7 +264,7 @@ impl LiveStreamRelayManager {
     pub async fn stop_relay(&self, stream_id: &Uuid) {
         let mut signals = self.stop_signals.lock().await;
         if let Some(stop_tx) = signals.remove(stream_id) {
-            info!("Stopping relay pull supervisor for stream [{}]", stream_id);
+            info!("Stopping relay supervisor for stream [{}]", stream_id);
             let _ = stop_tx.send(());
         }
         let stream_dir = format!("{}/streams/{}", self.upload_dir, stream_id);

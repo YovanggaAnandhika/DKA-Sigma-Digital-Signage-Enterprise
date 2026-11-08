@@ -81,16 +81,24 @@ export async function POST(
     const sdpOffer = await req.text();
     const streamerBase =
       process.env.HND_STREAMER_INTERNAL_URL || 'http://dka-product-sigma-streamer:8889';
-    const whepUrl = `${streamerBase.replace(/\/$/, '')}/live/${streamId}/whep`;
+    const base = streamerBase.replace(/\/$/, '');
 
-    const upstream = await fetch(whepUrl, {
+    // Try normalized 0-B-frame + Opus path (`webrtc/live/<streamId>/whep`) first, then fallback to raw (`live/<streamId>/whep`)
+    let upstream = await fetch(`${base}/webrtc/live/${streamId}/whep`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/sdp',
-      },
+      headers: { 'Content-Type': 'application/sdp' },
       body: sdpOffer,
       cache: 'no-store',
     });
+
+    if (!upstream.ok) {
+      upstream = await fetch(`${base}/live/${streamId}/whep`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/sdp' },
+        body: sdpOffer,
+        cache: 'no-store',
+      });
+    }
 
     if (!upstream.ok) {
       return new NextResponse(null, { status: upstream.status });

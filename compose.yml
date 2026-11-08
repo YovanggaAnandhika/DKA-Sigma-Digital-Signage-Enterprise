@@ -100,6 +100,8 @@ services:
       MTX_HLSSEGMENTCOUNT: "4"
       MTX_HLSSEGMENTDURATION: "1s"
       MTX_HLSALLOWORIGINS: '["*"]'
+      MTX_PATHDEFAULTS_RUNONREADY: "sh -c 'case \"$$MTX_PATH\" in live/*) ffmpeg -hide_banner -loglevel error -fflags +nobuffer+discardcorrupt+flush_packets -flags low_delay -rtsp_transport tcp -i rtsp://127.0.0.1:8554/$$MTX_PATH -c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -bf 0 -vf \"scale=min(1280\\,iw):-2,format=yuv420p\" -b:v 1800k -maxrate 2200k -bufsize 1100k -g 30 -keyint_min 30 -sc_threshold 0 -c:a libopus -b:a 96k -ar 48000 -ac 2 -f rtsp -rtsp_transport tcp rtsp://127.0.0.1:8554/webrtc/$$MTX_PATH ;; esac'"
+      MTX_PATHDEFAULTS_RUNONREADYRESTART: "yes"
     networks:
       - dka-internal
 
