@@ -18,6 +18,9 @@ message LiveStream {
   bool low_latency_mode = 11;
   bool is_muted = 12;
   string poster_image_url = 13;
+  bool requires_auth = 16;
+  string ingest_username = 17;
+  string ingest_password = 18;
   string created_at = 14;
   string updated_at = 15;
 }
@@ -32,6 +35,9 @@ message CreateLiveStreamRequest {
   bool low_latency_mode = 7;
   bool is_muted = 8;
   string poster_image_url = 9;
+  bool requires_auth = 10;
+  string ingest_username = 11;
+  string ingest_password = 12;
 }
 
 message GetLiveStreamRequest {
@@ -60,6 +66,9 @@ message UpdateLiveStreamRequest {
   bool is_muted = 9;
   string poster_image_url = 10;
   bool is_relay_active = 11;
+  bool requires_auth = 12;
+  string ingest_username = 13;
+  string ingest_password = 14;
 }
 
 message DeleteLiveStreamRequest {

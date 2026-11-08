@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS components_live_streams (
     low_latency_mode BOOLEAN NOT NULL DEFAULT TRUE,
     is_muted BOOLEAN NOT NULL DEFAULT FALSE,
     poster_image_url VARCHAR(500) NOT NULL DEFAULT '',
+    requires_auth BOOLEAN NOT NULL DEFAULT FALSE,
+    ingest_username VARCHAR(100) NOT NULL DEFAULT '',
+    ingest_password VARCHAR(100) NOT NULL DEFAULT '',
     created_by_user_id UUID REFERENCES iam_users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

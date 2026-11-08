@@ -26,6 +26,9 @@ struct LiveStreamRow {
     low_latency_mode: bool,
     is_muted: bool,
     poster_image_url: String,
+    requires_auth: bool,
+    ingest_username: String,
+    ingest_password: String,
     created_at: chrono::DateTime<chrono::Utc>,
     updated_at: chrono::DateTime<chrono::Utc>,
 }
@@ -46,6 +49,9 @@ impl LiveStreamRow {
             low_latency_mode: self.low_latency_mode,
             is_muted: self.is_muted,
             poster_image_url: self.poster_image_url,
+            requires_auth: self.requires_auth,
+            ingest_username: self.ingest_username,
+            ingest_password: self.ingest_password,
             created_at: self.created_at.to_rfc3339(),
             updated_at: self.updated_at.to_rfc3339(),
         }
@@ -102,12 +108,13 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
             INSERT INTO components_live_streams (
                 id, name, description, stream_mode, source_type, source_url,
                 server_hls_endpoint, is_relay_active, auto_reconnect, low_latency_mode,
-                is_muted, poster_image_url
+                is_muted, poster_image_url, requires_auth, ingest_username, ingest_password
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             RETURNING id, corporation_id, name, description, stream_mode, source_type,
                       source_url, server_hls_endpoint, is_relay_active, auto_reconnect,
-                      low_latency_mode, is_muted, poster_image_url, created_at, updated_at
+                      low_latency_mode, is_muted, poster_image_url, requires_auth,
+                      ingest_username, ingest_password, created_at, updated_at
             "#
         )
         .bind(id)
@@ -122,6 +129,9 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         .bind(req.low_latency_mode)
         .bind(req.is_muted)
         .bind(&req.poster_image_url)
+        .bind(req.requires_auth)
+        .bind(&req.ingest_username)
+        .bind(&req.ingest_password)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -146,7 +156,8 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
             r#"
             SELECT id, corporation_id, name, description, stream_mode, source_type,
                    source_url, server_hls_endpoint, is_relay_active, auto_reconnect,
-                   low_latency_mode, is_muted, poster_image_url, created_at, updated_at
+                   low_latency_mode, is_muted, poster_image_url, requires_auth,
+                   ingest_username, ingest_password, created_at, updated_at
             FROM components_live_streams
             WHERE id = $1
             "#
@@ -171,7 +182,8 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
             r#"
             SELECT id, corporation_id, name, description, stream_mode, source_type,
                    source_url, server_hls_endpoint, is_relay_active, auto_reconnect,
-                   low_latency_mode, is_muted, poster_image_url, created_at, updated_at
+                   low_latency_mode, is_muted, poster_image_url, requires_auth,
+                   ingest_username, ingest_password, created_at, updated_at
             FROM components_live_streams
             WHERE name ILIKE $1 OR source_url ILIKE $1 OR description ILIKE $1
             ORDER BY created_at DESC
@@ -225,11 +237,15 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
                 low_latency_mode = $10,
                 is_muted = $11,
                 poster_image_url = $12,
+                requires_auth = $13,
+                ingest_username = $14,
+                ingest_password = $15,
                 updated_at = NOW()
             WHERE id = $1
             RETURNING id, corporation_id, name, description, stream_mode, source_type,
                       source_url, server_hls_endpoint, is_relay_active, auto_reconnect,
-                      low_latency_mode, is_muted, poster_image_url, created_at, updated_at
+                      low_latency_mode, is_muted, poster_image_url, requires_auth,
+                      ingest_username, ingest_password, created_at, updated_at
             "#
         )
         .bind(id)
@@ -244,6 +260,9 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         .bind(req.low_latency_mode)
         .bind(req.is_muted)
         .bind(&req.poster_image_url)
+        .bind(req.requires_auth)
+        .bind(&req.ingest_username)
+        .bind(&req.ingest_password)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?
@@ -297,7 +316,8 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
             WHERE id = $1
             RETURNING id, corporation_id, name, description, stream_mode, source_type,
                       source_url, server_hls_endpoint, is_relay_active, auto_reconnect,
-                      low_latency_mode, is_muted, poster_image_url, created_at, updated_at
+                      low_latency_mode, is_muted, poster_image_url, requires_auth,
+                      ingest_username, ingest_password, created_at, updated_at
             "#
         )
         .bind(id)
