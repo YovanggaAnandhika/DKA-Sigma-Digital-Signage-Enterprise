@@ -2,40 +2,75 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { StreamSourceType, StreamMode } from '../types';
+import { StreamSourceType, StreamMode, LiveStreamConfig } from '../types';
 import {
   getLiveStream,
   createLiveStream,
   updateLiveStream,
 } from '@/lib/services/studio/livestream.service';
-import { LiveStreamConfig } from '../types';
 
-interface LiveStreamFormState {
+export interface WhipConfig {
+  requiresAuth: boolean;
+  token: string;
+}
+
+export interface RtmpConfig {
+  requiresAuth: boolean;
+  username: string;
+  password: string;
+}
+
+export interface RtspConfig {
+  sourceUrl: string;
+  requiresAuth: boolean;
+  username: string;
+  password: string;
+}
+
+export interface LiveStreamProtocolsState {
+  WHIP: WhipConfig;
+  RTMP: RtmpConfig;
+  RTSP: RtspConfig;
+}
+
+export interface LiveStreamFormState {
   name: string;
   description: string;
   sourceType: StreamSourceType;
-  sourceUrl: string;
   autoReconnect: boolean;
   lowLatencyMode: boolean;
   isMuted: boolean;
   posterImageUrl: string;
-  requiresAuth: boolean;
-  ingestUsername: string;
-  ingestPassword: string;
+  protocols: LiveStreamProtocolsState;
 }
+
+const DEFAULT_PROTOCOLS: LiveStreamProtocolsState = {
+  WHIP: {
+    requiresAuth: false,
+    token: '',
+  },
+  RTMP: {
+    requiresAuth: false,
+    username: '',
+    password: '',
+  },
+  RTSP: {
+    sourceUrl: '',
+    requiresAuth: false,
+    username: '',
+    password: '',
+  },
+};
 
 const DEFAULT_STATE: LiveStreamFormState = {
   name: '',
   description: '',
   sourceType: 'WHIP',
-  sourceUrl: '',
   autoReconnect: true,
   lowLatencyMode: true,
   isMuted: true,
   posterImageUrl: '',
-  requiresAuth: false,
-  ingestUsername: '',
-  ingestPassword: '',
+  protocols: DEFAULT_PROTOCOLS,
 };
 
 interface LiveStreamEditorContextValue {
@@ -45,18 +80,18 @@ interface LiveStreamEditorContextValue {
   isEdit: boolean;
   // Draft values
   draft: LiveStreamFormState;
-  // Setters
+  // Top-level setters
   setName: (val: string) => void;
   setDescription: (val: string) => void;
   setSourceType: (val: StreamSourceType) => void;
-  setSourceUrl: (val: string) => void;
   setAutoReconnect: (val: boolean) => void;
   setLowLatencyMode: (val: boolean) => void;
   setIsMuted: (val: boolean) => void;
   setPosterImageUrl: (val: string) => void;
-  setRequiresAuth: (val: boolean) => void;
-  setIngestUsername: (val: string) => void;
-  setIngestPassword: (val: string) => void;
+  // Isolated Protocol-specific setters
+  updateWhip: (val: Partial<WhipConfig>) => void;
+  updateRtmp: (val: Partial<RtmpConfig>) => void;
+  updateRtsp: (val: Partial<RtspConfig>) => void;
   // Status flags
   isDirty: boolean;
   saving: boolean;
@@ -86,7 +121,7 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
   const router = useRouter();
   const [streamId, setStreamId] = useState<string>(initialStreamId || '');
   const [generatedKey, setGeneratedKey] = useState<string>('');
-  const [serverHost, setServerHost] = useState<string>('');
+  const [serverHost, setServerHost] = useState<string>('sigma.dkaapis.test');
 
   const [savedState, setSavedState] = useState<LiveStreamFormState>(DEFAULT_STATE);
   const [draft, setDraft] = useState<LiveStreamFormState>(DEFAULT_STATE);
@@ -117,18 +152,34 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
 
     getLiveStream(streamId)
       .then((item: LiveStreamConfig) => {
+        const type = (item.sourceType as StreamSourceType) || 'WHIP';
+        const protocols: LiveStreamProtocolsState = {
+          WHIP: {
+            requiresAuth: type === 'WHIP' ? (item.requiresAuth ?? false) : false,
+            token: type === 'WHIP' ? (item.ingestPassword || '') : '',
+          },
+          RTMP: {
+            requiresAuth: type === 'RTMP' ? (item.requiresAuth ?? false) : false,
+            username: type === 'RTMP' ? (item.ingestUsername || '') : '',
+            password: type === 'RTMP' ? (item.ingestPassword || '') : '',
+          },
+          RTSP: {
+            sourceUrl: type === 'RTSP' ? (item.sourceUrl || '') : '',
+            requiresAuth: type === 'RTSP' ? (item.requiresAuth ?? false) : false,
+            username: type === 'RTSP' ? (item.ingestUsername || '') : '',
+            password: type === 'RTSP' ? (item.ingestPassword || '') : '',
+          },
+        };
+
         const loaded: LiveStreamFormState = {
           name: item.name || '',
           description: item.description || '',
-          sourceType: (item.sourceType as StreamSourceType) || 'WHIP',
-          sourceUrl: item.sourceUrl || '',
+          sourceType: type,
           autoReconnect: item.autoReconnect ?? true,
           lowLatencyMode: item.lowLatencyMode ?? true,
           isMuted: item.isMuted ?? true,
           posterImageUrl: item.posterImageUrl || '',
-          requiresAuth: item.requiresAuth ?? false,
-          ingestUsername: item.ingestUsername ?? '',
-          ingestPassword: item.ingestPassword ?? '',
+          protocols,
         };
         setSavedState(loaded);
         setDraft(loaded);
@@ -143,18 +194,45 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
     return JSON.stringify(draft) !== JSON.stringify(savedState);
   }, [draft, savedState]);
 
-  // Field setters that modify draft in-memory without saving to DB
+  // Top-level setters
   const setName = useCallback((name: string) => setDraft((prev) => ({ ...prev, name })), []);
   const setDescription = useCallback((description: string) => setDraft((prev) => ({ ...prev, description })), []);
   const setSourceType = useCallback((sourceType: StreamSourceType) => setDraft((prev) => ({ ...prev, sourceType })), []);
-  const setSourceUrl = useCallback((sourceUrl: string) => setDraft((prev) => ({ ...prev, sourceUrl })), []);
   const setAutoReconnect = useCallback((autoReconnect: boolean) => setDraft((prev) => ({ ...prev, autoReconnect })), []);
   const setLowLatencyMode = useCallback((lowLatencyMode: boolean) => setDraft((prev) => ({ ...prev, lowLatencyMode })), []);
   const setIsMuted = useCallback((isMuted: boolean) => setDraft((prev) => ({ ...prev, isMuted })), []);
   const setPosterImageUrl = useCallback((posterImageUrl: string) => setDraft((prev) => ({ ...prev, posterImageUrl })), []);
-  const setRequiresAuth = useCallback((requiresAuth: boolean) => setDraft((prev) => ({ ...prev, requiresAuth })), []);
-  const setIngestUsername = useCallback((ingestUsername: string) => setDraft((prev) => ({ ...prev, ingestUsername })), []);
-  const setIngestPassword = useCallback((ingestPassword: string) => setDraft((prev) => ({ ...prev, ingestPassword })), []);
+
+  // Isolated protocol-specific setters (changes NEVER bleed into other protocols)
+  const updateWhip = useCallback((val: Partial<WhipConfig>) => {
+    setDraft((prev) => ({
+      ...prev,
+      protocols: {
+        ...prev.protocols,
+        WHIP: { ...prev.protocols.WHIP, ...val },
+      },
+    }));
+  }, []);
+
+  const updateRtmp = useCallback((val: Partial<RtmpConfig>) => {
+    setDraft((prev) => ({
+      ...prev,
+      protocols: {
+        ...prev.protocols,
+        RTMP: { ...prev.protocols.RTMP, ...val },
+      },
+    }));
+  }, []);
+
+  const updateRtsp = useCallback((val: Partial<RtspConfig>) => {
+    setDraft((prev) => ({
+      ...prev,
+      protocols: {
+        ...prev.protocols,
+        RTSP: { ...prev.protocols.RTSP, ...val },
+      },
+    }));
+  }, []);
 
   // Revert draft changes back to last saved state
   const revert = useCallback(() => {
@@ -164,10 +242,35 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
 
   // Save to database: locks the state and updates backend WITHOUT redirecting
   const save = useCallback(async () => {
-    const effectiveSourceUrl = draft.sourceUrl.trim();
-    if (!draft.name.trim() || !effectiveSourceUrl) {
-      setErrorMessage('Nama siaran dan URL sumber wajib diisi.');
+    if (!draft.name.trim()) {
+      setErrorMessage('Nama siaran wajib diisi.');
       return;
+    }
+
+    let effectiveSourceUrl = '';
+    let requiresAuth = false;
+    let ingestUsername = '';
+    let ingestPassword = '';
+
+    if (draft.sourceType === 'WHIP') {
+      effectiveSourceUrl = `http://${serverHost}/streams/${streamKey}/whip`;
+      requiresAuth = draft.protocols.WHIP.requiresAuth;
+      ingestPassword = draft.protocols.WHIP.token.trim();
+    } else if (draft.sourceType === 'RTMP') {
+      effectiveSourceUrl = `rtmp://${serverHost}:1935/live/${streamKey}`;
+      requiresAuth = draft.protocols.RTMP.requiresAuth;
+      ingestUsername = draft.protocols.RTMP.username.trim();
+      ingestPassword = draft.protocols.RTMP.password.trim();
+    } else if (draft.sourceType === 'RTSP') {
+      effectiveSourceUrl = draft.protocols.RTSP.sourceUrl.trim();
+      requiresAuth = draft.protocols.RTSP.requiresAuth;
+      ingestUsername = draft.protocols.RTSP.username.trim();
+      ingestPassword = draft.protocols.RTSP.password.trim();
+
+      if (!effectiveSourceUrl) {
+        setErrorMessage('URL RTSP Kamera wajib diisi.');
+        return;
+      }
     }
 
     setSaving(true);
@@ -187,9 +290,9 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
           lowLatencyMode: draft.lowLatencyMode,
           isMuted: draft.isMuted,
           posterImageUrl: draft.posterImageUrl.trim(),
-          requiresAuth: draft.requiresAuth,
-          ingestUsername: draft.requiresAuth && draft.sourceType !== 'WHIP' ? draft.ingestUsername.trim() : '',
-          ingestPassword: draft.requiresAuth ? draft.ingestPassword.trim() : '',
+          requiresAuth,
+          ingestUsername,
+          ingestPassword,
         });
 
         setSavedState(draft);
@@ -206,15 +309,14 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
           lowLatencyMode: draft.lowLatencyMode,
           isMuted: draft.isMuted,
           posterImageUrl: draft.posterImageUrl.trim(),
-          requiresAuth: draft.requiresAuth,
-          ingestUsername: draft.requiresAuth && draft.sourceType !== 'WHIP' ? draft.ingestUsername.trim() : '',
-          ingestPassword: draft.requiresAuth ? draft.ingestPassword.trim() : '',
+          requiresAuth,
+          ingestUsername,
+          ingestPassword,
         });
 
         setSavedState(draft);
         setSaveSuccess(true);
         setStreamId(created.id);
-        // Seamlessly switch URL from create to edit without full page redirect
         router.replace(`/studio/components/livestream/${created.id}/edit`);
         setTimeout(() => setSaveSuccess(false), 2500);
       }
@@ -223,7 +325,7 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
     } finally {
       setSaving(false);
     }
-  }, [draft, isEdit, streamId, router]);
+  }, [draft, isEdit, streamId, streamKey, serverHost, router]);
 
   const value = useMemo(
     () => ({
@@ -235,14 +337,13 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
       setName,
       setDescription,
       setSourceType,
-      setSourceUrl,
       setAutoReconnect,
       setLowLatencyMode,
       setIsMuted,
       setPosterImageUrl,
-      setRequiresAuth,
-      setIngestUsername,
-      setIngestPassword,
+      updateWhip,
+      updateRtmp,
+      updateRtsp,
       isDirty,
       saving,
       saveSuccess,
@@ -259,14 +360,13 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
       setName,
       setDescription,
       setSourceType,
-      setSourceUrl,
       setAutoReconnect,
       setLowLatencyMode,
       setIsMuted,
       setPosterImageUrl,
-      setRequiresAuth,
-      setIngestUsername,
-      setIngestPassword,
+      updateWhip,
+      updateRtmp,
+      updateRtsp,
       isDirty,
       saving,
       saveSuccess,

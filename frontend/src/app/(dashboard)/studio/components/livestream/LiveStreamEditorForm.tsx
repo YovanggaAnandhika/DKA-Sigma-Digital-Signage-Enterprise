@@ -57,15 +57,9 @@ function LiveStreamEditorContent() {
     draft,
     setName,
     setDescription,
-    setSourceType,
-    setSourceUrl,
     setAutoReconnect,
     setLowLatencyMode,
-    setIsMuted,
     setPosterImageUrl,
-    setRequiresAuth,
-    setIngestUsername,
-    setIngestPassword,
     isDirty,
     saving,
     saveSuccess,
@@ -302,20 +296,7 @@ function LiveStreamEditorContent() {
             </div>
 
             {/* MediaMTX Ingest Source Panel (Updates draft in real time) */}
-            <IngestSourcePanel
-              sourceType={draft.sourceType}
-              onChangeSourceType={setSourceType}
-              sourceUrl={draft.sourceUrl}
-              onChangeSourceUrl={setSourceUrl}
-              requiresAuth={draft.requiresAuth}
-              onToggleAuth={setRequiresAuth}
-              username={draft.ingestUsername}
-              onChangeUsername={setIngestUsername}
-              password={draft.ingestPassword}
-              onChangePassword={setIngestPassword}
-              streamKey={streamKey}
-              serverHost={serverHost}
-            />
+            <IngestSourcePanel />
           </div>
 
           {/* Bottom Streaming Switches */}
@@ -330,7 +311,7 @@ function LiveStreamEditorContent() {
         {/* Right Uncropped Live Video Monitor Stage (Real-time Preview from Draft Context) */}
         <StreamPreviewMonitor
           sourceType={draft.sourceType}
-          sourceUrl={draft.sourceUrl}
+          sourceUrl={draft.sourceType === 'RTSP' ? draft.protocols.RTSP.sourceUrl : `/streams/${streamKey}/live.m3u8`}
           streamKey={streamKey}
           serverHost={serverHost}
           isRelayActive={true}

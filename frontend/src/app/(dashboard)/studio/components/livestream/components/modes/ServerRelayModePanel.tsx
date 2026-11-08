@@ -1,16 +1,14 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import dynamic from 'next/dynamic';
 import { SingleSelect } from '@/components/ui/SingleSelect';
 import { StreamSourceType } from '../../types';
-import { SourceModePanelProps } from './types';
+import { useLiveStreamEditor } from '../../context/LiveStreamEditorContext';
 
 const WhipSourceConfig = dynamic(() => import('../sources/WhipSourceConfig'), { ssr: false });
 const RtmpSourceConfig = dynamic(() => import('../sources/RtmpSourceConfig'), { ssr: false });
 const RtspSourceConfig = dynamic(() => import('../sources/RtspSourceConfig'), { ssr: false });
-
-const ALLOWED_RELAY_TYPES: StreamSourceType[] = ['WHIP', 'RTMP', 'RTSP'];
 
 const PROTOCOL_OPTIONS = [
   { value: 'WHIP', label: 'WHIP' },
@@ -18,43 +16,17 @@ const PROTOCOL_OPTIONS = [
   { value: 'RTSP', label: 'RTSP CCTV' },
 ];
 
-function generateSecureToken(length = 20): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = 'sig_tok_';
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    const array = new Uint8Array(length);
-    crypto.getRandomValues(array);
-    for (let i = 0; i < length; i++) {
-      result += chars[array[i] % chars.length];
-    }
-    return result;
-  }
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
+export default function ServerRelayModePanel() {
+  const {
+    draft,
+    setSourceType,
+    updateWhip,
+    updateRtmp,
+    updateRtsp,
+    streamKey,
+    serverHost,
+  } = useLiveStreamEditor();
 
-const SOURCE_REGISTRY: Record<string, React.ComponentType<any>> = {
-  WHIP: WhipSourceConfig,
-  RTMP: RtmpSourceConfig,
-  RTSP: RtspSourceConfig,
-};
-
-export default function ServerRelayModePanel({
-  sourceType,
-  onChangeSourceType,
-  sourceUrl,
-  onChangeSourceUrl,
-  requiresAuth,
-  onToggleAuth,
-  username,
-  onChangeUsername,
-  password,
-  onChangePassword,
-  streamKey,
-  serverHost,
-}: SourceModePanelProps) {
   const host = serverHost || (typeof window !== 'undefined' && window.location.hostname ? window.location.hostname : 'sigma.dkaapis.test');
   const whipUrl = typeof window !== 'undefined' && window.location.host
     ? `${window.location.protocol}//${window.location.host}/streams/${streamKey}/whip`
@@ -63,41 +35,9 @@ export default function ServerRelayModePanel({
   const rtmpServerUrl = `rtmp://${host}:1935/live`;
   const fullRtmpIngestUrl = `${rtmpServerUrl}/${streamKey}`;
 
-  // Isolation check: ensure sourceType is valid
-  useEffect(() => {
-    if (!ALLOWED_RELAY_TYPES.includes(sourceType)) {
-      onChangeSourceType('WHIP');
-      onChangeSourceUrl(whipUrl);
-      return;
-    }
-
-    if (sourceType === 'WHIP') {
-      onChangeSourceUrl(whipUrl);
-    } else if (sourceType === 'RTMP') {
-      onChangeSourceUrl(fullRtmpIngestUrl);
-    }
-  }, [sourceType, whipUrl, fullRtmpIngestUrl, onChangeSourceType, onChangeSourceUrl]);
-
   const handleProtocolChange = (val: string) => {
-    const nextType = val as StreamSourceType;
-    onChangeSourceType(nextType);
-    if (nextType === 'WHIP') {
-      onChangeSourceUrl(whipUrl);
-      if (requiresAuth && !password) {
-        onChangePassword(generateSecureToken());
-      }
-    } else if (nextType === 'RTMP') {
-      onChangeSourceUrl(fullRtmpIngestUrl);
-    } else {
-      onChangeSourceUrl('');
-    }
+    setSourceType(val as StreamSourceType);
   };
-
-  const handleGenerateToken = () => {
-    onChangePassword(generateSecureToken());
-  };
-
-  const ActiveComponent = SOURCE_REGISTRY[sourceType] || WhipSourceConfig;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -106,32 +46,49 @@ export default function ServerRelayModePanel({
           Protokol Sumber
         </label>
         <SingleSelect
-          value={sourceType}
+          value={draft.sourceType}
           onChange={handleProtocolChange}
           options={PROTOCOL_OPTIONS}
           placeholder="Pilih Protokol Ingest MediaMTX"
         />
       </div>
 
-      <ActiveComponent
-        streamKey={streamKey}
-        serverHost={serverHost}
-        whipUrl={whipUrl}
-        rtmpServerUrl={rtmpServerUrl}
-        serverUrl={rtmpServerUrl}
-        fullRtmpIngestUrl={fullRtmpIngestUrl}
-        sourceUrl={sourceUrl}
-        onChangeSourceUrl={onChangeSourceUrl}
-        requiresAuth={requiresAuth}
-        onToggleAuth={onToggleAuth}
-        username={username}
-        onChangeUsername={onChangeUsername}
-        password={password}
-        bearerToken={password}
-        onChangePassword={onChangePassword}
-        onChangeBearerToken={onChangePassword}
-        onGenerateToken={handleGenerateToken}
-      />
+      {draft.sourceType === 'WHIP' && (
+        <WhipSourceConfig
+          whipUrl={whipUrl}
+          requiresAuth={draft.protocols.WHIP.requiresAuth}
+          onToggleAuth={(val) => updateWhip({ requiresAuth: val })}
+          bearerToken={draft.protocols.WHIP.token}
+          onChangeBearerToken={(val) => updateWhip({ token: val })}
+        />
+      )}
+
+      {draft.sourceType === 'RTMP' && (
+        <RtmpSourceConfig
+          serverUrl={rtmpServerUrl}
+          fullRtmpIngestUrl={fullRtmpIngestUrl}
+          streamKey={streamKey}
+          requiresAuth={draft.protocols.RTMP.requiresAuth}
+          onToggleAuth={(val) => updateRtmp({ requiresAuth: val })}
+          username={draft.protocols.RTMP.username}
+          onChangeUsername={(val) => updateRtmp({ username: val })}
+          password={draft.protocols.RTMP.password}
+          onChangePassword={(val) => updateRtmp({ password: val })}
+        />
+      )}
+
+      {draft.sourceType === 'RTSP' && (
+        <RtspSourceConfig
+          sourceUrl={draft.protocols.RTSP.sourceUrl}
+          onChangeSourceUrl={(val) => updateRtsp({ sourceUrl: val })}
+          requiresAuth={draft.protocols.RTSP.requiresAuth}
+          onToggleAuth={(val) => updateRtsp({ requiresAuth: val })}
+          username={draft.protocols.RTSP.username}
+          onChangeUsername={(val) => updateRtsp({ username: val })}
+          password={draft.protocols.RTSP.password}
+          onChangePassword={(val) => updateRtsp({ password: val })}
+        />
+      )}
     </div>
   );
 }
