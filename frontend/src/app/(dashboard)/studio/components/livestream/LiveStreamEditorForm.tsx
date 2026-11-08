@@ -10,6 +10,7 @@ import {
   Check,
   Server,
   Globe,
+  Shield,
 } from 'lucide-react';
 import { SingleSelect } from '@/components/ui/SingleSelect';
 import {
@@ -81,6 +82,9 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
   const [isMuted, setIsMuted] = useState(true);
   const [posterImageUrl, setPosterImageUrl] = useState('');
   const [isRelayActive, setIsRelayActive] = useState(true);
+  const [requiresAuth, setRequiresAuth] = useState(false);
+  const [ingestUsername, setIngestUsername] = useState('');
+  const [ingestPassword, setIngestPassword] = useState('');
   const [saving, setSaving] = useState(false);
 
   const [posterOptions, setPosterOptions] = useState<{ value: string; label: string }[]>([
@@ -131,6 +135,9 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
         setIsMuted(item.isMuted);
         setPosterImageUrl(item.posterImageUrl);
         setIsRelayActive(item.isRelayActive);
+        setRequiresAuth(item.requiresAuth ?? false);
+        setIngestUsername(item.ingestUsername ?? '');
+        setIngestPassword(item.ingestPassword ?? '');
       })
       .catch(() => router.push('/studio/components/livestream'));
   }, [streamId, router]);
@@ -161,6 +168,9 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
           lowLatencyMode,
           isMuted,
           posterImageUrl: posterImageUrl.trim(),
+          requiresAuth,
+          ingestUsername: requiresAuth ? ingestUsername.trim() : '',
+          ingestPassword: requiresAuth ? ingestPassword.trim() : '',
         });
       } else {
         await createLiveStream({
@@ -173,6 +183,9 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
           lowLatencyMode,
           isMuted,
           posterImageUrl: posterImageUrl.trim(),
+          requiresAuth,
+          ingestUsername: requiresAuth ? ingestUsername.trim() : '',
+          ingestPassword: requiresAuth ? ingestPassword.trim() : '',
         });
       }
       router.push('/studio/components/livestream');
@@ -200,7 +213,13 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
   // Bottom bar placed neatly underneath the video monitor
   const bottomUrlOrIngestBar =
     streamMode === 'SERVER_HOSTED_HLS' && sourceType === 'RTMP' ? (
-      <ObsIngestCard serverUrl={rtmpServerUrl} streamKey={streamKey} />
+      <ObsIngestCard
+        serverUrl={rtmpServerUrl}
+        streamKey={streamKey}
+        requiresAuth={requiresAuth}
+        username={ingestUsername}
+        password={ingestPassword}
+      />
     ) : (
       <div
         style={{
@@ -447,6 +466,90 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                   placeholder="Pilih dari Pustaka Media"
                 />
               </div>
+            </div>
+
+            {/* Ingest Authentication (Username & Password for OBS / RTSP) */}
+            <div
+              style={{
+                padding: '9px 11px',
+                borderRadius: '10px',
+                backgroundColor: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Shield size={13} style={{ color: requiresAuth ? 'var(--accent-emerald)' : 'var(--text-muted)' }} />
+                  <span style={{ fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Autentikasi Pengirim (Password)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={requiresAuth}
+                  onClick={() => setRequiresAuth(!requiresAuth)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    width: '36px',
+                    height: '20px',
+                    padding: '2px',
+                    borderRadius: 'var(--radius-full)',
+                    backgroundColor: requiresAuth ? 'var(--accent-emerald)' : 'var(--bg-surface)',
+                    border: `1px solid ${requiresAuth ? 'var(--accent-emerald)' : 'var(--border-strong)'}`,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '14px',
+                      height: '14px',
+                      borderRadius: '50%',
+                      backgroundColor: '#ffffff',
+                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)',
+                      transform: requiresAuth ? 'translateX(16px)' : 'translateX(0)',
+                      transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                    }}
+                  />
+                </button>
+              </div>
+
+              {requiresAuth && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '2px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.67rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                      Username Ingest
+                    </label>
+                    <input
+                      type="text"
+                      value={ingestUsername}
+                      onChange={(e) => setIngestUsername(e.target.value)}
+                      placeholder="Contoh: obs_user"
+                      className="form-input"
+                      style={{ fontSize: '0.74rem', padding: '5px 8px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.67rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                      Password Ingest
+                    </label>
+                    <input
+                      type="password"
+                      value={ingestPassword}
+                      onChange={(e) => setIngestPassword(e.target.value)}
+                      placeholder="Password siaran"
+                      className="form-input"
+                      style={{ fontSize: '0.74rem', padding: '5px 8px' }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
