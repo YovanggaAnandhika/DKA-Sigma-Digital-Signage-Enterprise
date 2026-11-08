@@ -262,27 +262,59 @@ impl LiveStreamRelayManager {
     }
 
     pub async fn kick_streamer_publishers(&self, stream_id: &Uuid) {
-        let api_url = format!("{}/v3/webrtcsessions/list", self.streamer_api_url.trim_end_matches('/'));
+        let base_api = self.streamer_api_url.trim_end_matches('/');
         let target_path = format!("live/{}", stream_id);
 
-        if let Ok(resp) = self.http_client.get(&api_url).send().await {
-            #[derive(Deserialize)]
-            struct SessionItem {
-                id: String,
-                path: String,
-                state: String,
+        #[derive(Deserialize)]
+        struct MediaMtxItem {
+            id: String,
+            path: String,
+            #[serde(default)]
+            state: String,
+        }
+        #[derive(Deserialize)]
+        struct MediaMtxList {
+            #[serde(default)]
+            items: Vec<MediaMtxItem>,
+        }
+
+        // 1. Kick active WebRTC publisher sessions (WHIP)
+        let webrtc_url = format!("{}/v3/webrtcsessions/list", base_api);
+        if let Ok(resp) = self.http_client.get(&webrtc_url).send().await {
+            if let Ok(list) = resp.json::<MediaMtxList>().await {
+                for item in list.items {
+                    if (item.path == target_path || item.path.ends_with(&format!("/{}", stream_id))) && item.state == "publish" {
+                        let kick_url = format!("{}/v3/webrtcsessions/kick/{}", base_api, item.id);
+                        let _ = self.http_client.post(&kick_url).send().await;
+                        info!("⚡ [LiveStreamRelay] Kicked WebRTC publisher session [{}] on path [{}]", item.id, item.path);
+                    }
+                }
             }
-            #[derive(Deserialize)]
-            struct SessionList {
-                #[serde(default)]
-                items: Vec<SessionItem>,
+        }
+
+        // 2. Kick active RTMP publisher connections
+        let rtmp_url = format!("{}/v3/rtmpconns/list", base_api);
+        if let Ok(resp) = self.http_client.get(&rtmp_url).send().await {
+            if let Ok(list) = resp.json::<MediaMtxList>().await {
+                for item in list.items {
+                    if (item.path == target_path || item.path.ends_with(&format!("/{}", stream_id))) && item.state == "publish" {
+                        let kick_url = format!("{}/v3/rtmpconns/kick/{}", base_api, item.id);
+                        let _ = self.http_client.post(&kick_url).send().await;
+                        info!("⚡ [LiveStreamRelay] Kicked RTMP publisher connection [{}] on path [{}]", item.id, item.path);
+                    }
+                }
             }
-            if let Ok(list) = resp.json::<SessionList>().await {
+        }
+
+        // 3. Kick active RTSP publisher sessions
+        let rtsp_url = format!("{}/v3/rtspsessions/list", base_api);
+        if let Ok(resp) = self.http_client.get(&rtsp_url).send().await {
+            if let Ok(list) = resp.json::<MediaMtxList>().await {
                 for item in list.items {
                     if item.path == target_path && item.state == "publish" {
-                        let kick_url = format!("{}/v3/webrtcsessions/kick/{}", self.streamer_api_url.trim_end_matches('/'), item.id);
+                        let kick_url = format!("{}/v3/rtspsessions/kick/{}", base_api, item.id);
                         let _ = self.http_client.post(&kick_url).send().await;
-                        info!("⚡ [LiveStreamRelay] Kicked publisher session [{}] on path [{}]", item.id, target_path);
+                        info!("⚡ [LiveStreamRelay] Kicked RTSP publisher session [{}] on path [{}]", item.id, item.path);
                     }
                 }
             }

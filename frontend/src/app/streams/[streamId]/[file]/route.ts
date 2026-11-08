@@ -87,22 +87,37 @@ export async function POST(
     if (file === 'whip') {
       const authHeader = req.headers.get('authorization') || '';
 
-      // Validate Bearer Token against DB truth
+      // Validate Protocol & Bearer Token against DB truth
       const client = getGrpcClient(LiveStreamServiceClient);
       const grpcReq = new GetLiveStreamRequest();
       grpcReq.setId(streamId);
 
-      const liveStream = await new Promise<{ requiresAuth: boolean; ingestPassword?: string } | null>((resolve) => {
+      const liveStream = await new Promise<{ requiresAuth: boolean; ingestPassword?: string; sourceType?: string } | null>((resolve) => {
         client.getLiveStream(grpcReq, (err, response) => {
           if (err || !response) return resolve(null);
           resolve(response.toObject() as any);
         });
       });
 
-      if (liveStream?.requiresAuth && liveStream.ingestPassword) {
-        const expectedToken = liveStream.ingestPassword.trim();
+      if (!liveStream) {
+        return new NextResponse('Live stream not found', {
+          status: 404,
+          headers: { 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+
+      const currentSourceType = (liveStream.sourceType || '').toUpperCase();
+      if (currentSourceType !== 'WHIP') {
+        return new NextResponse(`Forbidden: Live stream is configured for ${currentSourceType || 'another protocol'}, not WHIP`, {
+          status: 403,
+          headers: { 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+
+      if (liveStream.requiresAuth) {
+        const expectedToken = (liveStream.ingestPassword || '').trim();
         const providedToken = authHeader.replace(/^Bearer\s+/i, '').trim();
-        if (!providedToken || providedToken !== expectedToken) {
+        if (!expectedToken || !providedToken || providedToken !== expectedToken) {
           return new NextResponse('Unauthorized: Invalid or missing Bearer token', {
             status: 401,
             headers: {

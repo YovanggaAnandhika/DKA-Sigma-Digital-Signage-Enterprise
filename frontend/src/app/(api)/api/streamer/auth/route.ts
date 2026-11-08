@@ -69,20 +69,26 @@ export async function POST(req: NextRequest) {
       return new NextResponse('Stream not found', { status: 404 });
     }
 
-    // If stream does not require authentication, permit publishing
-    if (!liveStream.requiresAuth) {
-      return new NextResponse(null, { status: 200 });
-    }
+    const currentSourceType = (liveStream.sourceType || '').toUpperCase();
 
-    // 5. Enforce authentication based on protocol
-    const expectedUser = (liveStream.ingestUsername || '').trim();
-    const expectedPass = (liveStream.ingestPassword || '').trim();
-
+    // 5. Enforce protocol matching & authentication
     if (protocol === 'rtmp') {
+      if (currentSourceType !== 'RTMP') {
+        return new NextResponse(`Forbidden: Live stream is configured for ${currentSourceType || 'another protocol'}, not RTMP`, { status: 403 });
+      }
+
+      // If stream does not require authentication, permit publishing
+      if (!liveStream.requiresAuth) {
+        return new NextResponse(null, { status: 200 });
+      }
+
+      const expectedUser = (liveStream.ingestUsername || '').trim();
+      const expectedPass = (liveStream.ingestPassword || '').trim();
+
       const userMatches = !expectedUser || user === expectedUser;
       const passMatches = !expectedPass || password === expectedPass;
 
-      if (userMatches && passMatches && (user || password)) {
+      if (userMatches && passMatches && (user || password || (!expectedUser && !expectedPass))) {
         return new NextResponse(null, { status: 200 });
       }
 
@@ -90,11 +96,14 @@ export async function POST(req: NextRequest) {
     }
 
     if (protocol === 'webrtc' || protocol === 'whip') {
+      if (currentSourceType !== 'WHIP') {
+        return new NextResponse(`Forbidden: Live stream is configured for ${currentSourceType || 'another protocol'}, not WHIP`, { status: 403 });
+      }
       // WHIP requests pass through Next.js /streams/[streamId]/whip which already validates the Bearer token
       return new NextResponse(null, { status: 200 });
     }
 
-    // Fallback: permit if no explicit credentials required
+    // Default fallback: permit only if protocol matches
     return new NextResponse(null, { status: 200 });
   } catch (error) {
     return new NextResponse('Internal Error in Auth Webhook', { status: 500 });
