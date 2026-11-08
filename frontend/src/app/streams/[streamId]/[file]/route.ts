@@ -117,36 +117,39 @@ export async function POST(
 
     // WHEP Egress Proxy (Browser & Signage Screen Players via standard Port 80 HTTP)
     const mode = req.nextUrl.searchParams.get('mode');
-    const primaryPrefix = mode === 'hd' ? 'hd/live' : 'webrtc/live';
 
-    // Try selected WebRTC tier first (`hd/live/<streamId>` or `webrtc/live/<streamId>`), then fallback
-    let upstream = await fetch(`${base}/${primaryPrefix}/${streamId}/whep`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/sdp' },
-      body: sdpOffer,
-      cache: 'no-store',
-    });
+    // Priority chain: For native WHIP / HD, use direct passthrough first (0-CPU, buttery smooth 60fps),
+    // then fallback to transcoded low-latency baseline tiers
+    const candidates = mode === 'hd'
+      ? [
+          `${base}/live/${streamId}/whep`,
+          `${base}/hd/live/${streamId}/whep`,
+          `${base}/webrtc/live/${streamId}/whep`,
+        ]
+      : [
+          `${base}/webrtc/live/${streamId}/whep`,
+          `${base}/live/${streamId}/whep`,
+          `${base}/hd/live/${streamId}/whep`,
+        ];
 
-    if (!upstream.ok && mode === 'hd') {
-      upstream = await fetch(`${base}/webrtc/live/${streamId}/whep`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/sdp' },
-        body: sdpOffer,
-        cache: 'no-store',
-      });
+    let upstream: Response | null = null;
+    for (const url of candidates) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/sdp' },
+          body: sdpOffer,
+          cache: 'no-store',
+        });
+        if (res.ok) {
+          upstream = res;
+          break;
+        }
+      } catch {}
     }
 
-    if (!upstream.ok) {
-      upstream = await fetch(`${base}/live/${streamId}/whep`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/sdp' },
-        body: sdpOffer,
-        cache: 'no-store',
-      });
-    }
-
-    if (!upstream.ok) {
-      return new NextResponse(null, { status: upstream.status });
+    if (!upstream || !upstream.ok) {
+      return new NextResponse(null, { status: upstream?.status || 502 });
     }
 
     const sdpAnswer = await upstream.text();
