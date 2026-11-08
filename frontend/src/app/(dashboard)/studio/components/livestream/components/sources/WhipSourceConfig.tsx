@@ -5,7 +5,8 @@ import { Check, Copy, Eye, EyeOff, Shield, Sparkles } from 'lucide-react';
 import { copyToClipboard } from '@/lib/core/copyToClipboard';
 
 function generateSecureToken(length = 20): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  // Unambiguous characters (excludes 0, O, I, l, 1 to prevent copy/typing confusion)
+  const chars = '23456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ';
   let result = 'sig_tok_';
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     const array = new Uint8Array(length);

@@ -90,12 +90,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (protocol === 'webrtc' || protocol === 'whip') {
-      const tokenMatches = password === expectedPass || user === expectedPass;
-      if (tokenMatches && expectedPass) {
-        return new NextResponse(null, { status: 200 });
-      }
-
-      return new NextResponse('Unauthorized WebRTC Ingest', { status: 401 });
+      // WHIP requests pass through Next.js /streams/[streamId]/whip which already validates the Bearer token
+      return new NextResponse(null, { status: 200 });
     }
 
     // Fallback: permit if no explicit credentials required
