@@ -11,6 +11,8 @@ import {
   Server,
   Globe,
   Shield,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { SingleSelect } from '@/components/ui/SingleSelect';
 import {
@@ -85,6 +87,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
   const [requiresAuth, setRequiresAuth] = useState(false);
   const [ingestUsername, setIngestUsername] = useState('');
   const [ingestPassword, setIngestPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [posterOptions, setPosterOptions] = useState<{ value: string; label: string }[]>([
@@ -469,19 +472,19 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
             {/* Ingest Authentication (Username & Password for OBS / RTSP) */}
             <div
               style={{
-                padding: '9px 11px',
+                padding: '11px 13px',
                 borderRadius: '10px',
                 backgroundColor: 'var(--bg-surface-elevated)',
                 border: '1px solid var(--border-subtle)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '8px',
+                gap: '10px',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Shield size={13} style={{ color: requiresAuth ? 'var(--accent-emerald)' : 'var(--text-muted)' }} />
-                  <span style={{ fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Shield size={15} style={{ color: requiresAuth ? 'var(--accent-emerald)' : 'var(--text-muted)' }} />
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                     Autentikasi Pengirim (Password)
                   </span>
                 </div>
@@ -519,9 +522,9 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
               </div>
 
               {requiresAuth && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '2px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '2px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.67rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
                       Username Ingest
                     </label>
                     <input
@@ -530,21 +533,43 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                       onChange={(e) => setIngestUsername(e.target.value)}
                       placeholder="Contoh: obs_user"
                       className="form-input"
-                      style={{ fontSize: '0.74rem', padding: '5px 8px' }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.67rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
                       Password Ingest
                     </label>
-                    <input
-                      type="password"
-                      value={ingestPassword}
-                      onChange={(e) => setIngestPassword(e.target.value)}
-                      placeholder="Password siaran"
-                      className="form-input"
-                      style={{ fontSize: '0.74rem', padding: '5px 8px' }}
-                    />
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={ingestPassword}
+                        onChange={(e) => setIngestPassword(e.target.value)}
+                        placeholder="Password siaran"
+                        className="form-input"
+                        style={{ paddingRight: '36px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{
+                          position: 'absolute',
+                          right: '8px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-muted)',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                        title={showPassword ? 'Sembunyikan Password' : 'Lihat Password'}
+                      >
+                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
