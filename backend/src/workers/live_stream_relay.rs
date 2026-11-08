@@ -1,16 +1,33 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::{oneshot, Mutex};
 use tracing::{error, info};
 use uuid::Uuid;
 use sqlx::PgPool;
+use serde::Deserialize;
 
 #[derive(Clone)]
 pub struct LiveStreamRelayManager {
     stop_signals: Arc<Mutex<HashMap<Uuid, oneshot::Sender<()>>>>,
     upload_dir: String,
+    streamer_api_url: String,
+    streamer_rtmp_url: String,
+    streamer_hls_url: String,
+    http_client: reqwest::Client,
+}
+
+#[derive(Deserialize)]
+struct MtxPathListResponse {
+    #[serde(default)]
+    items: Vec<MtxPathItem>,
+}
+
+#[derive(Deserialize)]
+struct MtxPathItem {
+    name: String,
+    #[serde(default)]
+    ready: bool,
 }
 
 async fn purge_stream_files(stream_dir: &str) {
@@ -22,15 +39,87 @@ async fn purge_stream_files(stream_dir: &str) {
 }
 
 impl LiveStreamRelayManager {
-    pub fn new(upload_dir: String) -> Self {
-        Self {
+    pub fn new(
+        upload_dir: String,
+        streamer_api_url: String,
+        streamer_rtmp_url: String,
+        streamer_hls_url: String,
+    ) -> Self {
+        let http_client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(3))
+            .build()
+            .unwrap_or_default();
+
+        let mgr = Self {
             stop_signals: Arc::new(Mutex::new(HashMap::new())),
             upload_dir,
-        }
+            streamer_api_url,
+            streamer_rtmp_url,
+            streamer_hls_url,
+            http_client,
+        };
+
+        mgr.spawn_streamer_monitor();
+        mgr
     }
 
     pub fn upload_dir(&self) -> &str {
         &self.upload_dir
+    }
+
+    pub fn streamer_hls_url(&self) -> &str {
+        &self.streamer_hls_url
+    }
+
+    pub fn http_client(&self) -> &reqwest::Client {
+        &self.http_client
+    }
+
+    /// Background monitor that polls internal Docker MediaMTX API (`STREAMER_API_URL/v3/paths/list`)
+    /// to log real-time START STREAMING and STOP STREAMING events for WebRTC/UDP/SRT/RTMP feeds.
+    fn spawn_streamer_monitor(&self) {
+        let api_url = format!("{}/v3/paths/list", self.streamer_api_url.trim_end_matches('/'));
+        let client = self.http_client.clone();
+
+        tokio::spawn(async move {
+            let mut active_paths: HashSet<String> = HashSet::new();
+            let mut engine_ready_logged = false;
+
+            loop {
+                if let Ok(resp) = client.get(&api_url).send().await {
+                    if !engine_ready_logged && resp.status().is_success() {
+                        engine_ready_logged = true;
+                        info!("⚡ [LiveStreamRelay] Connected to internal UDP/WebRTC/RTMP Streamer Engine ({})", api_url);
+                    }
+                    if let Ok(list) = resp.json::<MtxPathListResponse>().await {
+                        let mut current_ready: HashSet<String> = HashSet::new();
+                        for item in list.items {
+                            if item.ready {
+                                current_ready.insert(item.name.clone());
+                                if !active_paths.contains(&item.name) {
+                                    info!(
+                                        "🟢 [LiveStreamRelay] START STREAMING detected on path [{}] (WebRTC UDP / RTMP ready)",
+                                        item.name
+                                    );
+                                }
+                            }
+                        }
+
+                        for old_path in &active_paths {
+                            if !current_ready.contains(old_path) {
+                                info!(
+                                    "🔴 [LiveStreamRelay] STOP STREAMING detected on path [{}] (feed disconnected)",
+                                    old_path
+                                );
+                            }
+                        }
+
+                        active_paths = current_ready;
+                    }
+                }
+                tokio::time::sleep(tokio::time::Duration::from_millis(800)).await;
+            }
+        });
     }
 
     pub async fn start_relay(
@@ -38,158 +127,91 @@ impl LiveStreamRelayManager {
         stream_id: Uuid,
         source_type: &str,
         source_url: &str,
-        low_latency: bool,
+        _low_latency: bool,
     ) {
-        // Stop existing supervisor process if any
         self.stop_relay(&stream_id).await;
 
-        let out_dir = format!("{}/streams/{}", self.upload_dir, stream_id);
-        if let Err(e) = tokio::fs::create_dir_all(&out_dir).await {
-            error!("Failed to create stream output directory {}: {}", out_dir, e);
+        let upper_type = source_type.to_uppercase();
+
+        // Direct ingest (RTMP / SRT / WEBRTC) is handled directly in-memory by dka-product-sigma-streamer (MediaMTX)
+        if upper_type == "RTMP" || upper_type == "SRT" || upper_type == "WEBRTC" {
+            info!(
+                "⏳ [LiveStreamRelay] Zero-disk UDP/WebRTC & RTMP ingest active on dka-product-sigma-streamer for stream [live/{}]",
+                stream_id
+            );
             return;
         }
 
+        // For external pull sources (e.g. RTSP IP Camera), pull and push into internal Docker streamer via RTMP
         let (stop_tx, mut stop_rx) = oneshot::channel::<()>();
         {
             let mut signals = self.stop_signals.lock().await;
             signals.insert(stream_id, stop_tx);
         }
 
-        let upload_dir = self.upload_dir.clone();
-        let source_type_s = source_type.to_string();
         let source_url_s = source_url.to_string();
+        let target_rtmp = format!(
+            "{}/live/{}",
+            self.streamer_rtmp_url.trim_end_matches('/'),
+            stream_id
+        );
 
         tokio::spawn(async move {
-            info!("Relay supervisor started for stream [{}] ({})", stream_id, source_type_s);
-            let stream_dir = format!("{}/streams/{}", upload_dir, stream_id);
+            info!(
+                "Relay pull supervisor started for stream [{}] ({}) -> {}",
+                stream_id, upper_type, target_rtmp
+            );
 
             loop {
-                // Purge stale segments so live.m3u8 only exists while stream is actively incoming
-                purge_stream_files(&stream_dir).await;
-
-                let m3u8_path = format!("{}/live.m3u8", stream_dir);
-                let segment_path = format!("{}/live%d.ts", stream_dir);
-                let hls_time = "2";
-                let hls_list_size = if low_latency { "4" } else { "6" };
-
                 let mut cmd = Command::new("ffmpeg");
-                cmd.arg("-y");
+                cmd.args([
+                    "-y",
+                    "-fflags", "+nobuffer+discardcorrupt+flush_packets",
+                    "-flags", "low_delay",
+                ]);
 
-                match source_type_s.to_uppercase().as_str() {
-                    "RTMP" => {
-                        cmd.args([
-                            "-fflags", "+nobuffer+discardcorrupt+flush_packets",
-                            "-flags", "low_delay",
-                            "-listen", "1",
-                            "-i", &format!("rtmp://0.0.0.0:1935/live/{}", stream_id),
-                            "-c:v", "libx264",
-                            "-preset", "ultrafast",
-                            "-tune", "zerolatency",
-                            "-vf", "scale='min(1280,iw)':-2",
-                            "-b:v", "1800k",
-                            "-maxrate", "2200k",
-                            "-bufsize", "2200k",
-                            "-g", "30",
-                            "-keyint_min", "30",
-                            "-sc_threshold", "0",
-                            "-c:a", "aac",
-                            "-b:a", "128k",
-                            "-f", "hls",
-                            "-hls_time", hls_time,
-                            "-hls_list_size", hls_list_size,
-                            "-hls_delete_threshold", "4",
-                            "-hls_flags", "delete_segments+omit_endlist+temp_file+independent_segments",
-                            "-hls_segment_filename", &segment_path,
-                            &m3u8_path,
-                        ]);
-                    }
-                    "RTSP" => {
-                        cmd.args([
-                            "-fflags", "+nobuffer+discardcorrupt+flush_packets",
-                            "-flags", "low_delay",
-                            "-rtsp_transport", "tcp",
-                            "-i", &source_url_s,
-                            "-c:v", "libx264",
-                            "-preset", "ultrafast",
-                            "-tune", "zerolatency",
-                            "-vf", "scale='min(1280,iw)':-2",
-                            "-b:v", "1800k",
-                            "-maxrate", "2200k",
-                            "-bufsize", "2200k",
-                            "-g", "30",
-                            "-keyint_min", "30",
-                            "-sc_threshold", "0",
-                            "-c:a", "aac",
-                            "-b:a", "128k",
-                            "-f", "hls",
-                            "-hls_time", hls_time,
-                            "-hls_list_size", hls_list_size,
-                            "-hls_delete_threshold", "4",
-                            "-hls_flags", "delete_segments+omit_endlist+temp_file+independent_segments",
-                            "-hls_segment_filename", &segment_path,
-                            &m3u8_path,
-                        ]);
-                    }
-                    _ => {
-                        cmd.args([
-                            "-i", &source_url_s,
-                            "-c:v", "copy",
-                            "-c:a", "copy",
-                            "-f", "hls",
-                            "-hls_time", hls_time,
-                            "-hls_list_size", hls_list_size,
-                            "-hls_delete_threshold", "4",
-                            "-hls_flags", "delete_segments+omit_endlist+temp_file",
-                            "-hls_segment_filename", &segment_path,
-                            &m3u8_path,
-                        ]);
-                    }
+                if upper_type == "RTSP" {
+                    cmd.args(["-rtsp_transport", "tcp"]);
                 }
 
+                cmd.args([
+                    "-i", &source_url_s,
+                    "-c:v", "libx264",
+                    "-preset", "ultrafast",
+                    "-tune", "zerolatency",
+                    "-vf", "scale='min(1280,iw)':-2",
+                    "-b:v", "1800k",
+                    "-maxrate", "2200k",
+                    "-bufsize", "2200k",
+                    "-g", "30",
+                    "-keyint_min", "30",
+                    "-sc_threshold", "0",
+                    "-c:a", "aac",
+                    "-b:a", "128k",
+                    "-f", "flv",
+                    &target_rtmp,
+                ]);
+
                 cmd.stdout(std::process::Stdio::null());
-                cmd.stderr(std::process::Stdio::piped());
+                cmd.stderr(std::process::Stdio::null());
                 cmd.kill_on_drop(true);
 
                 let mut child = match cmd.spawn() {
                     Ok(c) => c,
                     Err(e) => {
-                        error!("Failed to spawn FFmpeg for stream [{}]: {}", stream_id, e);
+                        error!("Failed to spawn FFmpeg puller for stream [{}]: {}", stream_id, e);
                         tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
                         continue;
                     }
                 };
 
-                info!("⏳ [LiveStreamRelay] Ingest listener READY on RTMP port 1935 for stream [{}]", stream_id);
-
-                if let Some(stderr) = child.stderr.take() {
-                    let stream_id_clone = stream_id;
-                    tokio::spawn(async move {
-                        let mut reader = BufReader::new(stderr).lines();
-                        let mut start_logged = false;
-                        while let Ok(Some(line)) = reader.next_line().await {
-                            if !start_logged && (line.contains("Opening '") || line.contains("Stream #0:0") || line.contains("Publishing") || line.contains("rtmp://")) {
-                                start_logged = true;
-                                info!("🟢 [LiveStreamRelay] START STREAMING detected for stream [{}] (feed incoming)", stream_id_clone);
-                            }
-                        }
-                    });
-                }
-
                 tokio::select! {
                     _ = &mut stop_rx => {
-                        info!("Relay supervisor received stop signal for stream [{}]", stream_id);
                         let _ = child.kill().await;
-                        purge_stream_files(&stream_dir).await;
                         break;
                     }
-                    status = child.wait() => {
-                        // Immediately remove playlist & segments so clients see STREAM OFF right away
-                        purge_stream_files(&stream_dir).await;
-                        match status {
-                            Ok(s) => info!("🔴 [LiveStreamRelay] STOP STREAMING detected for stream [{}] (status: {:?}). Re-opening listener...", stream_id, s),
-                            Err(e) => error!("🔴 [LiveStreamRelay] STOP STREAMING error for stream [{}]: {}. Re-opening listener...", stream_id, e),
-                        }
-                        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
+                    _ = child.wait() => {
+                        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
                     }
                 }
             }
@@ -199,7 +221,7 @@ impl LiveStreamRelayManager {
     pub async fn stop_relay(&self, stream_id: &Uuid) {
         let mut signals = self.stop_signals.lock().await;
         if let Some(stop_tx) = signals.remove(stream_id) {
-            info!("Stopping FFmpeg HLS relay supervisor for stream [{}]", stream_id);
+            info!("Stopping relay pull supervisor for stream [{}]", stream_id);
             let _ = stop_tx.send(());
         }
         let stream_dir = format!("{}/streams/{}", self.upload_dir, stream_id);
@@ -209,17 +231,15 @@ impl LiveStreamRelayManager {
     pub async fn stop_all(&self) {
         let mut signals = self.stop_signals.lock().await;
         for (stream_id, stop_tx) in signals.drain() {
-            info!("Shutting down FFmpeg relay supervisor for stream [{}]", stream_id);
+            info!("Shutting down relay supervisor for stream [{}]", stream_id);
             let _ = stop_tx.send(());
-            let stream_dir = format!("{}/streams/{}", self.upload_dir, stream_id);
-            purge_stream_files(&stream_dir).await;
         }
         let _ = Command::new("pkill").args(["-9", "ffmpeg"]).status().await;
     }
 
     pub async fn sync_active_relays(&self, pool: &PgPool) {
-        // Kill any orphaned ffmpeg processes left from previous cargo-watch runs
         let _ = Command::new("pkill").args(["-9", "ffmpeg"]).status().await;
+
         #[derive(sqlx::FromRow)]
         struct ActiveStreamRow {
             id: Uuid,
@@ -239,7 +259,7 @@ impl LiveStreamRelayManager {
             }
         };
 
-        info!("Syncing {} active Live Stream HLS relays...", active_rows.len());
+        info!("Syncing {} active Live Stream relays with internal streamer engine...", active_rows.len());
         for row in active_rows {
             self.start_relay(row.id, &row.source_type, &row.source_url, row.low_latency_mode).await;
         }

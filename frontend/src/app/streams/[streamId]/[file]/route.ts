@@ -57,8 +57,54 @@ export async function OPTIONS() {
     status: 204,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, HEAD, POST, PATCH, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': '*',
     },
   });
+}
+
+/**
+ * WebRTC WHEP Signaling Bridge (`POST /streams/[streamId]/whep`)
+ * Forwards the browser's SDP Offer over internal Docker network to `dka-product-sigma-streamer:8889/live/<streamId>/whep`
+ * and returns the SDP Answer for sub-second UDP/TCP WebRTC streaming.
+ */
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { streamId: string; file: string } }
+) {
+  const { streamId, file } = params;
+  if (!streamId || file !== 'whep') {
+    return new NextResponse('Invalid WHEP endpoint', { status: 400 });
+  }
+
+  try {
+    const sdpOffer = await req.text();
+    const streamerBase =
+      process.env.HND_STREAMER_INTERNAL_URL || 'http://dka-product-sigma-streamer:8889';
+    const whepUrl = `${streamerBase.replace(/\/$/, '')}/live/${streamId}/whep`;
+
+    const upstream = await fetch(whepUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/sdp',
+      },
+      body: sdpOffer,
+      cache: 'no-store',
+    });
+
+    if (!upstream.ok) {
+      return new NextResponse(null, { status: upstream.status });
+    }
+
+    const sdpAnswer = await upstream.text();
+    return new Response(sdpAnswer, {
+      status: 201,
+      headers: {
+        'Content-Type': 'application/sdp',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  } catch {
+    return new NextResponse(null, { status: 502 });
+  }
 }

@@ -63,7 +63,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let stream_manager = StreamConnectionManager::new();
     grpc::iot::mqtt::spawn_mqtt_worker(pool.clone(), stream_manager.clone());
 
-    let relay_manager = crate::workers::live_stream_relay::LiveStreamRelayManager::new(config.upload_dir.clone());
+    let relay_manager = crate::workers::live_stream_relay::LiveStreamRelayManager::new(
+        config.upload_dir.clone(),
+        config.streamer_api_url.clone(),
+        config.streamer_rtmp_url.clone(),
+        config.streamer_hls_url.clone(),
+    );
     relay_manager.sync_active_relays(&pool).await;
     let relay_manager_shutdown = relay_manager.clone();
 

@@ -51,10 +51,8 @@ function getAdaptiveStreamProfile(stallCount: number) {
   const isLowEndDevice = cores <= 2 || memory <= 2;
 
   if (isConstrainedNetwork || isLowEndDevice || stallCount >= 2) {
-    // High-stability profile for slow network or constrained device
     return { syncSegments: 3, maxLagSeconds: 4.5, hardDropSeconds: 8.5, catchUpRate: 1.08 };
   }
-  // Low-latency profile for fast LAN / 4G+ & capable device
   return { syncSegments: 1.5, maxLagSeconds: 2.8, hardDropSeconds: 5.5, catchUpRate: 1.18 };
 }
 
@@ -78,6 +76,7 @@ export default function HlsPlayer({
   const statusRef = useRef<StreamPlaybackStatus>('OFFLINE');
   const hasFirstFrameRef = useRef<boolean>(false);
   const hlsInstanceRef = useRef<any>(null);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
   const isStreamOnlineRef = useRef<boolean>(false);
   const lastMediaTimeRef = useRef<number>(-1);
   const lastAdvanceAtRef = useRef<number>(Date.now());
@@ -107,6 +106,17 @@ export default function HlsPlayer({
   }, [isMuted, volume]);
 
   const stopAndResetVideo = useCallback(() => {
+    if (pcRef.current) {
+      try {
+        pcRef.current.onconnectionstatechange = null;
+        pcRef.current.oniceconnectionstatechange = null;
+        pcRef.current.ontrack = null;
+        pcRef.current.close();
+      } catch {
+        // ignore
+      }
+      pcRef.current = null;
+    }
     if (hlsInstanceRef.current) {
       try {
         hlsInstanceRef.current.destroy();
@@ -119,6 +129,7 @@ export default function HlsPlayer({
     if (video) {
       try {
         video.pause();
+        video.srcObject = null;
         video.removeAttribute('src');
         video.load();
       } catch {
@@ -137,7 +148,7 @@ export default function HlsPlayer({
     updateStatus('LIVE');
   }, [src, updateStatus]);
 
-  const startPlayback = useCallback(() => {
+  const startHlsPlayback = useCallback(() => {
     const video = videoRef.current;
     if (!video || !src) return;
 
@@ -153,6 +164,7 @@ export default function HlsPlayer({
     updateStatus('BUFFERING');
     lastAdvanceAtRef.current = Date.now();
 
+    video.srcObject = null;
     video.muted = isMuted;
     video.defaultMuted = isMuted;
     video.volume = Math.max(0, Math.min(1, volume));
@@ -243,7 +255,7 @@ export default function HlsPlayer({
     }
   }, [src, autoPlay, isMuted, volume, handlePlaying, stopAndResetVideo, updateStatus]);
 
-  // Lightweight Watchdog: Only checks playlist when OFFLINE or when video playback actually stalls
+  // Ultra-Low Latency WebRTC (UDP WHEP) Connection for Local Server Relay
   useEffect(() => {
     if (!src) {
       stopAndResetVideo();
@@ -252,63 +264,171 @@ export default function HlsPlayer({
     }
 
     let isCancelled = false;
-    const isLocalRelay = src.startsWith('/streams/');
+    const localMatch = src.match(/^\/streams\/([^/]+)\//);
 
-    if (!isLocalRelay) {
+    if (!localMatch) {
       isStreamOnlineRef.current = true;
-      startPlayback();
+      startHlsPlayback();
       return () => {
         isCancelled = true;
         stopAndResetVideo();
       };
     }
 
-    const probePlaylist = async () => {
+    const streamId = localMatch[1];
+    const whepUrl = `/streams/${streamId}/whep`;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const connectWebRtc = async () => {
       if (isCancelled) return;
 
-      // If currently playing smoothly (frames advancing within last 2.2s), skip redundant HTTP probe!
+      // Avoid re-connecting if WebRTC is already connected and playing
       if (
-        isStreamOnlineRef.current &&
-        statusRef.current === 'LIVE' &&
-        Date.now() - lastAdvanceAtRef.current < 2200
+        pcRef.current &&
+        (pcRef.current.connectionState === 'connected' ||
+          pcRef.current.connectionState === 'connecting')
       ) {
         return;
       }
 
       try {
-        const res = await fetch(`${src.split('?')[0]}?_t=${Date.now()}`, {
-          method: 'GET',
+        const pc = new RTCPeerConnection({
+          bundlePolicy: 'max-bundle',
+        });
+        pcRef.current = pc;
+
+        pc.addTransceiver('video', { direction: 'recvonly' });
+        pc.addTransceiver('audio', { direction: 'recvonly' });
+
+        pc.ontrack = (event) => {
+          if (isCancelled) return;
+          const video = videoRef.current;
+          if (video && event.streams && event.streams[0]) {
+            if (video.srcObject !== event.streams[0]) {
+              video.srcObject = event.streams[0];
+              video.muted = isMuted;
+              video.defaultMuted = isMuted;
+              video.volume = Math.max(0, Math.min(1, volume));
+              video.playsInline = true;
+              video
+                .play()
+                .then(() => {
+                  isStreamOnlineRef.current = true;
+                  handlePlaying();
+                })
+                .catch(() => {});
+            }
+          }
+        };
+
+        const handleDisconnect = () => {
+          if (isCancelled) return;
+          const state = pc.connectionState;
+          const iceState = pc.iceConnectionState;
+          if (
+            state === 'disconnected' ||
+            state === 'failed' ||
+            state === 'closed' ||
+            iceState === 'disconnected' ||
+            iceState === 'failed'
+          ) {
+            isStreamOnlineRef.current = false;
+            stopAndResetVideo();
+            updateStatus('OFFLINE');
+            if (!isCancelled) {
+              retryTimer = setTimeout(connectWebRtc, 1200);
+            }
+          }
+        };
+
+        pc.onconnectionstatechange = handleDisconnect;
+        pc.oniceconnectionstatechange = handleDisconnect;
+
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        // Wait up to 250ms for local ICE candidates
+        if (pc.iceGatheringState !== 'complete') {
+          await new Promise<void>((resolve) => {
+            const timeout = setTimeout(resolve, 250);
+            pc.onicegatheringstatechange = () => {
+              if (pc.iceGatheringState === 'complete') {
+                clearTimeout(timeout);
+                resolve();
+              }
+            };
+          });
+        }
+
+        const res = await fetch(whepUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/sdp' },
+          body: pc.localDescription?.sdp || offer.sdp,
           cache: 'no-store',
         });
 
-        if (isCancelled) return;
+        if (isCancelled) {
+          pc.close();
+          return;
+        }
 
-        if (res.ok) {
-          if (!isStreamOnlineRef.current) {
-            isStreamOnlineRef.current = true;
-            stallCountRef.current = 0;
-            startPlayback();
-          }
-        } else {
-          // 404: OBS stopped -> immediately switch to STREAM OFF
+        if (!res.ok) {
+          // 404 = stream not currently published by OBS
+          pc.close();
+          pcRef.current = null;
           if (isStreamOnlineRef.current || statusRef.current !== 'OFFLINE') {
             isStreamOnlineRef.current = false;
-            stallCountRef.current = 0;
             stopAndResetVideo();
             updateStatus('OFFLINE');
           }
+          retryTimer = setTimeout(connectWebRtc, 1200);
+          return;
         }
+
+        isStreamOnlineRef.current = true;
+        if (!hasFirstFrameRef.current) {
+          updateStatus('BUFFERING');
+        }
+
+        const answerSdp = await res.text();
+        await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
       } catch {
-        // network error
+        if (pcRef.current) {
+          try {
+            pcRef.current.close();
+          } catch {
+            // ignore
+          }
+          pcRef.current = null;
+        }
+        if (!isCancelled) {
+          retryTimer = setTimeout(connectWebRtc, 1500);
+        }
       }
     };
 
-    probePlaylist();
-    const interval = setInterval(probePlaylist, 1800);
+    connectWebRtc();
+
+    // Watchdog to detect immediate freeze if OBS stops sending frames before ICE timeout
+    const watchdog = setInterval(() => {
+      if (isCancelled) return;
+      if (
+        isStreamOnlineRef.current &&
+        statusRef.current === 'LIVE' &&
+        Date.now() - lastAdvanceAtRef.current > 2400
+      ) {
+        // Verify stream still active via lightweight WHEP probe or reset
+        isStreamOnlineRef.current = false;
+        stopAndResetVideo();
+        updateStatus('OFFLINE');
+        connectWebRtc();
+      }
+    }, 1200);
 
     return () => {
       isCancelled = true;
-      clearInterval(interval);
+      if (retryTimer) clearTimeout(retryTimer);
+      clearInterval(watchdog);
       isStreamOnlineRef.current = false;
       stopAndResetVideo();
     };
@@ -329,48 +449,49 @@ export default function HlsPlayer({
         updateStatus('LIVE');
       }
 
-      // Two-Tier Live-Edge Sync:
-      // 1) Hard Frame-Drop (jump to live edge - 1.2s) if lag exceeds hardDropSeconds (e.g. tab backgrounded or spike)
-      // 2) Smooth playbackRate catch-up if lag is moderate
-      const now = Date.now();
-      let liveEdge = 0;
-      if (hlsInstanceRef.current && typeof hlsInstanceRef.current.liveSyncPosition === 'number') {
-        liveEdge = hlsInstanceRef.current.liveSyncPosition;
-      } else if (video.seekable && video.seekable.length > 0) {
-        liveEdge = video.seekable.end(video.seekable.length - 1);
-      } else if (video.buffered && video.buffered.length > 0) {
-        liveEdge = video.buffered.end(video.buffered.length - 1);
-      }
+      // Only apply HLS live-edge sync when not using WebRTC (srcObject)
+      if (!video.srcObject) {
+        const now = Date.now();
+        let liveEdge = 0;
+        if (hlsInstanceRef.current && typeof hlsInstanceRef.current.liveSyncPosition === 'number') {
+          liveEdge = hlsInstanceRef.current.liveSyncPosition;
+        } else if (video.seekable && video.seekable.length > 0) {
+          liveEdge = video.seekable.end(video.seekable.length - 1);
+        } else if (video.buffered && video.buffered.length > 0) {
+          liveEdge = video.buffered.end(video.buffered.length - 1);
+        }
 
-      if (liveEdge > 0) {
-        const profile = getAdaptiveStreamProfile(stallCountRef.current);
-        const lag = liveEdge - current;
+        if (liveEdge > 0) {
+          const profile = getAdaptiveStreamProfile(stallCountRef.current);
+          const lag = liveEdge - current;
 
-        if (lag > profile.hardDropSeconds && now - lastHardDropAtRef.current > 4000) {
-          // Drop stale frames immediately and snap to newest keyframe near live edge
-          lastHardDropAtRef.current = now;
-          video.currentTime = Math.max(0, liveEdge - 1.0);
-          video.playbackRate = 1.0;
-        } else if (lag > profile.maxLagSeconds && video.playbackRate !== profile.catchUpRate) {
-          video.playbackRate = profile.catchUpRate;
-        } else if (lag <= 1.8 && video.playbackRate !== 1.0) {
-          video.playbackRate = 1.0;
+          if (lag > profile.hardDropSeconds && now - lastHardDropAtRef.current > 4000) {
+            lastHardDropAtRef.current = now;
+            video.currentTime = Math.max(0, liveEdge - 1.0);
+            video.playbackRate = 1.0;
+          } else if (lag > profile.maxLagSeconds && video.playbackRate !== profile.catchUpRate) {
+            video.playbackRate = profile.catchUpRate;
+          } else if (lag <= 1.8 && video.playbackRate !== 1.0) {
+            video.playbackRate = 1.0;
+          }
         }
       }
     }
   };
 
   const handleWaiting = () => {
-    if (isStreamOnlineRef.current) {
+    if (isStreamOnlineRef.current && !videoRef.current?.srcObject) {
       stallCountRef.current += 1;
       updateStatus('BUFFERING');
     }
   };
 
   const handleVideoError = () => {
-    isStreamOnlineRef.current = false;
-    stopAndResetVideo();
-    updateStatus('OFFLINE');
+    if (!videoRef.current?.srcObject) {
+      isStreamOnlineRef.current = false;
+      stopAndResetVideo();
+      updateStatus('OFFLINE');
+    }
   };
 
   return (

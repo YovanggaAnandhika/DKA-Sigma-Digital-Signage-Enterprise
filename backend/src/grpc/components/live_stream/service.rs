@@ -337,11 +337,35 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         let data = match tokio::fs::read(&file_path).await {
             Ok(d) => d,
             Err(_) => {
-                return Ok(Response::new(GetStreamSegmentResponse {
-                    success: false,
-                    content_type: String::new(),
-                    data: Vec::new(),
-                }));
+                // Fetch directly from internal Docker streamer engine (dka-product-sigma-streamer:8888)
+                let target_file = if file_name == "live.m3u8" { "index.m3u8" } else { file_name };
+                let url = format!(
+                    "{}/live/{}/{}",
+                    self.relay_manager.streamer_hls_url().trim_end_matches('/'),
+                    stream_id,
+                    target_file
+                );
+                match self.relay_manager.http_client().get(&url).send().await {
+                    Ok(resp) if resp.status().is_success() => {
+                        match resp.bytes().await {
+                            Ok(b) => b.to_vec(),
+                            Err(_) => {
+                                return Ok(Response::new(GetStreamSegmentResponse {
+                                    success: false,
+                                    content_type: String::new(),
+                                    data: Vec::new(),
+                                }));
+                            }
+                        }
+                    }
+                    _ => {
+                        return Ok(Response::new(GetStreamSegmentResponse {
+                            success: false,
+                            content_type: String::new(),
+                            data: Vec::new(),
+                        }));
+                    }
+                }
             }
         };
 
