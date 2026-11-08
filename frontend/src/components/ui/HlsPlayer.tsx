@@ -23,6 +23,39 @@ declare global {
   interface Window {
     Hls?: any;
   }
+  interface Navigator {
+    connection?: {
+      effectiveType?: string;
+      downlink?: number;
+      saveData?: boolean;
+    };
+    deviceMemory?: number;
+  }
+}
+
+function getAdaptiveStreamProfile(stallCount: number) {
+  if (typeof navigator === 'undefined') {
+    return { syncSegments: 2, maxLagSeconds: 3.5, catchUpRate: 1.12 };
+  }
+  const conn = navigator.connection;
+  const cores = navigator.hardwareConcurrency || 4;
+  const memory = navigator.deviceMemory || 4;
+
+  const isConstrainedNetwork =
+    conn?.saveData ||
+    conn?.effectiveType === '2g' ||
+    conn?.effectiveType === 'slow-2g' ||
+    conn?.effectiveType === '3g' ||
+    (typeof conn?.downlink === 'number' && conn.downlink < 2.5);
+
+  const isLowEndDevice = cores <= 2 || memory <= 2;
+
+  if (isConstrainedNetwork || isLowEndDevice || stallCount >= 2) {
+    // High-stability profile for slow network or constrained device
+    return { syncSegments: 3, maxLagSeconds: 5.5, catchUpRate: 1.06 };
+  }
+  // Low-latency profile for fast LAN / 4G+ & capable device
+  return { syncSegments: 1.5, maxLagSeconds: 3.0, catchUpRate: 1.15 };
 }
 
 export default function HlsPlayer({
@@ -47,7 +80,8 @@ export default function HlsPlayer({
   const hlsInstanceRef = useRef<any>(null);
   const isStreamOnlineRef = useRef<boolean>(false);
   const lastMediaTimeRef = useRef<number>(-1);
-  const lastMediaTickAtRef = useRef<number>(Date.now());
+  const lastAdvanceAtRef = useRef<number>(Date.now());
+  const stallCountRef = useRef<number>(0);
 
   const updateStatus = useCallback(
     (next: StreamPlaybackStatus) => {
@@ -61,11 +95,6 @@ export default function HlsPlayer({
     },
     [onStatusChange]
   );
-
-  const markFirstFrame = useCallback(() => {
-    hasFirstFrameRef.current = true;
-    setHasFirstFrame(true);
-  }, []);
 
   // Sync muted & volume directly to DOM element without reloading stream
   useEffect(() => {
@@ -99,28 +128,13 @@ export default function HlsPlayer({
     setHasFirstFrame(false);
   }, []);
 
-  const syncToLiveEdge = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    try {
-      if (video.seekable && video.seekable.length > 0) {
-        const liveEdge = video.seekable.end(video.seekable.length - 1);
-        if (liveEdge - video.currentTime > 1.8) {
-          video.currentTime = Math.max(0, liveEdge - 0.3);
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
   const handlePlaying = useCallback(() => {
     if (!isStreamOnlineRef.current && src.startsWith('/streams/')) return;
-    lastMediaTickAtRef.current = Date.now();
-    markFirstFrame();
+    lastAdvanceAtRef.current = Date.now();
+    hasFirstFrameRef.current = true;
+    setHasFirstFrame(true);
     updateStatus('LIVE');
-    syncToLiveEdge();
-  }, [src, markFirstFrame, updateStatus, syncToLiveEdge]);
+  }, [src, updateStatus]);
 
   const startPlayback = useCallback(() => {
     const video = videoRef.current;
@@ -136,13 +150,14 @@ export default function HlsPlayer({
     }
 
     updateStatus('BUFFERING');
+    lastAdvanceAtRef.current = Date.now();
 
     video.muted = isMuted;
     video.defaultMuted = isMuted;
     video.volume = Math.max(0, Math.min(1, volume));
     video.playsInline = true;
 
-    const cleanSrc = `${src.split('?')[0]}?_t=${Date.now()}`;
+    const cleanSrc = src.split('?')[0];
 
     // Native HLS (Safari on macOS / iOS)
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -168,13 +183,14 @@ export default function HlsPlayer({
         return;
       }
 
+      const profile = getAdaptiveStreamProfile(stallCountRef.current);
       const hls = new window.Hls({
         enableWorker: true,
-        lowLatencyMode: true,
-        liveSyncDurationCount: 1,
-        liveMaxLatencyDurationCount: 2,
-        maxLiveSyncPlaybackRate: 1.5,
-        backBufferLength: 3,
+        lowLatencyMode: false,
+        liveSyncDurationCount: profile.syncSegments,
+        liveMaxLatencyDurationCount: profile.syncSegments + 2,
+        maxLiveSyncPlaybackRate: profile.catchUpRate,
+        backBufferLength: 4,
       });
       hlsInstanceRef.current = hls;
 
@@ -188,7 +204,6 @@ export default function HlsPlayer({
             .then(() => handlePlaying())
             .catch(() => {});
         }
-        handlePlaying();
       });
 
       hls.on(window.Hls.Events.ERROR, (_event: any, data: any) => {
@@ -227,7 +242,7 @@ export default function HlsPlayer({
     }
   }, [src, autoPlay, isMuted, volume, handlePlaying, stopAndResetVideo, updateStatus]);
 
-  // Real-time Watchdog: detects instant start, instant stop, and slow network buffering
+  // Lightweight Watchdog: Only checks playlist when OFFLINE or when video playback actually stalls
   useEffect(() => {
     if (!src) {
       stopAndResetVideo();
@@ -247,8 +262,18 @@ export default function HlsPlayer({
       };
     }
 
-    const checkStreamAvailability = async () => {
+    const probePlaylist = async () => {
       if (isCancelled) return;
+
+      // If currently playing smoothly (frames advancing within last 2.2s), skip redundant HTTP probe!
+      if (
+        isStreamOnlineRef.current &&
+        statusRef.current === 'LIVE' &&
+        Date.now() - lastAdvanceAtRef.current < 2200
+      ) {
+        return;
+      }
+
       try {
         const res = await fetch(`${src.split('?')[0]}?_t=${Date.now()}`, {
           method: 'GET',
@@ -259,43 +284,28 @@ export default function HlsPlayer({
 
         if (res.ok) {
           if (!isStreamOnlineRef.current) {
-            // Stream is ONLINE -> start playback immediately!
             isStreamOnlineRef.current = true;
-            lastMediaTickAtRef.current = Date.now();
+            stallCountRef.current = 0;
             startPlayback();
-          } else {
-            const video = videoRef.current;
-            if (video) {
-              // If video already has enough data to play, ensure it is playing & marked LIVE
-              if (video.readyState >= 2) {
-                if (video.paused && autoPlay) {
-                  video.play().catch(() => {});
-                }
-                if (statusRef.current !== 'LIVE') {
-                  handlePlaying();
-                }
-              } else if (hasFirstFrameRef.current && Date.now() - lastMediaTickAtRef.current > 2500) {
-                updateStatus('BUFFERING');
-              }
-            }
+          } else if (hasFirstFrameRef.current && Date.now() - lastAdvanceAtRef.current > 2800) {
+            updateStatus('BUFFERING');
           }
         } else {
-          // 404: Stream stopped -> immediately switch to STREAM OFF!
+          // 404: OBS stopped -> immediately switch to STREAM OFF
           if (isStreamOnlineRef.current || statusRef.current !== 'OFFLINE') {
             isStreamOnlineRef.current = false;
+            stallCountRef.current = 0;
             stopAndResetVideo();
             updateStatus('OFFLINE');
           }
         }
       } catch {
-        if (!isCancelled && isStreamOnlineRef.current) {
-          updateStatus('BUFFERING');
-        }
+        // network error
       }
     };
 
-    checkStreamAvailability();
-    const interval = setInterval(checkStreamAvailability, 1200);
+    probePlaylist();
+    const interval = setInterval(probePlaylist, 1800);
 
     return () => {
       isCancelled = true;
@@ -307,23 +317,44 @@ export default function HlsPlayer({
   }, [src]);
 
   const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
-    const current = e.currentTarget.currentTime;
+    const video = e.currentTarget;
+    const current = video.currentTime;
     if (current !== lastMediaTimeRef.current) {
       lastMediaTimeRef.current = current;
-      lastMediaTickAtRef.current = Date.now();
-      markFirstFrame();
+      lastAdvanceAtRef.current = Date.now();
+      if (!hasFirstFrameRef.current) {
+        hasFirstFrameRef.current = true;
+        setHasFirstFrame(true);
+      }
       if (statusRef.current !== 'LIVE') {
         updateStatus('LIVE');
       }
-      syncToLiveEdge();
+
+      // Gentle playback rate catch-up adapted to network & device profile
+      if (video.seekable && video.seekable.length > 0) {
+        const profile = getAdaptiveStreamProfile(stallCountRef.current);
+        const liveEdge = video.seekable.end(video.seekable.length - 1);
+        const lag = liveEdge - current;
+        if (lag > profile.maxLagSeconds && video.playbackRate !== profile.catchUpRate) {
+          video.playbackRate = profile.catchUpRate;
+        } else if (lag <= 2.0 && video.playbackRate !== 1.0) {
+          video.playbackRate = 1.0;
+        }
+      }
     }
   };
 
   const handleWaiting = () => {
-    const video = videoRef.current;
-    if (isStreamOnlineRef.current && video && video.readyState < 2) {
+    if (isStreamOnlineRef.current) {
+      stallCountRef.current += 1;
       updateStatus('BUFFERING');
     }
+  };
+
+  const handleVideoError = () => {
+    isStreamOnlineRef.current = false;
+    stopAndResetVideo();
+    updateStatus('OFFLINE');
   };
 
   return (
@@ -351,9 +382,10 @@ export default function HlsPlayer({
         onPlaying={handlePlaying}
         onCanPlay={handlePlaying}
         onLoadedData={handlePlaying}
-        onLoadedMetadata={handlePlaying}
         onTimeUpdate={handleTimeUpdate}
         onWaiting={handleWaiting}
+        onEnded={handleVideoError}
+        onError={handleVideoError}
         style={{
           width: '100%',
           height: '100%',
@@ -365,7 +397,7 @@ export default function HlsPlayer({
         }}
       />
 
-      {/* Buffering Overlay: Translucent so video underneath remains visible if frames already loaded */}
+      {/* Buffering Overlay */}
       {status === 'BUFFERING' && (
         <div
           style={{

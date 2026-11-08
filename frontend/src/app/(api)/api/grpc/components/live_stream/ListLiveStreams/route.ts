@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { LiveStreamServiceClient } from '@/lib/api/components/v1/live_stream/live_stream_grpc_pb';
 import { ListLiveStreamsRequest } from '@/lib/api/components/v1/live_stream/live_stream.common_pb';
-import { getGrpcCredentials, getGrpcHost, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const request = new ListLiveStreamsRequest().setSearch(body.search || '');
-    const client = new LiveStreamServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = getGrpcClient(LiveStreamServiceClient);
 
     return new Promise<NextResponse>((resolve) => {
       client.listLiveStreams(request, getGrpcMetadata(getTokenFromRequest(req)), (error, response) => {
