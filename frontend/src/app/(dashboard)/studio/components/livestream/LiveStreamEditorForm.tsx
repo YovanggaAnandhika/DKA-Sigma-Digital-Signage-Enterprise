@@ -23,13 +23,16 @@ import {
   StreamSourceType,
 } from './types';
 import StreamSettingsCard from './components/StreamSettingsCard';
+import { SourceModePanelProps } from './components/modes/types';
 
-// Dynamically loaded source-specific configuration panels
-const WhipSourceConfig = dynamic(() => import('./components/sources/WhipSourceConfig'), { ssr: false });
-const RtmpSourceConfig = dynamic(() => import('./components/sources/RtmpSourceConfig'), { ssr: false });
-const RtspSourceConfig = dynamic(() => import('./components/sources/RtspSourceConfig'), { ssr: false });
-const HlsSourceConfig = dynamic(() => import('./components/sources/HlsSourceConfig'), { ssr: false });
-const YoutubeSourceConfig = dynamic(() => import('./components/sources/YoutubeSourceConfig'), { ssr: false });
+// Dynamically loaded isolated mode panels
+const DirectEmbedModePanel = dynamic(() => import('./components/modes/DirectEmbedModePanel'), { ssr: false });
+const ServerRelayModePanel = dynamic(() => import('./components/modes/ServerRelayModePanel'), { ssr: false });
+
+const MODE_PANELS: Record<StreamMode, React.ComponentType<SourceModePanelProps>> = {
+  EXTERNAL_EMBED: DirectEmbedModePanel,
+  SERVER_HOSTED_HLS: ServerRelayModePanel,
+};
 
 const StreamPreviewMonitor = dynamic(
   () => import('./components/StreamPreviewMonitor'),
@@ -64,23 +67,6 @@ function generateUUID(): string {
     const v = c === 'x' ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
-}
-
-function generateSecureToken(length = 20): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = 'sig_tok_';
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    const array = new Uint8Array(length);
-    crypto.getRandomValues(array);
-    for (let i = 0; i < length; i++) {
-      result += chars[array[i] % chars.length];
-    }
-    return result;
-  }
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
 }
 
 interface LiveStreamEditorFormProps {
@@ -134,23 +120,6 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
       .catch(() => {});
   }, []);
 
-  const rtmpServerUrl = `rtmp://${serverHost}:1935/live`;
-  const fullRtmpIngestUrl = `${rtmpServerUrl}/${streamKey}`;
-  const whipServerUrl = typeof window !== 'undefined'
-    ? `${window.location.protocol}//${window.location.host}/streams/${streamKey}/whip`
-    : `http://${serverHost}/streams/${streamKey}/whip`;
-
-  // Sync internal server relay endpoint when using WHIP / RTMP
-  useEffect(() => {
-    if (streamMode === 'SERVER_HOSTED_HLS') {
-      if (sourceType === 'WHIP') {
-        setSourceUrl(whipServerUrl);
-      } else if (sourceType === 'RTMP') {
-        setSourceUrl(fullRtmpIngestUrl);
-      }
-    }
-  }, [streamMode, sourceType, fullRtmpIngestUrl, whipServerUrl]);
-
   useEffect(() => {
     if (!streamId) return;
     getLiveStream(streamId)
@@ -174,15 +143,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const effectiveSourceUrl =
-      streamMode === 'SERVER_HOSTED_HLS'
-        ? sourceType === 'RTMP'
-          ? fullRtmpIngestUrl
-          : sourceType === 'WHIP'
-          ? whipServerUrl
-          : sourceUrl.trim()
-        : sourceUrl.trim();
-
+    const effectiveSourceUrl = sourceUrl.trim();
     if (!name.trim() || !effectiveSourceUrl) return;
 
     setSaving(true);
@@ -228,44 +189,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
     }
   };
 
-  const sourceTypeOptions = [
-    ...(streamMode === 'SERVER_HOSTED_HLS'
-      ? [
-          { value: 'WHIP', label: 'WHIP (WebRTC Port 80)' },
-          { value: 'RTMP', label: 'RTMP (Port 1935)' },
-          { value: 'RTSP', label: 'RTSP' },
-          { value: 'HLS', label: 'HLS' },
-        ]
-      : [
-          { value: 'HLS', label: 'HLS' },
-          { value: 'RTSP', label: 'RTSP' },
-          { value: 'RTMP', label: 'RTMP' },
-          { value: 'YOUTUBE_EMBED', label: 'YouTube Live' },
-        ]),
-  ];
-
-  const handleSourceTypeChange = (newType: StreamSourceType) => {
-    setSourceType(newType);
-    if (streamMode === 'SERVER_HOSTED_HLS') {
-      if (newType === 'WHIP') {
-        setSourceUrl(whipServerUrl);
-        if (requiresAuth && !ingestPassword) {
-          setIngestPassword(generateSecureToken());
-        }
-      } else if (newType === 'RTMP') {
-        setSourceUrl(fullRtmpIngestUrl);
-      } else {
-        // Reset URL when switching to RTSP or HLS so it doesn't leave an old internal HTTP endpoint
-        setSourceUrl('');
-      }
-    } else {
-      setSourceUrl('');
-    }
-  };
-
-  const handleGenerateToken = () => {
-    setIngestPassword(generateSecureToken());
-  };
+  const ActiveModePanel = MODE_PANELS[streamMode] || DirectEmbedModePanel;
 
   return (
     <form
@@ -396,11 +320,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <button
                   type="button"
-                  onClick={() => {
-                    setStreamMode('EXTERNAL_EMBED');
-                    if (sourceType === 'WHIP') setSourceType('HLS');
-                    setSourceUrl('');
-                  }}
+                  onClick={() => setStreamMode('EXTERNAL_EMBED')}
                   style={{
                     padding: '9px 11px',
                     borderRadius: '10px',
@@ -428,13 +348,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setStreamMode('SERVER_HOSTED_HLS');
-                    if (sourceType === 'YOUTUBE_EMBED' || sourceType === 'HLS') {
-                      setSourceType('WHIP');
-                      setSourceUrl(whipServerUrl);
-                    }
-                  }}
+                  onClick={() => setStreamMode('SERVER_HOSTED_HLS')}
                   style={{
                     padding: '9px 11px',
                     borderRadius: '10px',
@@ -462,86 +376,34 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
               </div>
             </div>
 
-            {/* Protocol & Poster Media Picker */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Protokol Sumber
-                </label>
-                <SingleSelect
-                  value={sourceType}
-                  onChange={(val) => handleSourceTypeChange(val as StreamSourceType)}
-                  options={sourceTypeOptions}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Gambar Poster
-                </label>
-                <SingleSelect
-                  value={posterImageUrl}
-                  onChange={(val) => setPosterImageUrl(String(val))}
-                  options={posterOptions}
-                  placeholder="Pilih dari Pustaka Media"
-                />
-              </div>
+            {/* Poster Media Picker */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                Gambar Poster
+              </label>
+              <SingleSelect
+                value={posterImageUrl}
+                onChange={(val) => setPosterImageUrl(String(val))}
+                options={posterOptions}
+                placeholder="Pilih dari Pustaka Media"
+              />
             </div>
 
-            {/* Dynamic Modular Source Configuration Section */}
-            {sourceType === 'WHIP' && (
-              <WhipSourceConfig
-                whipUrl={whipServerUrl}
-                requiresAuth={requiresAuth}
-                onToggleAuth={(val) => {
-                  setRequiresAuth(val);
-                  if (val && !ingestPassword) setIngestPassword(generateSecureToken());
-                }}
-                bearerToken={ingestPassword}
-                onChangeBearerToken={setIngestPassword}
-                onGenerateToken={handleGenerateToken}
-              />
-            )}
-
-            {sourceType === 'RTMP' && (
-              <RtmpSourceConfig
-                serverUrl={rtmpServerUrl}
-                streamKey={streamKey}
-                requiresAuth={requiresAuth}
-                onToggleAuth={setRequiresAuth}
-                username={ingestUsername}
-                onChangeUsername={setIngestUsername}
-                password={ingestPassword}
-                onChangePassword={setIngestPassword}
-              />
-            )}
-
-            {sourceType === 'RTSP' && (
-              <RtspSourceConfig
-                sourceUrl={sourceUrl}
-                onChangeSourceUrl={setSourceUrl}
-                requiresAuth={requiresAuth}
-                onToggleAuth={setRequiresAuth}
-                username={ingestUsername}
-                onChangeUsername={setIngestUsername}
-                password={ingestPassword}
-                onChangePassword={setIngestPassword}
-              />
-            )}
-
-            {sourceType === 'HLS' && (
-              <HlsSourceConfig
-                sourceUrl={sourceUrl}
-                onChangeSourceUrl={setSourceUrl}
-              />
-            )}
-
-            {sourceType === 'YOUTUBE_EMBED' && (
-              <YoutubeSourceConfig
-                sourceUrl={sourceUrl}
-                onChangeSourceUrl={setSourceUrl}
-              />
-            )}
+            {/* Isolated Mode Panel (Automatically loaded based on streamMode) */}
+            <ActiveModePanel
+              sourceType={sourceType}
+              onChangeSourceType={setSourceType}
+              sourceUrl={sourceUrl}
+              onChangeSourceUrl={setSourceUrl}
+              requiresAuth={requiresAuth}
+              onToggleAuth={setRequiresAuth}
+              username={ingestUsername}
+              onChangeUsername={setIngestUsername}
+              password={ingestPassword}
+              onChangePassword={setIngestPassword}
+              streamKey={streamKey}
+              serverHost={serverHost}
+            />
           </div>
 
           {/* Bottom Streaming Switches */}
