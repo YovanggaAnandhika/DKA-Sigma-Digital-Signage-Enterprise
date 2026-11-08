@@ -1,4 +1,4 @@
-'use client';
+  'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -10,9 +10,8 @@ import {
   Server,
   Globe,
   Tv,
-  Zap,
-  RefreshCw,
 } from 'lucide-react';
+import { SingleSelect } from '@/components/ui/SingleSelect';
 import {
   createLiveStream,
   getLiveStream,
@@ -109,6 +108,20 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
     RTMP: 'rtmp://live.server.local/app/stream_key',
     YOUTUBE_EMBED: 'https://www.youtube.com/watch?v=jfKfPfyJRdk',
   };
+
+  const sourceTypeOptions = [
+    { value: 'HLS', label: 'HLS (.m3u8)', hint: 'HTTP Live Streaming' },
+    { value: 'RTSP', label: 'RTSP (IP Cam / CCTV)', hint: 'Real-Time Streaming Protocol' },
+    { value: 'RTMP', label: 'RTMP (OBS / Encoder)', hint: 'Real-Time Messaging Protocol' },
+    ...(streamMode === 'EXTERNAL_EMBED'
+      ? [{ value: 'YOUTUBE_EMBED', label: 'YouTube Live / Embed', hint: 'Streaming Publik YouTube' }]
+      : []),
+  ];
+
+  const audioOptions = [
+    { value: 'muted', label: 'Bisukan (Muted)', hint: 'Audio senyap saat pertama kali diputar' },
+    { value: 'unmuted', label: 'Suara Aktif (Unmuted)', hint: 'Audio langsung bersuara di player' },
+  ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -266,32 +279,22 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
                 Protokol Sumber
               </label>
-              <select
+              <SingleSelect
                 value={sourceType}
-                onChange={(e) => setSourceType(e.target.value as StreamSourceType)}
-                className="form-input"
-              >
-                <option value="HLS">HLS (.m3u8)</option>
-                <option value="RTSP">RTSP (IP Cam / CCTV)</option>
-                <option value="RTMP">RTMP (OBS / Encoder)</option>
-                {streamMode === 'EXTERNAL_EMBED' && (
-                  <option value="YOUTUBE_EMBED">YouTube Live / Embed</option>
-                )}
-              </select>
+                onChange={(val) => setSourceType(val as StreamSourceType)}
+                options={sourceTypeOptions}
+              />
             </div>
 
             <div>
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
                 Output Audio Default
               </label>
-              <select
+              <SingleSelect
                 value={isMuted ? 'muted' : 'unmuted'}
-                onChange={(e) => setIsMuted(e.target.value === 'muted')}
-                className="form-input"
-              >
-                <option value="muted">Bisukan (Muted)</option>
-                <option value="unmuted">Suara Aktif (Unmuted)</option>
-              </select>
+                onChange={(val) => setIsMuted(val === 'muted')}
+                options={audioOptions}
+              />
             </div>
           </div>
 
@@ -343,26 +346,113 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
             />
           </div>
 
+          {/* Advanced Streaming Parameters */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '4px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.8125rem', color: 'var(--text-primary)' }}>
-              <input
-                type="checkbox"
-                checked={lowLatencyMode}
-                onChange={(e) => setLowLatencyMode(e.target.checked)}
-              />
-              <Zap size={14} style={{ color: 'var(--accent-amber)' }} />
-              <span>Aktifkan Mode Low-Latency (Buffer minimal untuk siaran real-time)</span>
-            </label>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 14px',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+                transition: 'border-color 0.2s ease, background-color 0.2s ease',
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingRight: '12px' }}>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Mode Low-Latency
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                  Buffer minimal untuk siaran langsung real-time
+                </span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={lowLatencyMode}
+                onClick={() => setLowLatencyMode(!lowLatencyMode)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  width: '38px',
+                  height: '22px',
+                  padding: '2px',
+                  borderRadius: 'var(--radius-full)',
+                  backgroundColor: lowLatencyMode ? 'var(--primary-500)' : 'var(--bg-surface)',
+                  border: `1px solid ${lowLatencyMode ? 'var(--primary-500)' : 'var(--border-strong)'}`,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  flexShrink: 0,
+                }}
+              >
+                <span
+                  style={{
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '50%',
+                    backgroundColor: '#ffffff',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)',
+                    transform: lowLatencyMode ? 'translateX(16px)' : 'translateX(0)',
+                    transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  }}
+                />
+              </button>
+            </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.8125rem', color: 'var(--text-primary)' }}>
-              <input
-                type="checkbox"
-                checked={autoReconnect}
-                onChange={(e) => setAutoReconnect(e.target.checked)}
-              />
-              <RefreshCw size={14} style={{ color: 'var(--primary-500)' }} />
-              <span>Auto-Reconnect otomatis jika jaringan atau kamera terputus sementara</span>
-            </label>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 14px',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+                transition: 'border-color 0.2s ease, background-color 0.2s ease',
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingRight: '12px' }}>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Auto-Reconnect Otomatis
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                  Menyambungkan ulang otomatis jika koneksi jaringan atau kamera terputus
+                </span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={autoReconnect}
+                onClick={() => setAutoReconnect(!autoReconnect)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  width: '38px',
+                  height: '22px',
+                  padding: '2px',
+                  borderRadius: 'var(--radius-full)',
+                  backgroundColor: autoReconnect ? 'var(--primary-500)' : 'var(--bg-surface)',
+                  border: `1px solid ${autoReconnect ? 'var(--primary-500)' : 'var(--border-strong)'}`,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  flexShrink: 0,
+                }}
+              >
+                <span
+                  style={{
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '50%',
+                    backgroundColor: '#ffffff',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)',
+                    transform: autoReconnect ? 'translateX(16px)' : 'translateX(0)',
+                    transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  }}
+                />
+              </button>
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
