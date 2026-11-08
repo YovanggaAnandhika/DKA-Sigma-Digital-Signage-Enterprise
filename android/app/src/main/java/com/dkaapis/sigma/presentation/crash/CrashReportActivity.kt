@@ -94,7 +94,7 @@ class CrashReportActivity : AppCompatActivity() {
                 Toast.makeText(this@CrashReportActivity, "Log crash disalin ke clipboard", Toast.LENGTH_SHORT).show()
             }
         }
-        // 
+        //
         val btnPairing = Button(this).apply {
             text = "Buka Mode Pairing"
             setTextColor(Color.WHITE)

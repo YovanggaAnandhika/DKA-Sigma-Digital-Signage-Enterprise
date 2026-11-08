@@ -103,7 +103,10 @@ export default function HlsPlayer({
         const hls = new window.Hls({
           enableWorker: true,
           lowLatencyMode: true,
-          backBufferLength: 10,
+          liveSyncDurationCount: 1,
+          liveMaxLatencyDurationCount: 2,
+          maxLiveSyncPlaybackRate: 1.5,
+          backBufferLength: 3,
         });
         hlsInstanceRef.current = hls;
 
@@ -209,9 +212,26 @@ export default function HlsPlayer({
     }
   };
 
+  const syncToLiveEdge = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    try {
+      if (video.seekable && video.seekable.length > 0) {
+        const liveEdge = video.seekable.end(video.seekable.length - 1);
+        // If lagging more than 1.5 seconds behind the newest frame, jump to live edge!
+        if (liveEdge - video.currentTime > 1.5) {
+          video.currentTime = Math.max(0, liveEdge - 0.2);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   const markPlaying = () => {
     setIsPlaying(true);
     setHasError(false);
+    syncToLiveEdge();
   };
 
   return (

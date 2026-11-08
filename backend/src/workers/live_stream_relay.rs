@@ -64,6 +64,8 @@ impl LiveStreamRelayManager {
                 match source_type_s.to_uppercase().as_str() {
                     "RTMP" => {
                         cmd.args([
+                            "-fflags", "nobuffer",
+                            "-flags", "low_delay",
                             "-listen", "1",
                             "-i", &format!("rtmp://0.0.0.0:1935/live/{}", stream_id),
                             "-c:v", "copy",
@@ -71,7 +73,7 @@ impl LiveStreamRelayManager {
                             "-f", "hls",
                             "-hls_time", hls_time,
                             "-hls_list_size", hls_list_size,
-                            "-hls_flags", "delete_segments",
+                            "-hls_flags", "delete_segments+omit_endlist",
                             "-hls_segment_filename", &segment_path,
                             &m3u8_path,
                         ]);
