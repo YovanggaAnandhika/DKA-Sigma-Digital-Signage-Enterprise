@@ -14,56 +14,16 @@ export interface LiveStreamConfig {
   lowLatencyMode: boolean;
   isMuted: boolean;
   posterImageUrl: string;
+  requiresAuth?: boolean;
+  ingestUsername?: string;
+  ingestPassword?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
 export const LIVESTREAM_STORAGE_KEY = 'hndsigma_livestreams_v1';
 
-export const DEFAULT_LIVESTREAMS: LiveStreamConfig[] = [
-  {
-    id: 'f0000000-0000-0000-0000-000000000001',
-    name: 'Kamera CCTV Area Kasir & Lobby Utama',
-    description: 'Relay terpusat 1 feed RTSP kamera IP lokal menjadi HLS untuk seluruh layar cabang.',
-    streamMode: 'SERVER_HOSTED_HLS',
-    sourceType: 'RTSP',
-    sourceUrl: 'rtsp://192.168.1.50:554/Streaming/Channels/101',
-    serverHlsEndpoint: '/streams/f0000000-0000-0000-0000-000000000001/live.m3u8',
-    isRelayActive: true,
-    autoReconnect: true,
-    lowLatencyMode: true,
-    isMuted: true,
-    posterImageUrl: '',
-  },
-  {
-    id: 'f0000000-0000-0000-0000-000000000002',
-    name: 'Siaran Langsung Promo & Event (HLS Direct)',
-    description: 'Stream video HLS langsung dari CDN untuk penayangan acara peluncuran produk.',
-    streamMode: 'EXTERNAL_EMBED',
-    sourceType: 'HLS',
-    sourceUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-    serverHlsEndpoint: '',
-    isRelayActive: false,
-    autoReconnect: true,
-    lowLatencyMode: true,
-    isMuted: false,
-    posterImageUrl: '',
-  },
-  {
-    id: 'f0000000-0000-0000-0000-000000000003',
-    name: 'Townhall Korporat & Siaran Berita (YouTube Live)',
-    description: 'Embed langsung siaran YouTube Live dengan pemutaran otomatis tanpa gangguan.',
-    streamMode: 'EXTERNAL_EMBED',
-    sourceType: 'YOUTUBE_EMBED',
-    sourceUrl: 'https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1&mute=1',
-    serverHlsEndpoint: '',
-    isRelayActive: false,
-    autoReconnect: true,
-    lowLatencyMode: false,
-    isMuted: true,
-    posterImageUrl: '',
-  },
-];
+export const DEFAULT_LIVESTREAMS: LiveStreamConfig[] = [];
 
 export function toYoutubeEmbedUrl(rawUrl: string, isMuted = true): string {
   const trimmed = (rawUrl || '').trim();

@@ -21,6 +21,9 @@ type LiveStreamProtoObject = {
   lowLatencyMode: boolean;
   isMuted: boolean;
   posterImageUrl: string;
+  requiresAuth?: boolean;
+  ingestUsername?: string;
+  ingestPassword?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -39,6 +42,9 @@ function mapLiveStream(item: LiveStreamProtoObject): LiveStreamConfig {
     lowLatencyMode: item.lowLatencyMode ?? true,
     isMuted: Boolean(item.isMuted),
     posterImageUrl: item.posterImageUrl || '',
+    requiresAuth: Boolean(item.requiresAuth),
+    ingestUsername: item.ingestUsername || '',
+    ingestPassword: item.ingestPassword || '',
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
   };
