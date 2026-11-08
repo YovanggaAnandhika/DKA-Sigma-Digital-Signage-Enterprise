@@ -31,13 +31,12 @@ const StreamPreviewMonitor = dynamic(
     ssr: false,
     loading: () => (
       <div
-        className="card-elevated"
         style={{
           padding: '20px',
           display: 'flex',
           flexDirection: 'column',
           gap: '14px',
-          minHeight: '360px',
+          minHeight: '340px',
           alignItems: 'center',
           justifyContent: 'center',
           color: 'var(--text-muted)',
@@ -198,17 +197,55 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
       : []),
   ];
 
+  // Bottom bar placed neatly underneath the video monitor
+  const bottomUrlOrIngestBar =
+    streamMode === 'SERVER_HOSTED_HLS' && sourceType === 'RTMP' ? (
+      <ObsIngestCard serverUrl={rtmpServerUrl} streamKey={streamKey} />
+    ) : (
+      <div
+        style={{
+          padding: '10px 12px',
+          borderRadius: 'var(--radius-md)',
+          backgroundColor: 'var(--bg-surface-elevated)',
+          border: '1px solid var(--border-subtle)',
+        }}
+      >
+        <label
+          style={{
+            display: 'block',
+            fontSize: '0.68rem',
+            fontWeight: 700,
+            color: 'var(--text-secondary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.03em',
+            marginBottom: '4px',
+          }}
+        >
+          URL Sumber Stream
+        </label>
+        <input
+          type="text"
+          value={sourceUrl}
+          onChange={(e) => setSourceUrl(e.target.value)}
+          placeholder={placeholderByType[sourceType]}
+          className="form-input"
+          style={{ fontFamily: 'monospace', fontSize: '0.76rem', padding: '6px 10px' }}
+          required
+        />
+      </div>
+    );
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       {/* Header with Circular Back Button */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <Link
           href="/studio/components/livestream"
           className="btn btn-outline"
           style={{
-            width: '40px',
-            minWidth: '40px',
-            height: '40px',
+            width: '38px',
+            minWidth: '38px',
+            height: '38px',
             padding: 0,
             display: 'inline-flex',
             alignItems: 'center',
@@ -219,14 +256,14 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
           aria-label="Kembali ke Daftar Live Stream"
           title="Kembali ke Daftar Live Stream"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={17} />
         </Link>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div
             style={{
-              padding: '9px',
-              borderRadius: '12px',
+              padding: '8px',
+              borderRadius: '10px',
               backgroundColor: 'var(--bg-surface-elevated)',
               color: 'var(--accent-rose)',
               border: '1px solid var(--border-subtle)',
@@ -235,174 +272,173 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
               justifyContent: 'center',
             }}
           >
-            <Radio size={20} />
+            <Radio size={18} />
           </div>
           <div>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
+            <h1 style={{ fontSize: '1.15rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
               {isEdit ? 'Ubah Live Stream' : 'Tambah Live Stream'}
             </h1>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px', margin: 0 }}>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1px', margin: 0 }}>
               Konfigurasi sumber siaran langsung untuk zona layar signage.
             </p>
           </div>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(350px, 440px) 1fr', gap: '20px', alignItems: 'start' }}>
-        {/* Left Compact Configuration Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="card-elevated"
-          style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}
+      {/* Unified Attached Studio Console Card (Left Form + Right Monitor & Bottom URL/Ingest Bar) */}
+      <form
+        onSubmit={handleSubmit}
+        className="card-elevated"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(330px, 390px) 1fr',
+          alignItems: 'stretch',
+          overflow: 'hidden',
+          padding: 0,
+        }}
+      >
+        {/* Left Attached Configuration Panel */}
+        <div
+          style={{
+            padding: '18px 20px',
+            borderRight: '1px solid var(--border-subtle)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}
         >
-          <div>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
-              Nama Siaran
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Contoh: Kamera Area Lobby Utama"
-              className="form-input"
-              required
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
-              Keterangan Singkat
-            </label>
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Contoh: Tayangan langsung area pelayanan"
-              className="form-input"
-            />
-          </div>
-
-          {/* Dual-Mode Selector */}
-          <div>
-            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-              Mode Streaming
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <button
-                type="button"
-                onClick={() => setStreamMode('EXTERNAL_EMBED')}
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  backgroundColor:
-                    streamMode === 'EXTERNAL_EMBED' ? 'var(--bg-surface-elevated)' : 'var(--bg-surface)',
-                  border:
-                    streamMode === 'EXTERNAL_EMBED'
-                      ? '2px solid var(--primary-500)'
-                      : '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '3px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-primary)' }}>
-                  <Globe size={14} style={{ color: 'var(--primary-500)' }} />
-                  <span>Direct Embed</span>
-                </div>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>
-                  Koneksi langsung ke sumber
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setStreamMode('SERVER_HOSTED_HLS');
-                  if (sourceType === 'YOUTUBE_EMBED') setSourceType('RTMP');
-                }}
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: '10px',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  backgroundColor:
-                    streamMode === 'SERVER_HOSTED_HLS' ? 'var(--bg-surface-elevated)' : 'var(--bg-surface)',
-                  border:
-                    streamMode === 'SERVER_HOSTED_HLS'
-                      ? '2px solid var(--accent-emerald)'
-                      : '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '3px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-primary)' }}>
-                  <Server size={14} style={{ color: 'var(--accent-emerald)' }} />
-                  <span>Server HLS Relay</span>
-                </div>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>
-                  Relay terpusat dari server
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* Protocol & Poster Media Picker */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
-                Protokol Sumber
-              </label>
-              <SingleSelect
-                value={sourceType}
-                onChange={(val) => setSourceType(val as StreamSourceType)}
-                options={sourceTypeOptions}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
-                Gambar Poster
-              </label>
-              <SingleSelect
-                value={posterImageUrl}
-                onChange={(val) => setPosterImageUrl(String(val))}
-                options={posterOptions}
-                placeholder="Pilih dari Pustaka Media"
-              />
-            </div>
-          </div>
-
-          {streamMode === 'SERVER_HOSTED_HLS' && sourceType === 'RTMP' ? (
-            <ObsIngestCard serverUrl={rtmpServerUrl} streamKey={streamKey} />
-          ) : (
-            <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
-                URL Sumber Stream
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                Nama Siaran
               </label>
               <input
                 type="text"
-                value={sourceUrl}
-                onChange={(e) => setSourceUrl(e.target.value)}
-                placeholder={placeholderByType[sourceType]}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Contoh: Kamera Area Lobby Utama"
                 className="form-input"
-                style={{ fontFamily: 'monospace', fontSize: '0.78rem' }}
                 required
               />
             </div>
-          )}
 
-          {/* Compact Streaming Switches */}
-          <StreamSettingsCard
-            lowLatencyMode={lowLatencyMode}
-            onToggleLowLatency={setLowLatencyMode}
-            autoReconnect={autoReconnect}
-            onToggleAutoReconnect={setAutoReconnect}
-          />
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                Keterangan Singkat
+              </label>
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Contoh: Tayangan langsung area pelayanan"
+                className="form-input"
+              />
+            </div>
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+            {/* Dual-Mode Selector */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
+                Mode Streaming
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setStreamMode('EXTERNAL_EMBED')}
+                  style={{
+                    padding: '9px 11px',
+                    borderRadius: '10px',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    backgroundColor:
+                      streamMode === 'EXTERNAL_EMBED' ? 'var(--bg-surface-elevated)' : 'var(--bg-surface)',
+                    border:
+                      streamMode === 'EXTERNAL_EMBED'
+                        ? '2px solid var(--primary-500)'
+                        : '1px solid var(--border-subtle)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '2px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.76rem', color: 'var(--text-primary)' }}>
+                    <Globe size={13} style={{ color: 'var(--primary-500)' }} />
+                    <span>Direct Embed</span>
+                  </div>
+                  <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', lineHeight: 1.25 }}>
+                    Koneksi langsung ke sumber
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStreamMode('SERVER_HOSTED_HLS');
+                    if (sourceType === 'YOUTUBE_EMBED') setSourceType('RTMP');
+                  }}
+                  style={{
+                    padding: '9px 11px',
+                    borderRadius: '10px',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    backgroundColor:
+                      streamMode === 'SERVER_HOSTED_HLS' ? 'var(--bg-surface-elevated)' : 'var(--bg-surface)',
+                    border:
+                      streamMode === 'SERVER_HOSTED_HLS'
+                        ? '2px solid var(--accent-emerald)'
+                        : '1px solid var(--border-subtle)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '2px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.76rem', color: 'var(--text-primary)' }}>
+                    <Server size={13} style={{ color: 'var(--accent-emerald)' }} />
+                    <span>Server Relay</span>
+                  </div>
+                  <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', lineHeight: 1.25 }}>
+                    Relay terpusat dari server
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Protocol & Poster Media Picker */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Protokol Sumber
+                </label>
+                <SingleSelect
+                  value={sourceType}
+                  onChange={(val) => setSourceType(val as StreamSourceType)}
+                  options={sourceTypeOptions}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Gambar Poster
+                </label>
+                <SingleSelect
+                  value={posterImageUrl}
+                  onChange={(val) => setPosterImageUrl(String(val))}
+                  options={posterOptions}
+                  placeholder="Pilih dari Pustaka Media"
+                />
+              </div>
+            </div>
+
+            {/* Compact Streaming Switches */}
+            <StreamSettingsCard
+              lowLatencyMode={lowLatencyMode}
+              onToggleLowLatency={setLowLatencyMode}
+              autoReconnect={autoReconnect}
+              onToggleAutoReconnect={setAutoReconnect}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', paddingTop: '6px' }}>
             <Link href="/studio/components/livestream" className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>
               Batal
             </Link>
@@ -411,20 +447,32 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
               <span>{saving ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Simpan Live Stream'}</span>
             </button>
           </div>
-        </form>
+        </div>
 
-        {/* Right Live Preview Monitor with Dedicated Frame & Volume/Mute Control */}
-        <StreamPreviewMonitor
-          name={name}
-          streamMode={streamMode}
-          sourceType={sourceType}
-          sourceUrl={sourceUrl}
-          streamKey={streamKey}
-          isMuted={isMuted}
-          onToggleMute={setIsMuted}
-          posterImageUrl={posterImageUrl}
-        />
-      </div>
+        {/* Right Attached Live Preview Monitor + Bottom URL/Ingest Bar */}
+        <div
+          style={{
+            padding: '18px 20px',
+            backgroundColor: 'var(--bg-surface)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+          }}
+        >
+          <StreamPreviewMonitor
+            name={name}
+            streamMode={streamMode}
+            sourceType={sourceType}
+            sourceUrl={sourceUrl}
+            streamKey={streamKey}
+            lowLatencyMode={lowLatencyMode}
+            isMuted={isMuted}
+            onToggleMute={setIsMuted}
+            posterImageUrl={posterImageUrl}
+            bottomSlot={bottomUrlOrIngestBar}
+          />
+        </div>
+      </form>
     </div>
   );
 }

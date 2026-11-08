@@ -32,9 +32,11 @@ interface StreamPreviewMonitorProps {
   sourceType: StreamSourceType;
   sourceUrl: string;
   streamKey: string;
+  lowLatencyMode?: boolean;
   isMuted: boolean;
   onToggleMute: (muted: boolean) => void;
   posterImageUrl?: string;
+  bottomSlot?: React.ReactNode;
 }
 
 export default function StreamPreviewMonitor({
@@ -43,9 +45,11 @@ export default function StreamPreviewMonitor({
   sourceType,
   sourceUrl,
   streamKey,
+  lowLatencyMode = true,
   isMuted,
   onToggleMute,
   posterImageUrl,
+  bottomSlot,
 }: StreamPreviewMonitorProps) {
   const [volume, setVolume] = useState<number>(0.8);
   const [playbackStatus, setPlaybackStatus] = useState<StreamPlaybackStatus>('OFFLINE');
@@ -85,13 +89,12 @@ export default function StreamPreviewMonitor({
 
   return (
     <div
-      className="card-elevated"
       style={{
-        padding: '20px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '14px',
-        alignSelf: 'start',
+        gap: '12px',
+        height: '100%',
+        justifyContent: 'space-between',
       }}
     >
       {/* Top Studio Monitor Control Bar */}
@@ -116,7 +119,7 @@ export default function StreamPreviewMonitor({
               transition: 'all 0.2s ease',
             }}
           />
-          <h2 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+          <h2 style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
             Monitor Siaran
           </h2>
           <span
@@ -137,8 +140,20 @@ export default function StreamPreviewMonitor({
           >
             {statusLabel}
           </span>
-          <span className="badge badge-neutral" style={{ fontSize: '0.68rem' }}>
+          <span className="badge badge-neutral" style={{ fontSize: '0.65rem' }}>
             {sourceType === 'YOUTUBE_EMBED' ? 'YOUTUBE' : sourceType}
+          </span>
+          <span
+            style={{
+              fontSize: '0.65rem',
+              fontWeight: 700,
+              padding: '2px 7px',
+              borderRadius: '6px',
+              backgroundColor: lowLatencyMode ? 'rgba(59, 130, 246, 0.12)' : 'rgba(168, 85, 247, 0.12)',
+              color: lowLatencyMode ? 'var(--primary-400)' : '#c084fc',
+            }}
+          >
+            {lowLatencyMode ? 'WEBRTC UDP' : 'HD ORIGINAL'}
           </span>
         </div>
 
@@ -148,7 +163,7 @@ export default function StreamPreviewMonitor({
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '4px 10px 4px 6px',
+            padding: '3px 10px 3px 5px',
             borderRadius: 'var(--radius-full)',
             backgroundColor: 'var(--bg-surface-elevated)',
             border: '1px solid var(--border-subtle)',
@@ -160,8 +175,8 @@ export default function StreamPreviewMonitor({
             title={isMuted ? 'Aktifkan Suara' : 'Bisukan Suara'}
             aria-label={isMuted ? 'Aktifkan Suara' : 'Bisukan Suara'}
             style={{
-              width: '28px',
-              height: '28px',
+              width: '26px',
+              height: '26px',
               borderRadius: '50%',
               border: 'none',
               display: 'inline-flex',
@@ -173,7 +188,7 @@ export default function StreamPreviewMonitor({
               transition: 'all 0.15s ease',
             }}
           >
-            {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+            {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
           </button>
 
           <input
@@ -184,7 +199,7 @@ export default function StreamPreviewMonitor({
             onChange={handleVolumeChange}
             aria-label="Volume Audio"
             style={{
-              width: '76px',
+              width: '72px',
               height: '4px',
               accentColor: isMuted ? 'var(--text-muted)' : 'var(--primary-500)',
               cursor: 'pointer',
@@ -193,7 +208,7 @@ export default function StreamPreviewMonitor({
 
           <span
             style={{
-              fontSize: '0.7rem',
+              fontSize: '0.68rem',
               fontWeight: 700,
               fontFamily: 'monospace',
               minWidth: '32px',
@@ -209,18 +224,19 @@ export default function StreamPreviewMonitor({
       {/* Dedicated Broadcast Monitor Frame Bezel */}
       <div
         style={{
-          padding: '8px',
-          borderRadius: '16px',
+          padding: '6px',
+          borderRadius: '14px',
           backgroundColor: '#0b0f19',
           border: '2px solid var(--border-strong)',
-          boxShadow: 'inset 0 2px 6px rgba(0, 0, 0, 0.65), 0 12px 24px -8px rgba(0, 0, 0, 0.25)',
+          boxShadow: 'inset 0 2px 6px rgba(0, 0, 0, 0.65), 0 8px 20px -8px rgba(0, 0, 0, 0.25)',
         }}
       >
         <div
           style={{
             width: '100%',
             aspectRatio: '16 / 9',
-            borderRadius: '10px',
+            maxHeight: '340px',
+            borderRadius: '9px',
             overflow: 'hidden',
             backgroundColor: '#090d16',
             display: 'flex',
@@ -270,6 +286,7 @@ export default function StreamPreviewMonitor({
               poster={posterImageUrl || undefined}
               isMuted={isMuted}
               volume={volume}
+              lowLatencyMode={lowLatencyMode}
               autoPlay
               controls={false}
               fallbackTitle="Stream Off"
@@ -294,6 +311,7 @@ export default function StreamPreviewMonitor({
                 poster={posterImageUrl || undefined}
                 isMuted={isMuted}
                 volume={volume}
+                lowLatencyMode={lowLatencyMode}
                 autoPlay
                 controls={false}
                 fallbackTitle="Stream Off"
@@ -301,18 +319,21 @@ export default function StreamPreviewMonitor({
               />
             )
           ) : (
-            <div style={{ textAlign: 'center', padding: '32px', maxWidth: '420px' }}>
-              <Tv size={36} style={{ color: 'var(--primary-500)', marginBottom: '10px' }} />
-              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff' }}>
+            <div style={{ textAlign: 'center', padding: '24px', maxWidth: '400px' }}>
+              <Tv size={32} style={{ color: 'var(--primary-500)', marginBottom: '8px' }} />
+              <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#ffffff' }}>
                 Siaran {sourceType} Siap Ditayangkan
               </div>
-              <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)', marginTop: '6px', lineHeight: 1.5 }}>
+              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)', marginTop: '4px', lineHeight: 1.4 }}>
                 Aliran video akan diputar langsung pada perangkat layar signage.
               </p>
             </div>
           )}
         </div>
       </div>
+
+      {/* Bottom Attached URL / Ingest Bar under Video */}
+      {bottomSlot && <div>{bottomSlot}</div>}
     </div>
   );
 }

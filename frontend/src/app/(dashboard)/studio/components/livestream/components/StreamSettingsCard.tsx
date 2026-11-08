@@ -17,7 +17,7 @@ export default function StreamSettingsCard({
 }: StreamSettingsCardProps) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-      {/* Low Latency Switch */}
+      {/* Low Latency vs High Definition Switch */}
       <div
         style={{
           display: 'flex',
@@ -35,7 +35,7 @@ export default function StreamSettingsCard({
             Low-Latency
           </span>
           <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>
-            Buffer minimal
+            {lowLatencyMode ? 'WebRTC UDP Instan' : 'High Definition (HD)'}
           </span>
         </div>
         <button

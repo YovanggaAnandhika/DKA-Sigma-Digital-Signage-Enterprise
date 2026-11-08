@@ -10,6 +10,7 @@ interface HlsPlayerProps {
   poster?: string;
   isMuted?: boolean;
   volume?: number;
+  lowLatencyMode?: boolean;
   autoPlay?: boolean;
   controls?: boolean;
   className?: string;
@@ -61,6 +62,7 @@ export default function HlsPlayer({
   poster,
   isMuted = true,
   volume = 0.8,
+  lowLatencyMode = true,
   autoPlay = true,
   controls = false,
   className,
@@ -266,11 +268,55 @@ export default function HlsPlayer({
     let isCancelled = false;
     const localMatch = src.match(/^\/streams\/([^/]+)\//);
 
+    // When lowLatencyMode is OFF (High Definition / Original Quality mode), use HLS instead of WebRTC
+    // so the player receives the unscaled, un-reencoded original 1080p High-Profile stream from OBS.
     if (!localMatch) {
       isStreamOnlineRef.current = true;
       startHlsPlayback();
       return () => {
         isCancelled = true;
+        stopAndResetVideo();
+      };
+    }
+
+    if (!lowLatencyMode) {
+      const probeHls = async () => {
+        if (isCancelled) return;
+        if (
+          isStreamOnlineRef.current &&
+          statusRef.current === 'LIVE' &&
+          Date.now() - lastAdvanceAtRef.current < 2500
+        ) {
+          return;
+        }
+        try {
+          const res = await fetch(`${src.split('?')[0]}?_t=${Date.now()}`, {
+            method: 'GET',
+            cache: 'no-store',
+          });
+          if (isCancelled) return;
+          if (res.ok) {
+            if (!isStreamOnlineRef.current) {
+              isStreamOnlineRef.current = true;
+              stallCountRef.current = 0;
+              startHlsPlayback();
+            }
+          } else if (isStreamOnlineRef.current || statusRef.current !== 'OFFLINE') {
+            isStreamOnlineRef.current = false;
+            stallCountRef.current = 0;
+            stopAndResetVideo();
+            updateStatus('OFFLINE');
+          }
+        } catch {
+          // ignore
+        }
+      };
+      probeHls();
+      const hlsTimer = setInterval(probeHls, 1800);
+      return () => {
+        isCancelled = true;
+        clearInterval(hlsTimer);
+        isStreamOnlineRef.current = false;
         stopAndResetVideo();
       };
     }
@@ -433,7 +479,7 @@ export default function HlsPlayer({
       stopAndResetVideo();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [src]);
+  }, [src, lowLatencyMode]);
 
   const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const video = e.currentTarget;
