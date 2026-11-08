@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Check, Copy, KeyRound, Sparkles } from 'lucide-react';
+import { Check, Copy, Sparkles } from 'lucide-react';
 
 interface ObsIngestCardProps {
   serverUrl: string;
   streamKey: string;
   serverHost?: string;
+  sourceType?: 'WHIP' | 'RTMP' | string;
+  onSelectSourceType?: (val: 'WHIP' | 'RTMP') => void;
   requiresAuth?: boolean;
   bearerToken?: string;
   onGenerateToken?: () => void;
@@ -16,11 +18,12 @@ export default function ObsIngestCard({
   serverUrl,
   streamKey,
   serverHost = 'sigma.dkaapis.test',
+  sourceType = 'WHIP',
+  onSelectSourceType,
   requiresAuth = false,
   bearerToken = '',
   onGenerateToken,
 }: ObsIngestCardProps) {
-  const [ingestType, setIngestType] = useState<'WHIP' | 'RTMP'>('WHIP');
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const handleCopy = (text: string, field: string) => {
@@ -30,6 +33,8 @@ export default function ObsIngestCard({
       setTimeout(() => setCopiedField(null), 2000);
     }
   };
+
+  const isWhip = sourceType === 'WHIP';
 
   const whipServerUrl = typeof window !== 'undefined'
     ? `${window.location.protocol}//${window.location.host}/streams/${streamKey}/whip`
@@ -52,16 +57,16 @@ export default function ObsIngestCard({
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <button
             type="button"
-            onClick={() => setIngestType('WHIP')}
+            onClick={() => onSelectSourceType?.('WHIP')}
             style={{
               padding: '2px 8px',
               borderRadius: '5px',
               fontSize: '0.68rem',
               fontWeight: 700,
               cursor: 'pointer',
-              backgroundColor: ingestType === 'WHIP' ? 'var(--primary-500)' : 'transparent',
-              color: ingestType === 'WHIP' ? '#ffffff' : 'var(--text-muted)',
-              border: ingestType === 'WHIP' ? '1px solid var(--primary-500)' : '1px solid var(--border-subtle)',
+              backgroundColor: isWhip ? 'var(--primary-500)' : 'transparent',
+              color: isWhip ? '#ffffff' : 'var(--text-muted)',
+              border: isWhip ? '1px solid var(--primary-500)' : '1px solid var(--border-subtle)',
               transition: 'all 0.15s ease',
             }}
           >
@@ -70,16 +75,16 @@ export default function ObsIngestCard({
 
           <button
             type="button"
-            onClick={() => setIngestType('RTMP')}
+            onClick={() => onSelectSourceType?.('RTMP')}
             style={{
               padding: '2px 8px',
               borderRadius: '5px',
               fontSize: '0.68rem',
               fontWeight: 700,
               cursor: 'pointer',
-              backgroundColor: ingestType === 'RTMP' ? 'var(--bg-surface)' : 'transparent',
-              color: ingestType === 'RTMP' ? 'var(--text-primary)' : 'var(--text-muted)',
-              border: ingestType === 'RTMP' ? '1px solid var(--border-strong)' : '1px solid var(--border-subtle)',
+              backgroundColor: !isWhip ? 'var(--bg-surface)' : 'transparent',
+              color: !isWhip ? 'var(--text-primary)' : 'var(--text-muted)',
+              border: !isWhip ? '1px solid var(--border-strong)' : '1px solid var(--border-subtle)',
               transition: 'all 0.15s ease',
             }}
           >
@@ -93,7 +98,7 @@ export default function ObsIngestCard({
       </div>
 
       {/* WHIP View */}
-      {ingestType === 'WHIP' ? (
+      {isWhip ? (
         <div
           style={{
             display: 'grid',

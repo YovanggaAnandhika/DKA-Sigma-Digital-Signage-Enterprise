@@ -133,7 +133,7 @@ impl LiveStreamRelayManager {
 
         let upper_type = source_type.to_uppercase();
 
-        if upper_type == "RTMP" || upper_type == "SRT" || upper_type == "WEBRTC" || upper_type == "RTSP" {
+        if upper_type == "RTMP" || upper_type == "SRT" || upper_type == "WEBRTC" || upper_type == "RTSP" || upper_type == "WHIP" {
             info!(
                 "⏳ [LiveStreamRelay] Zero-disk UDP/WebRTC & RTMP ingest active on dka-product-sigma-streamer for stream [live/{}]",
                 stream_id

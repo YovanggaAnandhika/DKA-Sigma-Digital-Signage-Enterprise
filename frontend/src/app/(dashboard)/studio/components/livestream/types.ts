@@ -1,5 +1,5 @@
 export type StreamMode = 'EXTERNAL_EMBED' | 'SERVER_HOSTED_HLS';
-export type StreamSourceType = 'HLS' | 'RTSP' | 'RTMP' | 'YOUTUBE_EMBED';
+export type StreamSourceType = 'HLS' | 'RTSP' | 'RTMP' | 'WHIP' | 'YOUTUBE_EMBED';
 
 export interface LiveStreamConfig {
   id: string;

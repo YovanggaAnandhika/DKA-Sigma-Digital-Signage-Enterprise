@@ -135,12 +135,17 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
 
   const rtmpServerUrl = `rtmp://${serverHost}:1935/live`;
   const fullRtmpIngestUrl = `${rtmpServerUrl}/${streamKey}`;
+  const whipServerUrl = `http://${serverHost}/streams/${streamKey}/whip`;
 
   useEffect(() => {
-    if (streamMode === 'SERVER_HOSTED_HLS' && sourceType === 'RTMP') {
-      setSourceUrl(fullRtmpIngestUrl);
+    if (streamMode === 'SERVER_HOSTED_HLS') {
+      if (sourceType === 'RTMP') {
+        setSourceUrl(fullRtmpIngestUrl);
+      } else if (sourceType === 'WHIP') {
+        setSourceUrl(whipServerUrl);
+      }
     }
-  }, [streamMode, sourceType, fullRtmpIngestUrl]);
+  }, [streamMode, sourceType, fullRtmpIngestUrl, whipServerUrl]);
 
   useEffect(() => {
     if (!streamId) return;
@@ -166,8 +171,12 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const effectiveSourceUrl =
-      streamMode === 'SERVER_HOSTED_HLS' && sourceType === 'RTMP'
-        ? fullRtmpIngestUrl
+      streamMode === 'SERVER_HOSTED_HLS'
+        ? sourceType === 'RTMP'
+          ? fullRtmpIngestUrl
+          : sourceType === 'WHIP'
+          ? whipServerUrl
+          : sourceUrl.trim()
         : sourceUrl.trim();
 
     if (!name.trim() || !effectiveSourceUrl) return;
@@ -190,7 +199,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
           isMuted,
           posterImageUrl: posterImageUrl.trim(),
           requiresAuth,
-          ingestUsername: requiresAuth ? ingestUsername.trim() : '',
+          ingestUsername: requiresAuth && sourceType !== 'WHIP' ? ingestUsername.trim() : '',
           ingestPassword: requiresAuth ? ingestPassword.trim() : '',
         });
       } else {
@@ -205,7 +214,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
           isMuted,
           posterImageUrl: posterImageUrl.trim(),
           requiresAuth,
-          ingestUsername: requiresAuth ? ingestUsername.trim() : '',
+          ingestUsername: requiresAuth && sourceType !== 'WHIP' ? ingestUsername.trim() : '',
           ingestPassword: requiresAuth ? ingestPassword.trim() : '',
         });
       }
@@ -219,16 +228,24 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
     HLS: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     RTSP: 'rtsp://admin:pass@192.168.1.50:554/Streaming/Channels/101',
     RTMP: 'rtmp://live.server.local/app/stream_key',
+    WHIP: 'http://sigma.dkaapis.test/streams/<stream_id>/whip',
     YOUTUBE_EMBED: 'https://www.youtube.com/watch?v=jfKfPfyJRdk',
   };
 
   const sourceTypeOptions = [
-    { value: 'HLS', label: 'HLS' },
-    { value: 'RTSP', label: 'RTSP' },
-    { value: 'RTMP', label: 'RTMP' },
-    ...(streamMode === 'EXTERNAL_EMBED'
-      ? [{ value: 'YOUTUBE_EMBED', label: 'YouTube Live' }]
-      : []),
+    ...(streamMode === 'SERVER_HOSTED_HLS'
+      ? [
+          { value: 'WHIP', label: 'WHIP (WebRTC Port 80)' },
+          { value: 'RTMP', label: 'RTMP (Port 1935)' },
+          { value: 'RTSP', label: 'RTSP' },
+          { value: 'HLS', label: 'HLS' },
+        ]
+      : [
+          { value: 'HLS', label: 'HLS' },
+          { value: 'RTSP', label: 'RTSP' },
+          { value: 'RTMP', label: 'RTMP' },
+          { value: 'YOUTUBE_EMBED', label: 'YouTube Live' },
+        ]),
   ];
 
   const handleGenerateToken = () => {
@@ -237,11 +254,13 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
 
   // Bottom bar placed neatly underneath the video monitor
   const bottomUrlOrIngestBar =
-    streamMode === 'SERVER_HOSTED_HLS' && sourceType === 'RTMP' ? (
+    streamMode === 'SERVER_HOSTED_HLS' && (sourceType === 'RTMP' || sourceType === 'WHIP') ? (
       <ObsIngestCard
         serverUrl={rtmpServerUrl}
         streamKey={streamKey}
         serverHost={serverHost}
+        sourceType={sourceType}
+        onSelectSourceType={(val) => setSourceType(val)}
         requiresAuth={requiresAuth}
         bearerToken={ingestPassword}
         onGenerateToken={handleGenerateToken}
@@ -439,7 +458,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                   type="button"
                   onClick={() => {
                     setStreamMode('SERVER_HOSTED_HLS');
-                    if (sourceType === 'YOUTUBE_EMBED') setSourceType('RTMP');
+                    if (sourceType === 'YOUTUBE_EMBED' || sourceType === 'HLS') setSourceType('WHIP');
                   }}
                   style={{
                     padding: '9px 11px',
@@ -553,23 +572,12 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
               </div>
 
               {requiresAuth && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '2px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                      Username (RTMP)
-                    </label>
-                    <input
-                      type="text"
-                      value={ingestUsername}
-                      onChange={(e) => setIngestUsername(e.target.value)}
-                      placeholder="Contoh: obs_user"
-                      className="form-input"
-                    />
-                  </div>
+                sourceType === 'WHIP' ? (
+                  /* WHIP Mode: ONLY Bearer Token (No Username) */
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                       <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                        Password / Token
+                        Bearer Token (OBS WHIP)
                       </label>
                       <button
                         type="button"
@@ -586,10 +594,10 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                           alignItems: 'center',
                           gap: '3px',
                         }}
-                        title="Acak Token / Password Baru"
+                        title="Acak Bearer Token Baru"
                       >
                         <Sparkles size={11} />
-                        <span>Generate</span>
+                        <span>Generate Token</span>
                       </button>
                     </div>
                     <div style={{ position: 'relative' }}>
@@ -597,7 +605,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                         type={showPassword ? 'text' : 'password'}
                         value={ingestPassword}
                         onChange={(e) => setIngestPassword(e.target.value)}
-                        placeholder="Token siaran"
+                        placeholder="Token autentikasi WHIP"
                         className="form-input"
                         style={{ paddingRight: '36px', fontFamily: 'monospace' }}
                       />
@@ -618,13 +626,87 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
                           alignItems: 'center',
                           justifyContent: 'center',
                         }}
-                        title={showPassword ? 'Sembunyikan Password' : 'Lihat Password'}
+                        title={showPassword ? 'Sembunyikan Token' : 'Lihat Token'}
                       >
                         {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  /* RTMP / RTSP Mode: Username & Password */
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '2px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                        Username Ingest
+                      </label>
+                      <input
+                        type="text"
+                        value={ingestUsername}
+                        onChange={(e) => setIngestUsername(e.target.value)}
+                        placeholder="Contoh: obs_user"
+                        className="form-input"
+                      />
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                          Password Ingest
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleGenerateToken}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            cursor: 'pointer',
+                            fontSize: '0.67rem',
+                            fontWeight: 600,
+                            color: 'var(--primary-400)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                          }}
+                          title="Acak Password Baru"
+                        >
+                          <Sparkles size={11} />
+                          <span>Generate</span>
+                        </button>
+                      </div>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={ingestPassword}
+                          onChange={(e) => setIngestPassword(e.target.value)}
+                          placeholder="Password siaran"
+                          className="form-input"
+                          style={{ paddingRight: '36px' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          style={{
+                            position: 'absolute',
+                            right: '8px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--text-muted)',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                          title={showPassword ? 'Sembunyikan Password' : 'Lihat Password'}
+                        >
+                          {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
               )}
             </div>
           </div>
