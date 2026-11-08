@@ -118,18 +118,19 @@ export async function POST(
     // WHEP Egress Proxy (Browser & Signage Screen Players via standard Port 80 HTTP)
     const mode = req.nextUrl.searchParams.get('mode');
 
-    // Priority chain: For native WHIP / HD, use direct passthrough first (0-CPU, buttery smooth 60fps),
-    // then fallback to transcoded low-latency baseline tiers
+    // Priority chain:
+    // - HD mode: 1080p normalized zero-B-frame ultrafast stream (`hd/live`), falling back to direct or 720p
+    // - Low-latency mode: 720p instant baseline stream (`webrtc/live`), falling back to HD or direct
     const candidates = mode === 'hd'
       ? [
-          `${base}/live/${streamId}/whep`,
           `${base}/hd/live/${streamId}/whep`,
+          `${base}/live/${streamId}/whep`,
           `${base}/webrtc/live/${streamId}/whep`,
         ]
       : [
           `${base}/webrtc/live/${streamId}/whep`,
-          `${base}/live/${streamId}/whep`,
           `${base}/hd/live/${streamId}/whep`,
+          `${base}/live/${streamId}/whep`,
         ];
 
     let upstream: Response | null = null;
