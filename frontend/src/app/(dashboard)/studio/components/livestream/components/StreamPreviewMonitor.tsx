@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Radio, Tv, Volume2, VolumeX } from 'lucide-react';
 import { StreamMode, StreamSourceType, toYoutubeEmbedUrl } from '../types';
+import type { StreamPlaybackStatus } from '@/components/ui/HlsPlayer';
 
 const HlsPlayer = dynamic(() => import('@/components/ui/HlsPlayer'), {
   ssr: false,
@@ -47,6 +48,7 @@ export default function StreamPreviewMonitor({
   posterImageUrl,
 }: StreamPreviewMonitorProps) {
   const [volume, setVolume] = useState<number>(0.8);
+  const [playbackStatus, setPlaybackStatus] = useState<StreamPlaybackStatus>('OFFLINE');
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = Number(e.target.value) / 100;
@@ -59,6 +61,27 @@ export default function StreamPreviewMonitor({
   };
 
   const displayPercent = isMuted ? 0 : Math.round(volume * 100);
+
+  const isHlsManaged = streamMode === 'SERVER_HOSTED_HLS' || sourceType === 'HLS';
+  const effectiveStatus: StreamPlaybackStatus = isHlsManaged
+    ? playbackStatus
+    : sourceUrl.trim()
+      ? 'LIVE'
+      : 'OFFLINE';
+
+  const statusColor =
+    effectiveStatus === 'LIVE'
+      ? 'var(--accent-emerald)'
+      : effectiveStatus === 'BUFFERING'
+        ? '#f59e0b'
+        : 'var(--accent-red)';
+
+  const statusLabel =
+    effectiveStatus === 'LIVE'
+      ? 'LIVE'
+      : effectiveStatus === 'BUFFERING'
+        ? 'BUFFERING'
+        : 'STREAM OFF';
 
   return (
     <div
@@ -87,14 +110,33 @@ export default function StreamPreviewMonitor({
               width: '9px',
               height: '9px',
               borderRadius: '50%',
-              backgroundColor: 'var(--accent-emerald)',
-              boxShadow: '0 0 8px var(--accent-emerald)',
+              backgroundColor: statusColor,
+              boxShadow: `0 0 8px ${statusColor}`,
               display: 'inline-block',
+              transition: 'all 0.2s ease',
             }}
           />
           <h2 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
             Monitor Siaran
           </h2>
+          <span
+            style={{
+              padding: '2px 8px',
+              borderRadius: '9999px',
+              fontSize: '0.65rem',
+              fontWeight: 800,
+              letterSpacing: '0.04em',
+              backgroundColor:
+                effectiveStatus === 'LIVE'
+                  ? 'rgba(16, 185, 129, 0.14)'
+                  : effectiveStatus === 'BUFFERING'
+                    ? 'rgba(245, 158, 11, 0.14)'
+                    : 'rgba(239, 68, 68, 0.14)',
+              color: statusColor,
+            }}
+          >
+            {statusLabel}
+          </span>
           <span className="badge badge-neutral" style={{ fontSize: '0.68rem' }}>
             {sourceType === 'YOUTUBE_EMBED' ? 'YOUTUBE' : sourceType}
           </span>
@@ -230,16 +272,13 @@ export default function StreamPreviewMonitor({
               volume={volume}
               autoPlay
               controls={false}
-              fallbackTitle={
-                sourceType === 'RTMP'
-                  ? 'Menunggu Siaran OBS Studio'
-                  : 'Menunggu Siaran Server'
-              }
+              fallbackTitle="Stream Off"
               fallbackDescription={
                 sourceType === 'RTMP'
-                  ? 'Mulai streaming dari OBS Studio untuk menampilkan tayangan langsung.'
-                  : 'Server sedang menghubungkan aliran video.'
+                  ? 'Siaran OBS Studio sedang tidak aktif. Mulai streaming dari OBS untuk menayangkan video secara langsung.'
+                  : 'Aliran video dari sumber kamera sedang tidak aktif.'
               }
+              onStatusChange={setPlaybackStatus}
             />
           ) : sourceType === 'HLS' ? (
             !sourceUrl.trim() ? (
@@ -257,6 +296,8 @@ export default function StreamPreviewMonitor({
                 volume={volume}
                 autoPlay
                 controls={false}
+                fallbackTitle="Stream Off"
+                onStatusChange={setPlaybackStatus}
               />
             )
           ) : (

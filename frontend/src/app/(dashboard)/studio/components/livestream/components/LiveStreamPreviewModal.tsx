@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { X, Tv, Volume2, VolumeX } from 'lucide-react';
 import { LiveStreamConfig, toYoutubeEmbedUrl } from '../types';
+import type { StreamPlaybackStatus } from '@/components/ui/HlsPlayer';
 
 const HlsPlayer = dynamic(() => import('@/components/ui/HlsPlayer'), {
   ssr: false,
@@ -33,10 +34,12 @@ interface LiveStreamPreviewModalProps {
 export default function LiveStreamPreviewModal({ item, onClose }: LiveStreamPreviewModalProps) {
   const [isMuted, setIsMuted] = useState<boolean>(item?.isMuted ?? true);
   const [volume, setVolume] = useState<number>(0.8);
+  const [playbackStatus, setPlaybackStatus] = useState<StreamPlaybackStatus>('OFFLINE');
 
   useEffect(() => {
     if (item) {
       setIsMuted(item.isMuted);
+      setPlaybackStatus('OFFLINE');
     }
   }, [item]);
 
@@ -61,6 +64,23 @@ export default function LiveStreamPreviewModal({ item, onClose }: LiveStreamPrev
   };
 
   const displayPercent = isMuted ? 0 : Math.round(volume * 100);
+
+  const isHlsManaged = item.streamMode === 'SERVER_HOSTED_HLS' || item.sourceType === 'HLS';
+  const effectiveStatus: StreamPlaybackStatus = isHlsManaged ? playbackStatus : 'LIVE';
+
+  const statusColor =
+    effectiveStatus === 'LIVE'
+      ? 'var(--accent-emerald)'
+      : effectiveStatus === 'BUFFERING'
+        ? '#f59e0b'
+        : 'var(--accent-red)';
+
+  const statusLabel =
+    effectiveStatus === 'LIVE'
+      ? 'LIVE'
+      : effectiveStatus === 'BUFFERING'
+        ? 'BUFFERING'
+        : 'STREAM OFF';
 
   return (
     <div
@@ -97,7 +117,7 @@ export default function LiveStreamPreviewModal({ item, onClose }: LiveStreamPrev
           boxShadow: '0 24px 48px -12px rgba(0, 0, 0, 0.45)',
         }}
       >
-        {/* Modal Header with Audio Controls & Close */}
+        {/* Modal Header with Live Status Badge, Audio Controls & Close */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span
@@ -105,14 +125,33 @@ export default function LiveStreamPreviewModal({ item, onClose }: LiveStreamPrev
                 width: '9px',
                 height: '9px',
                 borderRadius: '50%',
-                backgroundColor: 'var(--accent-emerald)',
-                boxShadow: '0 0 8px var(--accent-emerald)',
+                backgroundColor: statusColor,
+                boxShadow: `0 0 8px ${statusColor}`,
                 display: 'inline-block',
+                transition: 'all 0.2s ease',
               }}
             />
             <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
               {item.name}
             </h3>
+            <span
+              style={{
+                padding: '2px 8px',
+                borderRadius: '9999px',
+                fontSize: '0.65rem',
+                fontWeight: 800,
+                letterSpacing: '0.04em',
+                backgroundColor:
+                  effectiveStatus === 'LIVE'
+                    ? 'rgba(16, 185, 129, 0.14)'
+                    : effectiveStatus === 'BUFFERING'
+                      ? 'rgba(245, 158, 11, 0.14)'
+                      : 'rgba(239, 68, 68, 0.14)',
+                color: statusColor,
+              }}
+            >
+              {statusLabel}
+            </span>
             <span className="badge badge-neutral" style={{ fontSize: '0.68rem' }}>
               {item.sourceType === 'YOUTUBE_EMBED' ? 'YOUTUBE' : item.sourceType}
             </span>
@@ -249,8 +288,9 @@ export default function LiveStreamPreviewModal({ item, onClose }: LiveStreamPrev
                 volume={volume}
                 autoPlay
                 controls={false}
-                fallbackTitle="Menunggu Siaran Server"
-                fallbackDescription={`Menyiapkan aliran video untuk ${item.name}.`}
+                fallbackTitle="Stream Off"
+                fallbackDescription={`Siaran ${item.name} sedang tidak aktif.`}
+                onStatusChange={setPlaybackStatus}
               />
             ) : item.sourceType === 'HLS' ? (
               <HlsPlayer
@@ -260,6 +300,8 @@ export default function LiveStreamPreviewModal({ item, onClose }: LiveStreamPrev
                 volume={volume}
                 autoPlay
                 controls={false}
+                fallbackTitle="Stream Off"
+                onStatusChange={setPlaybackStatus}
               />
             ) : (
               <div

@@ -13,6 +13,14 @@ pub struct LiveStreamRelayManager {
     upload_dir: String,
 }
 
+async fn purge_stream_files(stream_dir: &str) {
+    if let Ok(mut entries) = tokio::fs::read_dir(stream_dir).await {
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            let _ = tokio::fs::remove_file(entry.path()).await;
+        }
+    }
+}
+
 impl LiveStreamRelayManager {
     pub fn new(upload_dir: String) -> Self {
         Self {
@@ -53,9 +61,14 @@ impl LiveStreamRelayManager {
 
         tokio::spawn(async move {
             info!("Relay supervisor started for stream [{}] ({})", stream_id, source_type_s);
+            let stream_dir = format!("{}/streams/{}", upload_dir, stream_id);
+
             loop {
-                let m3u8_path = format!("{}/streams/{}/live.m3u8", upload_dir, stream_id);
-                let segment_path = format!("{}/streams/{}/live%d.ts", upload_dir, stream_id);
+                // Purge stale segments so live.m3u8 only exists while stream is actively incoming
+                purge_stream_files(&stream_dir).await;
+
+                let m3u8_path = format!("{}/live.m3u8", stream_dir);
+                let segment_path = format!("{}/live%d.ts", stream_dir);
                 let hls_time = if low_latency { "1" } else { "2" };
                 let hls_list_size = if low_latency { "3" } else { "5" };
 
@@ -89,7 +102,8 @@ impl LiveStreamRelayManager {
                             "-f", "hls",
                             "-hls_time", hls_time,
                             "-hls_list_size", hls_list_size,
-                            "-hls_flags", "delete_segments",
+                            "-hls_delete_threshold", "3",
+                            "-hls_flags", "delete_segments+omit_endlist",
                             "-hls_segment_filename", &segment_path,
                             &m3u8_path,
                         ]);
@@ -102,7 +116,8 @@ impl LiveStreamRelayManager {
                             "-f", "hls",
                             "-hls_time", hls_time,
                             "-hls_list_size", hls_list_size,
-                            "-hls_flags", "delete_segments",
+                            "-hls_delete_threshold", "3",
+                            "-hls_flags", "delete_segments+omit_endlist",
                             "-hls_segment_filename", &segment_path,
                             &m3u8_path,
                         ]);
@@ -141,14 +156,17 @@ impl LiveStreamRelayManager {
                     _ = &mut stop_rx => {
                         info!("Relay supervisor received stop signal for stream [{}]", stream_id);
                         let _ = child.kill().await;
+                        purge_stream_files(&stream_dir).await;
                         break;
                     }
                     status = child.wait() => {
+                        // Immediately remove playlist & segments so clients see STREAM OFF right away
+                        purge_stream_files(&stream_dir).await;
                         match status {
                             Ok(s) => info!("🔴 [LiveStreamRelay] STOP STREAMING detected for stream [{}] (status: {:?}). Re-opening listener...", stream_id, s),
                             Err(e) => error!("🔴 [LiveStreamRelay] STOP STREAMING error for stream [{}]: {}. Re-opening listener...", stream_id, e),
                         }
-                        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
                     }
                 }
             }
@@ -161,6 +179,8 @@ impl LiveStreamRelayManager {
             info!("Stopping FFmpeg HLS relay supervisor for stream [{}]", stream_id);
             let _ = stop_tx.send(());
         }
+        let stream_dir = format!("{}/streams/{}", self.upload_dir, stream_id);
+        purge_stream_files(&stream_dir).await;
     }
 
     pub async fn sync_active_relays(&self, pool: &PgPool) {

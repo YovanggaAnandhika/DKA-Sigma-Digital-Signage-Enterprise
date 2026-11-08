@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Radio, RefreshCw, AlertCircle } from 'lucide-react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { Tv, Loader2 } from 'lucide-react';
+
+export type StreamPlaybackStatus = 'OFFLINE' | 'BUFFERING' | 'LIVE';
 
 interface HlsPlayerProps {
   src: string;
@@ -14,6 +16,7 @@ interface HlsPlayerProps {
   style?: React.CSSProperties;
   fallbackTitle?: string;
   fallbackDescription?: string;
+  onStatusChange?: (status: StreamPlaybackStatus) => void;
 }
 
 declare global {
@@ -31,14 +34,30 @@ export default function HlsPlayer({
   controls = false,
   className,
   style,
-  fallbackTitle = 'Menunggu Siaran OBS Studio',
-  fallbackDescription = 'Pastikan OBS sedang melakukan streaming ke server.',
+  fallbackTitle = 'Stream Off',
+  fallbackDescription = 'Siaran langsung sedang tidak aktif. Mulai streaming dari perangkat pengirim untuk menayangkan video.',
+  onStatusChange,
 }: HlsPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [hasError, setHasError] = useState<boolean>(false);
-  const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [status, setStatus] = useState<StreamPlaybackStatus>('OFFLINE');
+  const [hasFirstFrame, setHasFirstFrame] = useState<boolean>(false);
+
   const hlsInstanceRef = useRef<any>(null);
+  const isStreamOnlineRef = useRef<boolean>(false);
+  const lastMediaTimeRef = useRef<number>(0);
+  const lastMediaTickAtRef = useRef<number>(Date.now());
+
+  const updateStatus = useCallback(
+    (next: StreamPlaybackStatus) => {
+      setStatus((prev) => {
+        if (prev !== next) {
+          onStatusChange?.(next);
+        }
+        return next;
+      });
+    },
+    [onStatusChange]
+  );
 
   // Sync muted & volume directly to DOM element without reloading stream
   useEffect(() => {
@@ -49,169 +68,189 @@ export default function HlsPlayer({
     }
   }, [isMuted, volume]);
 
-  useEffect(() => {
-    let isCancelled = false;
-
-    function cleanup() {
-      if (retryTimerRef.current) {
-        clearTimeout(retryTimerRef.current);
-        retryTimerRef.current = null;
+  const destroyPlayer = useCallback(() => {
+    if (hlsInstanceRef.current) {
+      try {
+        hlsInstanceRef.current.destroy();
+      } catch {
+        // ignore
       }
-      if (hlsInstanceRef.current) {
-        try {
-          hlsInstanceRef.current.destroy();
-        } catch {
-          // ignore
-        }
-        hlsInstanceRef.current = null;
+      hlsInstanceRef.current = null;
+    }
+    const video = videoRef.current;
+    if (video) {
+      try {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+      } catch {
+        // ignore
       }
     }
+    setHasFirstFrame(false);
+  }, []);
 
-    function initPlayer() {
-      cleanup();
-      setHasError(false);
-      const video = videoRef.current;
-      if (!video || !src) return;
+  const startPlayback = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !src) return;
 
-      video.muted = isMuted;
-      video.defaultMuted = isMuted;
-      video.volume = Math.max(0, Math.min(1, volume));
-      video.playsInline = true;
+    destroyPlayer();
+    updateStatus('BUFFERING');
 
-      if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = src;
-        video.load();
-        if (autoPlay) {
-          const playPromise = video.play();
-          if (playPromise !== undefined) {
-            playPromise
-              .then(() => {
-                if (!isCancelled) setIsPlaying(true);
-              })
-              .catch(() => {});
-          }
-        }
+    video.muted = isMuted;
+    video.defaultMuted = isMuted;
+    video.volume = Math.max(0, Math.min(1, volume));
+    video.playsInline = true;
+
+    const cleanSrc = `${src.split('?')[0]}?_t=${Date.now()}`;
+
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = cleanSrc;
+      video.load();
+      if (autoPlay) {
+        video.play().catch(() => {});
+      }
+      return;
+    }
+
+    const attachHlsJs = () => {
+      if (!window.Hls || !window.Hls.isSupported()) {
+        updateStatus('OFFLINE');
         return;
       }
 
-      function attachHlsJs() {
-        if (!window.Hls || !window.Hls.isSupported()) {
-          setHasError(true);
-          return;
+      const hls = new window.Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+        liveSyncDurationCount: 1,
+        liveMaxLatencyDurationCount: 2,
+        maxLiveSyncPlaybackRate: 1.5,
+        backBufferLength: 2,
+        manifestLoadingTimeOut: 2500,
+        manifestLoadingMaxRetry: 1,
+        levelLoadingTimeOut: 2500,
+        fragLoadingTimeOut: 3000,
+      });
+      hlsInstanceRef.current = hls;
+
+      hls.loadSource(cleanSrc);
+      hls.attachMedia(video);
+
+      hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
+        if (autoPlay && video) {
+          video.play().catch(() => {});
         }
+      });
 
-        const hls = new window.Hls({
-          enableWorker: true,
-          lowLatencyMode: true,
-          liveSyncDurationCount: 1,
-          liveMaxLatencyDurationCount: 2,
-          maxLiveSyncPlaybackRate: 1.5,
-          backBufferLength: 3,
-        });
-        hlsInstanceRef.current = hls;
-
-        hls.loadSource(src);
-        hls.attachMedia(video);
-
-        hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
-          if (autoPlay && video) {
-            video.play().catch(() => {});
+      hls.on(window.Hls.Events.ERROR, (_event: any, data: any) => {
+        if (data.fatal) {
+          if (data.type === window.Hls.ErrorTypes.MEDIA_ERROR) {
+            hls.recoverMediaError();
+          } else {
+            isStreamOnlineRef.current = false;
+            destroyPlayer();
+            updateStatus('OFFLINE');
           }
-          if (!isCancelled) setIsPlaying(true);
-        });
+        }
+      });
+    };
 
-        hls.on(window.Hls.Events.ERROR, (_event: any, data: any) => {
-          if (data.fatal) {
-            if (!isCancelled) {
-              setHasError(true);
-              setIsPlaying(false);
-            }
-            switch (data.type) {
-              case window.Hls.ErrorTypes.NETWORK_ERROR:
-                retryTimerRef.current = setTimeout(() => {
-                  if (!isCancelled) {
-                    hls.loadSource(src);
-                    hls.startLoad();
-                  }
-                }, 2500);
-                break;
-              case window.Hls.ErrorTypes.MEDIA_ERROR:
-                hls.recoverMediaError();
-                break;
-              default:
-                cleanup();
-                break;
-            }
-          }
-        });
-      }
-
-      if (window.Hls) {
-        attachHlsJs();
+    if (window.Hls) {
+      attachHlsJs();
+    } else {
+      const scriptId = 'hls-js-cdn-script';
+      if (!document.getElementById(scriptId)) {
+        const script = document.createElement('script');
+        script.id = scriptId;
+        script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.8/dist/hls.min.js';
+        script.async = true;
+        script.onload = () => attachHlsJs();
+        document.head.appendChild(script);
       } else {
-        const scriptId = 'hls-js-cdn-script';
-        if (!document.getElementById(scriptId)) {
-          const script = document.createElement('script');
-          script.id = scriptId;
-          script.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.8/dist/hls.min.js';
-          script.async = true;
-          script.onload = () => {
-            if (!isCancelled) attachHlsJs();
-          };
-          script.onerror = () => {
-            if (!isCancelled) setHasError(true);
-          };
-          document.head.appendChild(script);
-        } else {
-          const interval = setInterval(() => {
-            if (window.Hls) {
-              clearInterval(interval);
-              if (!isCancelled) attachHlsJs();
-            }
-          }, 100);
-          setTimeout(() => clearInterval(interval), 5000);
-        }
+        const waitTimer = setInterval(() => {
+          if (window.Hls) {
+            clearInterval(waitTimer);
+            attachHlsJs();
+          }
+        }, 100);
+        setTimeout(() => clearInterval(waitTimer), 4000);
       }
     }
+  }, [src, autoPlay, isMuted, volume, destroyPlayer, updateStatus]);
 
-    initPlayer();
+  // Real-time Watchdog: detects instant start, instant stop, and slow network buffering
+  useEffect(() => {
+    if (!src) {
+      destroyPlayer();
+      updateStatus('OFFLINE');
+      return;
+    }
+
+    let isCancelled = false;
+    const isLocalRelay = src.startsWith('/streams/');
+
+    if (!isLocalRelay) {
+      // External HLS stream: start immediately
+      isStreamOnlineRef.current = true;
+      startPlayback();
+      return () => {
+        isCancelled = true;
+        destroyPlayer();
+      };
+    }
+
+    const checkStreamAvailability = async () => {
+      if (isCancelled) return;
+      try {
+        const res = await fetch(`${src.split('?')[0]}?_t=${Date.now()}`, {
+          method: 'GET',
+          cache: 'no-store',
+        });
+
+        if (isCancelled) return;
+
+        if (res.ok) {
+          if (!isStreamOnlineRef.current) {
+            // Stream just came ONLINE -> auto trigger playback immediately!
+            isStreamOnlineRef.current = true;
+            lastMediaTickAtRef.current = Date.now();
+            startPlayback();
+          } else {
+            // Stream is ONLINE: check if playback head is stalled (slow network / buffering)
+            const video = videoRef.current;
+            if (video && hasFirstFrame) {
+              const stalledMs = Date.now() - lastMediaTickAtRef.current;
+              if (stalledMs > 1800 || video.readyState < 3) {
+                updateStatus('BUFFERING');
+              }
+            }
+          }
+        } else {
+          // 404: Stream was stopped -> immediately switch to STREAM OFF!
+          if (isStreamOnlineRef.current || status !== 'OFFLINE') {
+            isStreamOnlineRef.current = false;
+            destroyPlayer();
+            updateStatus('OFFLINE');
+          }
+        }
+      } catch {
+        if (!isCancelled && isStreamOnlineRef.current) {
+          updateStatus('BUFFERING');
+        }
+      }
+    };
+
+    checkStreamAvailability();
+    const interval = setInterval(checkStreamAvailability, 1200);
 
     return () => {
       isCancelled = true;
-      cleanup();
+      clearInterval(interval);
+      isStreamOnlineRef.current = false;
+      destroyPlayer();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [src, autoPlay]);
-
-  const handleVideoError = () => {
-    setIsPlaying(false);
-    setHasError(true);
-    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-    retryTimerRef.current = setTimeout(() => {
-      const video = videoRef.current;
-      if (video && src && video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = `${src.split('?')[0]}?_t=${Date.now()}`;
-        video.load();
-        if (autoPlay) video.play().catch(() => {});
-      }
-    }, 2500);
-  };
-
-  const handleManualReload = () => {
-    setIsPlaying(false);
-    setHasError(false);
-    const video = videoRef.current;
-    if (video) {
-      if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = `${src.split('?')[0]}?_t=${Date.now()}`;
-        video.load();
-        video.play().catch(() => {});
-      } else if (hlsInstanceRef.current && window.Hls) {
-        hlsInstanceRef.current.loadSource(src);
-        hlsInstanceRef.current.startLoad();
-      }
-    }
-  };
+  }, [src]);
 
   const syncToLiveEdge = () => {
     const video = videoRef.current;
@@ -228,10 +267,35 @@ export default function HlsPlayer({
     }
   };
 
-  const markPlaying = () => {
-    setIsPlaying(true);
-    setHasError(false);
+  const handlePlaying = () => {
+    if (!isStreamOnlineRef.current && src.startsWith('/streams/')) return;
+    lastMediaTickAtRef.current = Date.now();
+    setHasFirstFrame(true);
+    updateStatus('LIVE');
     syncToLiveEdge();
+  };
+
+  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const current = e.currentTarget.currentTime;
+    if (current > 0 && current !== lastMediaTimeRef.current) {
+      lastMediaTimeRef.current = current;
+      lastMediaTickAtRef.current = Date.now();
+      setHasFirstFrame(true);
+      updateStatus('LIVE');
+      syncToLiveEdge();
+    }
+  };
+
+  const handleWaiting = () => {
+    if (isStreamOnlineRef.current) {
+      updateStatus('BUFFERING');
+    }
+  };
+
+  const handleVideoError = () => {
+    if (!src.startsWith('/streams/')) {
+      updateStatus('OFFLINE');
+    }
   };
 
   return (
@@ -256,12 +320,11 @@ export default function HlsPlayer({
         autoPlay={autoPlay}
         controls={controls}
         playsInline
-        onPlaying={markPlaying}
-        onCanPlay={markPlaying}
-        onLoadedData={markPlaying}
-        onTimeUpdate={(e) => {
-          if (e.currentTarget.currentTime > 0) markPlaying();
-        }}
+        onPlaying={handlePlaying}
+        onCanPlay={handlePlaying}
+        onTimeUpdate={handleTimeUpdate}
+        onWaiting={handleWaiting}
+        onStalled={handleWaiting}
         onError={handleVideoError}
         style={{
           width: '100%',
@@ -269,10 +332,42 @@ export default function HlsPlayer({
           objectFit: 'cover',
           position: 'relative',
           zIndex: 1,
+          opacity: status === 'OFFLINE' ? 0 : 1,
+          transition: 'opacity 0.2s ease',
         }}
       />
 
-      {!isPlaying && (
+      {/* Buffering Overlay (Shown when network is slow or initial segments are loading) */}
+      {status === 'BUFFERING' && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 3,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px',
+            backgroundColor: hasFirstFrame ? 'rgba(9, 13, 22, 0.55)' : '#090d16',
+            backdropFilter: hasFirstFrame ? 'blur(4px)' : undefined,
+            color: '#ffffff',
+            pointerEvents: 'none',
+          }}
+        >
+          <Loader2
+            size={32}
+            className="animate-spin"
+            style={{ color: 'var(--primary-400)' }}
+          />
+          <div style={{ fontSize: '0.8125rem', fontWeight: 700, letterSpacing: '0.02em' }}>
+            Memuat Aliran Video...
+          </div>
+        </div>
+      )}
+
+      {/* Stream Off Overlay (Shown immediately when OBS stops or before streaming starts) */}
+      {status === 'OFFLINE' && (
         <div
           style={{
             position: 'absolute',
@@ -288,69 +383,58 @@ export default function HlsPlayer({
             color: 'rgba(255,255,255,0.7)',
           }}
         >
-          {hasError ? (
-            <>
-              <div
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(239, 68, 68, 0.14)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '10px',
-                }}
-              >
-                <AlertCircle size={22} style={{ color: 'var(--accent-red)' }} />
-              </div>
-              <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#ffffff', marginBottom: '4px' }}>
-                {fallbackTitle}
-              </div>
-              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)', maxWidth: '380px', lineHeight: 1.5, margin: '0 0 14px 0' }}>
-                {fallbackDescription}
-              </p>
-              <button
-                type="button"
-                onClick={handleManualReload}
-                className="btn btn-outline"
-                style={{
-                  fontSize: '0.75rem',
-                  padding: '6px 14px',
-                  gap: '6px',
-                  borderColor: 'rgba(255,255,255,0.2)',
-                  color: '#ffffff',
-                  backgroundColor: 'rgba(255,255,255,0.06)',
-                }}
-              >
-                <RefreshCw size={13} />
-                <span>Muat Ulang</span>
-              </button>
-            </>
-          ) : (
-            <>
-              <div
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(16, 185, 129, 0.14)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '10px',
-                }}
-              >
-                <Radio size={22} style={{ color: 'var(--accent-emerald)' }} />
-              </div>
-              <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#ffffff', marginBottom: '4px' }}>
-                Menghubungkan Siaran...
-              </div>
-              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)', maxWidth: '360px', lineHeight: 1.5, margin: 0 }}>
-                Menyiapkan aliran video dari server...
-              </p>
-            </>
-          )}
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(239, 68, 68, 0.12)',
+              border: '1px solid rgba(239, 68, 68, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '12px',
+            }}
+          >
+            <Tv size={22} style={{ color: 'var(--accent-red)' }} />
+          </div>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '3px 10px',
+              borderRadius: '9999px',
+              backgroundColor: 'rgba(239, 68, 68, 0.14)',
+              color: 'var(--accent-red)',
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              marginBottom: '8px',
+            }}
+          >
+            <span
+              style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--accent-red)',
+              }}
+            />
+            {fallbackTitle}
+          </div>
+          <p
+            style={{
+              fontSize: '0.75rem',
+              color: 'rgba(255,255,255,0.5)',
+              maxWidth: '360px',
+              lineHeight: 1.5,
+              margin: 0,
+            }}
+          >
+            {fallbackDescription}
+          </p>
         </div>
       )}
     </div>
