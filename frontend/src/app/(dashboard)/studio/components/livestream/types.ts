@@ -86,7 +86,19 @@ export function toYoutubeEmbedUrl(rawUrl: string, isMuted = true): string {
     }
 
     if (videoId) {
-      return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=${isMuted ? 1 : 0}&controls=0&rel=0`;
+      const params = new URLSearchParams({
+        autoplay: '1',
+        mute: isMuted ? '1' : '0',
+        controls: '0',
+        rel: '0',
+        playsinline: '1',
+        enablejsapi: '1',
+        iv_load_policy: '3',
+        modestbranding: '1',
+        disablekb: '1',
+        fs: '0',
+      });
+      return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
     }
   } catch {}
 

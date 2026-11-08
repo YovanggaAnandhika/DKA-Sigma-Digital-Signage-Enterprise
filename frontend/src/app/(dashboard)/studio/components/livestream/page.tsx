@@ -281,12 +281,12 @@ export default function LiveStreamPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'var(--bg-glass)',
-            backdropFilter: 'blur(8px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.72)',
+            backdropFilter: 'blur(6px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 9999,
+            zIndex: 1000,
             padding: '24px',
           }}
           onClick={() => setPreviewItem(null)}
@@ -296,10 +296,14 @@ export default function LiveStreamPage() {
             style={{
               width: '100%',
               maxWidth: '820px',
+              backgroundColor: 'var(--bg-surface)',
+              borderRadius: '16px',
+              border: '1px solid var(--border-subtle)',
               padding: '24px',
               display: 'flex',
               flexDirection: 'column',
               gap: '16px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
