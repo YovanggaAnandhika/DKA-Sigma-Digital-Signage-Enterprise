@@ -295,7 +295,7 @@ export default function StreamPreviewMonitor({
               controls={false}
               fallbackTitle="Stream Off"
               fallbackDescription={
-                sourceType === 'RTMP'
+                sourceType === 'RTMP' || sourceType === 'WHIP'
                   ? 'Siaran OBS Studio sedang tidak aktif. Mulai streaming dari OBS untuk menayangkan video secara langsung.'
                   : 'Aliran video dari sumber kamera sedang tidak aktif.'
               }
