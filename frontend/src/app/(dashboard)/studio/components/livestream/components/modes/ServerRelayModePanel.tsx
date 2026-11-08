@@ -13,9 +13,9 @@ const RtspSourceConfig = dynamic(() => import('../sources/RtspSourceConfig'), { 
 const ALLOWED_RELAY_TYPES: StreamSourceType[] = ['WHIP', 'RTMP', 'RTSP'];
 
 const PROTOCOL_OPTIONS = [
-  { value: 'WHIP', label: 'WHIP (WebRTC Port 80)' },
-  { value: 'RTMP', label: 'RTMP (Port 1935)' },
-  { value: 'RTSP', label: 'RTSP (Kamera IP / CCTV)' },
+  { value: 'WHIP', label: 'WHIP' },
+  { value: 'RTMP', label: 'RTMP' },
+  { value: 'RTSP', label: 'RTSP CCTV' },
 ];
 
 function generateSecureToken(length = 20): string {
@@ -55,11 +55,12 @@ export default function ServerRelayModePanel({
   streamKey,
   serverHost,
 }: SourceModePanelProps) {
-  const whipUrl = typeof window !== 'undefined'
+  const host = serverHost || (typeof window !== 'undefined' && window.location.hostname ? window.location.hostname : 'sigma.dkaapis.test');
+  const whipUrl = typeof window !== 'undefined' && window.location.host
     ? `${window.location.protocol}//${window.location.host}/streams/${streamKey}/whip`
-    : `http://${serverHost}/streams/${streamKey}/whip`;
+    : `http://${host}/streams/${streamKey}/whip`;
 
-  const rtmpServerUrl = `rtmp://${serverHost}:1935/live`;
+  const rtmpServerUrl = `rtmp://${host}:1935/live`;
   const fullRtmpIngestUrl = `${rtmpServerUrl}/${streamKey}`;
 
   // Isolation check: ensure sourceType is valid
@@ -117,6 +118,8 @@ export default function ServerRelayModePanel({
         serverHost={serverHost}
         whipUrl={whipUrl}
         rtmpServerUrl={rtmpServerUrl}
+        serverUrl={rtmpServerUrl}
+        fullRtmpIngestUrl={fullRtmpIngestUrl}
         sourceUrl={sourceUrl}
         onChangeSourceUrl={onChangeSourceUrl}
         requiresAuth={requiresAuth}

@@ -2,9 +2,27 @@
 
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Volume2, VolumeX } from 'lucide-react';
+import { Info, Volume2, VolumeX } from 'lucide-react';
 import { StreamSourceType } from '../types';
 import type { StreamPlaybackStatus } from '@/components/ui/HlsPlayer';
+
+const USAGE_GUIDES: Record<StreamSourceType, { title: string; desc: string; tip: string }> = {
+  WHIP: {
+    title: 'Siaran Langsung dari Komputer atau Laptop',
+    desc: 'Pilihan utama dan paling mudah untuk menyiarkan presentasi, acara, atau kegiatan langsung menggunakan aplikasi OBS Studio di PC/laptop.',
+    tip: 'Video tayang seketika tanpa jeda/delay dan langsung terhubung secara otomatis ke layar.',
+  },
+  RTMP: {
+    title: 'Siaran dari Alat Mixer atau Perangkat Siar',
+    desc: 'Digunakan jika Anda menggunakan perangkat perekam siaran profesional seperti video mixer fisik, Atem Mini, kamera siar luar, atau aplikasi vMix.',
+    tip: 'Hubungkan menggunakan alamat server dan kunci siar (Stream Key) yang tersedia di panel sebelah kiri.',
+  },
+  RTSP: {
+    title: 'Pantauan Kamera Keamanan atau CCTV',
+    desc: 'Digunakan untuk menampilkan video rekaman langsung dari kamera CCTV atau kamera IP lokal (seperti pantauan kasir, lobi, atau antrean) secara terus-menerus ke layar.',
+    tip: 'Cukup masukkan alamat IP kamera CCTV Anda di sebelah kiri, lalu simpan perubahan.',
+  },
+};
 
 const HlsPlayer = dynamic(() => import('@/components/ui/HlsPlayer'), {
   ssr: false,
@@ -236,6 +254,34 @@ export default function StreamPreviewMonitor({
             onStatusChange={setPlaybackStatus}
           />
         </div>
+
+        {/* Friendly Non-Technical Usage Guide */}
+        {USAGE_GUIDES[sourceType] && (
+          <div
+            style={{
+              padding: '12px 14px',
+              borderRadius: '9px',
+              backgroundColor: 'var(--bg-surface-elevated)',
+              border: '1px solid var(--border-subtle)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Info size={14} style={{ color: 'var(--primary-400)', flexShrink: 0 }} />
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                {USAGE_GUIDES[sourceType].title}
+              </span>
+            </div>
+            <p style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.45 }}>
+              {USAGE_GUIDES[sourceType].desc}
+            </p>
+            <span style={{ fontSize: '0.70rem', color: 'var(--text-muted)', marginTop: '2px', lineHeight: 1.4 }}>
+              💡 <strong>Tips:</strong> {USAGE_GUIDES[sourceType].tip}
+            </span>
+          </div>
+        )}
       </div>
 
       {bottomSlot}

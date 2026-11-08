@@ -38,7 +38,7 @@ export default function WhipSourceConfig({
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
           <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-            Server URL (OBS: WHIP)
+            Alamat Server WHIP
           </label>
           <span style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>
             Murni Port 80

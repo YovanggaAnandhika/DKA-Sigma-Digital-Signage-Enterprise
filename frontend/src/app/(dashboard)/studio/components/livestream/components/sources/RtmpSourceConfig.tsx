@@ -5,7 +5,9 @@ import { Check, Copy, Eye, EyeOff, Shield } from 'lucide-react';
 import { copyToClipboard } from '@/lib/core/copyToClipboard';
 
 interface RtmpSourceConfigProps {
-  serverUrl: string;
+  serverUrl?: string;
+  rtmpServerUrl?: string;
+  fullRtmpIngestUrl?: string;
   streamKey: string;
   requiresAuth: boolean;
   onToggleAuth: (val: boolean) => void;
@@ -17,6 +19,8 @@ interface RtmpSourceConfigProps {
 
 export default function RtmpSourceConfig({
   serverUrl,
+  rtmpServerUrl,
+  fullRtmpIngestUrl,
   streamKey,
   requiresAuth,
   onToggleAuth,
@@ -28,6 +32,12 @@ export default function RtmpSourceConfig({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
+  const fallbackServer = typeof window !== 'undefined' && window.location.hostname
+    ? `rtmp://${window.location.hostname}:1935/live`
+    : 'rtmp://sigma.dkaapis.test:1935/live';
+  const server = serverUrl || rtmpServerUrl || fallbackServer;
+  const fullUrl = fullRtmpIngestUrl || `${server}/${streamKey}`;
+
   const handleCopy = async (text: string, field: string) => {
     const success = await copyToClipboard(text);
     if (success) {
@@ -38,71 +48,130 @@ export default function RtmpSourceConfig({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      {/* Server RTMP & Stream Key */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px' }}>
-        <div>
-          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-            Server RTMP OBS
+      {/* Primary Single Ingest URL (Persis seperti WHIP) */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+          <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+            Alamat Server RTMP
           </label>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <input
-              type="text"
-              readOnly
-              value={serverUrl}
-              className="form-input"
-              style={{
-                fontFamily: 'monospace',
-                fontSize: '0.74rem',
-                backgroundColor: 'var(--bg-primary)',
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => handleCopy(serverUrl, 'server')}
-              className="btn btn-outline"
-              style={{ padding: '0 10px', gap: '4px', whiteSpace: 'nowrap', fontSize: '0.72rem' }}
-              title="Salin Server RTMP"
-            >
-              {copiedField === 'server' ? (
-                <Check size={12} style={{ color: 'var(--accent-emerald)' }} />
-              ) : (
-                <Copy size={12} />
-              )}
-              <span>{copiedField === 'server' ? 'Disalin' : 'Salin'}</span>
-            </button>
-          </div>
+          <span style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>
+            Murni Port 1935
+          </span>
         </div>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <input
+            type="text"
+            readOnly
+            value={fullUrl}
+            className="form-input"
+            style={{
+              fontFamily: 'monospace',
+              fontSize: '0.75rem',
+              backgroundColor: 'var(--bg-primary)',
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => handleCopy(fullUrl, 'full')}
+            className="btn btn-outline"
+            style={{ padding: '0 12px', gap: '4px', whiteSpace: 'nowrap', fontSize: '0.75rem' }}
+            title="Salin Single URL RTMP"
+          >
+            {copiedField === 'full' ? (
+              <Check size={13} style={{ color: 'var(--accent-emerald)' }} />
+            ) : (
+              <Copy size={13} />
+            )}
+            <span>{copiedField === 'full' ? 'Disalin' : 'Salin'}</span>
+          </button>
+        </div>
+        <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', marginTop: '3px', display: 'block' }}>
+          Format Single URL gabungan untuk encoder/vMix/OBS yang mendukung 1 baris URL lengkap.
+        </span>
+      </div>
 
-        <div>
-          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-            Stream Key
-          </label>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <input
-              type="text"
-              readOnly
-              value={streamKey}
-              className="form-input"
-              style={{
-                fontFamily: 'monospace',
-                fontSize: '0.74rem',
-                backgroundColor: 'var(--bg-primary)',
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => handleCopy(streamKey, 'key')}
-              className="btn btn-outline"
-              style={{ padding: '0 10px', gap: '4px', whiteSpace: 'nowrap', fontSize: '0.72rem' }}
-              title="Salin Stream Key"
-            >
-              {copiedField === 'key' ? (
-                <Check size={12} style={{ color: 'var(--accent-emerald)' }} />
-              ) : (
-                <Copy size={12} />
-              )}
-              <span>{copiedField === 'key' ? 'Disalin' : 'Salin'}</span>
-            </button>
+      {/* Format Pemisah OBS Studio (Server & Stream Key) */}
+      <div
+        style={{
+          padding: '8px 10px',
+          borderRadius: '8px',
+          backgroundColor: 'var(--bg-surface-elevated)',
+          border: '1px solid var(--border-subtle)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px',
+        }}
+      >
+        <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+          Format Pemisah Server dan Stream Key
+        </span>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: '2px' }}>
+              Server OBS
+            </label>
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <input
+                type="text"
+                readOnly
+                value={server}
+                className="form-input"
+                style={{
+                  fontFamily: 'monospace',
+                  fontSize: '0.70rem',
+                  padding: '4px 6px',
+                  backgroundColor: 'var(--bg-primary)',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => handleCopy(server, 'server')}
+                className="btn btn-outline"
+                style={{ padding: '0 8px', gap: '2px', whiteSpace: 'nowrap', fontSize: '0.68rem' }}
+                title="Salin Server RTMP"
+              >
+                {copiedField === 'server' ? (
+                  <Check size={11} style={{ color: 'var(--accent-emerald)' }} />
+                ) : (
+                  <Copy size={11} />
+                )}
+                <span>{copiedField === 'server' ? 'Disalin' : 'Salin'}</span>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: '2px' }}>
+              Stream Key
+            </label>
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <input
+                type="text"
+                readOnly
+                value={streamKey}
+                className="form-input"
+                style={{
+                  fontFamily: 'monospace',
+                  fontSize: '0.70rem',
+                  padding: '4px 6px',
+                  backgroundColor: 'var(--bg-primary)',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => handleCopy(streamKey, 'key')}
+                className="btn btn-outline"
+                style={{ padding: '0 8px', gap: '2px', whiteSpace: 'nowrap', fontSize: '0.68rem' }}
+                title="Salin Stream Key"
+              >
+                {copiedField === 'key' ? (
+                  <Check size={11} style={{ color: 'var(--accent-emerald)' }} />
+                ) : (
+                  <Copy size={11} />
+                )}
+                <span>{copiedField === 'key' ? 'Disalin' : 'Salin'}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -123,7 +192,7 @@ export default function RtmpSourceConfig({
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Shield size={14} style={{ color: requiresAuth ? 'var(--accent-emerald)' : 'var(--text-muted)' }} />
             <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-              Autentikasi Pengirim (OBS RTMP)
+              Autentikasi Pengirim RTMP
             </span>
           </div>
           <button
