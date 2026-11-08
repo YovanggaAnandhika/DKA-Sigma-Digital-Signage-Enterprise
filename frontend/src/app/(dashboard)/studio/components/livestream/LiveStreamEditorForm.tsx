@@ -3,17 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import {
   ArrowLeft,
   Radio,
   Check,
   Server,
   Globe,
-  Tv,
-  Copy,
 } from 'lucide-react';
 import { SingleSelect } from '@/components/ui/SingleSelect';
-import HlsPlayer from '@/components/ui/HlsPlayer';
 import {
   createLiveStream,
   getLiveStream,
@@ -22,8 +20,34 @@ import {
 import {
   StreamMode,
   StreamSourceType,
-  toYoutubeEmbedUrl,
 } from './types';
+import ObsIngestCard from './components/ObsIngestCard';
+import StreamSettingsCard from './components/StreamSettingsCard';
+
+const StreamPreviewMonitor = dynamic(
+  () => import('./components/StreamPreviewMonitor'),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="card-elevated"
+        style={{
+          padding: '24px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          minHeight: '380px',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--text-muted)',
+          fontSize: '0.8125rem',
+        }}
+      >
+        Memuat monitor pratinjau...
+      </div>
+    ),
+  }
+);
 
 function generateUUID(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -46,7 +70,6 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
 
   const [streamKey] = useState<string>(() => streamId || generateUUID());
   const [serverHost, setServerHost] = useState('sigma.dkaapis.test');
-  const [copiedField, setCopiedField] = useState<'server' | 'key' | null>(null);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -74,14 +97,6 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
       setSourceUrl(fullRtmpIngestUrl);
     }
   }, [streamMode, sourceType, fullRtmpIngestUrl]);
-
-  const handleCopy = (text: string, field: 'server' | 'key') => {
-    if (navigator?.clipboard) {
-      navigator.clipboard.writeText(text);
-      setCopiedField(field);
-      setTimeout(() => setCopiedField(null), 2000);
-    }
-  };
 
   useEffect(() => {
     if (!streamId) return;
@@ -344,92 +359,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
           </div>
 
           {streamMode === 'SERVER_HOSTED_HLS' && sourceType === 'RTMP' ? (
-            /* OBS Ingest Parameters Card: No manual URL typing required! */
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                padding: '16px',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--bg-surface-elevated)',
-                border: '1px solid var(--border-subtle)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    Parameter Ingest OBS Studio
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    Salin parameter berikut ke OBS Studio (Settings → Stream → Service: Custom).
-                  </div>
-                </div>
-                <span className="badge badge-success" style={{ fontSize: '0.6875rem' }}>
-                  Ingest Siap
-                </span>
-              </div>
-
-              {/* Server URL Row */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Server RTMP
-                </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="text"
-                    readOnly
-                    value={rtmpServerUrl}
-                    className="form-input"
-                    style={{ fontFamily: 'monospace', fontSize: '0.8125rem', backgroundColor: 'var(--bg-primary)' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(rtmpServerUrl, 'server')}
-                    className="btn btn-outline"
-                    style={{ padding: '0 12px', gap: '6px', whiteSpace: 'nowrap' }}
-                    title="Salin URL Server"
-                  >
-                    {copiedField === 'server' ? (
-                      <Check size={14} style={{ color: 'var(--accent-emerald)' }} />
-                    ) : (
-                      <Copy size={14} />
-                    )}
-                    <span>{copiedField === 'server' ? 'Tersalin' : 'Salin'}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Stream Key Row (Pure UUID) */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Stream Key (Murni UUID)
-                </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="text"
-                    readOnly
-                    value={streamKey}
-                    className="form-input"
-                    style={{ fontFamily: 'monospace', fontSize: '0.8125rem', backgroundColor: 'var(--bg-primary)' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(streamKey, 'key')}
-                    className="btn btn-outline"
-                    style={{ padding: '0 12px', gap: '6px', whiteSpace: 'nowrap' }}
-                    title="Salin Stream Key UUID"
-                  >
-                    {copiedField === 'key' ? (
-                      <Check size={14} style={{ color: 'var(--accent-emerald)' }} />
-                    ) : (
-                      <Copy size={14} />
-                    )}
-                    <span>{copiedField === 'key' ? 'Tersalin' : 'Salin'}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+            <ObsIngestCard serverUrl={rtmpServerUrl} streamKey={streamKey} />
           ) : (
             /* Standard URL Input for RTSP, HLS, or YouTube */
             <div>
@@ -482,113 +412,12 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
           </div>
 
           {/* Advanced Streaming Parameters */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '4px' }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '12px 14px',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--bg-surface-elevated)',
-                border: '1px solid var(--border-subtle)',
-                transition: 'border-color 0.2s ease, background-color 0.2s ease',
-              }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingRight: '12px' }}>
-                <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Mode Low-Latency
-                </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                  Buffer minimal untuk siaran langsung real-time
-                </span>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={lowLatencyMode}
-                onClick={() => setLowLatencyMode(!lowLatencyMode)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  width: '38px',
-                  height: '22px',
-                  padding: '2px',
-                  borderRadius: 'var(--radius-full)',
-                  backgroundColor: lowLatencyMode ? 'var(--primary-500)' : 'var(--bg-surface)',
-                  border: `1px solid ${lowLatencyMode ? 'var(--primary-500)' : 'var(--border-strong)'}`,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                  flexShrink: 0,
-                }}
-              >
-                <span
-                  style={{
-                    width: '16px',
-                    height: '16px',
-                    borderRadius: '50%',
-                    backgroundColor: '#ffffff',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)',
-                    transform: lowLatencyMode ? 'translateX(16px)' : 'translateX(0)',
-                    transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                  }}
-                />
-              </button>
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '12px 14px',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--bg-surface-elevated)',
-                border: '1px solid var(--border-subtle)',
-                transition: 'border-color 0.2s ease, background-color 0.2s ease',
-              }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingRight: '12px' }}>
-                <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Auto-Reconnect Otomatis
-                </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                  Menyambungkan ulang otomatis jika koneksi jaringan atau kamera terputus
-                </span>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={autoReconnect}
-                onClick={() => setAutoReconnect(!autoReconnect)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  width: '38px',
-                  height: '22px',
-                  padding: '2px',
-                  borderRadius: 'var(--radius-full)',
-                  backgroundColor: autoReconnect ? 'var(--primary-500)' : 'var(--bg-surface)',
-                  border: `1px solid ${autoReconnect ? 'var(--primary-500)' : 'var(--border-strong)'}`,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                  flexShrink: 0,
-                }}
-              >
-                <span
-                  style={{
-                    width: '16px',
-                    height: '16px',
-                    borderRadius: '50%',
-                    backgroundColor: '#ffffff',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)',
-                    transform: autoReconnect ? 'translateX(16px)' : 'translateX(0)',
-                    transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                  }}
-                />
-              </button>
-            </div>
-          </div>
+          <StreamSettingsCard
+            lowLatencyMode={lowLatencyMode}
+            onToggleLowLatency={setLowLatencyMode}
+            autoReconnect={autoReconnect}
+            onToggleAutoReconnect={setAutoReconnect}
+          />
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
             <Link href="/studio/components/livestream" className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>
@@ -601,115 +430,16 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
           </div>
         </form>
 
-        {/* Right Live Preview Monitor */}
-        <div className="card-elevated" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-                Monitor Pratinjau Siaran
-              </h2>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px', margin: 0 }}>
-                Simulasi tampilan zona Live Stream pada kanvas layar signage.
-              </p>
-            </div>
-            <span className="badge badge-neutral">{sourceType}</span>
-          </div>
-
-          <div
-            style={{
-              width: '100%',
-              aspectRatio: '16 / 9',
-              borderRadius: '12px',
-              overflow: 'hidden',
-              backgroundColor: 'var(--bg-primary)',
-              border: '1px solid var(--border-subtle)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-            }}
-          >
-            {sourceType === 'YOUTUBE_EMBED' ? (
-              !sourceUrl.trim() ? (
-                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
-                  <Radio size={36} style={{ marginBottom: '8px', opacity: 0.5 }} />
-                  <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Masukkan URL Sumber Stream</div>
-                  <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>
-                    Pratinjau video akan tampil secara otomatis di sini.
-                  </div>
-                </div>
-              ) : (
-                <div
-                  style={{
-                    position: 'relative',
-                    width: '100%',
-                    height: '100%',
-                    overflow: 'hidden',
-                    pointerEvents: 'none',
-                  }}
-                >
-                  <iframe
-                    src={toYoutubeEmbedUrl(sourceUrl, isMuted)}
-                    title={name || 'YouTube Live Preview'}
-                    style={{
-                      position: 'absolute',
-                      top: '-14%',
-                      left: 0,
-                      width: '100%',
-                      height: '128%',
-                      border: 'none',
-                      pointerEvents: 'none',
-                    }}
-                    allow="autoplay; encrypted-media; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
-              )
-            ) : streamMode === 'SERVER_HOSTED_HLS' ? (
-              <HlsPlayer
-                src={`/streams/${streamKey}/live.m3u8`}
-                poster={posterImageUrl.trim() || undefined}
-                isMuted={isMuted}
-                autoPlay
-                fallbackTitle={
-                  sourceType === 'RTMP'
-                    ? 'Menunggu Feed Ingest dari OBS Studio'
-                    : 'Menunggu Feed Live Stream Server'
-                }
-                fallbackDescription={
-                  sourceType === 'RTMP'
-                    ? `Mulai streaming dari OBS dengan Stream Key ${streamKey}. Segmen HLS akan langsung diputar otomatis di sini.`
-                    : 'Server sedang menghubungkan dan mengonversi feed sumber ke HLS.'
-                }
-              />
-            ) : sourceType === 'HLS' ? (
-              !sourceUrl.trim() ? (
-                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
-                  <Radio size={36} style={{ marginBottom: '8px', opacity: 0.5 }} />
-                  <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Masukkan URL Sumber HLS</div>
-                </div>
-              ) : (
-                <HlsPlayer
-                  src={sourceUrl.trim()}
-                  poster={posterImageUrl.trim() || undefined}
-                  isMuted={isMuted}
-                  autoPlay
-                />
-              )
-            ) : (
-              <div style={{ textAlign: 'center', padding: '32px', maxWidth: '460px' }}>
-                <Tv size={40} style={{ color: 'var(--primary-500)', marginBottom: '10px' }} />
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Feed {sourceType} Siap Dirender di Player Android
-                </div>
-                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.5 }}>
-                  Alamat <code>{sourceUrl}</code> akan diputar secara native oleh Media3 ExoPlayer (RTSP/HLS) pada
-                  perangkat Android TV dengan proteksi Auto-Reconnect.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Right Live Preview Monitor (Dynamic Lazy-Loaded) */}
+        <StreamPreviewMonitor
+          name={name}
+          streamMode={streamMode}
+          sourceType={sourceType}
+          sourceUrl={sourceUrl}
+          streamKey={streamKey}
+          isMuted={isMuted}
+          posterImageUrl={posterImageUrl}
+        />
       </div>
     </div>
   );

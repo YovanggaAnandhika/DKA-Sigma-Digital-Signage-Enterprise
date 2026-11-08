@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::{oneshot, Mutex};
 use tracing::{error, info};
@@ -108,7 +109,7 @@ impl LiveStreamRelayManager {
                 }
 
                 cmd.stdout(std::process::Stdio::null());
-                cmd.stderr(std::process::Stdio::null());
+                cmd.stderr(std::process::Stdio::piped());
 
                 let mut child = match cmd.spawn() {
                     Ok(c) => c,
@@ -119,6 +120,22 @@ impl LiveStreamRelayManager {
                     }
                 };
 
+                info!("⏳ [LiveStreamRelay] Ingest listener READY on RTMP port 1935 for stream [{}]", stream_id);
+
+                if let Some(stderr) = child.stderr.take() {
+                    let stream_id_clone = stream_id;
+                    tokio::spawn(async move {
+                        let mut reader = BufReader::new(stderr).lines();
+                        let mut start_logged = false;
+                        while let Ok(Some(line)) = reader.next_line().await {
+                            if !start_logged && (line.contains("Opening '") || line.contains("Stream #0:0") || line.contains("Publishing") || line.contains("rtmp://")) {
+                                start_logged = true;
+                                info!("🟢 [LiveStreamRelay] START STREAMING detected for stream [{}] (feed incoming)", stream_id_clone);
+                            }
+                        }
+                    });
+                }
+
                 tokio::select! {
                     _ = &mut stop_rx => {
                         info!("Relay supervisor received stop signal for stream [{}]", stream_id);
@@ -127,8 +144,8 @@ impl LiveStreamRelayManager {
                     }
                     status = child.wait() => {
                         match status {
-                            Ok(s) => info!("FFmpeg listener finished with status {:?} for stream [{}]. Re-opening listener...", s, stream_id),
-                            Err(e) => error!("FFmpeg process error for stream [{}]: {}. Re-opening listener...", stream_id, e),
+                            Ok(s) => info!("🔴 [LiveStreamRelay] STOP STREAMING detected for stream [{}] (status: {:?}). Re-opening listener...", stream_id, s),
+                            Err(e) => error!("🔴 [LiveStreamRelay] STOP STREAMING error for stream [{}]: {}. Re-opening listener...", stream_id, e),
                         }
                         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
                     }

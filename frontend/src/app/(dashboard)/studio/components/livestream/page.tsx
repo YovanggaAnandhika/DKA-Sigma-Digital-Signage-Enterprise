@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import {
   Radio,
   Plus,
@@ -9,9 +10,7 @@ import {
   Eye,
   Edit,
   Trash2,
-  X,
   RefreshCw,
-  Tv,
 } from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
 import { modal } from '@/components/ui/ModalDialog';
@@ -20,8 +19,12 @@ import {
   deleteLiveStream,
   toggleLiveStreamRelay,
 } from '@/lib/services';
-import { LiveStreamConfig, toYoutubeEmbedUrl } from './types';
-import HlsPlayer from '@/components/ui/HlsPlayer';
+import { LiveStreamConfig } from './types';
+
+const LiveStreamPreviewModal = dynamic(
+  () => import('./components/LiveStreamPreviewModal'),
+  { ssr: false }
+);
 
 export default function LiveStreamPage() {
   const [streams, setStreams] = useState<LiveStreamConfig[]>([]);
@@ -276,139 +279,12 @@ export default function LiveStreamPage() {
         />
       </div>
 
-      {/* Live Preview Modal */}
+      {/* Live Preview Modal (Dynamic Lazy-Loaded) */}
       {previewItem && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.72)',
-            backdropFilter: 'blur(6px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '24px',
-          }}
-          onClick={() => setPreviewItem(null)}
-        >
-          <div
-            className="card-elevated"
-            style={{
-              width: '100%',
-              maxWidth: '820px',
-              backgroundColor: 'var(--bg-surface)',
-              borderRadius: '16px',
-              border: '1px solid var(--border-subtle)',
-              padding: '24px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Radio size={20} style={{ color: 'var(--accent-rose)' }} />
-                <div>
-                  <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                    {previewItem.name}
-                  </h3>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                    {previewItem.streamMode === 'SERVER_HOSTED_HLS' && previewItem.serverHlsEndpoint
-                      ? `${previewItem.serverHlsEndpoint} (Ingest: ${previewItem.sourceUrl})`
-                      : previewItem.sourceUrl}
-                  </span>
-                </div>
-              </div>
-              <button onClick={() => setPreviewItem(null)} className="btn btn-outline" style={{ padding: '6px' }}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <div
-              style={{
-                width: '100%',
-                aspectRatio: '16 / 9',
-                borderRadius: '12px',
-                overflow: 'hidden',
-                backgroundColor: 'var(--bg-primary)',
-                border: '1px solid var(--border-subtle)',
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              {previewItem.sourceType === 'YOUTUBE_EMBED' ? (
-                <div
-                  style={{
-                    position: 'relative',
-                    width: '100%',
-                    height: '100%',
-                    overflow: 'hidden',
-                    pointerEvents: 'none',
-                  }}
-                >
-                  <iframe
-                    src={toYoutubeEmbedUrl(previewItem.sourceUrl, previewItem.isMuted)}
-                    title={previewItem.name}
-                    style={{
-                      position: 'absolute',
-                      top: '-14%',
-                      left: 0,
-                      width: '100%',
-                      height: '128%',
-                      border: 'none',
-                      pointerEvents: 'none',
-                    }}
-                    allow="autoplay; encrypted-media; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
-              ) : previewItem.streamMode === 'SERVER_HOSTED_HLS' ? (
-                <HlsPlayer
-                  src={previewItem.serverHlsEndpoint || `/streams/${previewItem.id}/live.m3u8`}
-                  poster={previewItem.posterImageUrl || undefined}
-                  isMuted={previewItem.isMuted}
-                  autoPlay
-                  fallbackTitle="Menunggu Feed Live Stream Server"
-                  fallbackDescription={`Server sedang menyiapkan segmen HLS untuk stream ${previewItem.name}.`}
-                />
-              ) : previewItem.sourceType === 'HLS' ? (
-                <HlsPlayer
-                  src={previewItem.sourceUrl}
-                  poster={previewItem.posterImageUrl || undefined}
-                  isMuted={previewItem.isMuted}
-                  autoPlay
-                />
-              ) : (
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px',
-                    padding: '32px',
-                    textAlign: 'center',
-                  }}
-                >
-                  <Tv size={42} style={{ color: 'var(--primary-500)' }} />
-                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    Stream {previewItem.sourceType} Siap Ditayangkan di Player Android (ExoPlayer RTSP/RTMP)
-                  </div>
-                  <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', maxWidth: '520px' }}>
-                    Protokol <code>{previewItem.sourceType}</code> ({previewItem.sourceUrl}) dirender secara native oleh
-                    Media3 ExoPlayer di perangkat TV Android atau melalui endpoint HLS Relay{' '}
-                    <code>{previewItem.serverHlsEndpoint || `/streams/${previewItem.id}/live.m3u8`}</code>.
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <LiveStreamPreviewModal
+          item={previewItem}
+          onClose={() => setPreviewItem(null)}
+        />
       )}
     </div>
   );
