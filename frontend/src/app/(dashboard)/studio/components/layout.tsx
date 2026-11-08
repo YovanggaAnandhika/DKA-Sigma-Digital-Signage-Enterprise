@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   ArrowLeft,
-  Layers,
   ListMusic,
   Globe,
   Images,
@@ -14,64 +13,82 @@ import {
   Clock,
 } from 'lucide-react';
 
-const TABS = [
-  { id: 'playlists', label: 'Daftar Putar', href: '/studio/components/playlists', icon: ListMusic },
-  { id: 'webview', label: 'Web View', href: '/studio/components/webview', icon: Globe },
-  { id: 'album', label: 'Album Foto', href: '/studio/components/album', icon: Images },
-  { id: 'ticket', label: 'Nomor Antrian', href: '/studio/components/ticket', icon: Ticket },
-  { id: 'ticker', label: 'Teks Berjalan', href: '/studio/components/ticker', icon: MessageSquareText },
-  { id: 'clock', label: 'Jam & Cuaca', href: '/studio/components/clock', icon: Clock },
-];
+const MODULE_META: Record<string, { title: string; subtitle: string; icon: React.ElementType }> = {
+  playlists: {
+    title: 'Daftar Putar',
+    subtitle: 'Kelola urutan dan durasi penayangan video & foto promosi.',
+    icon: ListMusic,
+  },
+  ticket: {
+    title: 'Nomor Antrian',
+    subtitle: 'Kelola data antrean, pemanggilan nomor, dan riwayat.',
+    icon: Ticket,
+  },
+  webview: {
+    title: 'Web View',
+    subtitle: 'Tampilkan halaman web langsung atau portal informasi interaktif.',
+    icon: Globe,
+  },
+  album: {
+    title: 'Album Foto',
+    subtitle: 'Kelola galeri slideshow foto produk, dokumentasi, dan promosi.',
+    icon: Images,
+  },
+  ticker: {
+    title: 'Teks Berjalan',
+    subtitle: 'Kelola pengumuman running text dan headline informasi penting.',
+    icon: MessageSquareText,
+  },
+  clock: {
+    title: 'Jam & Cuaca',
+    subtitle: 'Widget penunjuk waktu aktual, kalender, dan perkiraan cuaca.',
+    icon: Clock,
+  },
+};
 
 export default function ComponentsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const isHubPage = pathname === '/studio/components';
   const isCreateOrEdit = pathname.includes('/create') || pathname.includes('/edit');
-  const isTicketManagement =
-    pathname.startsWith('/studio/components/ticket/data') ||
-    pathname.startsWith('/studio/components/ticket/riwayat');
+
+  // If we are on the Hub Page (/studio/components), render children directly without wrappers/headers
+  if (isHubPage) {
+    return <div style={{ width: '100%' }}>{children}</div>;
+  }
+
+  // Detect which module we are in
+  const pathParts = pathname.split('/');
+  // pathname format: /studio/components/<module_name>/...
+  const moduleKey = pathParts[3] || '';
+  const currentMeta = MODULE_META[moduleKey];
+  const Icon = currentMeta?.icon;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', ...(isCreateOrEdit ? { flex: 1, minHeight: 0 } : {}) }}>
-      {/* Top Header & Tab Navigation Bar on List Pages */}
-      {isTicketManagement ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-          <Link
-            href="/studio/components"
-            className="btn btn-outline"
-            style={{ width: '42px', minWidth: '42px', height: '42px', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}
-            aria-label="Kembali ke Komponen"
-            title="Kembali ke Komponen"
-          >
-            <ArrowLeft size={20} />
-          </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div
+      {/* Sub-module Header with Circular Back Button pointing back to /studio/components */}
+      {!isCreateOrEdit && currentMeta && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <Link
+              href="/studio/components"
+              className="btn btn-outline"
               style={{
-                padding: '10px',
-                borderRadius: '12px',
-                backgroundColor: 'var(--bg-surface-elevated)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--border-subtle)',
-                display: 'flex',
+                width: '42px',
+                minWidth: '42px',
+                height: '42px',
+                padding: 0,
+                display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                borderRadius: '50%',
+                border: '1px solid var(--border-subtle)',
               }}
+              aria-label="Kembali ke Menu Komponen"
+              title="Kembali ke Menu Komponen"
             >
-              <Ticket size={22} />
-            </div>
-            <div>
-              <h1 style={{ fontSize: '1.375rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-                Nomor Antrian
-              </h1>
-              <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                Kelola data antrean dan riwayat panggilan.
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : !isCreateOrEdit && (
-        <>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+              <ArrowLeft size={18} />
+            </Link>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div
                 style={{
@@ -85,67 +102,25 @@ export default function ComponentsLayout({ children }: { children: React.ReactNo
                   justifyContent: 'center',
                 }}
               >
-                <Layers size={22} />
+                {Icon && <Icon size={22} />}
               </div>
               <div>
-                <h1 style={{ fontSize: '1.375rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-                  Komponen
+                <h1 style={{ fontSize: '1.375rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
+                  {currentMeta.title}
                 </h1>
-                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  Kelola modul konten dan widget interaktif signage.
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px', margin: 0 }}>
+                  {currentMeta.subtitle}
                 </p>
               </div>
             </div>
           </div>
-
-          {/* Route path-based Tab Navigation Bar */}
-          <div
-            className="card-elevated"
-            style={{
-              padding: '5px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              overflowX: 'auto',
-              backgroundColor: 'var(--bg-surface)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '10px',
-            }}
-          >
-            {TABS.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = pathname.startsWith(tab.href);
-
-              return (
-                <Link
-                  key={tab.id}
-                  href={tab.href}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 14px',
-                    borderRadius: '7px',
-                    textDecoration: 'none',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.15s ease',
-                    backgroundColor: isActive ? 'var(--primary-600)' : 'transparent',
-                    color: isActive ? '#ffffff' : 'var(--text-secondary)',
-                    fontWeight: isActive ? 600 : 500,
-                    fontSize: '0.8125rem',
-                  }}
-                >
-                  <Icon size={15} />
-                  <span>{tab.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </>
+        </div>
       )}
 
       {/* Render Active Route Page */}
-      <div style={isCreateOrEdit ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } : undefined}>{children}</div>
+      <div style={isCreateOrEdit ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } : undefined}>
+        {children}
+      </div>
     </div>
   );
 }
