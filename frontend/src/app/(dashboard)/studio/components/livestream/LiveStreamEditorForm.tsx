@@ -216,9 +216,7 @@ export default function LiveStreamEditorForm({ streamId }: LiveStreamEditorFormP
       <ObsIngestCard
         serverUrl={rtmpServerUrl}
         streamKey={streamKey}
-        requiresAuth={requiresAuth}
-        username={ingestUsername}
-        password={ingestPassword}
+        serverHost={serverHost}
       />
     ) : (
       <div

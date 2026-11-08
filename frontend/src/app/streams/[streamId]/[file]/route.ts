@@ -73,8 +73,8 @@ export async function POST(
   { params }: { params: { streamId: string; file: string } }
 ) {
   const { streamId, file } = params;
-  if (!streamId || file !== 'whep') {
-    return new NextResponse('Invalid WHEP endpoint', { status: 400 });
+  if (!streamId || (file !== 'whep' && file !== 'whip')) {
+    return new NextResponse('Invalid endpoint', { status: 400 });
   }
 
   try {
@@ -82,6 +82,40 @@ export async function POST(
     const streamerBase =
       process.env.HND_STREAMER_INTERNAL_URL || 'http://dka-product-sigma-streamer:8889';
     const base = streamerBase.replace(/\/$/, '');
+
+    // WHIP Ingestion Proxy (OBS Studio / WebRTC Publishers via standard Port 80 HTTP)
+    if (file === 'whip') {
+      const authHeader = req.headers.get('authorization') || '';
+      const headers: Record<string, string> = { 'Content-Type': 'application/sdp' };
+      if (authHeader) headers['Authorization'] = authHeader;
+
+      const upstream = await fetch(`${base}/live/${streamId}/whip`, {
+        method: 'POST',
+        headers,
+        body: sdpOffer,
+        cache: 'no-store',
+      });
+
+      if (!upstream.ok) {
+        return new NextResponse(null, { status: upstream.status });
+      }
+
+      const sdpAnswer = await upstream.text();
+      const responseHeaders: Record<string, string> = {
+        'Content-Type': 'application/sdp',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Expose-Headers': 'Location',
+      };
+      const loc = upstream.headers.get('location');
+      if (loc) responseHeaders['Location'] = loc;
+
+      return new Response(sdpAnswer, {
+        status: 201,
+        headers: responseHeaders,
+      });
+    }
+
+    // WHEP Egress Proxy (Browser & Signage Screen Players via standard Port 80 HTTP)
     const mode = req.nextUrl.searchParams.get('mode');
     const primaryPrefix = mode === 'hd' ? 'hd/live' : 'webrtc/live';
 
@@ -126,4 +160,56 @@ export async function POST(
   } catch {
     return new NextResponse(null, { status: 502 });
   }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { streamId: string; file: string } }
+) {
+  const { streamId, file } = params;
+  if (!streamId || (file !== 'whip' && file !== 'whep')) {
+    return new NextResponse('Invalid endpoint', { status: 400 });
+  }
+  const streamerBase =
+    process.env.HND_STREAMER_INTERNAL_URL || 'http://dka-product-sigma-streamer:8889';
+  const base = streamerBase.replace(/\/$/, '');
+  const authHeader = req.headers.get('authorization') || '';
+  const headers: Record<string, string> = {};
+  if (authHeader) headers['Authorization'] = authHeader;
+
+  const upstream = await fetch(`${base}/live/${streamId}/${file}`, {
+    method: 'DELETE',
+    headers,
+    cache: 'no-store',
+  }).catch(() => null);
+
+  return new Response(null, {
+    status: upstream?.status || 200,
+    headers: { 'Access-Control-Allow-Origin': '*' },
+  });
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { streamId: string; file: string } }
+) {
+  const { streamId, file } = params;
+  if (!streamId || (file !== 'whip' && file !== 'whep')) {
+    return new NextResponse('Invalid endpoint', { status: 400 });
+  }
+  const streamerBase =
+    process.env.HND_STREAMER_INTERNAL_URL || 'http://dka-product-sigma-streamer:8889';
+  const base = streamerBase.replace(/\/$/, '');
+  const body = await req.text();
+  const upstream = await fetch(`${base}/live/${streamId}/${file}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': req.headers.get('content-type') || 'application/trickle-ice-sdpfrag' },
+    body,
+    cache: 'no-store',
+  }).catch(() => null);
+
+  return new Response(upstream ? await upstream.text() : null, {
+    status: upstream?.status || 204,
+    headers: { 'Access-Control-Allow-Origin': '*' },
+  });
 }
