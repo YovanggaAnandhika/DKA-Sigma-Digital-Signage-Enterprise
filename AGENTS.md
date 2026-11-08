@@ -37,7 +37,10 @@ This project is an enterprise-grade digital signage management and streaming pla
 | `iot/esp32_queue_button/` | ESP32 Wi-Fi/MQTT queue-button firmware and flashing/wiring guide. |
 | `iot/arduino_nano_queue_button/` | Arduino Nano USB-serial queue-button firmware and guide. |
 | `docs/` | DDL, player integration, and operational/planning documents. |
-| `compose.yml` | Development container orchestration for frontend and backend; database/MQTT may be external. |
+| `compose.yml` | Development container orchestration for frontend (`dka-product-sigma-frontend`), backend (`dka-product-sigma-backend`), and ultra-low latency streaming engine (`dka-product-sigma-streamer`). |
+| `backend/src/workers/live_stream_relay.rs` | Live stream relay supervisor & real-time telemetry monitor connected to internal `dka-product-sigma-streamer`. |
+| `frontend/src/app/streams/[streamId]/[file]/route.ts` | Next.js streaming bridge for WebRTC WHEP signaling (`/streams/<id>/whep`) and HLS segment fallback (`/streams/<id>/live.m3u8`). |
+| `frontend/src/components/ui/HlsPlayer.tsx` | Unified real-time player supporting sub-second WebRTC UDP (`RTCPeerConnection`) and adaptive HLS with Two-Tier Live-Edge Sync. |
 | `graphify-out/` | Generated knowledge graph and reports; derived analysis, not a source of truth. |
 
 ### Instruction File Hierarchy
@@ -106,3 +109,45 @@ This project is an enterprise-grade digital signage management and streaming pla
 - Backend: never run `cargo run` or `cargo build`; verify Rust changes with `cargo check` from `backend/` and require zero errors and zero warnings.
 - Frontend: use Bun only for all frontend package, script, type-check, and test commands; never use npm, pnpm, yarn, or direct Node commands. Verify TypeScript changes with `bun tsc --noEmit` from `frontend/`. Never run `bun run build` or `next build`.
 - Android: verification is limited to `./gradlew :app:check` and `./gradlew :app:assemble` from `android/`. Do not run debug-variant tasks (including `assembleDebug`) or the `build` task.
+
+---
+
+## Live Stream & Ultra-Low Latency Relay Architecture (WebRTC UDP / SRT / RTMP / HLS)
+
+### 1. Container & Network Topology (`dka-internal` + `dka-development-nginx`)
+- **Zero Direct Host Ports in Project `compose.yml`**: All external ingress traffic enters exclusively through the central gateway container **`dka-development-nginx`** (Nginx Proxy Manager) and routes over the internal Docker network `dka-internal`.
+- **Gateway Stream Port Forwarding (`dka-development-nginx`)**:
+  - `1935/tcp` → `dka-product-sigma-streamer:1935` (RTMP Ingest from OBS Studio / Hardware Encoders)
+  - `8189/udp` & `8189/tcp` → `dka-product-sigma-streamer:8189` (WebRTC ICE Media Transport for sub-second `150–350 ms` playback)
+  - `8890/udp` → `dka-product-sigma-streamer:8890` (SRT UDP Ingest)
+  - `50051/tcp+udp` → `dka-product-sigma-backend:50051` (Tonic gRPC Server)
+  - `80/tcp` (`sigma.dkaapis.test`) → `dka-product-sigma-frontend:80` (Next.js App Router)
+- **Internal Docker Service URLs (`compose.yml`)**:
+  - `dka-product-sigma-backend` communicates with `dka-product-sigma-streamer` via internal Docker DNS:
+    - `STREAMER_API_URL: "http://dka-product-sigma-streamer:9997"` (Control & Telemetry REST API)
+    - `STREAMER_RTMP_URL: "rtsp://dka-product-sigma-streamer:8554"` (Internal RTSP/RTMP relay bus)
+    - `STREAMER_WEBRTC_URL: "http://dka-product-sigma-streamer:8889"` (Internal WebRTC WHEP/WHIP endpoint)
+    - `STREAMER_HLS_URL: "http://dka-product-sigma-streamer:8888"` (Internal HLS fallback muxer)
+  - `dka-product-sigma-frontend` communicates with `dka-product-sigma-streamer` via `HND_STREAMER_INTERNAL_URL: "http://dka-product-sigma-streamer:8889"` and with `dka-product-sigma-backend` via `HND_GRPC_SERVER_HOST: "dka-product-sigma-backend:50051"`.
+
+### 2. Zero-B-Frame & Opus Auto-Normalization Pipeline
+- **Browser WebRTC Specification Constraint**: WebRTC (RFC 7742) strictly rejects H.264 streams containing B-frames (`WebRTC doesn't support H264 streams with B-frames`) and requires **Opus** audio (`48 kHz`), whereas OBS Studio defaults to H.264 High/Main profile with `B-frames = 2` and `AAC` audio.
+- **Automatic In-Memory Normalization (`MTX_PATHDEFAULTS_RUNONREADY`)**:
+  - When OBS publishes an RTMP stream to `rtmp://sigma.dkaapis.test:1935/live/<stream_id>`, `dka-product-sigma-streamer` triggers an ultra-fast FFmpeg pipeline (`-c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -bf 0 -g 30 -c:a libopus`) into the internal path `webrtc/live/<stream_id>`.
+  - This guarantees 100% WebRTC compatibility across Safari (macOS/iOS), Chrome, Edge, and Firefox without requiring users to manually tune OBS Studio encoder settings.
+
+### 3. Real-Time Frontend Playback (`HlsPlayer.tsx` & `/streams/[streamId]/[file]/route.ts`)
+- **Primary Transport — WebRTC WHEP (`POST /streams/[streamId]/whep`)**:
+  - For local server relays (`/streams/<streamId>/...`), `HlsPlayer.tsx` establishes a native `RTCPeerConnection` and posts an SDP Offer to `/streams/<streamId>/whep`.
+  - `route.ts` forwards the SDP Offer internally to `http://dka-product-sigma-streamer:8889/webrtc/live/<streamId>/whep` (falling back to `/live/<streamId>/whep` for native 0-B-frame WHIP/SRT sources) and returns the SDP Answer.
+  - Video and audio flow over UDP port `8189` with sub-second latency (`150–350 ms`) and immediate `< 50 ms` state transitions (`LIVE` / `BUFFERING` / `STREAM OFF`).
+- **Fallback Transport — Adaptive HLS (`GET /streams/[streamId]/live.m3u8`)**:
+  - Used for external HLS embeds or legacy clients.
+  - Implements **Adaptive Device & Network Profiling** (`getAdaptiveStreamProfile` inspecting `navigator.connection`, `hardwareConcurrency`, `deviceMemory`, and dynamic stall counters) plus **Two-Tier Live-Edge Sync**:
+    - *Tier 1 (Smooth Catch-Up)*: Adjusts `video.playbackRate` (`1.08x–1.18x`) when lag exceeds `maxLagSeconds` (`2.8s–4.5s`).
+    - *Tier 2 (Hard Frame-Drop)*: Immediately drops stale frames and snaps to `liveEdge - 1.0s` when lag exceeds `hardDropSeconds` (`5.5s–8.5s`), guarded by a `4s` cooldown.
+
+### 4. Container Performance & Lifecycle Invariants
+- **Singleton gRPC Channel Multiplexing**: All high-frequency Next.js route handlers (`ListMedia`, `GetLiveStream`, `ListLiveStreams`, `/streams/[streamId]/[file]`) must use `getGrpcClient(ServiceClient)` from `frontend/src/lib/core/grpcClient.ts` to reuse a single HTTP/2 connection instead of instantiating `new ServiceClient()` per request, and parse JSON bodies safely with `await req.json().catch(() => ({}))`.
+- **Lightweight Healthcheck (`/up`)**: Container healthchecks in `dka-product-sigma-frontend` must hit the lightweight `GET /up` route (`frontend/src/app/up/route.ts`) rather than SSR pages (`/`) to prevent zombie curl processes and CPU/memory exhaustion during `next dev`.
+- **Graceful Shutdown & Encoder Disconnect**: `backend/src/main.rs` uses `serve_with_shutdown` listening for `SIGTERM`/`SIGINT` to invoke `relay_manager.stop_all()`, ensuring active FFmpeg child processes (`kill_on_drop(true)`) are terminated cleanly when containers restart.
