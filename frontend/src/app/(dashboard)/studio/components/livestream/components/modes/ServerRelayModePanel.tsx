@@ -49,7 +49,7 @@ export default function ServerRelayModePanel() {
           value={draft.sourceType}
           onChange={handleProtocolChange}
           options={PROTOCOL_OPTIONS}
-          placeholder="Pilih Protokol Ingest MediaMTX"
+          placeholder="Pilih Protokol"
         />
       </div>
 

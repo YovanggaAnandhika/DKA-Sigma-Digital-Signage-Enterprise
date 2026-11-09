@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Check, Copy, Eye, EyeOff, Shield } from 'lucide-react';
+import { Check, Copy, Eye, EyeOff } from 'lucide-react';
 import { copyToClipboard } from '@/lib/core/copyToClipboard';
 
 interface RtmpSourceConfigProps {
@@ -47,17 +47,12 @@ export default function RtmpSourceConfig({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      {/* Primary Single Ingest URL (Persis seperti WHIP) */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* Primary Single Ingest URL */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-          <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-            Alamat Server RTMP
-          </label>
-          <span style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>
-            Murni Port 1935
-          </span>
-        </div>
+        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+          URL Siaran RTMP
+        </label>
         <div style={{ display: 'flex', gap: '6px' }}>
           <input
             type="text"
@@ -67,7 +62,6 @@ export default function RtmpSourceConfig({
             style={{
               fontFamily: 'monospace',
               fontSize: '0.75rem',
-              backgroundColor: 'var(--bg-primary)',
             }}
           />
           <button
@@ -75,7 +69,7 @@ export default function RtmpSourceConfig({
             onClick={() => handleCopy(fullUrl, 'full')}
             className="btn btn-outline"
             style={{ padding: '0 12px', gap: '4px', whiteSpace: 'nowrap', fontSize: '0.75rem' }}
-            title="Salin Single URL RTMP"
+            title="Salin URL RTMP"
           >
             {copiedField === 'full' ? (
               <Check size={13} style={{ color: 'var(--accent-emerald)' }} />
@@ -85,116 +79,81 @@ export default function RtmpSourceConfig({
             <span>{copiedField === 'full' ? 'Disalin' : 'Salin'}</span>
           </button>
         </div>
-        <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', marginTop: '3px', display: 'block' }}>
-          Format Single URL gabungan untuk encoder/vMix/OBS yang mendukung 1 baris URL lengkap.
-        </span>
       </div>
 
-      {/* Format Pemisah OBS Studio (Server & Stream Key) */}
-      <div
-        style={{
-          padding: '8px 10px',
-          borderRadius: '8px',
-          backgroundColor: 'var(--bg-surface-elevated)',
-          border: '1px solid var(--border-subtle)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '6px',
-        }}
-      >
-        <span style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-          Format Pemisah Server dan Stream Key
-        </span>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: '2px' }}>
-              Server OBS
-            </label>
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <input
-                type="text"
-                readOnly
-                value={server}
-                className="form-input"
-                style={{
-                  fontFamily: 'monospace',
-                  fontSize: '0.70rem',
-                  padding: '4px 6px',
-                  backgroundColor: 'var(--bg-primary)',
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => handleCopy(server, 'server')}
-                className="btn btn-outline"
-                style={{ padding: '0 8px', gap: '2px', whiteSpace: 'nowrap', fontSize: '0.68rem' }}
-                title="Salin Server RTMP"
-              >
-                {copiedField === 'server' ? (
-                  <Check size={11} style={{ color: 'var(--accent-emerald)' }} />
-                ) : (
-                  <Copy size={11} />
-                )}
-                <span>{copiedField === 'server' ? 'Disalin' : 'Salin'}</span>
-              </button>
-            </div>
+      {/* Format Terpisah untuk OBS Studio */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px' }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '3px' }}>
+            Server OBS
+          </label>
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <input
+              type="text"
+              readOnly
+              value={server}
+              className="form-input"
+              style={{
+                fontFamily: 'monospace',
+                fontSize: '0.72rem',
+                padding: '5px 8px',
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => handleCopy(server, 'server')}
+              className="btn btn-outline"
+              style={{ padding: '0 8px', whiteSpace: 'nowrap', fontSize: '0.72rem' }}
+              title="Salin Server"
+            >
+              {copiedField === 'server' ? (
+                <Check size={12} style={{ color: 'var(--accent-emerald)' }} />
+              ) : (
+                <Copy size={12} />
+              )}
+            </button>
           </div>
+        </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: '2px' }}>
-              Stream Key
-            </label>
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <input
-                type="text"
-                readOnly
-                value={streamKey}
-                className="form-input"
-                style={{
-                  fontFamily: 'monospace',
-                  fontSize: '0.70rem',
-                  padding: '4px 6px',
-                  backgroundColor: 'var(--bg-primary)',
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => handleCopy(streamKey, 'key')}
-                className="btn btn-outline"
-                style={{ padding: '0 8px', gap: '2px', whiteSpace: 'nowrap', fontSize: '0.68rem' }}
-                title="Salin Stream Key"
-              >
-                {copiedField === 'key' ? (
-                  <Check size={11} style={{ color: 'var(--accent-emerald)' }} />
-                ) : (
-                  <Copy size={11} />
-                )}
-                <span>{copiedField === 'key' ? 'Disalin' : 'Salin'}</span>
-              </button>
-            </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '3px' }}>
+            Stream Key
+          </label>
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <input
+              type="text"
+              readOnly
+              value={streamKey}
+              className="form-input"
+              style={{
+                fontFamily: 'monospace',
+                fontSize: '0.72rem',
+                padding: '5px 8px',
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => handleCopy(streamKey, 'key')}
+              className="btn btn-outline"
+              style={{ padding: '0 8px', whiteSpace: 'nowrap', fontSize: '0.72rem' }}
+              title="Salin Key"
+            >
+              {copiedField === 'key' ? (
+                <Check size={12} style={{ color: 'var(--accent-emerald)' }} />
+              ) : (
+                <Copy size={12} />
+              )}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* RTMP Authentication (Username & Password) */}
-      <div
-        style={{
-          padding: '10px 12px',
-          borderRadius: '10px',
-          backgroundColor: 'var(--bg-surface-elevated)',
-          border: '1px solid var(--border-subtle)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-        }}
-      >
+      {/* RTMP Authentication */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '4px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Shield size={14} style={{ color: requiresAuth ? 'var(--accent-emerald)' : 'var(--text-muted)' }} />
-            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-              Autentikasi Pengirim RTMP
-            </span>
-          </div>
+          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+            Autentikasi Pengirim
+          </span>
           <button
             type="button"
             role="switch"
@@ -203,14 +162,14 @@ export default function RtmpSourceConfig({
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              width: '36px',
-              height: '20px',
+              width: '32px',
+              height: '18px',
               padding: '2px',
               borderRadius: 'var(--radius-full)',
-              backgroundColor: requiresAuth ? 'var(--accent-emerald)' : 'var(--bg-surface)',
-              border: `1px solid ${requiresAuth ? 'var(--accent-emerald)' : 'var(--border-strong)'}`,
+              backgroundColor: requiresAuth ? 'var(--primary-600)' : 'var(--border-strong)',
+              border: 'none',
               cursor: 'pointer',
-              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+              transition: 'background-color 0.15s ease',
               flexShrink: 0,
             }}
           >
@@ -220,31 +179,31 @@ export default function RtmpSourceConfig({
                 height: '14px',
                 borderRadius: '50%',
                 backgroundColor: '#ffffff',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)',
-                transform: requiresAuth ? 'translateX(16px)' : 'translateX(0)',
-                transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                transform: requiresAuth ? 'translateX(14px)' : 'translateX(0)',
+                transition: 'transform 0.15s ease',
               }}
             />
           </button>
         </div>
 
         {requiresAuth && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '2px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
-                Username Ingest
+              <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '3px' }}>
+                Username
               </label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => onChangeUsername(e.target.value)}
-                placeholder="Contoh: obs_user"
+                placeholder="Username siaran"
                 className="form-input"
+                style={{ fontSize: '0.75rem' }}
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
-                Password Ingest
+              <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '3px' }}>
+                Password
               </label>
               <div style={{ position: 'relative' }}>
                 <input
@@ -253,7 +212,7 @@ export default function RtmpSourceConfig({
                   onChange={(e) => onChangePassword(e.target.value)}
                   placeholder="Password siaran"
                   className="form-input"
-                  style={{ paddingRight: '36px' }}
+                  style={{ paddingRight: '32px', fontSize: '0.75rem' }}
                 />
                 <button
                   type="button"
@@ -267,14 +226,13 @@ export default function RtmpSourceConfig({
                     border: 'none',
                     color: 'var(--text-muted)',
                     cursor: 'pointer',
-                    padding: '4px',
-                    display: 'inline-flex',
+                    display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
+                    padding: 0,
                   }}
-                  title={showPassword ? 'Sembunyikan Password' : 'Lihat Password'}
+                  title={showPassword ? 'Sembunyikan' : 'Tampilkan'}
                 >
-                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
             </div>
@@ -284,4 +242,3 @@ export default function RtmpSourceConfig({
     </div>
   );
 }
-

@@ -125,30 +125,9 @@ function LiveStreamEditorContent() {
             <ArrowLeft size={17} />
           </Link>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                padding: '8px',
-                borderRadius: '10px',
-                backgroundColor: 'var(--bg-surface-elevated)',
-                color: 'var(--accent-rose)',
-                border: '1px solid var(--border-subtle)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Radio size={18} />
-            </div>
-            <div>
-              <h1 style={{ fontSize: '1.15rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
-                {isEdit ? 'Ubah Live Stream' : 'Tambah Live Stream'}
-              </h1>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1px', margin: 0 }}>
-                Konfigurasi siaran langsung terpusat melalui MediaMTX engine.
-              </p>
-            </div>
-          </div>
+          <h1 style={{ fontSize: '1.15rem', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
+            {isEdit ? 'Ubah Live Stream' : 'Tambah Live Stream'}
+          </h1>
         </div>
 
         {/* Action Buttons: Batal/Kembalikan & Simpan (Terkunci jika tersimpan) */}
@@ -207,7 +186,7 @@ function LiveStreamEditorContent() {
             ) : (
               <>
                 <Check size={15} />
-                <span>Tersimpan (Terkunci)</span>
+                <span>Tersimpan</span>
               </>
             )}
           </button>

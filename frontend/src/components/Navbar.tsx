@@ -49,20 +49,17 @@ export function Navbar() {
   return (
     <header
       style={{
-        height: '72px',
+        height: '64px',
         borderBottom: '1px solid var(--border-subtle)',
         backgroundColor: 'var(--bg-secondary)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
         position: 'sticky',
         top: 0,
         zIndex: 30,
-        padding: '0 28px',
+        padding: '0 24px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)',
-        transition: 'all 0.3s ease',
+        transition: 'all 0.2s ease',
       }}
     >
       {/* Left: Sidebar Toggle & System Status */}

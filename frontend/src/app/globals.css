@@ -961,58 +961,60 @@ main table td:last-child .btn:focus-visible {
 }
 
 /* ==========================================================================
-   MODERN VIBRANT SIDEBAR NAVIGATION
-   Smooth tactile icons with distinct squircle color identities
+   MINIMALIST ENTERPRISE SIDEBAR NAVIGATION
+   Clean, understated, distraction-free architecture
    ========================================================================== */
 .sidebar-nav-item {
   display: flex;
   align-items: center;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   text-decoration: none;
   position: relative;
   border: 1px solid transparent;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  color: var(--text-secondary);
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   cursor: pointer;
   outline: none;
+  height: 38px;
 }
 
 .sidebar-nav-item:hover {
   background-color: var(--hover-surface);
+  color: var(--text-primary);
 }
 
-.sidebar-icon-squircle {
+.sidebar-nav-item:hover .sidebar-nav-icon {
+  color: var(--text-primary);
+}
+
+.sidebar-nav-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border-radius: 10px;
-  border: 1px solid var(--item-border);
-  background-color: var(--item-bg);
-  color: var(--item-color);
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-              background-color 0.22s ease,
-              border-color 0.22s ease,
-              box-shadow 0.22s ease,
-              color 0.22s ease;
-}
-
-.sidebar-nav-item:hover .sidebar-icon-squircle {
-  transform: translateY(-1px) scale(1.06);
-  background-color: var(--item-bg-hover);
-  border-color: var(--item-border-hover);
-  box-shadow: 0 4px 12px var(--item-glow);
+  color: var(--text-muted);
+  transition: color 0.15s ease;
 }
 
 .sidebar-nav-item.is-active {
-  background-color: var(--item-active-bg);
-  border-color: var(--item-active-border);
+  background-color: var(--bg-surface-elevated);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
-.sidebar-nav-item.is-active .sidebar-icon-squircle {
-  background: var(--item-gradient);
-  color: #ffffff !important;
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 14px var(--item-glow), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+.sidebar-nav-item.is-active .sidebar-nav-icon {
+  color: var(--primary-500);
+}
+
+[data-theme="light"] .sidebar-nav-item.is-active {
+  background-color: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.16);
+  color: var(--primary-700);
+}
+
+[data-theme="light"] .sidebar-nav-item.is-active .sidebar-nav-icon {
+  color: var(--primary-600);
 }
 
 .sidebar-active-indicator {
@@ -1020,11 +1022,13 @@ main table td:last-child .btn:focus-visible {
   left: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 3.5px;
-  height: 20px;
-  border-radius: 0 4px 4px 0;
-  background: var(--item-color);
-  box-shadow: 0 0 10px var(--item-glow);
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 3px;
+  height: 18px;
+  border-radius: 0 3px 3px 0;
+  background-color: var(--primary-500);
+}
+
+[data-theme="light"] .sidebar-active-indicator {
+  background-color: var(--primary-600);
 }
 

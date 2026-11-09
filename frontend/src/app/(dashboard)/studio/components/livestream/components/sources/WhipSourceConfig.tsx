@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Check, Copy, Eye, EyeOff, Shield, Sparkles } from 'lucide-react';
+import { Check, Copy, Eye, EyeOff, RotateCw } from 'lucide-react';
 import { copyToClipboard } from '@/lib/core/copyToClipboard';
 
 function generateSecureToken(length = 20): string {
-  // Unambiguous characters (excludes 0, O, I, l, 1 to prevent copy/typing confusion)
   const chars = '23456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ';
   let result = 'sig_tok_';
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
@@ -77,17 +76,12 @@ export default function WhipSourceConfig({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      {/* Server URL Input with Copy Button */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* WHIP Endpoint URL */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-          <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-            Alamat Server WHIP
-          </label>
-          <span style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>
-            Murni Port 80
-          </span>
-        </div>
+        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+          URL Server WHIP
+        </label>
         <div style={{ display: 'flex', gap: '6px' }}>
           <input
             type="text"
@@ -97,7 +91,6 @@ export default function WhipSourceConfig({
             style={{
               fontFamily: 'monospace',
               fontSize: '0.75rem',
-              backgroundColor: 'var(--bg-primary)',
             }}
           />
           <button
@@ -105,7 +98,7 @@ export default function WhipSourceConfig({
             onClick={() => handleCopy(whipUrl, 'url')}
             className="btn btn-outline"
             style={{ padding: '0 12px', gap: '4px', whiteSpace: 'nowrap', fontSize: '0.75rem' }}
-            title="Salin Server URL WHIP"
+            title="Salin URL WHIP"
           >
             {copiedField === 'url' ? (
               <Check size={13} style={{ color: 'var(--accent-emerald)' }} />
@@ -117,25 +110,12 @@ export default function WhipSourceConfig({
         </div>
       </div>
 
-      {/* Ingest Authentication Section (Bearer Token only for WHIP) */}
-      <div
-        style={{
-          padding: '10px 12px',
-          borderRadius: '10px',
-          backgroundColor: 'var(--bg-surface-elevated)',
-          border: '1px solid var(--border-subtle)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-        }}
-      >
+      {/* WHIP Token Authentication */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '4px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Shield size={14} style={{ color: requiresAuth ? 'var(--accent-emerald)' : 'var(--text-muted)' }} />
-            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-              Autentikasi Bearer Token
-            </span>
-          </div>
+          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+            Autentikasi Token
+          </span>
           <button
             type="button"
             role="switch"
@@ -144,14 +124,14 @@ export default function WhipSourceConfig({
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              width: '36px',
-              height: '20px',
+              width: '32px',
+              height: '18px',
               padding: '2px',
               borderRadius: 'var(--radius-full)',
-              backgroundColor: requiresAuth ? 'var(--accent-emerald)' : 'var(--bg-surface)',
-              border: `1px solid ${requiresAuth ? 'var(--accent-emerald)' : 'var(--border-strong)'}`,
+              backgroundColor: requiresAuth ? 'var(--primary-600)' : 'var(--border-strong)',
+              border: 'none',
               cursor: 'pointer',
-              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+              transition: 'background-color 0.15s ease',
               flexShrink: 0,
             }}
           >
@@ -161,19 +141,18 @@ export default function WhipSourceConfig({
                 height: '14px',
                 borderRadius: '50%',
                 backgroundColor: '#ffffff',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)',
-                transform: requiresAuth ? 'translateX(16px)' : 'translateX(0)',
-                transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                transform: requiresAuth ? 'translateX(14px)' : 'translateX(0)',
+                transition: 'transform 0.15s ease',
               }}
             />
           </button>
         </div>
 
         {requiresAuth && (
-          <div style={{ marginTop: '2px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                Bearer Token (OBS)
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                Bearer Token
               </label>
               <button
                 type="button"
@@ -181,19 +160,18 @@ export default function WhipSourceConfig({
                 style={{
                   background: 'none',
                   border: 'none',
-                  padding: 0,
-                  cursor: 'pointer',
-                  fontSize: '0.67rem',
+                  color: 'var(--primary-500)',
+                  fontSize: '0.72rem',
                   fontWeight: 600,
-                  color: 'var(--primary-400)',
-                  display: 'flex',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '3px',
+                  gap: '4px',
+                  padding: 0,
                 }}
-                title="Generate Bearer Token Baru"
               >
-                <Sparkles size={11} />
-                <span>Generate Token</span>
+                <RotateCw size={11} />
+                <span>Buat Token Baru</span>
               </button>
             </div>
             <div style={{ display: 'flex', gap: '6px' }}>
@@ -202,12 +180,12 @@ export default function WhipSourceConfig({
                   type={showToken ? 'text' : 'password'}
                   value={token}
                   onChange={(e) => handleTokenChange(e.target.value)}
-                  placeholder="Token siaran WHIP"
+                  placeholder="Masukkan token siaran"
                   className="form-input"
                   style={{
-                    paddingRight: '36px',
                     fontFamily: 'monospace',
-                    fontSize: '0.78rem',
+                    fontSize: '0.75rem',
+                    paddingRight: '32px',
                   }}
                 />
                 <button
@@ -222,24 +200,21 @@ export default function WhipSourceConfig({
                     border: 'none',
                     color: 'var(--text-muted)',
                     cursor: 'pointer',
-                    padding: '4px',
-                    display: 'inline-flex',
+                    display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
+                    padding: 0,
                   }}
-                  title={showToken ? 'Sembunyikan Token' : 'Lihat Token'}
+                  title={showToken ? 'Sembunyikan' : 'Tampilkan'}
                 >
-                  {showToken ? <EyeOff size={15} /> : <Eye size={15} />}
+                  {showToken ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
-
               <button
                 type="button"
                 onClick={() => handleCopy(token, 'token')}
-                disabled={!token}
                 className="btn btn-outline"
                 style={{ padding: '0 12px', gap: '4px', whiteSpace: 'nowrap', fontSize: '0.75rem' }}
-                title="Salin Bearer Token"
+                title="Salin Token"
               >
                 {copiedField === 'token' ? (
                   <Check size={13} style={{ color: 'var(--accent-emerald)' }} />
@@ -255,4 +230,3 @@ export default function WhipSourceConfig({
     </div>
   );
 }
-

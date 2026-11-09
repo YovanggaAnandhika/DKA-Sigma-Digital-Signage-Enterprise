@@ -2,27 +2,9 @@
 
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Info, Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX } from 'lucide-react';
 import { StreamSourceType } from '../types';
 import type { StreamPlaybackStatus } from '@/components/ui/HlsPlayer';
-
-const USAGE_GUIDES: Record<StreamSourceType, { title: string; desc: string; tip: string }> = {
-  WHIP: {
-    title: 'Siaran Langsung dari Komputer atau Laptop',
-    desc: 'Pilihan utama dan paling mudah untuk menyiarkan presentasi, acara, atau kegiatan langsung menggunakan aplikasi OBS Studio di PC/laptop.',
-    tip: 'Video tayang seketika tanpa jeda/delay dan langsung terhubung secara otomatis ke layar.',
-  },
-  RTMP: {
-    title: 'Siaran dari Alat Mixer atau Perangkat Siar',
-    desc: 'Digunakan jika Anda menggunakan perangkat perekam siaran profesional seperti video mixer fisik, Atem Mini, kamera siar luar, atau aplikasi vMix.',
-    tip: 'Hubungkan menggunakan alamat server dan kunci siar (Stream Key) yang tersedia di panel sebelah kiri.',
-  },
-  RTSP: {
-    title: 'Pantauan Kamera Keamanan atau CCTV',
-    desc: 'Digunakan untuk menampilkan video rekaman langsung dari kamera CCTV atau kamera IP lokal (seperti pantauan kasir, lobi, atau antrean) secara terus-menerus ke layar.',
-    tip: 'Cukup masukkan alamat IP kamera CCTV Anda di sebelah kiri, lalu simpan perubahan.',
-  },
-};
 
 const HlsPlayer = dynamic(() => import('@/components/ui/HlsPlayer'), {
   ssr: false,
@@ -133,46 +115,25 @@ export default function StreamPreviewMonitor({
                 height: '7px',
                 borderRadius: '50%',
                 backgroundColor: statusColor,
-                boxShadow:
-                  effectiveStatus === 'LIVE'
-                    ? '0 0 8px var(--accent-emerald)'
-                    : 'none',
               }}
             />
-            <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
               Monitor Siaran
             </span>
             <span
               style={{
-                fontSize: '0.625rem',
-                fontWeight: 800,
-                padding: '2px 6px',
-                borderRadius: '4px',
+                fontSize: '0.6875rem',
+                fontWeight: 600,
+                color: statusColor,
                 backgroundColor:
                   effectiveStatus === 'LIVE'
-                    ? 'rgba(16, 185, 129, 0.14)'
-                    : effectiveStatus === 'BUFFERING'
-                      ? 'rgba(245, 158, 11, 0.14)'
-                      : 'rgba(239, 68, 68, 0.14)',
-                color: statusColor,
+                    ? 'rgba(16, 185, 129, 0.1)'
+                    : 'rgba(239, 68, 68, 0.1)',
+                padding: '1px 6px',
+                borderRadius: '4px',
               }}
             >
               {statusLabel}
-            </span>
-            <span className="badge badge-neutral" style={{ fontSize: '0.65rem' }}>
-              {sourceType}
-            </span>
-            <span
-              style={{
-                fontSize: '0.65rem',
-                fontWeight: 700,
-                padding: '2px 7px',
-                borderRadius: '6px',
-                backgroundColor: lowLatencyMode ? 'rgba(59, 130, 246, 0.12)' : 'rgba(168, 85, 247, 0.12)',
-                color: lowLatencyMode ? 'var(--primary-400)' : '#c084fc',
-              }}
-            >
-              {lowLatencyMode ? 'WEBRTC UDP' : 'HD ORIGINAL'}
             </span>
           </div>
 
@@ -254,39 +215,6 @@ export default function StreamPreviewMonitor({
             onStatusChange={setPlaybackStatus}
           />
         </div>
-
-        {/* Friendly Non-Technical Usage Guide */}
-        {USAGE_GUIDES[sourceType] && (
-          <div
-            style={{
-              padding: '14px 16px',
-              borderRadius: '10px',
-              backgroundColor: 'var(--bg-surface-elevated)',
-              border: '1px solid var(--border-subtle)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '6px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Info size={15} style={{ color: 'var(--primary-500)', flexShrink: 0 }} />
-              <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-                {USAGE_GUIDES[sourceType].title}
-              </span>
-            </div>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-              {USAGE_GUIDES[sourceType].desc}
-            </p>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '2px' }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-                Petunjuk:
-              </span>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-                {USAGE_GUIDES[sourceType].tip}
-              </span>
-            </div>
-          </div>
-        )}
       </div>
 
       {bottomSlot}

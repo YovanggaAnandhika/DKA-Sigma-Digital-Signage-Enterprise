@@ -16,28 +16,18 @@ export default function StreamSettingsCard({
   onToggleAutoReconnect,
 }: StreamSettingsCardProps) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-      {/* Low Latency vs High Definition Switch */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '10px 12px',
-          borderRadius: 'var(--radius-md)',
-          backgroundColor: 'var(--bg-surface-elevated)',
-          border: '1px solid var(--border-subtle)',
-          gap: '8px',
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-            Low-Latency
-          </span>
-          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>
-            {lowLatencyMode ? 'WebRTC UDP Instan' : 'High Definition (HD)'}
-          </span>
-        </div>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingTop: '12px',
+        borderTop: '1px solid var(--border-subtle)',
+        gap: '16px',
+      }}
+    >
+      {/* Low Latency Switch */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <button
           type="button"
           role="switch"
@@ -46,14 +36,14 @@ export default function StreamSettingsCard({
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            width: '36px',
-            height: '20px',
+            width: '32px',
+            height: '18px',
             padding: '2px',
             borderRadius: 'var(--radius-full)',
-            backgroundColor: lowLatencyMode ? 'var(--primary-500)' : 'var(--bg-surface)',
-            border: `1px solid ${lowLatencyMode ? 'var(--primary-500)' : 'var(--border-strong)'}`,
+            backgroundColor: lowLatencyMode ? 'var(--primary-600)' : 'var(--border-strong)',
+            border: 'none',
             cursor: 'pointer',
-            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+            transition: 'background-color 0.15s ease',
             flexShrink: 0,
           }}
         >
@@ -63,35 +53,18 @@ export default function StreamSettingsCard({
               height: '14px',
               borderRadius: '50%',
               backgroundColor: '#ffffff',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)',
-              transform: lowLatencyMode ? 'translateX(16px)' : 'translateX(0)',
-              transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+              transform: lowLatencyMode ? 'translateX(14px)' : 'translateX(0)',
+              transition: 'transform 0.15s ease',
             }}
           />
         </button>
+        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+          Latensi Rendah
+        </span>
       </div>
 
       {/* Auto Reconnect Switch */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '10px 12px',
-          borderRadius: 'var(--radius-md)',
-          backgroundColor: 'var(--bg-surface-elevated)',
-          border: '1px solid var(--border-subtle)',
-          gap: '8px',
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-            Auto-Reconnect
-          </span>
-          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>
-            Sambung otomatis
-          </span>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <button
           type="button"
           role="switch"
@@ -100,14 +73,14 @@ export default function StreamSettingsCard({
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            width: '36px',
-            height: '20px',
+            width: '32px',
+            height: '18px',
             padding: '2px',
             borderRadius: 'var(--radius-full)',
-            backgroundColor: autoReconnect ? 'var(--primary-500)' : 'var(--bg-surface)',
-            border: `1px solid ${autoReconnect ? 'var(--primary-500)' : 'var(--border-strong)'}`,
+            backgroundColor: autoReconnect ? 'var(--primary-600)' : 'var(--border-strong)',
+            border: 'none',
             cursor: 'pointer',
-            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+            transition: 'background-color 0.15s ease',
             flexShrink: 0,
           }}
         >
@@ -117,12 +90,14 @@ export default function StreamSettingsCard({
               height: '14px',
               borderRadius: '50%',
               backgroundColor: '#ffffff',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)',
-              transform: autoReconnect ? 'translateX(16px)' : 'translateX(0)',
-              transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+              transform: autoReconnect ? 'translateX(14px)' : 'translateX(0)',
+              transition: 'transform 0.15s ease',
             }}
           />
         </button>
+        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+          Sambung Otomatis
+        </span>
       </div>
     </div>
   );
