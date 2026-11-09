@@ -116,14 +116,7 @@ class LiveStreamZoneRenderer(
         }
 
         if (payload.streamMode == "SERVER_HOSTED_HLS" && payload.streamId.isNotBlank()) {
-            val isLowRamDevice =
-                context.getSystemService(ActivityManager::class.java)?.isLowRamDevice == true
-            if (isLowRamDevice && targetUrl.isNotBlank()) {
-                Log.i(TAG, "Using buffered HLS playback on low-RAM device (stream=${payload.streamId})")
-                startHlsPlayback(container, targetUrl, payload)
-            } else {
-                startWhepPlayback(container, targetUrl, payload)
-            }
+            startWhepPlayback(container, targetUrl, payload)
         } else if (targetUrl.isNotBlank()) {
             startHlsPlayback(container, targetUrl, payload)
         } else {
@@ -162,9 +155,10 @@ class LiveStreamZoneRenderer(
             webRtcView = renderer
             container.addView(renderer)
 
-            val endpoint = resolveUrl(
-                "/streams/${Uri.encode(payload.streamId)}/whep?mode=${if (payload.lowLatencyMode) "ll" else "hd"}"
-            )
+            val isLowRamDevice =
+                context.getSystemService(ActivityManager::class.java)?.isLowRamDevice == true
+            val mode = if (payload.lowLatencyMode || isLowRamDevice) "ll" else "hd"
+            val endpoint = resolveUrl("/streams/${Uri.encode(payload.streamId)}/whep?mode=$mode")
             Log.i(TAG, "Starting WebRTC live stream (stream=${payload.streamId})")
             fallbackRunnable = Runnable {
                 fallbackToHls(container, hlsFallbackUrl, payload, "WHEP connection timed out")
