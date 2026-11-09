@@ -19,17 +19,19 @@ object DeviceCapabilityHelper {
         val minBufferMs: Int,
         val maxBufferMs: Int,
         val bufferForPlaybackMs: Int,
-        val bufferForPlaybackAfterRebufferMs: Int
+        val bufferForPlaybackAfterRebufferMs: Int,
+        val targetBufferBytes: Int
     )
 
     fun getVideoBufferConfig(context: Context): BufferConfig {
         return if (isLowSpecDevice(context)) {
-            // Lean 3s-6s buffer (approx 15-25MB memory footprint, avoids GC pressure on 1GB RAM)
+            // Lean 2.5s-5s buffer capped at 10MB memory footprint (avoids GC pressure & OOM on 1GB RAM)
             BufferConfig(
-                minBufferMs = 3_000,
-                maxBufferMs = 6_000,
-                bufferForPlaybackMs = 500,
-                bufferForPlaybackAfterRebufferMs = 1_000
+                minBufferMs = 2_500,
+                maxBufferMs = 5_000,
+                bufferForPlaybackMs = 400,
+                bufferForPlaybackAfterRebufferMs = 800,
+                targetBufferBytes = 10 * 1024 * 1024
             )
         } else {
             // Rich 8s-20s buffer on devices with >1.5GB RAM
@@ -37,7 +39,8 @@ object DeviceCapabilityHelper {
                 minBufferMs = 8_000,
                 maxBufferMs = 20_000,
                 bufferForPlaybackMs = 1_500,
-                bufferForPlaybackAfterRebufferMs = 2_500
+                bufferForPlaybackAfterRebufferMs = 2_500,
+                targetBufferBytes = 32 * 1024 * 1024
             )
         }
     }

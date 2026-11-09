@@ -21,6 +21,8 @@ class QueueVisualEffectHelper {
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val invertPaint = Paint()
+    private val colorMatrixArray = FloatArray(20)
+    private val colorMatrix = ColorMatrix()
     private var invertAnimator: ValueAnimator? = null
     private var currentInvertProgress = 0f
     private var isCallingActive = false
@@ -97,13 +99,17 @@ class QueueVisualEffectHelper {
 
         val scale = 1.0f - 2.0f * t
         val offset = 255.0f * t
-        val matrix = ColorMatrix(floatArrayOf(
-            scale, 0f, 0f, 0f, offset,
-            0f, scale, 0f, 0f, offset,
-            0f, 0f, scale, 0f, offset,
-            0f, 0f, 0f, 1f, 0f
-        ))
-        invertPaint.colorFilter = ColorMatrixColorFilter(matrix)
+        // Zero-GC: Mutate pre-allocated float array in-place without triggering ART garbage collection
+        colorMatrixArray[0] = scale
+        colorMatrixArray[4] = offset
+        colorMatrixArray[6] = scale
+        colorMatrixArray[9] = offset
+        colorMatrixArray[12] = scale
+        colorMatrixArray[14] = offset
+        colorMatrixArray[18] = 1.0f
+
+        colorMatrix.set(colorMatrixArray)
+        invertPaint.colorFilter = ColorMatrixColorFilter(colorMatrix)
         target.setLayerType(View.LAYER_TYPE_HARDWARE, invertPaint)
         target.invalidate()
     }

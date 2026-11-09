@@ -125,6 +125,12 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     }
 
     private fun setupWindowEnvironment() {
+        // Zero-Overdraw optimization: Remove default window background to save 1 GPU fill pass
+        window.setBackgroundDrawable(null)
+        runCatching {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_DISPLAY)
+        }
+
         window.addFlags(
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
                 WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or

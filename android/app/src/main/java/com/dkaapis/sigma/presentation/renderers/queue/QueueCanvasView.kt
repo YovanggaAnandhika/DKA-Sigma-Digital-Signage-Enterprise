@@ -16,6 +16,8 @@ class QueueCanvasView(
     private val canvasHeight: Int = 1080
 ) : ViewGroup(context) {
 
+    private val density: Float = context.resources.displayMetrics.density
+
     init {
         clipChildren = false
         clipToPadding = false
@@ -39,14 +41,17 @@ class QueueCanvasView(
 
             if (child is TextView) {
                 val fontPx = meta.fontSize * scaleX
-                child.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontPx)
+                // Anti-layout thrashing: Only update text size if changed to prevent recursive measurement passes
+                if (kotlin.math.abs(child.textSize - fontPx) > 0.5f) {
+                    child.setTextSize(TypedValue.COMPLEX_UNIT_PX, fontPx)
+                }
                 child.includeFontPadding = false
             }
 
             val widthSpec = MeasureSpec.makeMeasureSpec(childW, MeasureSpec.EXACTLY)
             val heightSpec = if (child is TextView && meta.itemType != "marquee") {
                 child.measure(widthSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
-                val paddingBuffer = (4 * context.resources.displayMetrics.density).toInt()
+                val paddingBuffer = (4 * density).toInt()
                 val neededH = maxOf(childH, child.measuredHeight + paddingBuffer)
                 MeasureSpec.makeMeasureSpec(neededH, MeasureSpec.EXACTLY)
             } else {

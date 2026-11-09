@@ -1,5 +1,6 @@
 package com.dkaapis.sigma.presentation.renderers
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.net.Uri
 import android.view.ViewGroup
@@ -24,6 +25,7 @@ class VideoZoneRenderer(
     private var isDucked: Boolean = false
     private var currentItemMuted: Boolean = false
     private var playlistItems: List<VideoPlaylistItem> = emptyList()
+    private var duckAnimator: ValueAnimator? = null
 
     var onPlaybackCompleted: ((mediaId: String, durationSeconds: Int) -> Unit)? = null
     private var lastTrackIndex: Int = -1
@@ -44,6 +46,7 @@ class VideoZoneRenderer(
         this.playlistItems = playlist
 
         // Adaptive load control: dynamic buffer based on device capability (low-spec vs high-end)
+        val isLowSpec = DeviceCapabilityHelper.isLowSpecDevice(context)
         val bufConfig = DeviceCapabilityHelper.getVideoBufferConfig(context)
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
@@ -52,12 +55,17 @@ class VideoZoneRenderer(
                 bufConfig.bufferForPlaybackMs,
                 bufConfig.bufferForPlaybackAfterRebufferMs
             )
+            .setTargetBufferBytes(bufConfig.targetBufferBytes)
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
 
         val renderersFactory = DefaultRenderersFactory(context).apply {
             setEnableDecoderFallback(true)
-            setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+            // On low-spec devices (1GB RAM), disable software extension renderers to enforce pure hardware decoding
+            setExtensionRendererMode(
+                if (isLowSpec) DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
+                else DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
+            )
         }
 
         val player = ExoPlayer.Builder(context, renderersFactory)
@@ -66,6 +74,7 @@ class VideoZoneRenderer(
             .build()
             .apply {
             repeatMode = Player.REPEAT_MODE_ALL
+            videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
 
             for (item in playlist) {
                 val itemUri = Uri.fromFile(item.file)
@@ -244,13 +253,23 @@ class VideoZoneRenderer(
 
     fun setDuckedVolume(duck: Boolean) {
         isDucked = duck
-        val current = playlistItems.getOrNull(exoPlayer?.currentMediaItemIndex ?: 0)
+        val player = exoPlayer ?: return
+        val current = playlistItems.getOrNull(player.currentMediaItemIndex)
         if (current?.isMuted == true || currentItemMuted) {
-            exoPlayer?.volume = 0f
-        } else {
-            val baseVol = (current?.volumeLevel ?: 100).coerceIn(0, 100) / 100f
-            // Mute total (0f) saat speech panggilan antrian aktif, lalu pulihkan baseVol saat selesai
-            exoPlayer?.volume = if (duck) 0f else baseVol
+            player.volume = 0f
+            return
+        }
+        val targetVol = if (duck) 0f else ((current?.volumeLevel ?: 100).coerceIn(0, 100) / 100f)
+        val startVol = player.volume
+
+        duckAnimator?.cancel()
+        // Smooth linear ramp: 60ms down to mute, 180ms up to restore, eliminates harsh click/pop
+        duckAnimator = ValueAnimator.ofFloat(startVol, targetVol).apply {
+            duration = if (duck) 60L else 180L
+            addUpdateListener { anim ->
+                player.volume = anim.animatedValue as Float
+            }
+            start()
         }
     }
 
@@ -293,6 +312,8 @@ class VideoZoneRenderer(
                 onPlaybackCompleted?.invoke(item.mediaId, playedSec)
             }
         }
+        duckAnimator?.cancel()
+        duckAnimator = null
         exoPlayer?.release()
         exoPlayer = null
         playerView?.player = null

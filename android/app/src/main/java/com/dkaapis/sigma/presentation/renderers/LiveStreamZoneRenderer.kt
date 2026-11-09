@@ -139,6 +139,8 @@ class LiveStreamZoneRenderer(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
+                // Multi-surface zero-copy: Overlay on top of underlying video SurfaceView to prevent SurfaceFlinger thrashing
+                setZOrderMediaOverlay(true)
                 init(resources.eglBase.eglBaseContext, object : org.webrtc.RendererCommon.RendererEvents {
                     override fun onFirstFrameRendered() {
                         mainHandler.post {
@@ -372,6 +374,7 @@ class LiveStreamZoneRenderer(
                 )
                 useController = false
                 resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                (videoSurfaceView as? android.view.SurfaceView)?.setZOrderMediaOverlay(true)
                 this.player = player
             }
             container.addView(playerView)
