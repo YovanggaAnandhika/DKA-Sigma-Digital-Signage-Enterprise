@@ -6,8 +6,10 @@ export function middleware(request: NextRequest) {
   const url = request.nextUrl.pathname;
   const method = request.method;
 
-  // Log incoming request if not in production (debug mode)
-  if (!isProduction) {
+  const isStreamerAuth = url === '/api/streamer/auth';
+
+  // Log incoming request if not in production (debug mode), suppress high-frequency auth hooks
+  if (!isProduction && !isStreamerAuth) {
     console.log(`[Frontend API] Incoming: ${method} ${url}`);
   }
 
@@ -16,7 +18,7 @@ export function middleware(request: NextRequest) {
   // If the response is an error (status 400 or above), log it as an error
   if (response.status >= 400) {
     console.error(`[Frontend API] ERROR ${response.status}: ${method} ${url}`);
-  } else if (!isProduction) {
+  } else if (!isProduction && !isStreamerAuth) {
     console.log(`[Frontend API] Success ${response.status}: ${method} ${url}`);
   }
 

@@ -304,7 +304,7 @@ export default function DisplayCommandToolbar() {
         <div className="card-elevated" style={{ padding: '14px 16px' }}>
           <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>ID Perangkat</div>
           <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--text-primary)', marginTop: '4px' }}>
-            {device.hardwareFingerprint?.substring(0, 10) || device.id.substring(0, 8).toUpperCase()}
+            {!device.isPaired ? '●●●●●●' : (device.hardwareFingerprint?.substring(0, 10) || device.id.substring(0, 8).toUpperCase())}
           </div>
           <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
             {device.isPaired ? 'Terhubung' : 'Menunggu persetujuan'}

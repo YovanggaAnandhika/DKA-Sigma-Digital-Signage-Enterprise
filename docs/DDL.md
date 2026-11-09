@@ -147,11 +147,11 @@ CREATE TABLE IF NOT EXISTS iam_role_group_permissions (
 
 ---
 
-## 3. Daftar Lengkap Urutan DDL Migrasi Database (48 Migrasi)
+## 3. Daftar Lengkap Urutan DDL Migrasi Database (51 Migrasi)
 
-Berikut adalah urutan terverifikasi **48 pasang migrasi** di `backend/migrations/`:
+Berikut adalah urutan terverifikasi **51 pasang migrasi** di `backend/migrations/`:
 
-| No | File Migrasi (`.up.sql`) | Tabel Utama / DDL | Scope Multi-Tenancy |
+| No | File Migrasi (`.up.sql`) | Tabel Utama / DDL | Scope Multi-Tenancy & Integrasi |
 |---|---|---|---|
 | **0001** | `0001_create_system_corporations` | `system_corporations` | Root Tenant Entity (`active_until`, `max_screens`, `max_branches`) |
 | **0002** | `0002_create_system_branches` | `system_branches` | Branch Entity (`corporation_id`) |
@@ -167,13 +167,13 @@ Berikut adalah urutan terverifikasi **48 pasang migrasi** di `backend/migrations
 | **0012** | `0012_create_distribution_canary_groups` | `distribution_canary_groups` | `corporation_id`, `branch_id`, `created_by_user_id` |
 | **0013** | `0013_create_common_orientations` | `common_orientations` | Global Master Orientation (Landscape, Portrait) |
 | **0014** | `0014_create_common_resolutions` | `common_resolutions` | Global Master Resolution (1080p, 4K, 720p, dsb.) |
-| **0015** | `0015_create_studio_layouts` | `studio_layouts` | `corporation_id`, `branch_id`, `created_by_user_id` |
-| **0016** | `0016_create_studio_schedules` | `studio_schedules` | `corporation_id`, `branch_id`, `created_by_user_id` |
-| **0017** | `0017_create_hardware_display_groups` | `hardware_display_groups` | `corporation_id`, `branch_id`, `created_by_user_id` |
-| **0018** | `0018_create_hardware_devices` | `hardware_devices` | `corporation_id`, `branch_id`, `created_by_user_id` |
-| **0019** | `0019_create_hardware_device_pairings` | `hardware_device_pairings` | `corporation_id`, `branch_id`, `created_by_user_id` |
+| **0015** | `0015_create_studio_layouts` | `studio_layouts` | `corporation_id`, `branch_id`, `name`, `description`, `canvas_width`, `canvas_height` |
+| **0016** | `0016_create_studio_schedules` | `studio_schedules` | `corporation_id`, `branch_id`, `name`, `description` |
+| **0017** | `0017_create_hardware_display_groups` | `hardware_display_groups` | `corporation_id`, `branch_id`, `schedule_id`, `schedule_assigned_at` |
+| **0018** | `0018_create_hardware_devices` | `hardware_devices` | `corporation_id`, `timezone`, `schedule_id`, `schedule_assigned_at` |
+| **0019** | `0019_create_hardware_device_pairings` | `hardware_device_pairings` | `device_id`, `pairing_code`, `status`, `expires_at` (nullable token pairing) |
 | **0020** | `0020_create_studio_media_items` | `studio_media_items` | `corporation_id`, `branch_id`, `created_by_user_id` |
-| **0021** | `0021_create_studio_layers` | `studio_layers` | `corporation_id`, `branch_id`, `created_by_user_id` |
+| **0021** | `0021_create_studio_layers` | `studio_layers` | Child of `studio_layouts` (`layout_id`), `corporation_id` nullable |
 | **0022** | `0022_create_studio_playlists` | `studio_playlists` | `corporation_id`, `branch_id`, `created_by_user_id` |
 | **0023** | `0023_create_studio_playlist_items` | `studio_playlist_items` | `corporation_id`, `branch_id`, `created_by_user_id` |
 | **0024** | `0024_create_studio_transitions` | `studio_transitions` | Global Master Visual Transitions |
@@ -184,23 +184,38 @@ Berikut adalah urutan terverifikasi **48 pasang migrasi** di `backend/migrations
 | **0029** | `0029_create_components_queue_displays` | `components_queue_displays` | `corporation_id`, `branch_id`, `created_by_user_id` |
 | **0030** | `0030_create_components_albums` | `components_albums` | `corporation_id`, `branch_id`, `created_by_user_id` |
 | **0031** | `0031_create_components_album_photos` | `components_album_photos` | `corporation_id`, `branch_id`, `created_by_user_id` |
-| **0032** | `0032_create_studio_layer_blocks` | `studio_layer_blocks` | `corporation_id`, `branch_id`, `created_by_user_id` |
-| **0033** | `0033_create_studio_layer_playlist_item_overrides` | `studio_layer_playlist_item_overrides` | `corporation_id`, `branch_id`, `created_by_user_id` |
+| **0032** | `0032_create_studio_layer_blocks` | `studio_layer_blocks` | Child of `studio_layers` (`layer_id`), `queue_id`, `live_stream_id`, `corporation_id` nullable |
+| **0033** | `0033_create_studio_layer_playlist_item_overrides` | `studio_layer_playlist_item_overrides` | Child of `studio_layer_blocks`, `corporation_id` nullable |
 | **0034** | `0034_create_hardware_device_layouts` | `hardware_device_layouts` | `corporation_id`, `branch_id`, `created_by_user_id` |
-| **0035** | `0035_create_hardware_device_telemetry` | `hardware_device_telemetry` | `corporation_id` (Player Telemetry: Tanpa user reference) |
+| **0035** | `0035_create_hardware_device_telemetry` | `hardware_device_telemetry` | Telemetri Player: `memory_percent`, `storage_free_bytes`, `storage_total_bytes`, `ip_address`, `current_playing_media_id`, `active_layout_id` |
 | **0036** | `0036_create_studio_schedule_events` | `studio_schedule_events` | `corporation_id`, `branch_id`, `created_by_user_id` |
 | **0037** | `0037_create_components_queue_layout_items` | `components_queue_layout_items` | `corporation_id`, `branch_id`, `created_by_user_id` |
 | **0038** | `0038_create_components_queue_counters` | `components_queue_counters` | `corporation_id`, `branch_id`, `created_by_user_id` |
 | **0039** | `0039_create_components_queue_tickets` | `components_queue_tickets` | `corporation_id`, `branch_id`, `created_by_user_id` |
 | **0040** | `0040_create_components_queue_audios` | `components_queue_audios` | `corporation_id`, `branch_id`, `created_by_user_id` |
-| **0041** | `0041_create_hardware_device_screenshots` | `hardware_device_screenshots` | `corporation_id` (Player Screenshots: Tanpa user reference) |
+| **0041** | `0041_create_hardware_device_screenshots` | `hardware_device_screenshots` | Screenshot Player: `captured_at`, `file_url`, `file_size` |
 | **0042** | `0042_create_distribution_playback_logs` | `distribution_playback_logs` | `corporation_id` (Playback Logs: Tanpa user reference) |
 | **0043** | `0043_create_studio_layout_history` | `studio_layout_history` | `corporation_id`, `branch_id`, `created_by_user_id` |
-| **0044** | `0044_create_hardware_device_analytics` | `hardware_device_analytics` | `corporation_id` (Device Analytics: Tanpa user reference) |
+| **0044** | `0044_create_hardware_device_analytics` | `hardware_device_analytics` | Device Analytics: `input_output` JSONB, `assets_stats` JSONB, `recorded_at` |
 | **0045** | `0045_create_components_queue_sectors` | `components_queue_sectors` | Global Master Sektor Antrian (Retail F&B, Hospital, Bank, dll.) |
 | **0046** | `0046_create_iot_devices` | `iot_devices` | `corporation_id`, `branch_id`, `created_by_user_id` |
 | **0047** | `0047_create_components_queue_iot_bindings` | `components_queue_iot_bindings` | `corporation_id`, `branch_id`, `created_by_user_id` |
 | **0048** | `0048_add_iot_device_telemetry` | `iot_devices` (ALTER) | Telemetri IoT ESP32/Arduino (Tanpa user reference) |
+| **0049** | `0049_create_system_apk_releases` | `system_apk_releases` | APK OTA Update Management (`apk_file_url`, `sha256_hash`, `version_code`) |
+| **0050** | `0050_create_components_live_streams` | `components_live_streams` | Live Stream Relay (`stream_mode`, `source_type`, `server_hls_endpoint`) |
+| **0051** | `0051_add_live_stream_to_layer_blocks` | `studio_layer_blocks` (ALTER) | Menghubungkan blok layer canvas dengan Live Stream ID |
+
+---
+
+## 4. Alur Verifikasi DDL & Migrasi
+
+Untuk menjalankan migrasi fresh dan seeder:
+```bash
+cargo run --bin signage-backend -- --migrate:fresh --seed
+```
+Atau langkah terpisah:
+1. `cargo run --bin signage-backend -- --migrate`
+2. `cargo run --bin signage-backend -- --seed`
 
 ---
 

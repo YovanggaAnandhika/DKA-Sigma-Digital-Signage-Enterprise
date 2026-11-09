@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS studio_layouts (
     corporation_id UUID NOT NULL REFERENCES system_corporations(id) ON DELETE CASCADE,
     branch_id UUID REFERENCES system_branches(id) ON DELETE SET NULL,
     name VARCHAR(150) NOT NULL,
+    description VARCHAR(255),
     resolution_id UUID REFERENCES common_resolutions(id) ON DELETE SET NULL,
     orientation_id UUID REFERENCES common_orientations(id) ON DELETE SET NULL,
     canvas_width INT NOT NULL DEFAULT 1920,

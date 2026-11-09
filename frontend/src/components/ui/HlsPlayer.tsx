@@ -338,7 +338,8 @@ export default function HlsPlayer({
             stopAndResetVideo();
             updateStatus('OFFLINE');
             if (!isCancelled) {
-              retryTimer = setTimeout(connectWebRtc, 1200);
+              const delay = typeof document !== 'undefined' && document.hidden ? 8000 : 3500;
+              retryTimer = setTimeout(connectWebRtc, delay);
             }
           }
         };
@@ -383,7 +384,8 @@ export default function HlsPlayer({
             stopAndResetVideo();
             updateStatus('OFFLINE');
           }
-          retryTimer = setTimeout(connectWebRtc, 1200);
+          const offlineDelay = typeof document !== 'undefined' && document.hidden ? 8000 : 4000;
+          retryTimer = setTimeout(connectWebRtc, offlineDelay);
           return;
         }
 
@@ -404,7 +406,8 @@ export default function HlsPlayer({
           pcRef.current = null;
         }
         if (!isCancelled) {
-          retryTimer = setTimeout(connectWebRtc, 1500);
+          const errDelay = typeof document !== 'undefined' && document.hidden ? 8000 : 4000;
+          retryTimer = setTimeout(connectWebRtc, errDelay);
         }
       }
     };

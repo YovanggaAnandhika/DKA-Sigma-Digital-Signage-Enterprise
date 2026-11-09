@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS studio_layer_playlist_item_overrides (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    corporation_id UUID NOT NULL REFERENCES system_corporations(id) ON DELETE CASCADE,
+    corporation_id UUID REFERENCES system_corporations(id) ON DELETE CASCADE,
     layer_block_id UUID NOT NULL REFERENCES studio_layer_blocks(id) ON DELETE CASCADE,
     playlist_item_id UUID NOT NULL REFERENCES studio_playlist_items(id) ON DELETE CASCADE,
     duration_seconds INT,

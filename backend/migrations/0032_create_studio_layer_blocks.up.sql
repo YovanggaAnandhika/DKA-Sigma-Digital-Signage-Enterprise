@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS studio_layer_blocks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    corporation_id UUID NOT NULL REFERENCES system_corporations(id) ON DELETE CASCADE,
+    corporation_id UUID REFERENCES system_corporations(id) ON DELETE CASCADE,
     layer_id UUID NOT NULL REFERENCES studio_layers(id) ON DELETE CASCADE,
     start_time_seconds INT NOT NULL DEFAULT 0,
     duration_seconds INT NOT NULL DEFAULT 10,
@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS studio_layer_blocks (
     ticker_id UUID REFERENCES components_tickers(id) ON DELETE SET NULL,
     clock_id UUID REFERENCES components_clocks(id) ON DELETE SET NULL,
     webview_id UUID REFERENCES components_webviews(id) ON DELETE SET NULL,
-    queue_display_id UUID REFERENCES components_queue_displays(id) ON DELETE SET NULL,
+    queue_id UUID REFERENCES components_queue_displays(id) ON DELETE SET NULL,
     album_id UUID REFERENCES components_albums(id) ON DELETE SET NULL,
     trim_start_seconds INT DEFAULT 0,
     trim_end_seconds INT,
