@@ -115,6 +115,7 @@ data class WebviewConfigPayload(
  */
 data class LiveStreamConfigPayload(
     val name: String = "Live Stream",
+    val streamId: String = "",
     val streamMode: String = "SERVER_HOSTED_HLS",
     val sourceType: String = "WHIP",
     val sourceUrl: String = "",
@@ -135,6 +136,7 @@ data class LiveStreamConfigPayload(
                 .ifBlank { if (streamId.isNotBlank()) "/streams/$streamId/live.m3u8" else rawSource }
             return LiveStreamConfigPayload(
                 name = json.optString("name", "Live Stream"),
+                streamId = streamId,
                 streamMode = json.optString("streamMode", "SERVER_HOSTED_HLS"),
                 sourceType = json.optString("sourceType", "WHIP"),
                 sourceUrl = rawSource,

@@ -53,7 +53,8 @@ object QueueLayoutParser {
                 )
             }
 
-            items.addAll(parseItems(json.optJSONArray("itemsList") ?: json.optJSONArray("items")))
+            val layoutItems = parseItems(json.optJSONArray("itemsList") ?: json.optJSONArray("items"))
+            items.addAll(layoutItems.ifEmpty { defaultItems(w, h) })
 
             QueueLayoutConfig(
                 canvasW = w,

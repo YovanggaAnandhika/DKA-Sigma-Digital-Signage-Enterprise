@@ -112,6 +112,7 @@ dependencies {
     // Networking & Image Loading
     implementation(libs.okhttp)
     implementation(libs.coil)
+    implementation(libs.webrtc.android)
 
     // Coroutines & Lifecycle
     implementation(libs.kotlinx.coroutines.android)

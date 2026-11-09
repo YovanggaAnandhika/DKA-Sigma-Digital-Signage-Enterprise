@@ -20,6 +20,40 @@ import androidx.media3.ui.PlayerView
 import coil.load
 import com.dkaapis.sigma.data.local.ServerConfig
 import com.dkaapis.sigma.presentation.renderers.model.LiveStreamConfigPayload
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import org.webrtc.AudioTrack
+import org.webrtc.DefaultVideoDecoderFactory
+import org.webrtc.EglBase
+import org.webrtc.IceCandidate
+import org.webrtc.MediaConstraints
+import org.webrtc.MediaStream
+import org.webrtc.MediaStreamTrack
+import org.webrtc.PeerConnection
+import org.webrtc.PeerConnectionFactory
+import org.webrtc.RtpReceiver
+import org.webrtc.RtpTransceiver
+import org.webrtc.SdpObserver
+import org.webrtc.SessionDescription
+import org.webrtc.SurfaceViewRenderer
+import org.webrtc.VideoTrack
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.suspendCancellableCoroutine
+import java.util.concurrent.TimeUnit
 
 /**
  * Pure MediaMTX Single-URL Live Stream Zone Renderer for Android Player.
@@ -31,10 +65,18 @@ class LiveStreamZoneRenderer(
     private var exoPlayer: ExoPlayer? = null
     private var playerView: PlayerView? = null
     private var posterView: ImageView? = null
+    private var webRtcView: SurfaceViewRenderer? = null
+    @Volatile private var peerConnection: PeerConnection? = null
+    @Volatile private var remoteVideoTrack: VideoTrack? = null
+    @Volatile private var remoteAudioTrack: AudioTrack? = null
     private val mainHandler = Handler(Looper.getMainLooper())
-    private var released = false
+    private val connectionScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var connectionJob: kotlinx.coroutines.Job? = null
+    private var fallbackRunnable: Runnable? = null
+    @Volatile private var released = false
     private var isDucked = false
     private var isMuted = true
+    private var playbackPaused = false
 
     @SuppressLint("UnsafeOptInUsageError")
     fun createView(parent: ViewGroup, payload: LiveStreamConfigPayload): View {
@@ -66,12 +108,189 @@ class LiveStreamZoneRenderer(
         val rawTarget = payload.effectivePlaybackUrl.ifBlank { payload.sourceUrl }
         val targetUrl = resolveUrl(rawTarget)
 
-        // Jika siaran dinonaktifkan di CMS atau URL target kosong, tampilkan poster saja
-        if (!payload.isRelayActive || targetUrl.isBlank()) {
-            Log.i(TAG, "LiveStream inactive or empty targetUrl (active=${payload.isRelayActive}, url='$targetUrl')")
+        if (!payload.isRelayActive) {
+            Log.i(TAG, "Live stream relay is inactive (stream=${payload.streamId})")
             return container
         }
 
+        if (payload.streamMode == "SERVER_HOSTED_HLS" && payload.streamId.isNotBlank()) {
+            startWhepPlayback(container, targetUrl, payload)
+        } else if (targetUrl.isNotBlank()) {
+            startHlsPlayback(container, targetUrl, payload)
+        } else {
+            Log.w(TAG, "Live stream has no playback URL (stream=${payload.streamId})")
+        }
+
+        return container
+    }
+
+    private fun startWhepPlayback(
+        container: FrameLayout,
+        hlsFallbackUrl: String,
+        payload: LiveStreamConfigPayload
+    ) {
+        try {
+            val resources = LiveWebRtcRuntime.get(context)
+            val renderer = SurfaceViewRenderer(context).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                init(resources.eglBase.eglBaseContext, object : org.webrtc.RendererCommon.RendererEvents {
+                    override fun onFirstFrameRendered() {
+                        mainHandler.post {
+                            if (!released) {
+                                fallbackRunnable?.let(mainHandler::removeCallbacks)
+                                posterView?.animate()?.alpha(0f)?.setDuration(250)?.start()
+                            }
+                        }
+                    }
+
+                    override fun onFrameResolutionChanged(width: Int, height: Int, rotation: Int) = Unit
+                })
+                setScalingType(org.webrtc.RendererCommon.ScalingType.SCALE_ASPECT_FILL)
+            }
+            webRtcView = renderer
+            container.addView(renderer)
+
+            val endpoint = resolveUrl(
+                "/streams/${Uri.encode(payload.streamId)}/whep?mode=${if (payload.lowLatencyMode) "ll" else "hd"}"
+            )
+            Log.i(TAG, "Starting WebRTC live stream (stream=${payload.streamId})")
+            fallbackRunnable = Runnable {
+                fallbackToHls(container, hlsFallbackUrl, payload, "WHEP connection timed out")
+            }.also { mainHandler.postDelayed(it, WHEP_CONNECT_TIMEOUT_MS) }
+
+            connectionJob = connectionScope.launch {
+                try {
+                    connectWhep(endpoint, container, renderer, hlsFallbackUrl, payload)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    Log.e(TAG, "WHEP connection failed for stream=${payload.streamId}: ${error.message}")
+                    mainHandler.post {
+                        fallbackToHls(container, hlsFallbackUrl, payload, "WHEP signaling failed")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize WebRTC for stream=${payload.streamId}: ${e.message}", e)
+            fallbackToHls(container, hlsFallbackUrl, payload, "WebRTC initialization failed")
+        }
+    }
+
+    private suspend fun connectWhep(
+        endpoint: String,
+        container: FrameLayout,
+        renderer: SurfaceViewRenderer,
+        hlsFallbackUrl: String,
+        payload: LiveStreamConfigPayload
+    ) {
+        val iceGatheringComplete = CompletableDeferred<Unit>()
+        val observer = object : PeerConnection.Observer {
+            override fun onSignalingChange(state: PeerConnection.SignalingState) = Unit
+
+            override fun onIceConnectionChange(state: PeerConnection.IceConnectionState) {
+                Log.i(TAG, "WebRTC ICE state stream=${payload.streamId}: $state")
+                if (state == PeerConnection.IceConnectionState.FAILED) {
+                    mainHandler.post {
+                        fallbackToHls(container, hlsFallbackUrl, payload, "WebRTC ICE connection failed")
+                    }
+                }
+            }
+
+            override fun onIceConnectionReceivingChange(receiving: Boolean) = Unit
+
+            override fun onIceGatheringChange(state: PeerConnection.IceGatheringState) {
+                if (state == PeerConnection.IceGatheringState.COMPLETE) {
+                    iceGatheringComplete.complete(Unit)
+                }
+            }
+
+            override fun onIceCandidate(candidate: IceCandidate) = Unit
+            override fun onIceCandidatesRemoved(candidates: Array<IceCandidate>) = Unit
+            override fun onAddStream(stream: MediaStream) = Unit
+            override fun onRemoveStream(stream: MediaStream) = Unit
+            override fun onDataChannel(channel: org.webrtc.DataChannel) = Unit
+            override fun onRenegotiationNeeded() = Unit
+            override fun onAddTrack(receiver: RtpReceiver, streams: Array<MediaStream>) = Unit
+
+            override fun onTrack(transceiver: RtpTransceiver) {
+                when (val track = transceiver.receiver.track()) {
+                    is VideoTrack -> {
+                        remoteVideoTrack = track
+                        track.setEnabled(!playbackPaused)
+                        mainHandler.post {
+                            if (!released) track.addSink(renderer)
+                        }
+                    }
+                    is AudioTrack -> {
+                        remoteAudioTrack = track
+                        updateRemoteAudioTrack()
+                    }
+                }
+            }
+        }
+
+        val config = PeerConnection.RTCConfiguration(emptyList())
+        val peer = LiveWebRtcRuntime.get(context).factory.createPeerConnection(config, observer)
+            ?: error("Unable to create WebRTC peer connection")
+        peerConnection = peer
+        peer.addTransceiver(
+            MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO,
+            RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY)
+        )
+        peer.addTransceiver(
+            MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO,
+            RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY)
+        )
+
+        val offer = createOffer(peer)
+        setLocalDescription(peer, offer)
+        if (peer.iceGatheringState() != PeerConnection.IceGatheringState.COMPLETE) {
+            withTimeoutOrNull(ICE_GATHER_TIMEOUT_MS) { iceGatheringComplete.await() }
+        }
+        val localOffer = peer.localDescription ?: error("WebRTC local offer was not created")
+        val request = Request.Builder()
+            .url(endpoint)
+            .header("Accept", "application/sdp")
+            .post(localOffer.description.toRequestBody("application/sdp".toMediaType()))
+            .build()
+
+        val answerText = execute(request).use { response ->
+            if (!response.isSuccessful) error("WHEP request failed with HTTP ${response.code}")
+            response.body?.string()?.takeIf { it.isNotBlank() } ?: error("WHEP response has no SDP answer")
+        }
+        setRemoteDescription(peer, SessionDescription(SessionDescription.Type.ANSWER, answerText))
+    }
+
+    private fun fallbackToHls(
+        container: FrameLayout,
+        hlsUrl: String,
+        payload: LiveStreamConfigPayload,
+        reason: String
+    ) {
+        if (released || exoPlayer != null || hlsUrl.isBlank()) return
+        Log.w(TAG, "$reason; falling back to HLS for stream=${payload.streamId}")
+        fallbackRunnable?.let(mainHandler::removeCallbacks)
+        connectionJob?.cancel()
+        closePeerConnection()
+        webRtcView?.let { renderer ->
+            remoteVideoTrack?.removeSink(renderer)
+            renderer.visibility = View.GONE
+        }
+        startHlsPlayback(container, hlsUrl, payload)
+    }
+
+    private fun startHlsPlayback(
+        container: FrameLayout,
+        targetUrl: String,
+        payload: LiveStreamConfigPayload
+    ) {
+        if (targetUrl.isBlank()) {
+            Log.w(TAG, "No HLS/RTSP fallback URL for stream=${payload.streamId}")
+            return
+        }
         try {
             val targetUri = Uri.parse(targetUrl)
             val player = ExoPlayer.Builder(context)
@@ -88,8 +307,8 @@ class LiveStreamZoneRenderer(
                         )
                     }
                     setMediaItem(mediaBuilder.build())
-                    volume = if (isMuted) 0f else if (isDucked) 0.15f else 1f
-                    playWhenReady = true
+                    volume = currentAudioVolume()
+                    playWhenReady = !playbackPaused
 
                     addListener(object : Player.Listener {
                         override fun onRenderedFirstFrame() {
@@ -99,7 +318,7 @@ class LiveStreamZoneRenderer(
                         }
 
                         override fun onPlayerError(error: PlaybackException) {
-                            Log.w(TAG, "LiveStream playback error: ${error.message} (code: ${error.errorCode})")
+                            Log.w(TAG, "HLS/RTSP playback error stream=${payload.streamId}: ${error.message} (code: ${error.errorCode})")
                             if (released) return
                             posterView?.animate()?.alpha(1f)?.setDuration(200)?.start()
 
@@ -107,7 +326,7 @@ class LiveStreamZoneRenderer(
                                 mainHandler.removeCallbacksAndMessages(null)
                                 mainHandler.postDelayed({
                                     if (!released && exoPlayer != null) {
-                                        Log.i(TAG, "Reconnecting live stream: $targetUrl")
+                                        Log.i(TAG, "Reconnecting stream=${payload.streamId}")
                                         exoPlayer?.prepare()
                                         exoPlayer?.play()
                                     }
@@ -118,10 +337,9 @@ class LiveStreamZoneRenderer(
 
                     prepare()
                 }
-
             exoPlayer = player
 
-            val pv = PlayerView(context).apply {
+            playerView = PlayerView(context).apply {
                 layoutParams = FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
@@ -130,13 +348,91 @@ class LiveStreamZoneRenderer(
                 resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                 this.player = player
             }
-            playerView = pv
-            container.addView(pv)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize ExoPlayer for live stream: ${e.message}", e)
+            container.addView(playerView)
+        } catch (error: Exception) {
+            Log.e(TAG, "Failed to initialize ExoPlayer for stream=${payload.streamId}: ${error.message}", error)
+        }
+    }
+
+    private suspend fun createOffer(peer: PeerConnection): SessionDescription =
+        suspendCancellableCoroutine { continuation ->
+            peer.createOffer(object : SdpObserver {
+                override fun onCreateSuccess(description: SessionDescription) {
+                    if (continuation.isActive) continuation.resume(description)
+                }
+
+                override fun onSetSuccess() = Unit
+                override fun onCreateFailure(error: String) {
+                    if (continuation.isActive) continuation.resumeWithException(IllegalStateException(error))
+                }
+
+                override fun onSetFailure(error: String) = Unit
+            }, MediaConstraints())
         }
 
-        return container
+    private suspend fun setLocalDescription(peer: PeerConnection, description: SessionDescription) {
+        suspendCancellableCoroutine { continuation ->
+            peer.setLocalDescription(object : SdpObserver {
+                override fun onSetSuccess() {
+                    if (continuation.isActive) continuation.resume(Unit)
+                }
+
+                override fun onCreateSuccess(description: SessionDescription) = Unit
+                override fun onCreateFailure(error: String) = Unit
+                override fun onSetFailure(error: String) {
+                    if (continuation.isActive) continuation.resumeWithException(IllegalStateException(error))
+                }
+            }, description)
+        }
+    }
+
+    private suspend fun setRemoteDescription(peer: PeerConnection, description: SessionDescription) {
+        suspendCancellableCoroutine { continuation ->
+            peer.setRemoteDescription(object : SdpObserver {
+                override fun onSetSuccess() {
+                    if (continuation.isActive) continuation.resume(Unit)
+                }
+
+                override fun onCreateSuccess(description: SessionDescription) = Unit
+                override fun onCreateFailure(error: String) = Unit
+                override fun onSetFailure(error: String) {
+                    if (continuation.isActive) continuation.resumeWithException(IllegalStateException(error))
+                }
+            }, description)
+        }
+    }
+
+    private suspend fun execute(request: Request): Response =
+        suspendCancellableCoroutine { continuation ->
+            val call = HTTP_CLIENT.newCall(request)
+            continuation.invokeOnCancellation { call.cancel() }
+            call.enqueue(object : Callback {
+                override fun onFailure(call: Call, error: java.io.IOException) {
+                    if (continuation.isActive) continuation.resumeWithException(error)
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    if (continuation.isActive) continuation.resume(response) else response.close()
+                }
+            })
+        }
+
+    private fun closePeerConnection() {
+        val peer = peerConnection ?: return
+        peerConnection = null
+        remoteVideoTrack?.let { track -> webRtcView?.let(track::removeSink) }
+        remoteVideoTrack = null
+        remoteAudioTrack = null
+        peer.close()
+        peer.dispose()
+    }
+
+    private fun currentAudioVolume(): Float =
+        if (isMuted) 0f else if (isDucked) 0.15f else 1f
+
+    private fun updateRemoteAudioTrack() {
+        remoteAudioTrack?.setVolume(currentAudioVolume().toDouble())
+        remoteAudioTrack?.setEnabled(!playbackPaused)
     }
 
     private fun resolveUrl(raw: String): String {
@@ -152,30 +448,71 @@ class LiveStreamZoneRenderer(
 
     fun setDuckedVolume(ducked: Boolean) {
         this.isDucked = ducked
-        exoPlayer?.let { p ->
-            p.volume = if (isMuted) 0f else if (isDucked) 0.15f else 1f
-        }
+        exoPlayer?.volume = currentAudioVolume()
+        updateRemoteAudioTrack()
     }
 
     fun pause() {
+        playbackPaused = true
         exoPlayer?.pause()
+        remoteVideoTrack?.setEnabled(false)
+        remoteAudioTrack?.setEnabled(false)
     }
 
     fun resume() {
+        playbackPaused = false
         exoPlayer?.play()
+        remoteVideoTrack?.setEnabled(true)
+        updateRemoteAudioTrack()
     }
 
     fun release() {
         released = true
         mainHandler.removeCallbacksAndMessages(null)
+        connectionJob?.cancel()
+        connectionScope.cancel()
+        closePeerConnection()
         exoPlayer?.release()
         exoPlayer = null
         playerView?.player = null
         playerView = null
+        webRtcView?.let { renderer ->
+            remoteVideoTrack?.removeSink(renderer)
+            renderer.release()
+        }
+        webRtcView = null
         posterView = null
     }
 
     companion object {
         private const val TAG = "LiveStreamZoneRenderer"
+        private const val ICE_GATHER_TIMEOUT_MS = 5_000L
+        private const val WHEP_CONNECT_TIMEOUT_MS = 15_000L
+        private val HTTP_CLIENT = OkHttpClient.Builder()
+            .callTimeout(15, TimeUnit.SECONDS)
+            .build()
+    }
+}
+
+private object LiveWebRtcRuntime {
+    data class Resources(
+        val factory: PeerConnectionFactory,
+        val eglBase: EglBase
+    )
+
+    @Volatile private var resources: Resources? = null
+
+    fun get(context: Context): Resources = resources ?: synchronized(this) {
+        resources ?: run {
+            PeerConnectionFactory.initialize(
+                PeerConnectionFactory.InitializationOptions.builder(context.applicationContext)
+                    .createInitializationOptions()
+            )
+            val eglBase = EglBase.create()
+            val factory = PeerConnectionFactory.builder()
+                .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglBase.eglBaseContext))
+                .createPeerConnectionFactory()
+            Resources(factory, eglBase).also { resources = it }
+        }
     }
 }
