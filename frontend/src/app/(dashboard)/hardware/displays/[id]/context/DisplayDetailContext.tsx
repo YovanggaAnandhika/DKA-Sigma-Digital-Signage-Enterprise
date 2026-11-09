@@ -260,25 +260,26 @@ export function DisplayDetailProvider({
     };
   }, [deviceId]);
 
-  const executePairing = async (code?: string) => {
+  const executePairing = async (code: string) => {
     try {
       setApproving(true);
       await api.pairDevice({
         deviceId: device?.id || deviceId,
-        pairingCode: code ? code.toUpperCase() : undefined,
+        pairingCode: code.toUpperCase().trim(),
         deviceName: device?.name || 'Display Android',
       });
       setCmdFeedback('Layar berhasil disetujui! Membuka streaming player...');
       await fetchDevice();
     } catch (err: any) {
-      alert(err.message || 'Gagal menyetujui pairing perangkat');
+      throw err;
     } finally {
       setApproving(false);
     }
   };
 
   const handleApprovePairing = async (codeToPair?: string) => {
-    await executePairing(codeToPair || device?.pairingCode);
+    if (!codeToPair) throw new Error('Kode pairing wajib diisi');
+    await executePairing(codeToPair);
   };
 
   const handleExportCSV = () => {

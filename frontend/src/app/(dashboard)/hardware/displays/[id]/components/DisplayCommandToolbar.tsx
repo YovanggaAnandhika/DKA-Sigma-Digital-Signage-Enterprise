@@ -16,6 +16,7 @@ import {
   Unlink2,
   Moon,
   Sun,
+  CircleX,
 } from 'lucide-react';
 import { ServerCommandType } from '@/lib/services/hardware/device.service';
 import { api } from '@/lib/services';
@@ -24,6 +25,9 @@ import { useDisplayDetail } from '../context/DisplayDetailContext';
 export default function DisplayCommandToolbar() {
   const router = useRouter();
   const [unbinding, setUnbinding] = React.useState(false);
+  const [showPairModal, setShowPairModal] = React.useState(false);
+  const [pairingCodeInput, setPairingCodeInput] = React.useState('');
+  const [pairingError, setPairingError] = React.useState('');
   const {
     device,
     sendingCmd,
@@ -253,17 +257,15 @@ export default function DisplayCommandToolbar() {
                 Layar Android telah terdaftar. Setujui pairing untuk mulai menyiarkan konten signage.
               </p>
               <div style={{ marginTop: '6px', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                ID / Kode:{' '}
+                Status:{' '}
                 <span
                   style={{
-                    fontFamily: 'monospace',
-                    fontWeight: 800,
-                    fontSize: '1.1rem',
+                    fontWeight: 700,
+                    fontSize: '0.8125rem',
                     color: 'var(--accent-amber)',
-                    letterSpacing: '0.05em',
                   }}
                 >
-                  {device.pairingCode || device.hardwareFingerprint?.substring(0, 12) || device.id.substring(0, 8).toUpperCase()}
+                  Menunggu Verifikasi Kode Fisik TV
                 </span>
               </div>
             </div>
@@ -272,7 +274,11 @@ export default function DisplayCommandToolbar() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button
               type="button"
-              onClick={() => handleApprovePairing()}
+              onClick={() => {
+                setShowPairModal(true);
+                setPairingCodeInput('');
+                setPairingError('');
+              }}
               disabled={approving}
               className="btn btn-primary"
               style={{
@@ -296,9 +302,9 @@ export default function DisplayCommandToolbar() {
       {/* Overview Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
         <div className="card-elevated" style={{ padding: '14px 16px' }}>
-          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>ID / Kode Layar</div>
+          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>ID Perangkat</div>
           <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--text-primary)', marginTop: '4px' }}>
-            {device.pairingCode || device.hardwareFingerprint?.substring(0, 10) || device.id.substring(0, 8).toUpperCase()}
+            {device.hardwareFingerprint?.substring(0, 10) || device.id.substring(0, 8).toUpperCase()}
           </div>
           <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
             {device.isPaired ? 'Terhubung' : 'Menunggu persetujuan'}
@@ -342,6 +348,132 @@ export default function DisplayCommandToolbar() {
           </div>
         </div>
       </div>
+
+      {/* Physical Pairing Verification Modal */}
+      {showPairModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '16px',
+          }}
+        >
+          <div
+            className="card-elevated"
+            style={{
+              width: '100%',
+              maxWidth: '440px',
+              backgroundColor: 'var(--bg-surface)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '16px',
+              padding: '24px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                  Verifikasi Kepemilikan Layar
+                </h3>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '4px', margin: 0 }}>
+                  Layar: <b>{device.name}</b>
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => !approving && setShowPairModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: '4px',
+                }}
+                aria-label="Tutup"
+              >
+                <CircleX size={18} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const code = pairingCodeInput.trim().toUpperCase();
+                if (!code) return;
+                try {
+                  setPairingError('');
+                  await handleApprovePairing(code);
+                  setShowPairModal(false);
+                } catch (err: any) {
+                  setPairingError(err.message || 'Kode pairing fisik salah atau telah kedaluwarsa');
+                }
+              }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
+            >
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                Masukkan <b>6-digit Kode Pairing</b> yang sedang tampil di layar TV fisik untuk mengikat layar ini ke korporasi Anda:
+              </p>
+
+              <div>
+                <input
+                  type="text"
+                  autoFocus
+                  required
+                  value={pairingCodeInput}
+                  onChange={(e) => setPairingCodeInput(e.target.value.toUpperCase())}
+                  placeholder="CONTOH: K8F2N9"
+                  maxLength={10}
+                  className="form-input"
+                  style={{
+                    fontSize: '1.15rem',
+                    fontWeight: 800,
+                    fontFamily: 'monospace',
+                    letterSpacing: '0.2em',
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                    padding: '12px',
+                  }}
+                  disabled={approving}
+                />
+              </div>
+
+              {pairingError && (
+                <div style={{ color: 'var(--accent-rose)', fontSize: '0.8125rem', fontWeight: 600 }}>
+                  {pairingError}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', paddingTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowPairModal(false)}
+                  className="btn btn-secondary"
+                  disabled={approving}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={approving || !pairingCodeInput.trim()}
+                >
+                  {approving ? 'Memverifikasi...' : 'Verifikasi & Aktifkan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }
