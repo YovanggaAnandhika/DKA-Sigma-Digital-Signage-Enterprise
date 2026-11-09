@@ -4,7 +4,7 @@ import { GetStreamSegmentRequest, GetLiveStreamRequest } from '@/lib/api/compone
 import { getGrpcClient } from '@/lib/core/grpcClient';
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { streamId: string; file: string } }
 ) {
   const { streamId, file } = params;
@@ -13,12 +13,16 @@ export async function GET(
     return new NextResponse('Stream ID and filename required', { status: 400 });
   }
 
+  // Preserve any HLS session query parameters (e.g. ?session=uuid) required by MediaMTX
+  const search = req.nextUrl.search || '';
+  const fileWithQuery = search ? `${file}${search}` : file;
+
   // Reuse singleton multiplexed HTTP/2 gRPC channel to prevent socket & memory leaks
   const client = getGrpcClient(LiveStreamServiceClient);
 
   const grpcReq = new GetStreamSegmentRequest();
   grpcReq.setStreamId(streamId);
-  grpcReq.setFileName(file);
+  grpcReq.setFileName(fileWithQuery);
 
   return new Promise<Response>((resolve) => {
     client.getStreamSegment(grpcReq, (err, response) => {
@@ -176,6 +180,7 @@ export async function POST(
         ];
 
     let upstream: Response | null = null;
+    let lastError = '';
     for (const url of candidates) {
       try {
         const res = await fetch(url, {
@@ -187,11 +192,17 @@ export async function POST(
         if (res.ok) {
           upstream = res;
           break;
+        } else {
+          const bodyText = await res.text().catch(() => '');
+          lastError = `${url} -> ${res.status}: ${bodyText}`;
         }
-      } catch {}
+      } catch (err: any) {
+        lastError = `${url} -> fetch failed: ${err?.message}`;
+      }
     }
 
     if (!upstream || !upstream.ok) {
+      console.error('[WHEP Egress Error]', lastError);
       return new NextResponse(null, { status: upstream?.status || 502 });
     }
 

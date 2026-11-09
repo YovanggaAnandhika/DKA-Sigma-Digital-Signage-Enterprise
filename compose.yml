@@ -90,12 +90,12 @@ services:
       MTX_WEBRTCALLOWORIGINS: '["*"]'
       MTX_WEBRTCLOCALUDPADDRESS: ":8189"
       MTX_WEBRTCLOCALTCPADDRESS: ":8189"
-      MTX_WEBRTCADDITIONALHOSTS: "127.0.0.1,localhost,sigma.dkaapis.test,10.20.30.97"
+      MTX_WEBRTCADDITIONALHOSTS: "127.0.0.1,localhost,sigma.dkaapis.test,192.168.1.52,10.20.30.97"
       MTX_HLS: "yes"
       MTX_HLSADDRESS: ":8888"
       MTX_HLSVARIANT: "mpegts"
-      MTX_HLSSEGMENTCOUNT: "4"
-      MTX_HLSSEGMENTDURATION: "1s"
+      MTX_HLSSEGMENTCOUNT: "7"
+      MTX_HLSSEGMENTDURATION: "2s"
       MTX_HLSALLOWORIGINS: '["*"]'
       MTX_PATHDEFAULTS_RUNONREADY: "sh -c 'case \"$$MTX_PATH\" in live/*) ffmpeg -hide_banner -loglevel error -fflags +nobuffer+discardcorrupt+flush_packets -flags low_delay -rtsp_transport tcp -i rtsp://127.0.0.1:8554/$$MTX_PATH -map 0:v:0 -map 0:a:0? -c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -bf 0 -vf \"scale=min(1280\\,iw):-2,format=yuv420p\" -b:v 1800k -maxrate 2200k -bufsize 1100k -g 30 -keyint_min 30 -sc_threshold 0 -c:a libopus -b:a 96k -ar 48000 -ac 2 -f rtsp -rtsp_transport tcp rtsp://127.0.0.1:8554/webrtc/$$MTX_PATH & ffmpeg -hide_banner -loglevel error -fflags +nobuffer+discardcorrupt+flush_packets -flags low_delay -rtsp_transport tcp -i rtsp://127.0.0.1:8554/$$MTX_PATH -map 0:v:0 -map 0:a:0? -c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -bf 0 -vf \"format=yuv420p\" -b:v 3200k -maxrate 3800k -bufsize 1900k -g 30 -keyint_min 30 -sc_threshold 0 -c:a libopus -b:a 128k -ar 48000 -ac 2 -f rtsp -rtsp_transport tcp rtsp://127.0.0.1:8554/hd/$$MTX_PATH & wait ;; esac'"
       MTX_PATHDEFAULTS_RUNONREADYRESTART: "yes"

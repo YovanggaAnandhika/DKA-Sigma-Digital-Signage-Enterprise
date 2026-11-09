@@ -348,7 +348,12 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         let stream_id = Uuid::from_str(&req.stream_id)
             .map_err(|_| Status::invalid_argument("Invalid stream id"))?;
 
-        let file_name = std::path::Path::new(&req.file_name)
+        let (raw_file, query) = match req.file_name.split_once('?') {
+            Some((f, q)) => (f, format!("?{}", q)),
+            None => (req.file_name.as_str(), String::new()),
+        };
+
+        let file_name = std::path::Path::new(raw_file)
             .file_name()
             .and_then(|f| f.to_str())
             .ok_or_else(|| Status::invalid_argument("Invalid file name"))?;
@@ -361,10 +366,11 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
                 // Fetch directly from internal Docker streamer engine (dka-product-sigma-streamer:8888)
                 let target_file = if file_name == "live.m3u8" { "index.m3u8" } else { file_name };
                 let url = format!(
-                    "{}/live/{}/{}",
+                    "{}/live/{}/{}{}",
                     self.relay_manager.streamer_hls_url().trim_end_matches('/'),
                     stream_id,
-                    target_file
+                    target_file,
+                    query
                 );
                 match self.relay_manager.http_client().get(&url).send().await {
                     Ok(resp) if resp.status().is_success() => {

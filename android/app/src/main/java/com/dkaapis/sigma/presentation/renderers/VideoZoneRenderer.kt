@@ -12,6 +12,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.dkaapis.sigma.data.analytics.AssetStatsData
 import com.dkaapis.sigma.presentation.renderers.model.VideoPlaylistItem
+import com.dkaapis.sigma.presentation.util.DeviceCapabilityHelper
 import java.io.File
 
 class VideoZoneRenderer(
@@ -42,14 +43,14 @@ class VideoZoneRenderer(
     ): PlayerView {
         this.playlistItems = playlist
 
-        // Optimized load control: 8s min buffer, 15s max buffer, 1.5s playback buffer
-        // Melindungi dari jitter I/O flash memory eMMC pada TV Android tanpa membebani RAM
+        // Adaptive load control: dynamic buffer based on device capability (low-spec vs high-end)
+        val bufConfig = DeviceCapabilityHelper.getVideoBufferConfig(context)
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                /* minBufferMs = */ 8_000,
-                /* maxBufferMs = */ 15_000,
-                /* bufferForPlaybackMs = */ 1_500,
-                /* bufferForPlaybackAfterRebufferMs = */ 2_500
+                bufConfig.minBufferMs,
+                bufConfig.maxBufferMs,
+                bufConfig.bufferForPlaybackMs,
+                bufConfig.bufferForPlaybackAfterRebufferMs
             )
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()

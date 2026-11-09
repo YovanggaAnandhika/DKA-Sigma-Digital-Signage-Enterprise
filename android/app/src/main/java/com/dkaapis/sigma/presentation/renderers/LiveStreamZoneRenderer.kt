@@ -75,6 +75,7 @@ class LiveStreamZoneRenderer(
     private val connectionScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var connectionJob: kotlinx.coroutines.Job? = null
     private var fallbackRunnable: Runnable? = null
+    private var reconnectRunnable: Runnable? = null
     @Volatile private var released = false
     private var isDucked = false
     private var isMuted = true
@@ -195,6 +196,11 @@ class LiveStreamZoneRenderer(
 
             override fun onIceConnectionChange(state: PeerConnection.IceConnectionState) {
                 Log.i(TAG, "WebRTC ICE state stream=${payload.streamId}: $state")
+                if (state == PeerConnection.IceConnectionState.CONNECTED || state == PeerConnection.IceConnectionState.COMPLETED) {
+                    mainHandler.post {
+                        fallbackRunnable?.let(mainHandler::removeCallbacks)
+                    }
+                }
                 if (state == PeerConnection.IceConnectionState.FAILED) {
                     mainHandler.post {
                         fallbackToHls(container, hlsFallbackUrl, payload, "WebRTC ICE connection failed")
@@ -250,12 +256,17 @@ class LiveStreamZoneRenderer(
             RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY)
         )
 
-        val offer = createOffer(peer)
+        val constraints = MediaConstraints().apply {
+            mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
+            mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+        }
+        val offer = createOffer(peer, constraints)
         setLocalDescription(peer, offer)
         if (peer.iceGatheringState() != PeerConnection.IceGatheringState.COMPLETE) {
             withTimeoutOrNull(ICE_GATHER_TIMEOUT_MS) { iceGatheringComplete.await() }
         }
         val localOffer = peer.localDescription ?: error("WebRTC local offer was not created")
+        Log.i(TAG, "Local SDP offer length: ${localOffer.description.length}")
         val request = Request.Builder()
             .url(endpoint)
             .header("Accept", "application/sdp")
@@ -263,9 +274,11 @@ class LiveStreamZoneRenderer(
             .build()
 
         val answerText = execute(request).use { response ->
-            if (!response.isSuccessful) error("WHEP request failed with HTTP ${response.code}")
-            response.body?.string()?.takeIf { it.isNotBlank() } ?: error("WHEP response has no SDP answer")
+            val body = response.body?.string().orEmpty()
+            if (!response.isSuccessful) error("WHEP request failed with HTTP ${response.code}: $body")
+            body.takeIf { it.isNotBlank() } ?: error("WHEP response has no SDP answer")
         }
+        Log.i(TAG, "Received SDP answer length: ${answerText.length}")
         setRemoteDescription(peer, SessionDescription(SessionDescription.Type.ANSWER, answerText))
     }
 
@@ -300,7 +313,7 @@ class LiveStreamZoneRenderer(
         try {
             val targetUri = Uri.parse(targetUrl)
             val loadControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(5_000, 10_000, 1_000, 2_000)
+                .setBufferDurationsMs(1_500, 8_000, 500, 1_000)
                 .build()
             val player = ExoPlayer.Builder(context)
                 .setLoadControl(loadControl)
@@ -308,14 +321,14 @@ class LiveStreamZoneRenderer(
                 .build()
                 .apply {
                     val mediaBuilder = MediaItem.Builder().setUri(targetUri)
-                    if (payload.lowLatencyMode) {
-                        mediaBuilder.setLiveConfiguration(
-                            MediaItem.LiveConfiguration.Builder()
-                                .setTargetOffsetMs(2_000L)
-                                .setMaxPlaybackSpeed(1.04f)
-                                .build()
-                        )
-                    }
+                    val liveConfig = MediaItem.LiveConfiguration.Builder()
+                        .setTargetOffsetMs(1_500L)
+                        .setMinPlaybackSpeed(1.0f)
+                        .setMaxPlaybackSpeed(1.15f)
+                        .setMinOffsetMs(500L)
+                        .setMaxOffsetMs(4_000L)
+                        .build()
+                    mediaBuilder.setLiveConfiguration(liveConfig)
                     setMediaItem(mediaBuilder.build())
                     volume = currentAudioVolume()
                     playWhenReady = !playbackPaused
@@ -333,14 +346,17 @@ class LiveStreamZoneRenderer(
                             posterView?.animate()?.alpha(1f)?.setDuration(200)?.start()
 
                             if (payload.autoReconnect) {
-                                mainHandler.removeCallbacksAndMessages(null)
-                                mainHandler.postDelayed({
+                                reconnectRunnable?.let(mainHandler::removeCallbacks)
+                                val runnable = Runnable {
                                     if (!released && exoPlayer != null) {
                                         Log.i(TAG, "Reconnecting stream=${payload.streamId}")
+                                        exoPlayer?.seekToDefaultPosition()
                                         exoPlayer?.prepare()
                                         exoPlayer?.play()
                                     }
-                                }, 4_000L)
+                                }
+                                reconnectRunnable = runnable
+                                mainHandler.postDelayed(runnable, 2_000L)
                             }
                         }
                     })
@@ -364,7 +380,7 @@ class LiveStreamZoneRenderer(
         }
     }
 
-    private suspend fun createOffer(peer: PeerConnection): SessionDescription =
+    private suspend fun createOffer(peer: PeerConnection, constraints: MediaConstraints): SessionDescription =
         suspendCancellableCoroutine { continuation ->
             peer.createOffer(object : SdpObserver {
                 override fun onCreateSuccess(description: SessionDescription) {
@@ -377,7 +393,7 @@ class LiveStreamZoneRenderer(
                 }
 
                 override fun onSetFailure(error: String) = Unit
-            }, MediaConstraints())
+            }, constraints)
         }
 
     private suspend fun setLocalDescription(peer: PeerConnection, description: SessionDescription) {
@@ -496,7 +512,7 @@ class LiveStreamZoneRenderer(
 
     companion object {
         private const val TAG = "LiveStreamZoneRenderer"
-        private const val ICE_GATHER_TIMEOUT_MS = 250L
+        private const val ICE_GATHER_TIMEOUT_MS = 1200L
         private const val WHEP_CONNECT_TIMEOUT_MS = 15_000L
         private val HTTP_CLIENT = OkHttpClient.Builder()
             .callTimeout(15, TimeUnit.SECONDS)

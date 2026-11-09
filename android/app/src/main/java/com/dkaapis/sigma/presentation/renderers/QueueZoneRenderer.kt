@@ -19,6 +19,7 @@ import com.dkaapis.sigma.presentation.renderers.queue.model.QueueCallbacksPayloa
 import com.dkaapis.sigma.presentation.renderers.queue.model.QueueItemMeta
 import com.dkaapis.sigma.presentation.renderers.queue.parser.QueueLayoutParser
 import com.dkaapis.sigma.presentation.util.ColorParser
+import com.dkaapis.sigma.presentation.util.DeviceCapabilityHelper
 import java.util.Locale
 
 /**
@@ -110,7 +111,12 @@ class QueueZoneRenderer(
                         backgroundColor = "transparent", textColor = "transparent",
                         fontSize = 0f, fontWeight = "normal", textAlign = "left", templateContent = cfg.bgImageUrl
                     )
-                    load(cfg.bgImageUrl)
+                    load(cfg.bgImageUrl) {
+                        crossfade(true)
+                        if (DeviceCapabilityHelper.isLowSpecDevice(context)) {
+                            allowRgb565(true)
+                        }
+                    }
                 }
             )
         }
