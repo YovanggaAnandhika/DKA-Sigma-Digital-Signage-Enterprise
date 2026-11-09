@@ -11,18 +11,123 @@ mod workers;
 
 use crate::modules::distribution::stream::services::StreamConnectionManager;
 use config::Config;
-use std::env;
+use std::{env, fmt, time::Duration};
 use std::net::SocketAddr;
 use tonic::transport::Server;
+use tower_http::classify::{
+    ClassifiedResponse, ClassifyEos, ClassifyResponse, GrpcErrorsAsFailures,
+    GrpcEosErrorsAsFailures, GrpcFailureClass, MakeClassifier,
+};
 use tracing::{info, warn};
+
+#[derive(Clone, Copy)]
+struct GrpcEndpointClassifier;
+
+#[derive(Clone)]
+struct GrpcEndpointResponseClassifier {
+    endpoint: String,
+    inner: GrpcErrorsAsFailures,
+}
+
+struct GrpcEndpointEosClassifier {
+    endpoint: String,
+    inner: GrpcEosErrorsAsFailures,
+}
+
+struct GrpcEndpointFailure {
+    endpoint: String,
+    classification: GrpcFailureClass,
+}
+
+impl fmt::Display for GrpcEndpointFailure {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{}: {}", self.endpoint, self.classification)
+    }
+}
+
+impl MakeClassifier for GrpcEndpointClassifier {
+    type FailureClass = GrpcEndpointFailure;
+    type ClassifyEos = GrpcEndpointEosClassifier;
+    type Classifier = GrpcEndpointResponseClassifier;
+
+    fn make_classifier<B>(
+        &self,
+        request: &tonic::codegen::http::Request<B>,
+    ) -> Self::Classifier {
+        GrpcEndpointResponseClassifier {
+            endpoint: request.uri().path().to_owned(),
+            inner: GrpcErrorsAsFailures::new(),
+        }
+    }
+}
+
+impl ClassifyResponse for GrpcEndpointResponseClassifier {
+    type FailureClass = GrpcEndpointFailure;
+    type ClassifyEos = GrpcEndpointEosClassifier;
+
+    fn classify_response<B>(
+        self,
+        response: &tonic::codegen::http::Response<B>,
+    ) -> ClassifiedResponse<Self::FailureClass, Self::ClassifyEos> {
+        match self.inner.classify_response(response) {
+            ClassifiedResponse::Ready(result) => ClassifiedResponse::Ready(
+                result.map_err(|classification| GrpcEndpointFailure {
+                    endpoint: self.endpoint,
+                    classification,
+                }),
+            ),
+            ClassifiedResponse::RequiresEos(inner) => {
+                ClassifiedResponse::RequiresEos(GrpcEndpointEosClassifier {
+                    endpoint: self.endpoint,
+                    inner,
+                })
+            }
+        }
+    }
+
+    fn classify_error<E>(self, error: &E) -> Self::FailureClass
+    where
+        E: fmt::Display + 'static,
+    {
+        GrpcEndpointFailure {
+            endpoint: self.endpoint,
+            classification: self.inner.classify_error(error),
+        }
+    }
+}
+
+impl ClassifyEos for GrpcEndpointEosClassifier {
+    type FailureClass = GrpcEndpointFailure;
+
+    fn classify_eos(
+        self,
+        trailers: Option<&tonic::codegen::http::HeaderMap>,
+    ) -> Result<(), Self::FailureClass> {
+        self.inner
+            .classify_eos(trailers)
+            .map_err(|classification| GrpcEndpointFailure {
+                endpoint: self.endpoint,
+                classification,
+            })
+    }
+
+    fn classify_error<E>(self, error: &E) -> Self::FailureClass
+    where
+        E: fmt::Display + 'static,
+    {
+        GrpcEndpointFailure {
+            endpoint: self.endpoint,
+            classification: self.inner.classify_error(error),
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let rust_env = env::var("RUST_ENV").unwrap_or_else(|_| "development".to_string());
-    let default_filter = if rust_env == "production" {
-        "error"
-    } else {
+    let default_filter = if cfg!(debug_assertions) {
         "info,signage_backend=debug"
+    } else {
+        "error"
     };
 
     tracing_subscriber::fmt()
@@ -76,7 +181,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
     let relay_manager_shutdown = relay_manager.clone();
 
-    let mut router = Server::builder().layer(tower_http::trace::TraceLayer::new_for_grpc());
+    let mut router = Server::builder().layer(
+        tower_http::trace::TraceLayer::new(GrpcEndpointClassifier).on_failure(
+            |failure: GrpcEndpointFailure, latency: Duration, _span: &tracing::Span| {
+                tracing::error!(
+                    endpoint = %failure.endpoint,
+                    classification = %failure.classification,
+                    ?latency,
+                    "gRPC request failed"
+                );
+            },
+        ),
+    );
     let router = crate::register_grpc_services!(router, pool, config, stream_manager, relay_manager);
 
     router
@@ -92,4 +208,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn grpc_failure_classification_includes_endpoint() {
+        let request = tonic::codegen::http::Request::builder()
+            .uri("/signage.v1.MediaService/ListMedia")
+            .body(())
+            .unwrap();
+        let classifier = GrpcEndpointClassifier.make_classifier(&request);
+        let response = tonic::codegen::http::Response::builder()
+            .header("grpc-status", "13")
+            .body(())
+            .unwrap();
+
+        match classifier.classify_response(&response) {
+            ClassifiedResponse::Ready(Err(failure)) => {
+                assert_eq!(failure.endpoint, "/signage.v1.MediaService/ListMedia");
+                assert_eq!(failure.classification.to_string(), "Code: 13");
+            }
+            _ => panic!("expected a classified gRPC failure"),
+        }
+    }
 }
