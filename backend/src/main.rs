@@ -69,7 +69,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.streamer_rtmp_url.clone(),
         config.streamer_hls_url.clone(),
     );
-    relay_manager.sync_active_relays(&pool).await;
+    let relay_manager_startup = relay_manager.clone();
+    let pool_startup = pool.clone();
+    tokio::spawn(async move {
+        relay_manager_startup.sync_active_relays(&pool_startup).await;
+    });
     let relay_manager_shutdown = relay_manager.clone();
 
     let mut router = Server::builder().layer(tower_http::trace::TraceLayer::new_for_grpc());
