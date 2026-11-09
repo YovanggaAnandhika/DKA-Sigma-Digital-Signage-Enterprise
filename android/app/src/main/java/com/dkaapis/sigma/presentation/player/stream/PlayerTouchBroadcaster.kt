@@ -90,7 +90,7 @@ class PlayerTouchBroadcaster(
             .setPayloadJson(json.toString())
             .build()
 
-        val token = tokenStorage?.getAuthToken()
+        val token = tokenStorage?.getDeviceToken()
         if (!token.isNullOrBlank()) {
             val headers = Metadata().apply {
                 put(

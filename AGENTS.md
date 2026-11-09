@@ -108,7 +108,9 @@ This project is an enterprise-grade digital signage management and streaming pla
 ### 8. Required Verification Commands
 - Backend: never run `cargo run` or `cargo build`; verify Rust changes with `cargo check` from `backend/` and require zero errors and zero warnings.
 - Frontend: use Bun only for all frontend package, script, type-check, and test commands; never use npm, pnpm, yarn, or direct Node commands. Verify TypeScript changes with `bun tsc --noEmit` from `frontend/`. Never run `bun run build` or `next build`.
-- Android: verification is limited to `./gradlew :app:check` and `./gradlew :app:assemble` from `android/`. Do not run debug-variant tasks (including `assembleDebug`) or the `build` task.
+- Android: verification is limited to `./gradlew :app:check` from `android/`. **DILARANG KERAS menjalankan `./gradlew assemble` atau `assembleDebug` atau task build APK**. Pengguna yang akan melakukan perakitan APK secara manual.
+- **Larangan Clear / Hapus Direktori Sembarangan**: Jangan pernah membersihkan cache Gradle atau menghapus direktori proyek tanpa instruksi eksplisit dari pengguna.
+- **Larangan Bypass Durasi Layer di `LayerZone.kt`**: Logika durasi blok di timeline layout dikelola di Web CMS. Jangan pernah mem-bypass durasi layer di Android player; `hasActiveBlockAt` wajib mematuhi interval waktu linimasa asli.
 
 ---
 
@@ -122,6 +124,8 @@ This project is an enterprise-grade digital signage management and streaming pla
   - `8890/udp` → `dka-product-sigma-streamer:8890` (SRT UDP Ingest)
   - `50051/tcp+udp` → `dka-product-sigma-backend:50051` (Tonic gRPC Server)
   - `80/tcp` (`sigma.dkaapis.test`) → `dka-product-sigma-frontend:80` (Next.js App Router)
+- **Host LAN Wi-Fi IP Invariant (`MTX_WEBRTCADDITIONALHOSTS`)**:
+  - `MTX_WEBRTCADDITIONALHOSTS` di `compose.yml` WAJIB selalu menyertakan IP Wi-Fi lokal komputer pengembang (misalnya `192.168.1.52`) di samping domain lokal `sigma.dkaapis.test`, agar negosiasi ICE UDP WebRTC dari perangkat Android fisik di jaringan Wi-Fi lokal tidak mengalami kegagalan/timeout.
 - **Internal Docker Service URLs (`compose.yml`)**:
   - `dka-product-sigma-backend` communicates with `dka-product-sigma-streamer` via internal Docker DNS:
     - `STREAMER_API_URL: "http://dka-product-sigma-streamer:9997"` (Control & Telemetry REST API)
@@ -151,3 +155,61 @@ This project is an enterprise-grade digital signage management and streaming pla
 - **Singleton gRPC Channel Multiplexing**: All high-frequency Next.js route handlers (`ListMedia`, `GetLiveStream`, `ListLiveStreams`, `/streams/[streamId]/[file]`) must use `getGrpcClient(ServiceClient)` from `frontend/src/lib/core/grpcClient.ts` to reuse a single HTTP/2 connection instead of instantiating `new ServiceClient()` per request, and parse JSON bodies safely with `await req.json().catch(() => ({}))`.
 - **Lightweight Healthcheck (`/up`)**: Container healthchecks in `dka-product-sigma-frontend` must hit the lightweight `GET /up` route (`frontend/src/app/up/route.ts`) rather than SSR pages (`/`) to prevent zombie curl processes and CPU/memory exhaustion during `next dev`.
 - **Graceful Shutdown & Encoder Disconnect**: `backend/src/main.rs` uses `serve_with_shutdown` listening for `SIGTERM`/`SIGINT` to invoke `relay_manager.stop_all()`, ensuring active FFmpeg child processes (`kill_on_drop(true)`) are terminated cleanly when containers restart.
+
+---
+
+## Ultra-Smooth Multi-Zone Player & Adaptive Architecture (1 GB RAM to High-End)
+
+### 1. Dynamic Hardware Adaptation Matrix (`DeviceCapabilityHelper.kt`)
+- **Low-Spec Profile (`RAM <= 1.5 GB` / `isLowRamDevice`)**:
+  - **ExoPlayer LoadControl Buffer**: `minBuffer: 2.5s`, `maxBuffer: 5s`, `bufferForPlayback: 400ms`, `targetBufferBytes: 10 MB` strict memory cap (prevents Dalvik/ART GC pauses and 128MB heap exhaustion).
+  - **Extension Renderers**: Set `EXTENSION_RENDERER_MODE_OFF` to completely bypass heavy CPU-based software decoders (FFmpeg/VP9/AV1) and force native hardware `MediaCodec`.
+  - **Image Loading**: Coil image loader configured with `allowRgb565(true)` to halve bitmap heap memory usage.
+- **High-End Profile (`RAM > 1.5 GB`)**:
+  - Buffer: `minBuffer: 8s`, `maxBuffer: 20s`, `targetBufferBytes: 32 MB`, full ARGB_8888 rendering.
+
+### 2. Dual SurfaceView Zero-Copy & Z-Order Management
+- **Hardware Overlay Planes**: All video rendering uses `SurfaceView` (`app:surface_type="surface_view"`), bypassing OpenGL texture composition (`TextureView`) to save 20–35 MB VRAM per zone and achieve 0% CPU memory copy.
+- **Multi-Zone Overlay Anti-Flicker**: Inset/secondary videos (such as WebRTC `SurfaceViewRenderer` or HLS `PlayerView`) MUST call:
+  ```kotlin
+  setZOrderMediaOverlay(true)
+  ```
+  This places the inset cleanly above the primary video `SurfaceView` without SurfaceFlinger layer fighting or screen blanking.
+
+### 3. Anti-Slow-Motion & Reconnection Snapping (`LiveStreamZoneRenderer.kt`)
+- **Strict Speed Lock**: Configure `MediaItem.LiveConfiguration`:
+  - `setMinPlaybackSpeed(1.0f)`: Strictly prevents ExoPlayer from slowing down below 1.0x (eliminating the "slomo" drift).
+  - `setMaxPlaybackSpeed(1.15f)`: Allows gentle catch-up if minor buffering occurs.
+- **Instant Live-Edge Seek on Reconnect**: When OBS or upstream stream restarts, immediately call `exoPlayer.seekToDefaultPosition()` to snap directly to the latest live edge rather than decoding accumulated stale frames.
+
+### 4. Zero-GC & Anti-Layout Thrashing on Queue Display
+- **No Allocations in Frame Loop**: `QueueVisualEffectHelper.kt` pre-allocates a static `FloatArray(20)` and reusable `ColorMatrix`. During ticket call animations (color inversion), the array is mutated in-place with zero heap allocations (0 GC runs).
+- **Anti-Thrashing Font Scaling**: `QueueCanvasView.kt` caches display metrics `density` and only applies `setTextSize()` when the target size differs by $> 0.5\text{px}$, preventing recursive layout and measurement passes.
+
+### 5. OS-Level Zero-Overdraw & Smooth Audio Ducking
+- **Zero-Overdraw Window**: In `PlayerActivity.kt`, call `window.setBackgroundDrawable(null)` to eliminate Android's default window background fill pass, saving ~20% GPU fillrate. Rendering thread priority is set to `Process.THREAD_PRIORITY_DISPLAY`.
+- **Smooth Audio Ducking Ramp**: In `VideoZoneRenderer.kt`, volume ducking uses `ValueAnimator` with a 60ms linear ramp down to mute and a 180ms ramp up to base volume when TTS/chime finishes, preventing harsh speaker clicks or audio pops.
+
+---
+
+## Backend Database & gRPC Service Integrity Invariants
+
+### 1. Layer Block Component References (Single Source of Truth)
+- `studio_layer_blocks` stores foreign keys (`queue_id`, `ticker_id`, `clock_id`, `playlist_id`, `media_item_id`, `webview_id`, `album_id`, `live_stream_id`) referencing already existing records in their respective component tables.
+- **DILARANG KERAS menyisipkan query dummy `INSERT INTO components_* ... ON CONFLICT DO NOTHING` di dalam `LayerBlockRepository::create`**:
+  - Tabel-tabel komponen memiliki constraint `corporation_id UUID NOT NULL`. Query dummy tanpa `corporation_id` akan seketika digagalkan oleh PostgreSQL (`violates not-null constraint`), me-rollback transaksi, dan mengembalikan error gRPC `Code: 13 (INTERNAL)`.
+  - Dampak kegagalan ini adalah blok yang baru disimpan di Web CMS akan **hilang dari linimasa (*timeline*)** setelah halaman di-refresh.
+
+### 2. Nullable Columns Decoding Safety
+- Kolom teks opsional pada PostgreSQL (seperti `tts_template_call`, `tts_template_recall`, `tts_template_break` pada `components_queue_displays`) bertipe `TEXT` (nullable).
+- Struct Row sqlx di Rust WAJIB mendefinisikan field ini sebagai `Option<String>` dan memetakannya dengan `.unwrap_or_default()` saat mengonversi ke Protobuf message, agar tidak memicu `ColumnDecodeError` (gRPC Code 13).
+
+### 3. Real Schema Columns Alignment
+- `components_tickers`: Kolom riil adalah `text_content`, `badge_label`, `badge_bg_color`, `badge_text_color`, `speed`, `font_size`, `background_color`, `text_color`. Hindari penggunaan kolom fiktif (`messages`, `badge`, `theme`).
+- `components_clocks`: Kolom riil adalah `timezone`, `clock_format`, `show_seconds`, `show_date`, `font_size`, `text_color`, `background_color`, `weather_city`. Hindari penggunaan kolom fiktif (`city`, `is_24_hour`, `theme`).
+
+### 4. Player Telemetry & Touch Command Authorization (`PushCommand`)
+- Endpoint `StreamService::push_command` membedakan perintah administratif dengan sinyal operasional player:
+  - Perintah administratif (`ReloadManifest`, `RebootPlayer`, `ClearCache`) strictly mewajibkan izin `can_manage_distribution` via JWT Bearer token.
+  - Sinyal real-time player/antrean (`CommandEmergencyBroadcast` dengan payload `CALL_QUEUE`, `ASSET_DOWNLOAD_PROGRESS`, `ASSET_DOWNLOAD_COMPLETE`) diizinkan untuk dikirimkan oleh player Android tanpa penolakan `Code: 16 (UNAUTHENTICATED)`.
+  - Android player (`PlayerTouchBroadcaster`) tetap menyematkan header `Authorization: Bearer <token>` dari `TokenStorage` jika tersedia.
