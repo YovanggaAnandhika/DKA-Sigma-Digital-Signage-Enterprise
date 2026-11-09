@@ -12,8 +12,6 @@ pub struct DeviceEntity {
     pub is_paired: bool,
     #[serde(skip_serializing)]
     pub device_token_hash: Option<String>,
-    pub resolution_id: Option<Uuid>,
-    pub orientation_id: Option<Uuid>,
     pub screen_width: i32,
     pub screen_height: i32,
     pub orientation: String,

@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS hardware_devices (
     screen_width INT DEFAULT 1920,
     screen_height INT DEFAULT 1080,
     orientation VARCHAR(20) DEFAULT 'landscape',
+    timezone VARCHAR(100) NOT NULL DEFAULT 'Asia/Jakarta',
     is_online BOOLEAN NOT NULL DEFAULT FALSE,
     is_paired BOOLEAN NOT NULL DEFAULT FALSE,
     pairing_code VARCHAR(20),
@@ -19,7 +20,8 @@ CREATE TABLE IF NOT EXISTS hardware_devices (
     display_group_id UUID REFERENCES hardware_display_groups(id) ON DELETE SET NULL,
     canary_group_id UUID REFERENCES distribution_canary_groups(id) ON DELETE SET NULL,
     current_layout_id UUID REFERENCES studio_layouts(id) ON DELETE SET NULL,
-    current_schedule_id UUID REFERENCES studio_schedules(id) ON DELETE SET NULL,
+    schedule_id UUID REFERENCES studio_schedules(id) ON DELETE SET NULL,
+    schedule_assigned_at TIMESTAMPTZ,
     storage_total_bytes BIGINT DEFAULT 0,
     storage_free_bytes BIGINT DEFAULT 0,
     memory_usage_percent INT DEFAULT 0,
@@ -37,4 +39,4 @@ CREATE INDEX IF NOT EXISTS idx_devices_branch ON hardware_devices(branch_id);
 CREATE INDEX IF NOT EXISTS idx_devices_fingerprint ON hardware_devices(hardware_fingerprint);
 CREATE INDEX IF NOT EXISTS idx_devices_group ON hardware_devices(display_group_id);
 CREATE INDEX IF NOT EXISTS idx_devices_pairing ON hardware_devices(pairing_code);
-CREATE INDEX IF NOT EXISTS idx_devices_schedule ON hardware_devices(current_schedule_id);
+CREATE INDEX IF NOT EXISTS idx_devices_schedule ON hardware_devices(schedule_id);
