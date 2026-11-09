@@ -1,8 +1,10 @@
 package com.dkaapis.sigma.presentation.renderers.queue.parser
 
+import android.util.Log
 import com.dkaapis.sigma.presentation.renderers.queue.model.QueueItemMeta
 import com.dkaapis.sigma.presentation.renderers.queue.model.QueueLayoutConfig
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 
 /**
@@ -11,9 +13,9 @@ import org.json.JSONObject
 object QueueLayoutParser {
 
     fun parse(widgetDataJson: String?): QueueLayoutConfig {
-        if (widgetDataJson.isNullOrBlank()) return QueueLayoutConfig()
+        if (widgetDataJson.isNullOrBlank()) return defaultConfig()
 
-        return runCatching {
+        return try {
             val json = JSONObject(widgetDataJson)
             val w = json.optInt("canvasWidth", 1920).takeIf { it > 0 } ?: 1920
             val h = json.optInt("canvasHeight", 1080).takeIf { it > 0 } ?: 1080
@@ -66,10 +68,48 @@ object QueueLayoutParser {
                 bgImageUrl = bgImg,
                 canvasOpacity = canvasOp,
                 counters = counters,
-                items = items
+                items = items.ifEmpty { defaultItems(w, h) }
             )
-        }.getOrDefault(QueueLayoutConfig())
+        } catch (error: JSONException) {
+            Log.e(TAG, "Invalid queue widget JSON; using default layout", error)
+            defaultConfig()
+        }
     }
+
+    private fun defaultConfig() = QueueLayoutConfig(items = defaultItems(1920, 1080))
+
+    private fun defaultItems(width: Int, height: Int) = listOf(
+        QueueItemMeta(
+            id = "default-ticket-number",
+            itemType = "ticket_number",
+            x = 0,
+            y = height / 4,
+            width = width,
+            height = height / 3,
+            zIndex = 1,
+            backgroundColor = "transparent",
+            textColor = "#38bdf8",
+            fontSize = height * 0.2f,
+            fontWeight = "bold",
+            textAlign = "center",
+            templateContent = "\$queue_number\$"
+        ),
+        QueueItemMeta(
+            id = "default-counter-name",
+            itemType = "counter_loket",
+            x = 0,
+            y = height * 2 / 3,
+            width = width,
+            height = height / 5,
+            zIndex = 2,
+            backgroundColor = "transparent",
+            textColor = "#ffffff",
+            fontSize = height * 0.08f,
+            fontWeight = "bold",
+            textAlign = "center",
+            templateContent = "\$queue_counter\$"
+        )
+    )
 
     private fun parseCounters(arr: JSONArray?): List<Pair<String, String>> {
         if (arr == null || arr.length() == 0) {
@@ -130,4 +170,6 @@ object QueueLayoutParser {
             )
         }
     }
+
+    private const val TAG = "QueueLayoutParser"
 }
