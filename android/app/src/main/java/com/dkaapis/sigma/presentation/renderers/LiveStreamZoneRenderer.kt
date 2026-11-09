@@ -1,6 +1,7 @@
 package com.dkaapis.sigma.presentation.renderers
 
 import android.annotation.SuppressLint
+import android.app.ActivityManager
 import android.content.Context
 import android.net.Uri
 import android.os.Handler
@@ -14,6 +15,7 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
@@ -114,7 +116,14 @@ class LiveStreamZoneRenderer(
         }
 
         if (payload.streamMode == "SERVER_HOSTED_HLS" && payload.streamId.isNotBlank()) {
-            startWhepPlayback(container, targetUrl, payload)
+            val isLowRamDevice =
+                context.getSystemService(ActivityManager::class.java)?.isLowRamDevice == true
+            if (isLowRamDevice && targetUrl.isNotBlank()) {
+                Log.i(TAG, "Using buffered HLS playback on low-RAM device (stream=${payload.streamId})")
+                startHlsPlayback(container, targetUrl, payload)
+            } else {
+                startWhepPlayback(container, targetUrl, payload)
+            }
         } else if (targetUrl.isNotBlank()) {
             startHlsPlayback(container, targetUrl, payload)
         } else {
@@ -167,7 +176,7 @@ class LiveStreamZoneRenderer(
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: Exception) {
-                    Log.e(TAG, "WHEP connection failed for stream=${payload.streamId}: ${error.message}")
+                    Log.e(TAG, "WHEP connection failed for stream=${payload.streamId}: ${error.message}", error)
                     mainHandler.post {
                         fallbackToHls(container, hlsFallbackUrl, payload, "WHEP signaling failed")
                     }
@@ -232,7 +241,9 @@ class LiveStreamZoneRenderer(
             }
         }
 
-        val config = PeerConnection.RTCConfiguration(emptyList())
+        val config = PeerConnection.RTCConfiguration(emptyList()).apply {
+            bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE
+        }
         val peer = LiveWebRtcRuntime.get(context).factory.createPeerConnection(config, observer)
             ?: error("Unable to create WebRTC peer connection")
         peerConnection = peer
@@ -282,6 +293,7 @@ class LiveStreamZoneRenderer(
         startHlsPlayback(container, hlsUrl, payload)
     }
 
+    @SuppressLint("UnsafeOptInUsageError")
     private fun startHlsPlayback(
         container: FrameLayout,
         targetUrl: String,
@@ -293,7 +305,11 @@ class LiveStreamZoneRenderer(
         }
         try {
             val targetUri = Uri.parse(targetUrl)
+            val loadControl = DefaultLoadControl.Builder()
+                .setBufferDurationsMs(5_000, 10_000, 1_000, 2_000)
+                .build()
             val player = ExoPlayer.Builder(context)
+                .setLoadControl(loadControl)
                 .setWakeMode(C.WAKE_MODE_NETWORK)
                 .build()
                 .apply {
@@ -486,7 +502,7 @@ class LiveStreamZoneRenderer(
 
     companion object {
         private const val TAG = "LiveStreamZoneRenderer"
-        private const val ICE_GATHER_TIMEOUT_MS = 5_000L
+        private const val ICE_GATHER_TIMEOUT_MS = 250L
         private const val WHEP_CONNECT_TIMEOUT_MS = 15_000L
         private val HTTP_CLIENT = OkHttpClient.Builder()
             .callTimeout(15, TimeUnit.SECONDS)
