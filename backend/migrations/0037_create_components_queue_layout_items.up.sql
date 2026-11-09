@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS components_queue_layout_items (
     template_content TEXT,
     config JSONB DEFAULT '{}'::jsonb,
     is_visible BOOLEAN NOT NULL DEFAULT TRUE,
-    opacity NUMERIC(3, 2) NOT NULL DEFAULT 1.0,
+    opacity DOUBLE PRECISION NOT NULL DEFAULT 1.0,
     border_radius INT NOT NULL DEFAULT 0,
     border_color VARCHAR(30) NOT NULL DEFAULT 'transparent',
     border_width INT NOT NULL DEFAULT 0,
