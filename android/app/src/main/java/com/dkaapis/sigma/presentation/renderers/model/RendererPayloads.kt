@@ -119,9 +119,11 @@ data class LiveStreamConfigPayload(
     val sourceType: String = "WHIP",
     val sourceUrl: String = "",
     val effectivePlaybackUrl: String = "",
+    val isRelayActive: Boolean = true,
     val autoReconnect: Boolean = true,
     val lowLatencyMode: Boolean = true,
-    val isMuted: Boolean = true
+    val isMuted: Boolean = true,
+    val posterImageUrl: String = ""
 ) {
     companion object {
         fun fromJson(json: JSONObject): LiveStreamConfigPayload {
@@ -137,9 +139,11 @@ data class LiveStreamConfigPayload(
                 sourceType = json.optString("sourceType", "WHIP"),
                 sourceUrl = rawSource,
                 effectivePlaybackUrl = effective,
+                isRelayActive = json.optBoolean("isRelayActive", true),
                 autoReconnect = json.optBoolean("autoReconnect", true),
                 lowLatencyMode = json.optBoolean("lowLatencyMode", true),
-                isMuted = json.optBoolean("isMuted", true)
+                isMuted = json.optBoolean("isMuted", true),
+                posterImageUrl = json.optString("posterImageUrl", "")
             )
         }
     }

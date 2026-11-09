@@ -113,6 +113,7 @@ class PlayerZoneManager {
 
     fun setDuckedVolume(isDucked: Boolean) {
         videoRenderers.forEach { it.setDuckedVolume(isDucked) }
+        liveStreamRenderers.forEach { it.setDuckedVolume(isDucked) }
     }
 
     fun pausePlayback() {
