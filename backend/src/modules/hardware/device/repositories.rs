@@ -208,10 +208,12 @@ impl DeviceRepository {
         .fetch_one(&mut *tx)
         .await?;
 
-        sqlx::query(
+        let affected = sqlx::query(
             r#"
-            INSERT INTO hardware_device_pairings (device_id, pairing_code, status, paired_at, device_token, corporation_id, branch_id, approved_by_user_id)
-            VALUES ($1, 'APPROVED', 'paired', NOW(), $2, $3, $4, $5)
+            UPDATE hardware_device_pairings
+            SET status = 'paired', paired_at = NOW(), device_token = $2,
+                corporation_id = $3, branch_id = $4, approved_by_user_id = $5
+            WHERE device_id = $1 AND status = 'pending'
             "#,
         )
         .bind(device_id)
@@ -220,7 +222,27 @@ impl DeviceRepository {
         .bind(branch_id)
         .bind(created_by_user_id)
         .execute(&mut *tx)
-        .await?;
+        .await?
+        .rows_affected();
+
+        if affected == 0 {
+            sqlx::query(
+                r#"
+                INSERT INTO hardware_device_pairings (
+                    device_id, pairing_code, status, paired_at, device_token,
+                    corporation_id, branch_id, approved_by_user_id
+                )
+                VALUES ($1, 'APPROVED', 'paired', NOW(), $2, $3, $4, $5)
+                "#,
+            )
+            .bind(device_id)
+            .bind(raw_token)
+            .bind(corporation_id)
+            .bind(branch_id)
+            .bind(created_by_user_id)
+            .execute(&mut *tx)
+            .await?;
+        }
 
         tx.commit().await?;
 

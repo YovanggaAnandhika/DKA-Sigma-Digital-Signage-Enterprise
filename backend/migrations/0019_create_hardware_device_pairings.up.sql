@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS hardware_device_pairings (
     pairing_code VARCHAR(20) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
     device_token VARCHAR(255),
-    expires_at TIMESTAMPTZ NOT NULL,
+    expires_at TIMESTAMPTZ,
     approved_by_user_id UUID REFERENCES iam_users(id) ON DELETE SET NULL,
     paired_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
