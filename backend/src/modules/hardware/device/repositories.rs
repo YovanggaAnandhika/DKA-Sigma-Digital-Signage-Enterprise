@@ -335,14 +335,14 @@ impl DeviceRepository {
     pub async fn find_all(pool: &DbPool, corporation_id: Option<Uuid>) -> Result<Vec<DeviceEntity>, sqlx::Error> {
         let devices = if let Some(corp_id) = corporation_id {
             sqlx::query_as::<_, DeviceEntity>(
-                "SELECT * FROM hardware_devices WHERE corporation_id = $1 ORDER BY is_online DESC, name ASC",
+                "SELECT * FROM hardware_devices WHERE corporation_id = $1 OR (corporation_id IS NULL AND is_paired = FALSE) ORDER BY is_online DESC, is_paired ASC, name ASC",
             )
             .bind(corp_id)
             .fetch_all(pool)
             .await?
         } else {
             sqlx::query_as::<_, DeviceEntity>(
-                "SELECT * FROM hardware_devices ORDER BY is_online DESC, name ASC",
+                "SELECT * FROM hardware_devices ORDER BY is_online DESC, is_paired ASC, name ASC",
             )
             .fetch_all(pool)
             .await?
