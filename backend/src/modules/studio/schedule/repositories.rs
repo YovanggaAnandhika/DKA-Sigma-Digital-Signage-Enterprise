@@ -135,8 +135,8 @@ impl ScheduleRepository {
 
         let event = sqlx::query_as::<_, ScheduleEventEntity>(
             r#"
-            INSERT INTO studio_schedule_events (schedule_id, layout_id, start_time, end_time, days_of_week, priority, start_date, end_date)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO studio_schedule_events (schedule_id, layout_id, start_time, end_time, days_of_week, priority, start_date, end_date, corporation_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, (SELECT corporation_id FROM studio_schedules WHERE id = $1))
             RETURNING *
             "#,
         )

@@ -21,8 +21,8 @@ impl ManifestRepository {
         // Record in device_layouts
         sqlx::query(
             r#"
-            INSERT INTO hardware_device_layouts (device_id, layout_id, is_active)
-            VALUES ($1, $2, TRUE)
+            INSERT INTO hardware_device_layouts (device_id, layout_id, is_active, corporation_id)
+            VALUES ($1, $2, TRUE, (SELECT corporation_id FROM hardware_devices WHERE id = $1))
             ON CONFLICT DO NOTHING
             "#,
         )

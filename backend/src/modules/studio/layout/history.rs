@@ -32,8 +32,8 @@ impl LayoutHistoryRepository {
     ) -> Result<LayoutHistoryEntity, sqlx::Error> {
         let row = sqlx::query_as::<_, LayoutHistoryEntity>(
             r#"
-            INSERT INTO studio_layout_history (layout_id, version_hash, snapshot_json, description)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO studio_layout_history (layout_id, version_hash, snapshot_json, description, corporation_id)
+            VALUES ($1, $2, $3, $4, (SELECT corporation_id FROM studio_layouts WHERE id = $1))
             RETURNING id, layout_id, NULL as layout_name, version_hash, snapshot_json, description, created_at
             "#,
         )
@@ -275,8 +275,8 @@ impl LayoutHistoryRepository {
 
         sqlx::query(
             r#"
-            INSERT INTO studio_layout_history (layout_id, version_hash, snapshot_json, description)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO studio_layout_history (layout_id, version_hash, snapshot_json, description, corporation_id)
+            VALUES ($1, $2, $3, $4, (SELECT corporation_id FROM studio_layouts WHERE id = $1))
             "#,
         )
         .bind(snapshot.layout.id)

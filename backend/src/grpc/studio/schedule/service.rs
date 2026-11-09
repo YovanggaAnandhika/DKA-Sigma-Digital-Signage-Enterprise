@@ -287,7 +287,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         &self,
         request: Request<PushLayoutToScheduleRequest>,
     ) -> Result<Response<PushLayoutToScheduleResponse>, Status> {
-        let _claims =
+        let claims =
             crate::grpc::middleware::require_permission(&request, "can_manage_schedules")?;
         let req = request.into_inner();
         let layout_id = Uuid::parse_str(&req.layout_id)
@@ -298,6 +298,29 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
             .begin()
             .await
             .map_err(|e| Status::internal(format!("Database error: {}", e)))?;
+
+        // 0. Verify layout exists and resolve corporation_id & branch_id
+        let layout_row: Option<(Option<Uuid>, Option<Uuid>)> = sqlx::query_as(
+            "SELECT corporation_id, branch_id FROM studio_layouts WHERE id = $1",
+        )
+        .bind(layout_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(format!("Database error querying layout: {e}")))?;
+
+        let (layout_corp_id, layout_branch_id) = layout_row
+            .ok_or_else(|| Status::not_found(format!("Layout with ID '{}' not found", layout_id)))?;
+
+        let corp_id = claims
+            .active_corporation_id()
+            .and_then(|s| Uuid::parse_str(s).ok())
+            .or(layout_corp_id);
+        let branch_id = claims
+            .branch_id
+            .as_deref()
+            .and_then(|s| Uuid::parse_str(s).ok())
+            .or(layout_branch_id);
+        let user_id = Uuid::parse_str(&claims.sub).ok();
 
         // 1. Resolve or Create schedule
         let schedule_name = if req.schedule_name.trim().is_empty() {
@@ -334,13 +357,16 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         } else {
             sqlx::query_scalar::<_, Uuid>(
                 r#"
-                INSERT INTO studio_schedules (name, description, created_at, updated_at)
-                VALUES ($1, $2, NOW(), NOW())
+                INSERT INTO studio_schedules (name, description, corporation_id, branch_id, created_by_user_id, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
                 RETURNING id
                 "#,
             )
             .bind(&schedule_name)
             .bind(format!("Dipush dari template layout {}", layout_id))
+            .bind(corp_id)
+            .bind(branch_id)
+            .bind(user_id)
             .fetch_one(&mut *tx)
             .await
             .map_err(|e| Status::internal(format!("Failed to create schedule: {}", e)))?
@@ -363,12 +389,14 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
                     let vh = format!("{:x}", hasher.finalize());
                     if let Ok(snapshot_val) = serde_json::to_value(&full_dto) {
                         let _ = sqlx::query(
-                            "INSERT INTO studio_layout_history (layout_id, version_hash, snapshot_json, description) VALUES ($1, $2, $3, $4)"
+                            "INSERT INTO studio_layout_history (layout_id, version_hash, snapshot_json, description, corporation_id, created_by_user_id) VALUES ($1, $2, $3, $4, $5, $6)"
                         )
                         .bind(layout_id)
                         .bind(&vh)
                         .bind(snapshot_val)
                         .bind("Snapshot awal saat push penjadwalan")
+                        .bind(corp_id)
+                        .bind(user_id)
                         .execute(&mut *tx)
                         .await;
                     }
@@ -405,8 +433,8 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
             r#"
             INSERT INTO studio_schedule_events (
                 schedule_id, layout_id, start_time, end_time, days_of_week,
-                priority, start_date, end_date, version_hash, created_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+                priority, start_date, end_date, version_hash, corporation_id, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
             "#,
         )
         .bind(schedule_id)
@@ -418,6 +446,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         .bind(start_date)
         .bind(end_date)
         .bind(&version_hash)
+        .bind(corp_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| Status::internal(format!("Failed to create schedule event: {}", e)))?;

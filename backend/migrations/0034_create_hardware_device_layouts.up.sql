@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS hardware_device_layouts (
     device_id UUID NOT NULL REFERENCES hardware_devices(id) ON DELETE CASCADE,
     layout_id UUID NOT NULL REFERENCES studio_layouts(id) ON DELETE CASCADE,
-    corporation_id UUID NOT NULL REFERENCES system_corporations(id) ON DELETE CASCADE,
+    corporation_id UUID REFERENCES system_corporations(id) ON DELETE CASCADE,
     canary_group_id UUID REFERENCES distribution_canary_groups(id) ON DELETE SET NULL,
     assigned_by_user_id UUID REFERENCES iam_users(id) ON DELETE SET NULL,
     assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

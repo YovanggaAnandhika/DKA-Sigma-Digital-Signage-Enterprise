@@ -175,7 +175,7 @@ Berikut adalah urutan terverifikasi **51 pasang migrasi** di `backend/migrations
 | **0020** | `0020_create_studio_media_items` | `studio_media_items` | `corporation_id`, `branch_id`, `created_by_user_id` |
 | **0021** | `0021_create_studio_layers` | `studio_layers` | Child of `studio_layouts` (`layout_id`), `corporation_id` nullable |
 | **0022** | `0022_create_studio_playlists` | `studio_playlists` | `corporation_id`, `branch_id`, `created_by_user_id` |
-| **0023** | `0023_create_studio_playlist_items` | `studio_playlist_items` | `corporation_id`, `branch_id`, `created_by_user_id` |
+| **0023** | `0023_create_studio_playlist_items` | `studio_playlist_items` | `corporation_id` nullable, `position`, `transition_type`, `duration_seconds` |
 | **0024** | `0024_create_studio_transitions` | `studio_transitions` | Global Master Visual Transitions |
 | **0025** | `0025_create_studio_visual_filters` | `studio_visual_filters` | Global Master Visual Filter Presets |
 | **0026** | `0026_create_components_tickers` | `components_tickers` | `corporation_id`, `branch_id`, `created_by_user_id` |
@@ -186,16 +186,16 @@ Berikut adalah urutan terverifikasi **51 pasang migrasi** di `backend/migrations
 | **0031** | `0031_create_components_album_photos` | `components_album_photos` | `corporation_id`, `branch_id`, `created_by_user_id` |
 | **0032** | `0032_create_studio_layer_blocks` | `studio_layer_blocks` | Child of `studio_layers` (`layer_id`), `queue_id`, `live_stream_id`, `corporation_id` nullable |
 | **0033** | `0033_create_studio_layer_playlist_item_overrides` | `studio_layer_playlist_item_overrides` | Child of `studio_layer_blocks`, `corporation_id` nullable |
-| **0034** | `0034_create_hardware_device_layouts` | `hardware_device_layouts` | `corporation_id`, `branch_id`, `created_by_user_id` |
+| **0034** | `0034_create_hardware_device_layouts` | `hardware_device_layouts` | `corporation_id` nullable, `device_id`, `layout_id`, `is_active` |
 | **0035** | `0035_create_hardware_device_telemetry` | `hardware_device_telemetry` | Telemetri Player: `memory_percent`, `storage_free_bytes`, `storage_total_bytes`, `ip_address`, `current_playing_media_id`, `active_layout_id` |
-| **0036** | `0036_create_studio_schedule_events` | `studio_schedule_events` | `corporation_id`, `branch_id`, `created_by_user_id` |
+| **0036** | `0036_create_studio_schedule_events` | `studio_schedule_events` | `corporation_id` nullable, `schedule_id`, `layout_id`, `version_hash` |
 | **0037** | `0037_create_components_queue_layout_items` | `components_queue_layout_items` | `corporation_id`, `branch_id`, `created_by_user_id` |
 | **0038** | `0038_create_components_queue_counters` | `components_queue_counters` | `corporation_id`, `branch_id`, `created_by_user_id` |
 | **0039** | `0039_create_components_queue_tickets` | `components_queue_tickets` | `corporation_id`, `branch_id`, `created_by_user_id` |
 | **0040** | `0040_create_components_queue_audios` | `components_queue_audios` | `corporation_id`, `branch_id`, `created_by_user_id` |
 | **0041** | `0041_create_hardware_device_screenshots` | `hardware_device_screenshots` | Screenshot Player: `captured_at`, `file_url`, `file_size` |
-| **0042** | `0042_create_distribution_playback_logs` | `distribution_playback_logs` | `corporation_id` (Playback Logs: Tanpa user reference) |
-| **0043** | `0043_create_studio_layout_history` | `studio_layout_history` | `corporation_id`, `branch_id`, `created_by_user_id` |
+| **0042** | `0042_create_distribution_playback_logs` | `distribution_playback_logs` | `corporation_id` nullable, `media_id`, `is_completed` |
+| **0043** | `0043_create_studio_layout_history` | `studio_layout_history` | `corporation_id` nullable, `layout_id`, `version_hash`, `snapshot_json` |
 | **0044** | `0044_create_hardware_device_analytics` | `hardware_device_analytics` | Device Analytics: `input_output` JSONB, `assets_stats` JSONB, `recorded_at` |
 | **0045** | `0045_create_components_queue_sectors` | `components_queue_sectors` | Global Master Sektor Antrian (Retail F&B, Hospital, Bank, dll.) |
 | **0046** | `0046_create_iot_devices` | `iot_devices` | `corporation_id`, `branch_id`, `created_by_user_id` |

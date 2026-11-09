@@ -147,14 +147,15 @@ impl PlaylistRepository {
 
         let item = sqlx::query_as::<_, PlaylistItemEntity>(
             r#"
-            INSERT INTO studio_playlist_items (playlist_id, media_item_id, position, duration_seconds, transition_type, is_muted)
+            INSERT INTO studio_playlist_items (playlist_id, media_item_id, position, duration_seconds, transition_type, is_muted, corporation_id)
             VALUES (
                 $1,
                 $2,
                 $3,
                 COALESCE($4, (SELECT duration_seconds FROM studio_media_items WHERE id = $2 AND duration_seconds > 0), 10),
                 $5,
-                COALESCE($6, false)
+                COALESCE($6, false),
+                (SELECT corporation_id FROM studio_playlists WHERE id = $1)
             )
             RETURNING *
             "#,

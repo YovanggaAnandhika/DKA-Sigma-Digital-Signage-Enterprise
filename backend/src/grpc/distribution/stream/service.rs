@@ -236,8 +236,8 @@ impl StreamServiceTrait for StreamServiceImpl {
 
             let res = sqlx::query(
                 r#"
-                INSERT INTO distribution_playback_logs (device_id, media_id, layout_id, started_at, duration_seconds, is_completed)
-                VALUES ($1, $2, $3, $4, $5, $6)
+                INSERT INTO distribution_playback_logs (device_id, media_id, layout_id, started_at, duration_seconds, is_completed, corporation_id)
+                VALUES ($1, $2, $3, $4, $5, $6, (SELECT corporation_id FROM hardware_devices WHERE id = $1))
                 "#,
             )
             .bind(device_id)
