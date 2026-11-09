@@ -37,6 +37,7 @@ export interface LiveStreamFormState {
   name: string;
   description: string;
   sourceType: StreamSourceType;
+  isRelayActive: boolean;
   autoReconnect: boolean;
   lowLatencyMode: boolean;
   isMuted: boolean;
@@ -66,6 +67,7 @@ const DEFAULT_STATE: LiveStreamFormState = {
   name: '',
   description: '',
   sourceType: 'WHIP',
+  isRelayActive: true,
   autoReconnect: true,
   lowLatencyMode: true,
   isMuted: true,
@@ -84,6 +86,7 @@ interface LiveStreamEditorContextValue {
   setName: (val: string) => void;
   setDescription: (val: string) => void;
   setSourceType: (val: StreamSourceType) => void;
+  setIsRelayActive: (val: boolean) => void;
   setAutoReconnect: (val: boolean) => void;
   setLowLatencyMode: (val: boolean) => void;
   setIsMuted: (val: boolean) => void;
@@ -175,6 +178,7 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
           name: item.name || '',
           description: item.description || '',
           sourceType: type,
+          isRelayActive: item.isRelayActive ?? true,
           autoReconnect: item.autoReconnect ?? true,
           lowLatencyMode: item.lowLatencyMode ?? true,
           isMuted: item.isMuted ?? true,
@@ -198,6 +202,7 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
   const setName = useCallback((name: string) => setDraft((prev) => ({ ...prev, name })), []);
   const setDescription = useCallback((description: string) => setDraft((prev) => ({ ...prev, description })), []);
   const setSourceType = useCallback((sourceType: StreamSourceType) => setDraft((prev) => ({ ...prev, sourceType })), []);
+  const setIsRelayActive = useCallback((isRelayActive: boolean) => setDraft((prev) => ({ ...prev, isRelayActive })), []);
   const setAutoReconnect = useCallback((autoReconnect: boolean) => setDraft((prev) => ({ ...prev, autoReconnect })), []);
   const setLowLatencyMode = useCallback((lowLatencyMode: boolean) => setDraft((prev) => ({ ...prev, lowLatencyMode })), []);
   const setIsMuted = useCallback((isMuted: boolean) => setDraft((prev) => ({ ...prev, isMuted })), []);
@@ -285,7 +290,7 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
           sourceType: draft.sourceType,
           sourceUrl: effectiveSourceUrl,
           serverHlsEndpoint: `/streams/${streamId}/live.m3u8`,
-          isRelayActive: true,
+          isRelayActive: draft.isRelayActive,
           autoReconnect: draft.autoReconnect,
           lowLatencyMode: draft.lowLatencyMode,
           isMuted: draft.isMuted,
@@ -305,6 +310,7 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
           streamMode: 'SERVER_HOSTED_HLS' as StreamMode,
           sourceType: draft.sourceType,
           sourceUrl: effectiveSourceUrl,
+          isRelayActive: draft.isRelayActive,
           autoReconnect: draft.autoReconnect,
           lowLatencyMode: draft.lowLatencyMode,
           isMuted: draft.isMuted,
@@ -337,6 +343,7 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
       setName,
       setDescription,
       setSourceType,
+      setIsRelayActive,
       setAutoReconnect,
       setLowLatencyMode,
       setIsMuted,
@@ -360,6 +367,7 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
       setName,
       setDescription,
       setSourceType,
+      setIsRelayActive,
       setAutoReconnect,
       setLowLatencyMode,
       setIsMuted,

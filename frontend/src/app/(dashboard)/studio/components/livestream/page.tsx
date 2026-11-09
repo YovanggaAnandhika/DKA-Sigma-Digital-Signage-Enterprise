@@ -84,31 +84,20 @@ export default function LiveStreamPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Action & Filter Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-            Manajemen Siaran Langsung & Relay CCTV
-          </h2>
-          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Kelola feed kamera RTSP, HLS, RTMP OBS, YouTube Live, serta server relay.
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button onClick={loadStreams} className="btn btn-secondary" title="Segarkan Data">
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            <span>Segarkan</span>
-          </button>
-          <Link href="/studio/components/livestream/create" className="btn btn-primary">
-            <Plus size={16} />
-            <span>Tambah Live Stream</span>
-          </Link>
-        </div>
+      {/* Action Bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: '8px' }}>
+        <button onClick={loadStreams} className="btn btn-secondary" title="Segarkan Data">
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          <span>Segarkan</span>
+        </button>
+        <Link href="/studio/components/livestream/create" className="btn btn-primary">
+          <Plus size={16} />
+          <span>Tambah Live Stream</span>
+        </Link>
       </div>
 
       {/* Search Bar */}
-      <div className="card-elevated" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div className="card-elevated" style={{ padding: '14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
         <div style={{ position: 'relative', flex: 1 }}>
           <Search
             size={16}
@@ -122,7 +111,7 @@ export default function LiveStreamPage() {
           />
           <input
             type="text"
-            placeholder="Cari siaran langsung berdasarkan nama, keterangan, atau URL..."
+            placeholder="Cari siaran langsung berdasarkan nama..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -141,9 +130,8 @@ export default function LiveStreamPage() {
             <thead>
               <tr>
                 <th>Nama Siaran</th>
-                <th>Keterangan</th>
-                <th>Mode Streaming</th>
                 <th>Tipe Sumber</th>
+                <th>Status Siaran</th>
                 <th>Status Audio</th>
                 <th style={{ textAlign: 'right' }}>Aksi</th>
               </tr>
@@ -151,13 +139,13 @@ export default function LiveStreamPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                     Memuat daftar siaran langsung...
                   </td>
                 </tr>
               ) : paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                     Belum ada konfigurasi Live Stream ditemukan.
                   </td>
                 </tr>
@@ -173,52 +161,55 @@ export default function LiveStreamPage() {
                       </Link>
                     </td>
 
-                    <td style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
-                      {item.description || '-'}
-                    </td>
-
-                    <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
-                        <span
-                          className={`badge ${item.streamMode === 'SERVER_HOSTED_HLS' ? 'badge-success' : 'badge-neutral'
-                            }`}
-                        >
-                          {item.streamMode === 'SERVER_HOSTED_HLS' ? 'Server HLS Relay' : 'Direct External'}
-                        </span>
-                        {item.streamMode === 'SERVER_HOSTED_HLS' && (
-                          <button
-                            type="button"
-                            disabled={togglingId === item.id}
-                            onClick={() => handleToggleRelay(item)}
-                            className="btn btn-outline"
-                            style={{
-                              padding: '2px 8px',
-                              fontSize: '0.6875rem',
-                              height: 'auto',
-                              borderColor: item.isRelayActive ? 'var(--accent-emerald)' : 'var(--border-subtle)',
-                              color: item.isRelayActive ? 'var(--accent-emerald)' : 'var(--text-muted)',
-                            }}
-                          >
-                            {item.isRelayActive ? 'Relay Aktif' : 'Relay Nonaktif'}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-
                     <td>
                       <span
                         style={{
                           padding: '2px 8px',
-                          borderRadius: '9999px',
-                          fontSize: '0.6875rem',
-                          fontWeight: 700,
-                          backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                          color: 'var(--primary-400)',
-                          border: '1px solid rgba(59, 130, 246, 0.3)',
+                          borderRadius: '4px',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          backgroundColor: 'var(--bg-surface-elevated)',
+                          color: 'var(--text-secondary)',
+                          border: '1px solid var(--border-subtle)',
                         }}
                       >
                         {item.sourceType}
                       </span>
+                    </td>
+
+                    <td>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={item.isRelayActive}
+                        disabled={togglingId === item.id}
+                        onClick={() => handleToggleRelay(item)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '4px 10px',
+                          borderRadius: 'var(--radius-full)',
+                          border: '1px solid var(--border-subtle)',
+                          backgroundColor: item.isRelayActive ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-surface-elevated)',
+                          color: item.isRelayActive ? 'var(--accent-emerald)' : 'var(--text-muted)',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          cursor: togglingId === item.id ? 'default' : 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                        title={item.isRelayActive ? 'Klik untuk menonaktifkan siaran' : 'Klik untuk mengaktifkan siaran'}
+                      >
+                        <span
+                          style={{
+                            width: '6px',
+                            height: '6px',
+                            borderRadius: '50%',
+                            backgroundColor: item.isRelayActive ? 'var(--accent-emerald)' : 'var(--text-muted)',
+                          }}
+                        />
+                        <span>{item.isRelayActive ? 'Siaran Aktif' : 'Nonaktif'}</span>
+                      </button>
                     </td>
 
                     <td>

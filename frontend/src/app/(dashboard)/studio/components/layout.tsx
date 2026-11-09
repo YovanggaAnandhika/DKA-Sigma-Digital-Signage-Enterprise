@@ -74,14 +74,14 @@ export default function ComponentsLayout({ children }: { children: React.ReactNo
       {/* Sub-module Header with Circular Back Button pointing back to /studio/components */}
       {!isCreateOrEdit && currentMeta && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Link
               href="/studio/components"
               className="btn btn-outline"
               style={{
-                width: '42px',
-                minWidth: '42px',
-                height: '42px',
+                width: '38px',
+                minWidth: '38px',
+                height: '38px',
                 padding: 0,
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -92,33 +92,12 @@ export default function ComponentsLayout({ children }: { children: React.ReactNo
               aria-label="Kembali ke Menu Komponen"
               title="Kembali ke Menu Komponen"
             >
-              <ArrowLeft size={18} />
+              <ArrowLeft size={17} />
             </Link>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div
-                style={{
-                  padding: '10px',
-                  borderRadius: '12px',
-                  backgroundColor: 'var(--bg-surface-elevated)',
-                  color: 'var(--text-primary)',
-                  border: '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {Icon && <Icon size={22} />}
-              </div>
-              <div>
-                <h1 style={{ fontSize: '1.375rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
-                  {currentMeta.title}
-                </h1>
-                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px', margin: 0 }}>
-                  {currentMeta.subtitle}
-                </p>
-              </div>
-            </div>
+            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
+              {currentMeta.title}
+            </h1>
           </div>
         </div>
       )}

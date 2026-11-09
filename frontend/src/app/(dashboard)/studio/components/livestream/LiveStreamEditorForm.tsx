@@ -56,7 +56,7 @@ function LiveStreamEditorContent() {
     isEdit,
     draft,
     setName,
-    setDescription,
+    setIsRelayActive,
     setAutoReconnect,
     setLowLatencyMode,
     setPosterImageUrl,
@@ -248,17 +248,88 @@ function LiveStreamEditorContent() {
               />
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                Keterangan Singkat
+            {/* Status Live Streaming (Modern Radio Segmented Toggle) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                Status Siaran
               </label>
-              <input
-                type="text"
-                value={draft.description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Contoh: Tayangan langsung area pelayanan"
-                className="form-input"
-              />
+              <div
+                role="radiogroup"
+                aria-label="Status Live Streaming"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '3px',
+                  borderRadius: 'var(--radius-full)',
+                  backgroundColor: 'var(--bg-primary)',
+                  border: '1px solid var(--border-subtle)',
+                  width: 'fit-content',
+                  gap: '4px',
+                }}
+              >
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={draft.isRelayActive}
+                  onClick={() => setIsRelayActive(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 14px',
+                    borderRadius: 'var(--radius-full)',
+                    border: 'none',
+                    backgroundColor: draft.isRelayActive ? 'var(--bg-surface-elevated)' : 'transparent',
+                    color: draft.isRelayActive ? 'var(--text-primary)' : 'var(--text-muted)',
+                    fontSize: '0.78rem',
+                    fontWeight: draft.isRelayActive ? 600 : 500,
+                    cursor: 'pointer',
+                    boxShadow: draft.isRelayActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '7px',
+                      height: '7px',
+                      borderRadius: '50%',
+                      backgroundColor: draft.isRelayActive ? 'var(--accent-emerald)' : 'var(--text-muted)',
+                    }}
+                  />
+                  <span>Siaran Aktif</span>
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={!draft.isRelayActive}
+                  onClick={() => setIsRelayActive(false)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 14px',
+                    borderRadius: 'var(--radius-full)',
+                    border: 'none',
+                    backgroundColor: !draft.isRelayActive ? 'var(--bg-surface-elevated)' : 'transparent',
+                    color: !draft.isRelayActive ? 'var(--text-primary)' : 'var(--text-muted)',
+                    fontSize: '0.78rem',
+                    fontWeight: !draft.isRelayActive ? 600 : 500,
+                    cursor: 'pointer',
+                    boxShadow: !draft.isRelayActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '7px',
+                      height: '7px',
+                      borderRadius: '50%',
+                      backgroundColor: !draft.isRelayActive ? 'var(--accent-rose)' : 'var(--text-muted)',
+                    }}
+                  />
+                  <span>Nonaktif</span>
+                </button>
+              </div>
             </div>
 
             {/* Poster Media Picker */}
@@ -293,7 +364,7 @@ function LiveStreamEditorContent() {
           sourceUrl={draft.sourceType === 'RTSP' ? draft.protocols.RTSP.sourceUrl : `/streams/${streamKey}/live.m3u8`}
           streamKey={streamKey}
           serverHost={serverHost}
-          isRelayActive={true}
+          isRelayActive={draft.isRelayActive}
           lowLatencyMode={draft.lowLatencyMode}
           autoReconnect={draft.autoReconnect}
           isMuted={draft.isMuted}

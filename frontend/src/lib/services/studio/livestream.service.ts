@@ -74,7 +74,7 @@ export async function getLiveStream(id: string): Promise<LiveStreamConfig> {
 }
 
 export async function createLiveStream(
-  payload: Omit<LiveStreamConfig, 'id' | 'serverHlsEndpoint' | 'isRelayActive'>
+  payload: Omit<LiveStreamConfig, 'id' | 'serverHlsEndpoint'>
 ): Promise<LiveStreamConfig> {
   const res = await invokeApi<LiveStreamProtoObject>(
     '/api/grpc/components/live_stream/CreateLiveStream',
