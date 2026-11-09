@@ -140,31 +140,13 @@ export default function CreateApkReleasePage() {
         >
           <ArrowLeft size={18} />
         </Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #0284c7, #0369a1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              boxShadow: '0 4px 14px rgba(2, 132, 199, 0.3)',
-              flexShrink: 0,
-            }}
-          >
-            <Smartphone size={20} />
-          </div>
-          <div>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-              Unggah Rilis APK Baru
-            </h1>
-            <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Paket binary APK untuk distribusi pembaruan Over-the-Air (OTA) ke Android Player
-            </p>
-          </div>
+        <div>
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+            Unggah Rilis APK
+          </h1>
+          <p style={{ margin: '2px 0 0', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+            Unggah paket aplikasi baru untuk pembaruan Android Player.
+          </p>
         </div>
       </div>
 

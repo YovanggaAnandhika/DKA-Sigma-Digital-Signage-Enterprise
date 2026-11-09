@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Images, Plus, Search, Eye, Edit, Trash2, X, Sparkles, Play, Pause, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { Images, Plus, Search, Eye, Edit, Trash2, X, Play, Pause, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
 import { modal } from '@/components/ui/ModalDialog';
 import { getAlbums, deleteAlbum } from '@/lib/services';

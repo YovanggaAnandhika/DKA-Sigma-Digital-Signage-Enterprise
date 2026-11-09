@@ -91,31 +91,13 @@ export default function ApkManagementPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
       {/* Page Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div
-            style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #0284c7, #0369a1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              boxShadow: '0 4px 14px rgba(2, 132, 199, 0.3)',
-              flexShrink: 0,
-            }}
-          >
-            <Smartphone size={22} />
-          </div>
-          <div>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-              Pembaruan APK (OTA)
-            </h1>
-            <p style={{ margin: '3px 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Manajemen Versi & Distribusi Pembaruan Kiosk Android Terpusat
-            </p>
-          </div>
+        <div>
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+            Pembaruan Sistem
+          </h1>
+          <p style={{ margin: '3px 0 0', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+            Manajemen versi dan distribusi pembaruan aplikasi Android pemutar.
+          </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -331,19 +313,8 @@ export default function ApkManagementPage() {
             </div>
             <Link
               href="/system/apk/create"
+              className="btn btn-primary"
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '10px 22px',
-                borderRadius: '10px',
-                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                color: '#ffffff',
-                fontWeight: 600,
-                fontSize: '0.875rem',
-                textDecoration: 'none',
-                boxShadow: '0 4px 14px rgba(2, 132, 199, 0.35)',
-                transition: 'all 0.2s ease',
                 marginTop: '8px',
               }}
             >

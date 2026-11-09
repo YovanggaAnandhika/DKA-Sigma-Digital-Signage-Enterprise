@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Globe, Type, Clock, Users, Images, Radio, Plus, Sparkles, Check, ListMusic, Search } from 'lucide-react';
+import { X, Globe, Type, Clock, Users, Images, Radio, Plus, Check, ListMusic, Search } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 import { addMediaBlock, addPlaylistBlock, addWidgetBlock, createLayer } from '@/lib/services/studio/layout.service';
 import { DEFAULT_WEBVIEWS, WEBVIEW_STORAGE_KEY, WebViewConfig } from '@/app/(dashboard)/studio/components/webview/types';

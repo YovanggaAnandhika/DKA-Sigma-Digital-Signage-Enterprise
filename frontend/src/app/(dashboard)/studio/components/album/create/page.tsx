@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Images, Plus, Trash2, Check, Sparkles, FolderOpen } from 'lucide-react';
+import { ArrowLeft, Images, Plus, Trash2, Check, FolderOpen } from 'lucide-react';
 import { PhotoItem } from '../types';
 import AlbumMediaPickerModal from '../components/AlbumMediaPickerModal';
 import { createAlbum } from '@/lib/services';
