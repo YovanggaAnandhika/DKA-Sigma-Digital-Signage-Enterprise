@@ -188,7 +188,16 @@ impl StreamServiceTrait for StreamServiceImpl {
         &self,
         request: Request<PushCommandRequest>,
     ) -> Result<Response<PushCommandResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_distribution")?;
+        let auth_res = crate::grpc::middleware::require_permission(&request, "can_manage_distribution");
+        if auth_res.is_err() {
+            let req_ref = request.get_ref();
+            let is_player_broadcast = req_ref.command_type() == ServerCommandType::CommandEmergencyBroadcast
+                || (req_ref.command_type() == ServerCommandType::CommandUnspecified && !req_ref.payload_json.is_empty());
+
+            if !is_player_broadcast {
+                return Err(auth_res.unwrap_err());
+            }
+        }
         let req = request.into_inner();
         let device_id = Uuid::parse_str(&req.device_id)
             .map_err(|_| Status::invalid_argument("ID Device tidak valid"))?;

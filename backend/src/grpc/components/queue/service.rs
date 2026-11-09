@@ -55,9 +55,9 @@ struct QueueDisplayRow {
     sector_type: String,
     ticket_label: String,
     counter_label: String,
-    tts_template_call: String,
-    tts_template_recall: String,
-    tts_template_break: String,
+    tts_template_call: Option<String>,
+    tts_template_recall: Option<String>,
+    tts_template_break: Option<String>,
     current_sequence: i32,
     created_at: chrono::DateTime<chrono::Utc>,
     updated_at: chrono::DateTime<chrono::Utc>,
@@ -70,9 +70,9 @@ struct QueueDisplaySyncRow {
     sector_type: String,
     ticket_label: String,
     counter_label: String,
-    tts_template_call: String,
-    tts_template_recall: String,
-    tts_template_break: String,
+    tts_template_call: Option<String>,
+    tts_template_recall: Option<String>,
+    tts_template_break: Option<String>,
 }
 
 #[derive(FromRow)]
@@ -192,7 +192,7 @@ impl QueueServiceImpl {
         call_type: &str,
     ) {
         let Some(ref mgr) = self.stream_manager else { return };
-        let disp: Option<(String, String, String, String, String)> = sqlx::query_as(
+        let disp: Option<(String, String, String, Option<String>, Option<String>)> = sqlx::query_as(
             "SELECT name, ticket_label, counter_label, tts_template_call, tts_template_recall FROM components_queue_displays WHERE id = $1"
         )
         .bind(queue_display_id)
@@ -201,13 +201,15 @@ impl QueueServiceImpl {
         .ok()
         .flatten();
 
-        let (qname, tlabel, clabel, tts_call, tts_recall) = disp.unwrap_or_else(|| (
+        let (qname, tlabel, clabel, tts_call_opt, tts_recall_opt) = disp.unwrap_or_else(|| (
             "Layar Antrian".to_string(),
             "NOMOR ANTRIAN".to_string(),
             "LOKET".to_string(),
-            "Nomor antrian {ticket}, silakan menuju ke {counter}".to_string(),
-            "Panggilan ulang nomor antrian {ticket}, silakan menuju ke {counter}".to_string(),
+            None,
+            None,
         ));
+        let tts_call = tts_call_opt.unwrap_or_else(|| "Nomor antrian {ticket}, silakan menuju ke {counter}".to_string());
+        let tts_recall = tts_recall_opt.unwrap_or_else(|| "Panggilan ulang nomor antrian {ticket}, silakan menuju ke {counter}".to_string());
 
         let payload = serde_json::json!({
             "type": "CALL_QUEUE",
@@ -430,9 +432,9 @@ impl QueueServiceImpl {
             sector_type: display.sector_type,
             ticket_label: display.ticket_label,
             counter_label: display.counter_label,
-            tts_template_call: display.tts_template_call,
-            tts_template_recall: display.tts_template_recall,
-            tts_template_break: display.tts_template_break,
+            tts_template_call: display.tts_template_call.unwrap_or_default(),
+            tts_template_recall: display.tts_template_recall.unwrap_or_default(),
+            tts_template_break: display.tts_template_break.unwrap_or_default(),
             current_sequence: display.current_sequence,
         })
     }
@@ -1811,9 +1813,9 @@ impl QueueTicketServiceTrait for QueueServiceImpl {
             sector_type: display.sector_type,
             ticket_label: display.ticket_label,
             counter_label: display.counter_label,
-            tts_template_call: display.tts_template_call,
-            tts_template_recall: display.tts_template_recall,
-            tts_template_break: display.tts_template_break,
+            tts_template_call: display.tts_template_call.unwrap_or_default(),
+            tts_template_recall: display.tts_template_recall.unwrap_or_default(),
+            tts_template_break: display.tts_template_break.unwrap_or_default(),
             counters,
             waiting_tickets_count: waiting_count as i32,
         }))

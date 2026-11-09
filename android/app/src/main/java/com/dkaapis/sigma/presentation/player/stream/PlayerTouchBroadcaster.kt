@@ -2,6 +2,8 @@ package com.dkaapis.sigma.presentation.player.stream
 
 import android.util.Log
 import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
+import com.dkaapis.sigma.data.local.TokenStorage
+import io.grpc.Metadata
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -12,7 +14,8 @@ import signage.distribution.v1.stream.StreamServiceGrpcKt
  * Pengirim event broadcast dari player ke backend via gRPC StreamService.PushCommand port 50051
  */
 class PlayerTouchBroadcaster(
-    private val channelFactory: GrpcChannelFactory
+    private val channelFactory: GrpcChannelFactory,
+    private val tokenStorage: TokenStorage? = null
 ) {
     suspend fun broadcastQueueTouch(
         deviceId: String,
@@ -86,7 +89,19 @@ class PlayerTouchBroadcaster(
             .setCommandType(StreamCommon.ServerCommandType.COMMAND_EMERGENCY_BROADCAST)
             .setPayloadJson(json.toString())
             .build()
-        stub.pushCommand(req)
+
+        val token = tokenStorage?.getAuthToken()
+        if (!token.isNullOrBlank()) {
+            val headers = Metadata().apply {
+                put(
+                    Metadata.Key.of("authorization", Metadata.ASCII_STRING_MARSHALLER),
+                    "Bearer $token"
+                )
+            }
+            stub.pushCommand(req, headers)
+        } else {
+            stub.pushCommand(req)
+        }
     }
 
     companion object {

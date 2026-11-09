@@ -14,17 +14,14 @@ use crate::grpc::proto::common::v1::PaginationResponse;
 struct TickerRow {
     id: Uuid,
     name: String,
-    badge: String,
-    messages: Vec<String>,
+    text_content: String,
+    badge_label: Option<String>,
     speed: String,
-    theme: String,
     font_size: i32,
     background_color: String,
     text_color: String,
-    badge_background_color: String,
-    badge_text_color: String,
-    border_color: String,
-    border_radius: i32,
+    badge_bg_color: Option<String>,
+    badge_text_color: Option<String>,
     created_at: chrono::DateTime<chrono::Utc>,
     updated_at: chrono::DateTime<chrono::Utc>,
 }
@@ -34,17 +31,17 @@ impl TickerRow {
         Ticker {
             id: self.id.to_string(),
             name: self.name,
-            badge: self.badge,
-            messages: self.messages,
+            badge: self.badge_label.unwrap_or_default(),
+            messages: vec![self.text_content],
             speed: self.speed,
-            theme: self.theme,
+            theme: "blue".to_string(),
             font_size: self.font_size,
             background_color: self.background_color,
             text_color: self.text_color,
-            badge_background_color: self.badge_background_color,
-            badge_text_color: self.badge_text_color,
-            border_color: self.border_color,
-            border_radius: self.border_radius,
+            badge_background_color: self.badge_bg_color.unwrap_or_else(|| "#2563eb".to_string()),
+            badge_text_color: self.badge_text_color.unwrap_or_else(|| "#ffffff".to_string()),
+            border_color: "#60a5fa".to_string(),
+            border_radius: 8,
             created_at: self.created_at.to_rfc3339(),
             updated_at: self.updated_at.to_rfc3339(),
         }
@@ -69,40 +66,38 @@ impl TickerServiceTrait for TickerServiceImpl {
     ) -> Result<Response<Ticker>, Status> {
         let req = request.into_inner();
         let id = Uuid::new_v4();
+        let text_content = if !req.messages.is_empty() { req.messages.join(" • ") } else { "Pengumuman".to_string() };
 
         let row = sqlx::query_as::<_, TickerRow>(
             r#"
             INSERT INTO components_tickers (
-                id, name, badge, messages, speed, theme, font_size,
-                background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius
+                id, corporation_id, name, text_content, badge_label, speed, font_size,
+                background_color, text_color, badge_bg_color, badge_text_color
             )
             VALUES (
-                $1, $2, $3, $4, $5, $6, $7,
-                COALESCE(NULLIF($8, ''), '#1e3a8a'),
-                COALESCE(NULLIF($9, ''), '#ffffff'),
-                COALESCE(NULLIF($10, ''), '#2563eb'),
-                COALESCE(NULLIF($11, ''), '#ffffff'),
-                COALESCE(NULLIF($12, ''), '#60a5fa'),
-                CASE WHEN $13 > 0 THEN $13 ELSE 8 END
+                $1,
+                COALESCE((SELECT id FROM system_corporations LIMIT 1), '00000000-0000-0000-0000-000000000000'::uuid),
+                $2, $3, $4, $5, $6,
+                COALESCE(NULLIF($7, ''), '#000000'),
+                COALESCE(NULLIF($8, ''), '#ffffff'),
+                COALESCE(NULLIF($9, ''), '#2563eb'),
+                COALESCE(NULLIF($10, ''), '#ffffff')
             )
-            RETURNING id, name, badge, messages, speed, theme, font_size,
-                      background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius,
+            RETURNING id, name, text_content, badge_label, speed, font_size,
+                      background_color, text_color, badge_bg_color, badge_text_color,
                       created_at, updated_at
             "#
         )
         .bind(id)
         .bind(&req.name)
+        .bind(&text_content)
         .bind(&req.badge)
-        .bind(&req.messages[..])
         .bind(&req.speed)
-        .bind(&req.theme)
         .bind(req.font_size)
         .bind(&req.background_color)
         .bind(&req.text_color)
         .bind(&req.badge_background_color)
         .bind(&req.badge_text_color)
-        .bind(&req.border_color)
-        .bind(req.border_radius)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -116,7 +111,7 @@ impl TickerServiceTrait for TickerServiceImpl {
     ) -> Result<Response<Ticker>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
         let row = sqlx::query_as::<_, TickerRow>(
-            "SELECT id, name, badge, messages, speed, theme, font_size, background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius, created_at, updated_at FROM components_tickers WHERE id = $1"
+            "SELECT id, name, text_content, badge_label, speed, font_size, background_color, text_color, badge_bg_color, badge_text_color, created_at, updated_at FROM components_tickers WHERE id = $1"
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -136,11 +131,11 @@ impl TickerServiceTrait for TickerServiceImpl {
 
         let rows = sqlx::query_as::<_, TickerRow>(
             r#"
-            SELECT id, name, badge, messages, speed, theme, font_size,
-                   background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius,
+            SELECT id, name, text_content, badge_label, speed, font_size,
+                   background_color, text_color, badge_bg_color, badge_text_color,
                    created_at, updated_at
             FROM components_tickers
-            WHERE name ILIKE $1 OR badge ILIKE $1
+            WHERE name ILIKE $1 OR text_content ILIKE $1 OR badge_label ILIKE $1
             ORDER BY created_at DESC
             LIMIT 50
             "#
@@ -169,42 +164,37 @@ impl TickerServiceTrait for TickerServiceImpl {
     ) -> Result<Response<Ticker>, Status> {
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id).map_err(|_| Status::invalid_argument("Invalid id"))?;
+        let text_content = if !req.messages.is_empty() { Some(req.messages.join(" • ")) } else { None };
 
         let row = sqlx::query_as::<_, TickerRow>(
             r#"
             UPDATE components_tickers
             SET name = COALESCE(NULLIF($2, ''), name),
-                badge = COALESCE(NULLIF($3, ''), badge),
-                messages = $4,
+                text_content = COALESCE($3, text_content),
+                badge_label = COALESCE(NULLIF($4, ''), badge_label),
                 speed = COALESCE(NULLIF($5, ''), speed),
-                theme = COALESCE(NULLIF($6, ''), theme),
-                font_size = CASE WHEN $7 > 0 THEN $7 ELSE font_size END,
-                background_color = COALESCE(NULLIF($8, ''), background_color),
-                text_color = COALESCE(NULLIF($9, ''), text_color),
-                badge_background_color = COALESCE(NULLIF($10, ''), badge_background_color),
-                badge_text_color = COALESCE(NULLIF($11, ''), badge_text_color),
-                border_color = COALESCE(NULLIF($12, ''), border_color),
-                border_radius = CASE WHEN $13 > 0 THEN $13 ELSE border_radius END,
+                font_size = CASE WHEN $6 > 0 THEN $6 ELSE font_size END,
+                background_color = COALESCE(NULLIF($7, ''), background_color),
+                text_color = COALESCE(NULLIF($8, ''), text_color),
+                badge_bg_color = COALESCE(NULLIF($9, ''), badge_bg_color),
+                badge_text_color = COALESCE(NULLIF($10, ''), badge_text_color),
                 updated_at = NOW()
             WHERE id = $1
-            RETURNING id, name, badge, messages, speed, theme, font_size,
-                      background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius,
+            RETURNING id, name, text_content, badge_label, speed, font_size,
+                      background_color, text_color, badge_bg_color, badge_text_color,
                       created_at, updated_at
             "#
         )
         .bind(id)
         .bind(&req.name)
+        .bind(text_content)
         .bind(&req.badge)
-        .bind(&req.messages[..])
         .bind(&req.speed)
-        .bind(&req.theme)
         .bind(req.font_size)
         .bind(&req.background_color)
         .bind(&req.text_color)
         .bind(&req.badge_background_color)
         .bind(&req.badge_text_color)
-        .bind(&req.border_color)
-        .bind(req.border_radius)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;

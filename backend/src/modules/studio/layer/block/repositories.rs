@@ -6,67 +6,6 @@ pub struct LayerBlockRepository;
 
 impl LayerBlockRepository {
     pub async fn create(pool: &PgPool, dto: CreateLayerBlockDto) -> Result<LayerBlockEntity, sqlx::Error> {
-        if let Some(qid) = dto.queue_id {
-            sqlx::query(
-                "INSERT INTO components_queue_displays (id, name, prefix, theme_preset, background_color)
-                 VALUES ($1, 'Layar Antrian Baru', 'A', 'medical-green', '#0f172a')
-                 ON CONFLICT (id) DO NOTHING"
-            )
-            .bind(qid)
-            .execute(pool)
-            .await?;
-        }
-        if let Some(tid) = dto.ticker_id {
-            sqlx::query(
-                "INSERT INTO components_tickers (id, name, badge, messages, speed, theme, font_size)
-                 VALUES ($1, 'Pengumuman Promo Kasir & Diskon Member', 'PROMO HARI INI', ARRAY['Dapatkan diskon 20% untuk semua produk segar buah & sayur setiap hari Jumat hingga Minggu!', 'Gunakan kartu member HNDSigma Point untuk mendapatkan poin ganda di seluruh kasir.'], 'normal', 'blue', 16)
-                 ON CONFLICT (id) DO NOTHING"
-            )
-            .bind(tid)
-            .execute(pool)
-            .await?;
-        }
-        if let Some(cid) = dto.clock_id {
-            sqlx::query(
-                "INSERT INTO components_clocks (id, name, city, show_seconds, is_24_hour, theme)
-                 VALUES ($1, 'Jam Digital & Cuaca', 'Makassar', true, true, 'glass')
-                 ON CONFLICT (id) DO NOTHING"
-            )
-            .bind(cid)
-            .execute(pool)
-            .await?;
-        }
-        if let Some(wid) = dto.webview_id {
-            sqlx::query(
-                "INSERT INTO components_webviews (id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation)
-                 VALUES ($1, 'Webview Display', 'https://en.wikipedia.org/wiki/Digital_signage', 60, 100, true, 'landscape')
-                 ON CONFLICT (id) DO NOTHING"
-            )
-            .bind(wid)
-            .execute(pool)
-            .await?;
-        }
-        if let Some(aid) = dto.album_id {
-            sqlx::query(
-                "INSERT INTO components_albums (id, name, description, transition_effect, slide_duration_seconds)
-                 VALUES ($1, 'Album Foto Digital', 'Slideshow promo', 'ken-burns', 5)
-                 ON CONFLICT (id) DO NOTHING"
-            )
-            .bind(aid)
-            .execute(pool)
-            .await?;
-        }
-        if let Some(lsid) = dto.live_stream_id {
-            sqlx::query(
-                "INSERT INTO components_live_streams (id, name, description, stream_mode, source_type, source_url)
-                 VALUES ($1, 'Live Stream Utama', 'Siaran langsung / CCTV', 'EXTERNAL_EMBED', 'HLS', 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8')
-                 ON CONFLICT (id) DO NOTHING"
-            )
-            .bind(lsid)
-            .execute(pool)
-            .await?;
-        }
-
         let max_order: (Option<i32>,) = sqlx::query_as(
             "SELECT MAX(order_index) FROM studio_layer_blocks WHERE layer_id = $1"
         )

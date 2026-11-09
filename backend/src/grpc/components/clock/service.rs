@@ -14,37 +14,37 @@ use crate::grpc::proto::common::v1::PaginationResponse;
 struct ClockRow {
     id: Uuid,
     name: String,
-    city: String,
+    timezone: String,
+    clock_format: String,
     show_seconds: bool,
-    is_24_hour: bool,
-    theme: String,
-    background_color: String,
+    #[allow(dead_code)]
+    show_date: bool,
+    font_size: i32,
     text_color: String,
-    subtitle_color: String,
-    border_color: String,
-    border_radius: i32,
-    time_font_size: i32,
-    date_font_size: i32,
+    background_color: String,
+    weather_city: Option<String>,
     created_at: chrono::DateTime<chrono::Utc>,
     updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl ClockRow {
     fn into_proto(self) -> Clock {
+        let city = self.weather_city.unwrap_or(self.timezone);
+        let is_24_hour = self.clock_format.contains("24");
         Clock {
             id: self.id.to_string(),
             name: self.name,
-            city: self.city,
+            city,
             show_seconds: self.show_seconds,
-            is_24_hour: self.is_24_hour,
-            theme: self.theme,
+            is_24_hour,
+            theme: "glass".to_string(),
             background_color: self.background_color,
             text_color: self.text_color,
-            subtitle_color: self.subtitle_color,
-            border_color: self.border_color,
-            border_radius: self.border_radius,
-            time_font_size: self.time_font_size,
-            date_font_size: self.date_font_size,
+            subtitle_color: "#94a3b8".to_string(),
+            border_color: "#1e3a8a".to_string(),
+            border_radius: 12,
+            time_font_size: self.font_size,
+            date_font_size: 14,
             created_at: self.created_at.to_rfc3339(),
             updated_at: self.updated_at.to_rfc3339(),
         }
@@ -70,42 +70,36 @@ impl ClockServiceTrait for ClockServiceImpl {
         let req = request.into_inner();
         let id = Uuid::new_v4();
         let city = if req.city.is_empty() { "Makassar".to_string() } else { req.city };
-        let theme = if req.theme.is_empty() { "glass".to_string() } else { req.theme };
+        let clock_format = if req.is_24_hour { "24h".to_string() } else { "12h".to_string() };
+        let font_size = if req.time_font_size > 0 { req.time_font_size } else { 48 };
 
         let row = sqlx::query_as::<_, ClockRow>(
             r#"
             INSERT INTO components_clocks (
-                id, name, city, show_seconds, is_24_hour, theme,
-                background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size
+                id, corporation_id, name, timezone, clock_format, show_seconds, show_date, font_size,
+                background_color, text_color, weather_city
             )
             VALUES (
-                $1, $2, $3, $4, $5, $6,
-                COALESCE(NULLIF($7, ''), '#0f172a'),
-                COALESCE(NULLIF($8, ''), '#ffffff'),
-                COALESCE(NULLIF($9, ''), '#94a3b8'),
-                COALESCE(NULLIF($10, ''), '#1e3a8a'),
-                CASE WHEN $11 > 0 THEN $11 ELSE 12 END,
-                CASE WHEN $12 > 0 THEN $12 ELSE 52 END,
-                CASE WHEN $13 > 0 THEN $13 ELSE 14 END
+                $1,
+                COALESCE((SELECT id FROM system_corporations LIMIT 1), '00000000-0000-0000-0000-000000000000'::uuid),
+                $2, 'Asia/Jakarta', $3, $4, true, $5,
+                COALESCE(NULLIF($6, ''), 'transparent'),
+                COALESCE(NULLIF($7, ''), '#ffffff'),
+                $8
             )
-            RETURNING id, name, city, show_seconds, is_24_hour, theme,
-                      background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size,
+            RETURNING id, name, timezone, clock_format, show_seconds, show_date, font_size,
+                      background_color, text_color, weather_city,
                       created_at, updated_at
             "#
         )
         .bind(id)
         .bind(&req.name)
-        .bind(&city)
+        .bind(&clock_format)
         .bind(req.show_seconds)
-        .bind(req.is_24_hour)
-        .bind(&theme)
+        .bind(font_size)
         .bind(&req.background_color)
         .bind(&req.text_color)
-        .bind(&req.subtitle_color)
-        .bind(&req.border_color)
-        .bind(req.border_radius)
-        .bind(req.time_font_size)
-        .bind(req.date_font_size)
+        .bind(&city)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -119,7 +113,7 @@ impl ClockServiceTrait for ClockServiceImpl {
     ) -> Result<Response<Clock>, Status> {
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
         let row = sqlx::query_as::<_, ClockRow>(
-            "SELECT id, name, city, show_seconds, is_24_hour, theme, background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size, created_at, updated_at FROM components_clocks WHERE id = $1"
+            "SELECT id, name, timezone, clock_format, show_seconds, show_date, font_size, background_color, text_color, weather_city, created_at, updated_at FROM components_clocks WHERE id = $1"
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -139,11 +133,11 @@ impl ClockServiceTrait for ClockServiceImpl {
 
         let rows = sqlx::query_as::<_, ClockRow>(
             r#"
-            SELECT id, name, city, show_seconds, is_24_hour, theme,
-                   background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size,
+            SELECT id, name, timezone, clock_format, show_seconds, show_date, font_size,
+                   background_color, text_color, weather_city,
                    created_at, updated_at
             FROM components_clocks
-            WHERE name ILIKE $1 OR city ILIKE $1
+            WHERE name ILIKE $1 OR weather_city ILIKE $1 OR timezone ILIKE $1
             ORDER BY created_at DESC
             LIMIT 50
             "#
@@ -172,26 +166,23 @@ impl ClockServiceTrait for ClockServiceImpl {
     ) -> Result<Response<Clock>, Status> {
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id).map_err(|_| Status::invalid_argument("Invalid id"))?;
+        let clock_format = if req.is_24_hour { Some("24h".to_string()) } else { None };
+        let font_size = if req.time_font_size > 0 { req.time_font_size } else { 0 };
 
         let row = sqlx::query_as::<_, ClockRow>(
             r#"
             UPDATE components_clocks
             SET name = COALESCE(NULLIF($2, ''), name),
-                city = COALESCE(NULLIF($3, ''), city),
+                weather_city = COALESCE(NULLIF($3, ''), weather_city),
                 show_seconds = $4,
-                is_24_hour = $5,
-                theme = COALESCE(NULLIF($6, ''), theme),
+                clock_format = COALESCE($5, clock_format),
+                font_size = CASE WHEN $6 > 0 THEN $6 ELSE font_size END,
                 background_color = COALESCE(NULLIF($7, ''), background_color),
                 text_color = COALESCE(NULLIF($8, ''), text_color),
-                subtitle_color = COALESCE(NULLIF($9, ''), subtitle_color),
-                border_color = COALESCE(NULLIF($10, ''), border_color),
-                border_radius = CASE WHEN $11 > 0 THEN $11 ELSE border_radius END,
-                time_font_size = CASE WHEN $12 > 0 THEN $12 ELSE time_font_size END,
-                date_font_size = CASE WHEN $13 > 0 THEN $13 ELSE date_font_size END,
                 updated_at = NOW()
             WHERE id = $1
-            RETURNING id, name, city, show_seconds, is_24_hour, theme,
-                      background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size,
+            RETURNING id, name, timezone, clock_format, show_seconds, show_date, font_size,
+                      background_color, text_color, weather_city,
                       created_at, updated_at
             "#
         )
@@ -199,15 +190,10 @@ impl ClockServiceTrait for ClockServiceImpl {
         .bind(&req.name)
         .bind(&req.city)
         .bind(req.show_seconds)
-        .bind(req.is_24_hour)
-        .bind(&req.theme)
+        .bind(clock_format)
+        .bind(font_size)
         .bind(&req.background_color)
         .bind(&req.text_color)
-        .bind(&req.subtitle_color)
-        .bind(&req.border_color)
-        .bind(req.border_radius)
-        .bind(req.time_font_size)
-        .bind(req.date_font_size)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;

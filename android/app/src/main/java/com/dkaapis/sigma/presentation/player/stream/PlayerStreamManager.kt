@@ -29,7 +29,7 @@ class PlayerStreamManager(
 ) {
     private val eventParser = DeviceSseEventParser()
     private val queueSyncHelper = QueueSyncHelper(channelFactory)
-    private val touchBroadcaster = PlayerTouchBroadcaster(channelFactory)
+    private val touchBroadcaster = PlayerTouchBroadcaster(channelFactory, tokenStorage)
     private var streamJob: Job? = null
 
     // Outgoing client stream channel for DisplayStream
