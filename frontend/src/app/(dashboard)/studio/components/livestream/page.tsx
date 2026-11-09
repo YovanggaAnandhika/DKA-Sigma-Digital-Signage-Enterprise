@@ -180,9 +180,8 @@ export default function LiveStreamPage() {
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
                         <span
-                          className={`badge ${
-                            item.streamMode === 'SERVER_HOSTED_HLS' ? 'badge-success' : 'badge-neutral'
-                          }`}
+                          className={`badge ${item.streamMode === 'SERVER_HOSTED_HLS' ? 'badge-success' : 'badge-neutral'
+                            }`}
                         >
                           {item.streamMode === 'SERVER_HOSTED_HLS' ? 'Server HLS Relay' : 'Direct External'}
                         </span>
