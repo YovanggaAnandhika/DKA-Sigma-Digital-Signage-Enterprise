@@ -240,7 +240,14 @@ impl ManifestServiceImpl {
                 || (row.background_color == "#e9eef4" && row.text_color == "#0f172a");
             let background_color = if legacy_glass { "#1a2233" } else { &row.background_color };
             let text_color = if legacy_glass { "#f8fafc" } else { &row.text_color };
-            let is_glass = background_color == "#1a2233";
+            let theme = match background_color {
+                "#1a2233" | "#e9eef4" => "glass",
+                "#0f172a" => "dark",
+                "#064e3b" => "emerald",
+                "#78350f" => "gold",
+                _ => "glass",
+            };
+            let is_glass = theme == "glass";
             let json_val = serde_json::json!({
                 "id": row.id.to_string(),
                 "name": row.name,
@@ -249,11 +256,11 @@ impl ManifestServiceImpl {
                 "showSeconds": row.show_seconds,
                 "showDate": row.show_date,
                 "is24Hour": row.clock_format.contains("24"),
-                "theme": "glass",
+                "theme": theme,
                 "backgroundColor": background_color,
                 "textColor": text_color,
-                "subtitleColor": "#94a3b8",
-                "borderColor": if is_glass { "#334155" } else { "#1e3a8a" },
+                "subtitleColor": if is_glass { "#526175" } else { "#94a3b8" },
+                "borderColor": if is_glass { "#d5dee9" } else { "#1e3a8a" },
                 "borderRadius": 12,
                 "timeFontSize": row.font_size,
                 "dateFontSize": 14,

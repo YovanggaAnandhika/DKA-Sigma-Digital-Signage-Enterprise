@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Clock, Check, CloudSun, Calendar, MapPin, Droplets, Wind, Save, RefreshCw } from 'lucide-react';
-import { CITY_PRESETS, ClockWeatherConfig } from '../../types';
+import { CITY_PRESETS, CLOCK_THEME_STYLES, ClockWeatherConfig } from '../../types';
 import { getClock, updateClock } from '@/lib/services/studio/clock.service';
 import { modal } from '@/components/ui/ModalDialog';
 
@@ -18,6 +18,8 @@ export default function EditClockWeatherPage() {
   const [showSeconds, setShowSeconds] = useState(true);
   const [is24Hour, setIs24Hour] = useState(true);
   const [theme, setTheme] = useState<'glass' | 'dark' | 'emerald' | 'gold'>('glass');
+  const [textColor, setTextColor] = useState(CLOCK_THEME_STYLES.glass.textColor);
+  const [timeFontSize, setTimeFontSize] = useState(48);
   const [time, setTime] = useState<Date>(new Date());
 
   const [submitting, setSubmitting] = useState(false);
@@ -32,6 +34,8 @@ export default function EditClockWeatherPage() {
         setShowSeconds(found.showSeconds);
         setIs24Hour(found.is24Hour);
         setTheme(found.theme);
+        setTextColor(found.textColor || CLOCK_THEME_STYLES[found.theme].textColor);
+        setTimeFontSize(found.timeFontSize || 48);
       })
       .catch((err) => {
         if (!isMounted) return;
@@ -64,6 +68,8 @@ export default function EditClockWeatherPage() {
         showSeconds,
         is24Hour,
         theme,
+        textColor,
+        timeFontSize,
       });
 
       router.push('/studio/components/clock');
@@ -166,7 +172,10 @@ export default function EditClockWeatherPage() {
                 <button
                   key={t}
                   type="button"
-                  onClick={() => setTheme(t)}
+                  onClick={() => {
+                    setTheme(t);
+                    setTextColor(CLOCK_THEME_STYLES[t].textColor);
+                  }}
                   className={`btn ${theme === t ? 'btn-primary' : 'btn-outline'}`}
                   style={{ textTransform: 'capitalize', fontSize: '0.75rem', padding: '8px 4px' }}
                 >
@@ -175,6 +184,33 @@ export default function EditClockWeatherPage() {
               ))}
             </div>
           </div>
+
+          <div>
+            <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+              <span>Ukuran Teks Jam</span>
+              <span>{timeFontSize} px</span>
+            </label>
+            <input
+              type="range"
+              min="24"
+              max="96"
+              step="2"
+              value={timeFontSize}
+              onChange={(e) => setTimeFontSize(Number(e.target.value))}
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+            <span>Warna Teks Jam</span>
+            <input
+              type="color"
+              value={textColor}
+              onChange={(e) => setTextColor(e.target.value)}
+              aria-label="Warna teks jam"
+              style={{ width: '42px', height: '32px', padding: '2px', border: '1px solid var(--border-subtle)', borderRadius: '6px', background: 'transparent' }}
+            />
+          </label>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: '10px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
             <div>
@@ -246,18 +282,11 @@ export default function EditClockWeatherPage() {
                 maxWidth: '440px',
                 borderRadius: '24px',
                 padding: '28px',
-                background:
-                  theme === 'glass'
-                    ? 'var(--bg-surface-elevated)'
-                    : theme === 'emerald'
-                    ? 'linear-gradient(135deg, #064e3b 0%, #022c22 100%)'
-                    : theme === 'gold'
-                    ? 'linear-gradient(135deg, #78350f 0%, #451a03 100%)'
-                    : 'var(--bg-surface)',
+                background: CLOCK_THEME_STYLES[theme].backgroundColor,
                 border: '1px solid var(--border-subtle)',
                 boxShadow: 'var(--card-shadow)',
                 backdropFilter: 'blur(12px)',
-                color: theme === 'emerald' || theme === 'gold' ? '#ffffff' : 'var(--text-primary)',
+                color: textColor,
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
@@ -272,7 +301,7 @@ export default function EditClockWeatherPage() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '8px' }}>
-                <span style={{ fontSize: '3.75rem', fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1 }}>
+                <span style={{ fontSize: `${timeFontSize * 0.7}px`, fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1 }}>
                   {hours}:{minutes}
                 </span>
                 {showSeconds && (

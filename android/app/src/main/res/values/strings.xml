@@ -4,6 +4,11 @@
     <string name="pairing_subtitle">Masukkan kode verifikasi berikut pada CMS HNDSigma:</string>
     <string name="connecting">Menghubungkan ke Server…</string>
     <string name="syncing_manifest">Menyinkronkan Jadwal &amp; Konten…</string>
+    <string name="clock_location">⌖  %1$s</string>
+    <string name="clock_condition">☀  %1$s</string>
+    <string name="clock_temperature">%1$d°C</string>
+    <string name="clock_weather_metrics">◉ %1$d%%     ≋ %2$d km/h</string>
+    <string name="clock_date">▦  %1$s</string>
 
     <!-- Environment Server Configurations -->
     <string name="server_host">10.20.30.97</string>

@@ -37,7 +37,7 @@ impl ClockRow {
         let text_color = if legacy_glass { "#f8fafc" } else { &self.text_color };
         let is_24_hour = self.clock_format.contains("24");
         let theme = match background_color {
-            "#1a2233" => "glass",
+            "#1a2233" | "#e9eef4" => "glass",
             "#0f172a" => "dark",
             "#064e3b" => "emerald",
             "#78350f" => "gold",

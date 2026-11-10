@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Clock, Check, CloudSun, Calendar, MapPin, Droplets, Wind } from 'lucide-react';
-import { CITY_PRESETS, ClockWeatherConfig } from '../types';
+import { CITY_PRESETS, CLOCK_THEME_STYLES, ClockWeatherConfig } from '../types';
 import { createClock } from '@/lib/services/studio/clock.service';
 import { modal } from '@/components/ui/ModalDialog';
 
@@ -16,6 +16,8 @@ export default function CreateClockWeatherPage() {
   const [showSeconds, setShowSeconds] = useState(true);
   const [is24Hour, setIs24Hour] = useState(true);
   const [theme, setTheme] = useState<'glass' | 'dark' | 'emerald' | 'gold'>('glass');
+  const [textColor, setTextColor] = useState(CLOCK_THEME_STYLES.glass.textColor);
+  const [timeFontSize, setTimeFontSize] = useState(48);
 
   const [time, setTime] = useState<Date>(new Date());
 
@@ -38,6 +40,8 @@ export default function CreateClockWeatherPage() {
         showSeconds,
         is24Hour,
         theme,
+        textColor,
+        timeFontSize,
       });
 
       router.push('/studio/components/clock');
@@ -114,7 +118,11 @@ export default function CreateClockWeatherPage() {
             </label>
             <select
               value={theme}
-              onChange={(e) => setTheme(e.target.value as any)}
+              onChange={(e) => {
+                const nextTheme = e.target.value as ClockWeatherConfig['theme'];
+                setTheme(nextTheme);
+                setTextColor(CLOCK_THEME_STYLES[nextTheme].textColor);
+              }}
               className="form-input"
             >
               <option value="glass">Glassmorphism Transparan</option>
@@ -123,6 +131,33 @@ export default function CreateClockWeatherPage() {
               <option value="gold">Emas Mewah</option>
             </select>
           </div>
+
+          <div>
+            <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+              <span>Ukuran Teks Jam</span>
+              <span>{timeFontSize} px</span>
+            </label>
+            <input
+              type="range"
+              min="24"
+              max="96"
+              step="2"
+              value={timeFontSize}
+              onChange={(e) => setTimeFontSize(Number(e.target.value))}
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+            <span>Warna Teks Jam</span>
+            <input
+              type="color"
+              value={textColor}
+              onChange={(e) => setTextColor(e.target.value)}
+              aria-label="Warna teks jam"
+              style={{ width: '42px', height: '32px', padding: '2px', border: '1px solid var(--border-subtle)', borderRadius: '6px', background: 'transparent' }}
+            />
+          </label>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '4px' }}>
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8125rem', color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -173,14 +208,7 @@ export default function CreateClockWeatherPage() {
             style={{
               padding: '28px 36px',
               borderRadius: '20px',
-              background:
-                theme === 'glass'
-                  ? 'var(--bg-surface-elevated)'
-                  : theme === 'dark'
-                  ? 'var(--bg-surface)'
-                  : theme === 'emerald'
-                  ? '#064e3b'
-                  : '#78350f',
+              background: CLOCK_THEME_STYLES[theme].backgroundColor,
               backdropFilter: 'blur(16px)',
               border: '1px solid var(--border-subtle)',
               display: 'flex',
@@ -188,12 +216,12 @@ export default function CreateClockWeatherPage() {
               justifyContent: 'space-between',
               flexWrap: 'wrap',
               gap: '24px',
-              color: theme === 'emerald' || theme === 'gold' ? '#ffffff' : 'var(--text-primary)',
+              color: textColor,
               boxShadow: 'var(--card-shadow)',
             }}
           >
             <div>
-              <div style={{ fontSize: '3.5rem', fontWeight: 900, fontFamily: 'monospace', lineHeight: 1 }}>
+              <div style={{ fontSize: `${timeFontSize * 0.7}px`, fontWeight: 900, fontFamily: 'monospace', lineHeight: 1 }}>
                 {time.toLocaleTimeString('id-ID', {
                   hour: '2-digit',
                   minute: '2-digit',

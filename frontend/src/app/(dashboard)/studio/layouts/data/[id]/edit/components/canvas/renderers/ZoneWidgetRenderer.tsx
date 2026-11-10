@@ -1,12 +1,98 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { RotateCcw, Bell, Radio } from 'lucide-react';
+import { RotateCcw, Bell, Radio, Calendar, CloudSun, Droplets, MapPin, Wind } from 'lucide-react';
 import HlsPlayer from '@/components/ui/HlsPlayer';
 import { Layer } from '../../../context/LayoutStateContext';
 import { injectQueueVariables, createDefaultQueueLayoutItems } from '@/app/(dashboard)/studio/components/ticket/types';
+import { CITY_PRESETS } from '@/app/(dashboard)/studio/components/clock/types';
 
 const Marquee = 'marquee' as any;
+
+function ClockWidget({ data, scale, width, height }: { data: any; scale: number; width: number; height: number }) {
+  const [now, setNow] = React.useState(() => new Date());
+
+  React.useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const city = data?.city || 'Makassar';
+  const weather = CITY_PRESETS[city] || CITY_PRESETS.Makassar;
+  const timeZone = data?.timezone || 'Asia/Jakarta';
+  const timeParts = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: data?.is24Hour === false,
+    timeZone,
+  }).formatToParts(now);
+  const getPart = (type: string) => timeParts.find((part) => part.type === type)?.value || '';
+  const widgetScale = Math.max(0.1, Math.min(scale * width / 440, scale * height / 230));
+  const textColor = data?.textColor || '#f8fafc';
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        boxSizing: 'border-box',
+        padding: `${20 * widgetScale}px ${28 * widgetScale}px`,
+        backgroundColor: data?.backgroundColor || '#1a2233',
+        color: textColor,
+        border: `${Math.max(1, widgetScale)}px solid ${data?.borderColor || 'rgba(255,255,255,0.1)'}`,
+        borderRadius: `${Math.max(4, 24 * widgetScale)}px`,
+        boxShadow: '0 12px 28px rgba(0,0,0,0.24)',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 * widgetScale, marginBottom: 10 * widgetScale }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 * widgetScale, color: '#93c5fd', fontSize: 14 * widgetScale, fontWeight: 700 }}>
+          <MapPin size={14 * widgetScale} />
+          <span>{weather.city}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 * widgetScale, color: '#fbbf24', fontSize: 13 * widgetScale, fontWeight: 600, whiteSpace: 'nowrap' }}>
+          <CloudSun size={17 * widgetScale} />
+          <span>{weather.condition}</span>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 * widgetScale, marginBottom: 6 * widgetScale, whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: (data?.timeFontSize || 48) * 0.7 * widgetScale, fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1 }}>
+          {getPart('hour')}:{getPart('minute')}
+        </span>
+        {data?.showSeconds !== false && (
+          <span style={{ fontSize: 28 * widgetScale, fontWeight: 700, color: '#94a3b8' }}>:{getPart('second')}</span>
+        )}
+        {getPart('dayPeriod') && (
+          <span style={{ fontSize: 16 * widgetScale, fontWeight: 800, color: '#38bdf8' }}>{getPart('dayPeriod')}</span>
+        )}
+      </div>
+
+      {data?.showDate !== false && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 * widgetScale, color: '#cbd5e1', fontSize: (data?.dateFontSize || 14) * widgetScale, marginBottom: 12 * widgetScale }}>
+          <Calendar size={14 * widgetScale} color="#94a3b8" />
+          <span>{now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone })}</span>
+        </div>
+      )}
+
+      <div style={{ paddingTop: 10 * widgetScale, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 * widgetScale }}>
+        <span style={{ fontSize: 28 * widgetScale, lineHeight: 1, fontWeight: 800 }}>{weather.temp}°C</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 * widgetScale, color: '#94a3b8', fontSize: 12 * widgetScale, whiteSpace: 'nowrap' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 * widgetScale }}>
+            <Droplets size={12 * widgetScale} color="#38bdf8" /> {weather.humidity}%
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 * widgetScale }}>
+            <Wind size={12 * widgetScale} color="#34d399" /> {weather.windSpeed} km/h
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function TickerMarquee({
   text,
@@ -170,47 +256,7 @@ export default function ZoneWidgetRenderer({
   }
 
   if (activeBlock.widgetType === 'clock') {
-    return (
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundColor: activeBlock.widgetData?.backgroundColor || 'var(--bg-surface-elevated)',
-          color: activeBlock.widgetData?.textColor || 'var(--text-primary)',
-          borderRadius: activeBlock.widgetData?.borderRadius ? `${Math.round(activeBlock.widgetData.borderRadius * scale)}px` : undefined,
-          border: activeBlock.widgetData?.borderColor ? `${Math.max(1, Math.round(scale))}px solid ${activeBlock.widgetData.borderColor}` : undefined,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: `${Math.max(3, Math.round(12 * scale))}px`,
-        }}
-      >
-        <div style={{
-          fontSize: `${Math.max(10, Math.round((activeBlock.widgetData?.timeFontSize ? activeBlock.widgetData.timeFontSize * 0.7 : 36.4) * scale))}px`,
-          fontWeight: 800,
-          letterSpacing: '0.02em',
-          fontFamily: 'inherit',
-          lineHeight: 1.1,
-          whiteSpace: 'nowrap',
-        }}>
-          {new Date().toLocaleTimeString('id-ID', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: activeBlock.widgetData?.showSeconds ? '2-digit' : undefined,
-            hour12: activeBlock.widgetData?.is24Hour === false,
-            timeZone: activeBlock.widgetData?.timezone || 'Asia/Jakarta',
-          }).replace(/\./g, ':')}
-        </div>
-        <div style={{
-          fontSize: `${Math.max(7, Math.round((activeBlock.widgetData?.dateFontSize || 14) * scale))}px`,
-          color: activeBlock.widgetData?.subtitleColor || 'var(--text-muted)',
-          marginTop: `${Math.max(1, Math.round(4 * scale))}px`
-        }}>
-          {activeBlock.widgetData?.city || 'Makassar'} &bull; Cerah 31°C
-        </div>
-      </div>
-    );
+    return <ClockWidget data={activeBlock.widgetData} scale={scale} width={z.width} height={z.height} />;
   }
 
   if (activeBlock.widgetType === 'queue') {
