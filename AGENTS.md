@@ -234,3 +234,9 @@ This project is an enterprise-grade digital signage management and streaming pla
 - Saat siaran sedang tidak aktif, belum dipublikasikan (*offline*), atau mengalami gangguan jaringan:
   - Player WAJIB mempertahankan tampilan **"Siaran Offline"** yang elegan (menggunakan UI glassmorphism modern dengan indikator retry halus).
   - **DILARANG KERAS meloncat ke state "BUFFERING"** di setiap interval percobaan reconnecting (`reconnectRunnable`) ketika belum ada aliran paket/frame riil yang diterima. State buffering HANYA boleh aktif ketika media source telah terhubung dan sedang mengisi buffer playback frame pertama.
+
+### 8. gRPC Secret Pipe Low-Latency & Zero-Drop Streaming Invariants
+- **1MB HTTP/2 Flow Control Window**: `GrpcChannelFactory.kt` mengonfigurasi `.flowControlWindow(1024 * 1024)` dan `.maxInboundMessageSize(16 * 1024 * 1024)` pada `OkHttpChannelBuilder`, mengeliminasi starvation pause dan drop frame gRPC saat menerima paket video 500KB–1MB.
+- **Shared Multiplexed ManagedChannel**: Seluruh gRPC calls pada Android (telemetry, touch broadcast, command stream, asset download, dan video chunk dataSource) berbagi satu kanal tunggal HTTP/2 yang dipelihara sebagai shared singleton di `GrpcChannelFactory`.
+- **Direct Blocking Stub execution di ExoPlayer Loader**: `GrpcStreamDataSource` memanfaatkan `LiveStreamServiceGrpc.LiveStreamServiceBlockingStub` dengan deadline 3.5 detik yang dieksekusi sinkron langsung pada background thread `Loader$LoadTask` milik ExoPlayer, menghilangkan overhead coroutine switching (`runBlocking`/`Dispatchers.IO`).
+- **1-Second HLS Segment Alignment**: MediaMTX diatur dengan `MTX_HLSSEGMENTDURATION: "1s"` dan `MTX_HLSSEGMENTCOUNT: "5"`. Pipeline `hd/live/` menghasilkan baseline H.264 (0 B-frames) dengan strict 1-second GOP (`-g 30 -keyint_min 30`) dan audio AAC, memungkinkan ExoPlayer mencapai target latency sub-second hingga ~1.0–1.2 detik secara mulus tanpa slow-motion drift.
