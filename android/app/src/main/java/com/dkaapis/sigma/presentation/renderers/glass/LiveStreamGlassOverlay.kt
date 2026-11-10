@@ -37,7 +37,6 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
     private val centerModalCard: LinearLayout
     private val centerIconContainer: FrameLayout
     private val centerStatusPill: TextView
-    private val centerTitleText: TextView
     private val centerSubText: TextView
     private val centerProgressBar: ProgressBar
 
@@ -58,15 +57,15 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
 
         val density = context.resources.displayMetrics.density
 
-        // --- Centered Modal Glass Card (For Offline / Standby only - macOS Tahoe Floating Sheet) ---
+        // --- Centered Modal Glass Card (For Offline / Standby only - Pure Transparent Crystal Sheet) ---
         centerModalCard = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            background = GlassDrawableFactory.createMacOsTahoeGlassCard(22 * density, density)
-            elevation = 10 * density
+            background = GlassDrawableFactory.createMacOsTahoeGlassCard(20 * density, density)
+            elevation = 8 * density
             outlineProvider = ViewOutlineProvider.BACKGROUND
-            val padH = (24 * density).toInt()
-            val padV = (18 * density).toInt()
+            val padH = (22 * density).toInt()
+            val padV = (16 * density).toInt()
             setPadding(padH, padV, padH, padV)
             layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
                 gravity = Gravity.CENTER
@@ -88,48 +87,39 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
             layoutParams = LinearLayout.LayoutParams((32 * density).toInt(), (32 * density).toInt()).apply {
                 bottomMargin = (10 * density).toInt()
             }
-            indeterminateDrawable?.setTint(0xFF0284C7.toInt())
+            indeterminateDrawable?.setTint(0xFF38BDF8.toInt())
             visibility = View.GONE
         }
 
         // Status Pill (e.g. "SIARAN OFFLINE" / "SIAGA")
         centerStatusPill = TextView(context).apply {
-            setTextColor(0xFFEF4444.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            setTextColor(0xFFFF4D4D.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f)
             typeface = Typeface.DEFAULT_BOLD
+            letterSpacing = 0.05f
             gravity = Gravity.CENTER
+            setShadowLayer(4f, 0f, 1f, 0xB0000000.toInt())
             val pillPadH = (12 * density).toInt()
             val pillPadV = (4 * density).toInt()
             setPadding(pillPadH, pillPadV, pillPadH, pillPadV)
-            background = GlassDrawableFactory.createStatusPillDrawable(0x18EF4444.toInt(), 0x40EF4444.toInt(), 999f)
+            background = GlassDrawableFactory.createStatusPillDrawable(0x35EF4444.toInt(), 0x80EF4444.toInt(), 999f)
             layoutParams = LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
                 bottomMargin = (8 * density).toInt()
             }
         }
 
-        // Main Title Text (Deep dark slate for light theme)
-        centerTitleText = TextView(context).apply {
-            setTextColor(0xFF0F172A.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-                bottomMargin = (4 * density).toInt()
-            }
-        }
-
-        // Subtitle / Description Text
+        // Subtitle / Description Text (Crisp white with ambient shadow on transparent glass)
         centerSubText = TextView(context).apply {
-            setTextColor(0xFF475569.toInt())
+            setTextColor(0xFFF1F5F9.toInt())
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
             gravity = Gravity.CENTER
             maxLines = 2
+            setShadowLayer(6f, 0f, 1.5f, 0xCC000000.toInt())
             layoutParams = LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
         }
 
         centerModalCard.addView(centerProgressBar)
         centerModalCard.addView(centerStatusPill)
-        centerModalCard.addView(centerTitleText)
         centerModalCard.addView(centerSubText)
         addView(centerModalCard)
 
@@ -137,11 +127,11 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
         glassBufferingPill = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = GlassDrawableFactory.createMacOsTahoeGlassPill(density, 0xFF0284C7.toInt())
+            background = GlassDrawableFactory.createMacOsTahoeGlassPill(density, 0xFF38BDF8.toInt())
             elevation = 6 * density
             outlineProvider = ViewOutlineProvider.BACKGROUND
             val padH = (16 * density).toInt()
-            val padV = (9 * density).toInt()
+            val padV = (8 * density).toInt()
             setPadding(padH, padV, (18 * density).toInt(), padV)
             layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
                 gravity = Gravity.CENTER
@@ -154,15 +144,17 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
             layoutParams = LinearLayout.LayoutParams(size, size).apply {
                 rightMargin = (8 * density).toInt()
             }
-            indeterminateDrawable?.setTint(0xFF0284C7.toInt())
+            indeterminateDrawable?.setTint(0xFF38BDF8.toInt())
         }
 
         bufferingLabel = TextView(context).apply {
             text = "Memuat Siaran..."
-            setTextColor(0xFF0F172A.toInt())
+            setTextColor(0xFFF8FAFC.toInt())
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
             typeface = Typeface.DEFAULT_BOLD
+            letterSpacing = 0.02f
             gravity = Gravity.CENTER_VERTICAL
+            setShadowLayer(4f, 0f, 1f, 0xCC000000.toInt())
         }
 
         glassBufferingPill.addView(bufferingSpinner)
@@ -177,7 +169,7 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
             elevation = 6 * density
             outlineProvider = ViewOutlineProvider.BACKGROUND
             val pillPadH = (12 * density).toInt()
-            val pillPadV = (6 * density).toInt()
+            val pillPadV = (5 * density).toInt()
             setPadding(pillPadH, pillPadV, pillPadH, pillPadV)
             layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
                 gravity = Gravity.TOP or Gravity.START
@@ -198,9 +190,11 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
 
         liveBadgeText = TextView(context).apply {
             text = "LIVE • RTSP"
-            setTextColor(0xFF065F46.toInt())
+            setTextColor(0xFFECFDF5.toInt())
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
             typeface = Typeface.DEFAULT_BOLD
+            letterSpacing = 0.04f
+            setShadowLayer(4f, 0f, 1f, 0xCC000000.toInt())
         }
 
         liveBadgePill.addView(liveDotView)
@@ -243,10 +237,9 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
             centerProgressBar.visibility = View.GONE
 
             centerStatusPill.text = "SIARAN OFFLINE"
-            centerStatusPill.setTextColor(0xFFEF4444.toInt())
-            centerStatusPill.background = GlassDrawableFactory.createStatusPillDrawable(0x28EF4444.toInt(), 0x55EF4444.toInt(), 999f)
+            centerStatusPill.setTextColor(0xFFFF4D4D.toInt())
+            centerStatusPill.background = GlassDrawableFactory.createStatusPillDrawable(0x35EF4444.toInt(), 0x80EF4444.toInt(), 999f)
 
-            centerTitleText.text = if (streamName.isNotBlank()) streamName else "Siaran Langsung Mati"
             centerSubText.text = if (customNote.isNotBlank()) customNote else "Menunggu siaran dimulai dari OBS Studio / encoder."
 
             centerModalCard.animate()
@@ -272,10 +265,9 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
             centerProgressBar.visibility = View.GONE
 
             centerStatusPill.text = "SIARAN SIAGA"
-            centerStatusPill.setTextColor(0xFFF59E0B.toInt())
-            centerStatusPill.background = GlassDrawableFactory.createStatusPillDrawable(0x28F59E0B.toInt(), 0x55F59E0B.toInt(), 999f)
+            centerStatusPill.setTextColor(0xFFFBBF24.toInt())
+            centerStatusPill.background = GlassDrawableFactory.createStatusPillDrawable(0x35F59E0B.toInt(), 0x80F59E0B.toInt(), 999f)
 
-            centerTitleText.text = if (streamName.isNotBlank()) streamName else "Siaran Standby"
             centerSubText.text = "Jadwal tayang siaran belum aktif."
 
             centerModalCard.animate()

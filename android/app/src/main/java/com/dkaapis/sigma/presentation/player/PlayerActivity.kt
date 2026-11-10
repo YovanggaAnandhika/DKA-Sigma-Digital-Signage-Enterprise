@@ -317,7 +317,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             setLineSpacing(8f, 1f)
         }
         loadingOverlay = FrameLayout(this).apply {
-            setBackgroundColor(Color.parseColor("#E60B0F19"))
+            setBackgroundColor(Color.parseColor("#990B0F19"))
             layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             addView(LinearLayout(this@PlayerActivity).apply {
                 orientation = LinearLayout.VERTICAL
@@ -398,7 +398,18 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                     is PlayerUiState.Playing -> {
                         hasActivePlayback = true
                         WatchdogService.setPlaybackActive(this@PlayerActivity, true)
-                        loadingOverlay.visibility = View.GONE
+
+                        if (loadingOverlay.visibility == View.VISIBLE) {
+                            loadingOverlay.animate()
+                                .alpha(0f)
+                                .setDuration(450L)
+                                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                                .withEndAction {
+                                    loadingOverlay.visibility = View.GONE
+                                    loadingOverlay.alpha = 1f
+                                }
+                                .start()
+                        }
                         renderManifest(state.manifest)
 
                         val devId = deviceRepo.getSavedDeviceId()

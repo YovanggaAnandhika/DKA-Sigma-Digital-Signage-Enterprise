@@ -67,6 +67,24 @@ class ZoneContainerView @JvmOverloads constructor(
         }
     }
 
+    /**
+     * Transisi halus masuk dari zoom out ke posisi masing-masing zona
+     * diiringi opasitas perlahan dari transparan menjadi tampak.
+     */
+    fun animateEntrance(delayMs: Long = 0L, targetAlpha: Float = 1.0f) {
+        alpha = 0f
+        scaleX = 0.92f
+        scaleY = 0.92f
+        animate()
+            .alpha(targetAlpha)
+            .scaleX(1.0f)
+            .scaleY(1.0f)
+            .setStartDelay(delayMs)
+            .setDuration(650L)
+            .setInterpolator(android.view.animation.DecelerateInterpolator(2.0f))
+            .start()
+    }
+
     override fun onViewAdded(child: View?) {
         super.onViewAdded(child)
         if (child != overlayView) {

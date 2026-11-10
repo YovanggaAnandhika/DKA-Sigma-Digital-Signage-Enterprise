@@ -55,7 +55,7 @@ class PlayerZoneManager {
             activity.resources.displayMetrics.heightPixels.toFloat() / it
         } ?: 1.0f
 
-        for (zone in manifest.zones) {
+        for ((index, zone) in manifest.zones.withIndex()) {
             val zoneView = ZoneContainerView(activity).apply {
                 this.scaleFactorX = initialScaleX
                 this.scaleFactorY = initialScaleY
@@ -98,6 +98,13 @@ class PlayerZoneManager {
             }
 
             canvasLayout.addView(zoneView)
+
+            // Transisi halus masuk dari zoom out ke posisi zona masing-masing diiringi opasitas bertahap
+            val targetAlpha = zone.opacity.coerceIn(0.0f, 1.0f)
+            zoneView.animateEntrance(
+                delayMs = (index * 60L).coerceAtMost(300L),
+                targetAlpha = targetAlpha
+            )
         }
 
         val layoutDuration = manifest.zones.flatMap { it.blocks }.maxOfOrNull {
