@@ -16,6 +16,7 @@ import {
   setCounterStatus as apiSetCounterStatus,
   getQueueSyncState,
 } from '@/lib/services/studio/queue.service';
+import { pushDeviceCommand, ServerCommandType } from '@/lib/services/hardware/device.service';
 import { modal } from '@/components/ui/ModalDialog';
 
 const QueueControlDocks = dynamic(() => import('../control/QueueControlDocks'), {
@@ -323,20 +324,46 @@ export default function TabEditorControllTab() {
     return () => clearInterval(timer);
   }, [queue.id, calling, queue.audioChimeEnabled]);
 
-  const broadcastToAndroid = (payload: Record<string, any>) => {
+  const broadcastToAndroid = async (payload: Record<string, any>) => {
+    const event = {
+      queueId: queue.id,
+      source: 'web_console',
+      timestamp: Date.now(),
+      ...payload,
+    };
+    const failures: string[] = [];
+
     try {
-      fetch('/api/stream/device', {
+      await pushDeviceCommand(
+        '00000000-0000-0000-0000-000000000000',
+        ServerCommandType.COMMAND_EMERGENCY_BROADCAST,
+        JSON.stringify(event)
+      );
+    } catch (error) {
+      failures.push(`Player Android: ${error instanceof Error ? error.message : 'koneksi gagal'}`);
+    }
+
+    try {
+      const response = await fetch('/api/stream/device', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           deviceId: 'all',
-          queueId: queue.id,
-          source: 'web_console',
-          timestamp: Date.now(),
-          ...payload,
+          ...event,
         }),
-      }).catch(() => {});
-    } catch {}
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    } catch (error) {
+      failures.push(`Monitor browser: ${error instanceof Error ? error.message : 'koneksi gagal'}`);
+    }
+
+    if (failures.length > 0) {
+      await modal.alert({
+        title: 'Panggilan belum terkirim ke semua player',
+        message: failures.join('\n'),
+        variant: 'danger',
+      });
+    }
   };
 
   const recordCallHistory = (num: string, counterName: string, callType: 'next' | 'recall' | 'back') => {

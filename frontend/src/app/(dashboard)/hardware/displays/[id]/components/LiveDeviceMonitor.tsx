@@ -227,26 +227,26 @@ export default function LiveDeviceMonitor({ deviceId }: { deviceId: string }) {
         {(diagnostics?.zonesList || []).length === 0 ? (
           <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Belum ada informasi konten yang sedang tampil.</p>
         ) : (
-          <div style={{ display: 'grid', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', alignItems: 'start', gap: 10 }}>
             {diagnostics?.zonesList?.map((zone, index) => {
               const status = zoneStatus(zone);
               return (
-                <div key={`${zone.zoneId || zone.mediaId || index}`} style={{ padding: '12px 14px', borderRadius: 8, background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                <div key={`${zone.zoneId || zone.mediaId || index}`} style={{ minWidth: 0, padding: '10px 12px', borderRadius: 8, background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
                     <div style={{ minWidth: 0 }}>
-                      <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.68rem', marginBottom: 3 }}>
+                      <span style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '0.68rem', fontWeight: 600, marginBottom: 3 }}>
                         {zoneKindLabel(zone.kind)} · Zona {index + 1}
                       </span>
-                      <strong style={{ color: 'var(--text-primary)', fontSize: '0.82rem', overflowWrap: 'anywhere' }}>
+                      <strong style={{ display: 'block', color: 'var(--text-primary)', fontSize: '0.8rem', overflowWrap: 'anywhere' }}>
                         {zoneTitle(zone)}
                       </strong>
                     </div>
-                    <span style={{ flexShrink: 0, color: status.color, fontSize: '0.72rem', fontWeight: 600 }}>
+                    <span style={{ flexShrink: 0, color: status.color, fontSize: '0.68rem', fontWeight: 700, textAlign: 'right' }}>
                       {status.label}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', color: 'var(--text-muted)', fontSize: '0.7rem', marginTop: 8 }}>
-                    {zone.bufferedDurationMs != null ? <span>Buffer: {(zone.bufferedDurationMs / 1000).toFixed(1)} dtk</span> : null}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', color: 'var(--text-secondary)', fontSize: '0.68rem', marginTop: 8 }}>
+                    {zone.bufferedDurationMs != null ? <span>Buffer {(zone.bufferedDurationMs / 1000).toFixed(1)} dtk</span> : null}
                     {zone.droppedFrames ? <span>Frame terlewat: {zone.droppedFrames}</span> : null}
                     {zone.resolution ? <span>Resolusi: {zone.resolution.replace('x', ' × ')}</span> : null}
                   </div>
