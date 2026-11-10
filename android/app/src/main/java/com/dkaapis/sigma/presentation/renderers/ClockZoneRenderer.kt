@@ -14,6 +14,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.graphics.toColorInt
+import com.dkaapis.sigma.R
 import com.dkaapis.sigma.presentation.player.canvas.ZoneContainerView
 import com.dkaapis.sigma.presentation.renderers.model.ClockConfigPayload
 import com.dkaapis.sigma.presentation.util.ColorParser
