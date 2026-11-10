@@ -10,6 +10,10 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewOutlineProvider
+import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -54,11 +58,13 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
 
         val density = context.resources.displayMetrics.density
 
-        // --- Centered Modal Glass Card (For Offline / Standby only - Modern Luminous Light Glass) ---
+        // --- Centered Modal Glass Card (For Offline / Standby only - macOS Tahoe Floating Sheet) ---
         centerModalCard = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            background = GlassDrawableFactory.createStatusPillDrawable(0xE6FFFFFF.toInt(), 0x40CBD5E1.toInt(), 20 * density)
+            background = GlassDrawableFactory.createMacOsTahoeGlassCard(22 * density, density)
+            elevation = 10 * density
+            outlineProvider = ViewOutlineProvider.BACKGROUND
             val padH = (24 * density).toInt()
             val padV = (18 * density).toInt()
             setPadding(padH, padV, padH, padV)
@@ -127,13 +133,15 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
         centerModalCard.addView(centerSubText)
         addView(centerModalCard)
 
-        // --- Floating Modern Luminous Light Glass Buffering Pill ---
+        // --- Floating Modern macOS Tahoe Glass Buffering Pill ---
         glassBufferingPill = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = GlassDrawableFactory.createStatusPillDrawable(0xEAFFFFFF.toInt(), 0x660284C7.toInt(), 999f)
-            val padH = (14 * density).toInt()
-            val padV = (8 * density).toInt()
+            background = GlassDrawableFactory.createMacOsTahoeGlassPill(density, 0xFF0284C7.toInt())
+            elevation = 6 * density
+            outlineProvider = ViewOutlineProvider.BACKGROUND
+            val padH = (16 * density).toInt()
+            val padV = (9 * density).toInt()
             setPadding(padH, padV, (18 * density).toInt(), padV)
             layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
                 gravity = Gravity.CENTER
@@ -161,13 +169,15 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
         glassBufferingPill.addView(bufferingLabel)
         addView(glassBufferingPill)
 
-        // --- Top-Left Live Badge Pill (Modern Luminous Light Glass) ---
+        // --- Top-Left Live Badge Pill (macOS Tahoe Liquid Glass) ---
         liveBadgePill = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = GlassDrawableFactory.createStatusPillDrawable(0xEAFFFFFF.toInt(), 0x6610B981.toInt(), 999f)
-            val pillPadH = (10 * density).toInt()
-            val pillPadV = (5 * density).toInt()
+            background = GlassDrawableFactory.createMacOsTahoeGlassPill(density, 0xFF10B981.toInt())
+            elevation = 6 * density
+            outlineProvider = ViewOutlineProvider.BACKGROUND
+            val pillPadH = (12 * density).toInt()
+            val pillPadV = (6 * density).toInt()
             setPadding(pillPadH, pillPadV, pillPadH, pillPadV)
             layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
                 gravity = Gravity.TOP or Gravity.START
@@ -204,10 +214,19 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
             liveBadgePill.visibility = View.GONE
             centerModalCard.visibility = View.GONE
 
-            // Sleek modern transparent glass pill without obstructing screen with a card
+            // Sleek macOS Tahoe glass pill without obstructing screen with a card
             bufferingLabel.text = if (streamName.isNotBlank()) "Memuat $streamName..." else "Memuat Siaran..."
             glassBufferingPill.visibility = View.VISIBLE
-            glassBufferingPill.alpha = 1f
+            glassBufferingPill.alpha = 0f
+            glassBufferingPill.scaleX = 0.90f
+            glassBufferingPill.scaleY = 0.90f
+            glassBufferingPill.animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(260)
+                .setInterpolator(DecelerateInterpolator(2.0f))
+                .start()
         }
     }
 
@@ -218,7 +237,9 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
             glassBufferingPill.visibility = View.GONE
 
             centerModalCard.visibility = View.VISIBLE
-            centerModalCard.alpha = 1f
+            centerModalCard.alpha = 0f
+            centerModalCard.scaleX = 0.92f
+            centerModalCard.scaleY = 0.92f
             centerProgressBar.visibility = View.GONE
 
             centerStatusPill.text = "SIARAN OFFLINE"
@@ -227,6 +248,14 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
 
             centerTitleText.text = if (streamName.isNotBlank()) streamName else "Siaran Langsung Mati"
             centerSubText.text = if (customNote.isNotBlank()) customNote else "Menunggu siaran dimulai dari OBS Studio / encoder."
+
+            centerModalCard.animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(280)
+                .setInterpolator(DecelerateInterpolator(2.0f))
+                .start()
         }
     }
 
@@ -237,7 +266,9 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
             glassBufferingPill.visibility = View.GONE
 
             centerModalCard.visibility = View.VISIBLE
-            centerModalCard.alpha = 1f
+            centerModalCard.alpha = 0f
+            centerModalCard.scaleX = 0.92f
+            centerModalCard.scaleY = 0.92f
             centerProgressBar.visibility = View.GONE
 
             centerStatusPill.text = "SIARAN SIAGA"
@@ -246,6 +277,14 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
 
             centerTitleText.text = if (streamName.isNotBlank()) streamName else "Siaran Standby"
             centerSubText.text = "Jadwal tayang siaran belum aktif."
+
+            centerModalCard.animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(280)
+                .setInterpolator(DecelerateInterpolator(2.0f))
+                .start()
         }
     }
 
@@ -253,11 +292,14 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
         mainHandler.post {
             currentState = StreamState.LIVE
 
-            // Smoothly fade out center card & buffering pill
+            // Smoothly fade out center card & buffering pill with Apple-style exit scale
             if (centerModalCard.visibility == View.VISIBLE) {
                 centerModalCard.animate()
                     .alpha(0f)
+                    .scaleX(0.94f)
+                    .scaleY(0.94f)
                     .setDuration(180)
+                    .setInterpolator(AccelerateInterpolator(1.8f))
                     .withEndAction { centerModalCard.visibility = View.GONE }
                     .start()
             }
@@ -265,21 +307,33 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
             if (glassBufferingPill.visibility == View.VISIBLE) {
                 glassBufferingPill.animate()
                     .alpha(0f)
+                    .scaleX(0.94f)
+                    .scaleY(0.94f)
                     .setDuration(180)
+                    .setInterpolator(AccelerateInterpolator(1.8f))
                     .withEndAction { glassBufferingPill.visibility = View.GONE }
                     .start()
             }
 
-            // Show live pill
+            // Show live pill with smooth macOS Tahoe entrance
             liveBadgePill.visibility = View.VISIBLE
             liveBadgePill.alpha = 0f
+            liveBadgePill.scaleX = 0.90f
+            liveBadgePill.scaleY = 0.90f
             liveBadgeText.text = if (isLowLatency) "LIVE • WHEP 0.2s" else "LIVE • RTSP"
-            liveBadgePill.animate().alpha(1f).setDuration(200).start()
+            liveBadgePill.animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(260)
+                .setInterpolator(DecelerateInterpolator(2.0f))
+                .start()
 
-            // Pulse live dot animation
+            // Smooth pulse breathing on live dot
             ObjectAnimator.ofFloat(liveDotView, "alpha", 1f, 0.35f, 1f).apply {
-                duration = 1200
+                duration = 1400
                 repeatCount = ObjectAnimator.INFINITE
+                interpolator = AccelerateDecelerateInterpolator()
                 start()
             }
         }
