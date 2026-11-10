@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Clock, Check, CloudSun, Calendar, MapPin, Droplets, Wind, Save, RefreshCw } from 'lucide-react';
-import { CITY_PRESETS, CLOCK_THEME_STYLES, ClockWeatherConfig } from '../../types';
+import { CITY_PRESETS, CLOCK_THEME_STYLES, ClockWeatherConfig, getClockTimezone } from '../../types';
 import { getClock, updateClock } from '@/lib/services/studio/clock.service';
 import { modal } from '@/components/ui/ModalDialog';
 
@@ -84,19 +84,23 @@ export default function EditClockWeatherPage() {
   };
 
   const weather = CITY_PRESETS[city] || CITY_PRESETS['Makassar'];
+  const timeZone = getClockTimezone(city);
 
-  const hours = is24Hour
-    ? String(time.getHours()).padStart(2, '0')
-    : String(time.getHours() % 12 || 12).padStart(2, '0');
-  const minutes = String(time.getMinutes()).padStart(2, '0');
-  const seconds = String(time.getSeconds()).padStart(2, '0');
-  const ampm = time.getHours() >= 12 ? 'PM' : 'AM';
+  const timeParts = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: !is24Hour,
+    timeZone,
+  }).formatToParts(time);
+  const getPart = (type: string) => timeParts.find((part) => part.type === type)?.value || '';
 
   const formattedDate = time.toLocaleDateString('id-ID', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
+    timeZone,
   });
 
   if (loading) {
@@ -302,16 +306,16 @@ export default function EditClockWeatherPage() {
 
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '8px' }}>
                 <span style={{ fontSize: `${timeFontSize * 0.7}px`, fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1 }}>
-                  {hours}:{minutes}
+                  {getPart('hour')}:{getPart('minute')}
                 </span>
                 {showSeconds && (
                   <span style={{ fontSize: '1.75rem', fontWeight: 700, color: CLOCK_THEME_STYLES[theme].subtitleColor }}>
-                    :{seconds}
+                    :{getPart('second')}
                   </span>
                 )}
                 {!is24Hour && (
                   <span style={{ fontSize: '1rem', fontWeight: 800, color: CLOCK_THEME_STYLES[theme].periodColor, marginLeft: '4px' }}>
-                    {ampm}
+                    {getPart('dayPeriod')}
                   </span>
                 )}
               </div>

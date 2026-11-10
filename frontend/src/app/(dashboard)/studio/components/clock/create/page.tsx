@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Clock, Check, CloudSun, Calendar, MapPin, Droplets, Wind } from 'lucide-react';
-import { CITY_PRESETS, CLOCK_THEME_STYLES, ClockWeatherConfig } from '../types';
+import { CITY_PRESETS, CLOCK_THEME_STYLES, ClockWeatherConfig, getClockTimezone } from '../types';
 import { createClock } from '@/lib/services/studio/clock.service';
 import { modal } from '@/components/ui/ModalDialog';
 
@@ -56,6 +56,7 @@ export default function CreateClockWeatherPage() {
   };
 
   const weather = CITY_PRESETS[city] || CITY_PRESETS['Makassar'];
+  const timeZone = getClockTimezone(city);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -227,12 +228,12 @@ export default function CreateClockWeatherPage() {
                   minute: '2-digit',
                   second: showSeconds ? '2-digit' : undefined,
                   hour12: !is24Hour,
-                  timeZone: 'Asia/Jakarta',
+                  timeZone,
                 }).replace(/\./g, ':')}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', color: CLOCK_THEME_STYLES[theme].subtitleColor, marginTop: '8px', fontWeight: 600 }}>
                 <Calendar size={14} style={{ color: CLOCK_THEME_STYLES[theme].locationColor }} />
-                <span>{time.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                <span>{time.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone })}</span>
               </div>
             </div>
 

@@ -1,5 +1,5 @@
 import { invokeApi } from '../../core/invokeApi';
-import { CLOCK_THEME_STYLES, ClockWeatherConfig } from '../../../app/(dashboard)/studio/components/clock/types';
+import { CLOCK_THEME_STYLES, ClockWeatherConfig, getClockTimezone } from '../../../app/(dashboard)/studio/components/clock/types';
 
 type ClockProtoObject = {
   id: string;
@@ -29,7 +29,7 @@ function mapClock(item: ClockProtoObject): ClockWeatherConfig {
     id: item.id,
     name: item.name,
     city: item.city || 'Makassar',
-    timezone: item.timezone || 'Asia/Jakarta',
+    timezone: getClockTimezone(item.city || 'Makassar', item.timezone || 'Asia/Jakarta'),
     showSeconds: Boolean(item.showSeconds ?? item.show_seconds ?? true),
     is24Hour: Boolean(item.is24Hour ?? item.is_24_hour ?? true),
     theme: (item.theme as any) || 'glass',

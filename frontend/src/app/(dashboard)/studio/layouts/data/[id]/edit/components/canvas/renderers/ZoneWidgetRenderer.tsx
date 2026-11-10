@@ -5,7 +5,7 @@ import { RotateCcw, Bell, Radio, Calendar, CloudSun, Droplets, MapPin, Wind } fr
 import HlsPlayer from '@/components/ui/HlsPlayer';
 import { Layer } from '../../../context/LayoutStateContext';
 import { injectQueueVariables, createDefaultQueueLayoutItems } from '@/app/(dashboard)/studio/components/ticket/types';
-import { CITY_PRESETS, CLOCK_THEME_STYLES } from '@/app/(dashboard)/studio/components/clock/types';
+import { CITY_PRESETS, CLOCK_THEME_STYLES, getClockTimezone } from '@/app/(dashboard)/studio/components/clock/types';
 
 const Marquee = 'marquee' as any;
 
@@ -19,7 +19,7 @@ function ClockWidget({ data, scale, width, height }: { data: any; scale: number;
 
   const city = data?.city || 'Makassar';
   const weather = CITY_PRESETS[city] || CITY_PRESETS.Makassar;
-  const timeZone = data?.timezone || 'Asia/Jakarta';
+  const timeZone = getClockTimezone(city, data?.timezone || 'Asia/Jakarta');
   const timeParts = new Intl.DateTimeFormat('en-GB', {
     hour: '2-digit',
     minute: '2-digit',
