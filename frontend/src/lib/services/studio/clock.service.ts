@@ -36,8 +36,8 @@ function mapClock(item: ClockProtoObject): ClockWeatherConfig {
 }
 
 export async function getClocks(search = ''): Promise<ClockWeatherConfig[]> {
-  const res = await invokeApi<{ clocksList?: ClockProtoObject[] }>('/api/grpc/studio/clock/ListClocks', {});
-  const list = (res.clocksList || []).map(mapClock);
+  const res = await invokeApi<{ itemsList?: ClockProtoObject[] }>('/api/grpc/studio/clock/ListClocks', {});
+  const list = (res.itemsList || []).map(mapClock);
   if (!search) return list;
   const q = search.toLowerCase();
   return list.filter((c) => c.name.toLowerCase().includes(q) || c.city.toLowerCase().includes(q));
@@ -74,4 +74,3 @@ export async function updateClock(id: string, payload: Partial<ClockWeatherConfi
 export async function deleteClock(id: string): Promise<{ success: boolean }> {
   return invokeApi<{ success: boolean }>('/api/grpc/studio/clock/DeleteClock', { id });
 }
-

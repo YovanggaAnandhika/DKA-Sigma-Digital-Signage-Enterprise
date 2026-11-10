@@ -37,8 +37,8 @@ function mapTicker(item: TickerProtoObject): TickerConfig {
 }
 
 export async function getTickers(search = ''): Promise<TickerConfig[]> {
-  const res = await invokeApi<{ tickersList?: TickerProtoObject[] }>('/api/grpc/studio/ticker/ListTickers', {});
-  const list = (res.tickersList || []).map(mapTicker);
+  const res = await invokeApi<{ itemsList?: TickerProtoObject[] }>('/api/grpc/studio/ticker/ListTickers', {});
+  const list = (res.itemsList || []).map(mapTicker);
   if (!search) return list;
   const q = search.toLowerCase();
   return list.filter((t) => t.name.toLowerCase().includes(q) || t.badge.toLowerCase().includes(q));
@@ -77,4 +77,3 @@ export async function updateTicker(id: string, payload: Partial<TickerConfig>): 
 export async function deleteTicker(id: string): Promise<{ success: boolean }> {
   return invokeApi<{ success: boolean }>('/api/grpc/studio/ticker/DeleteTicker', { id });
 }
-

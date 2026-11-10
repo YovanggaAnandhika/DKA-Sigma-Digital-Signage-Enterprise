@@ -19,6 +19,7 @@ import {
   addMediaBlock,
   removePlaylistBlock,
 } from '@/lib/services/studio/layout.service';
+import { isUuid } from '@/lib/services/studio/widgetHelper';
 
 export default function InspectorBlockProperties() {
   const {
@@ -118,7 +119,7 @@ export default function InspectorBlockProperties() {
     );
   };
 
-  const handleDeleteBlock = () => {
+  const handleDeleteBlock = async () => {
     if (window.confirm('Hapus item ini dari alokasi layer?')) {
       const newBlocks = (blockZone.blocksList || []).filter((b) => b.id !== selectedBlock.id);
       if (blockZone.id === selectedLayerId) {
@@ -130,13 +131,16 @@ export default function InspectorBlockProperties() {
       }
       setSelectedBlockId(null);
       setInspectorTarget('layer');
-      showToast('Item berhasil dihapus dari alokasi');
 
-      if (!selectedBlock.id.startsWith('temp-')) {
+      if (blockZone.id !== selectedLayerId && isUuid(selectedBlock.id)) {
         try {
-          removePlaylistBlock(selectedBlock.id);
-        } catch (_) {}
+          await removePlaylistBlock(selectedBlock.id);
+        } catch (error) {
+          showToast(error instanceof Error ? error.message : 'Gagal menghapus item dari alokasi', 'error');
+          return;
+        }
       }
+      showToast('Item berhasil dihapus dari alokasi');
     }
   };
 

@@ -126,7 +126,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
       setDeletedLayerIds([]);
 
       for (const delBId of deletedBlockIds) {
-        await api.removePlaylistBlock(delBId);
+        if (isUuid(delBId)) await api.removePlaylistBlock(delBId);
       }
       setDeletedBlockIds([]);
 
@@ -311,7 +311,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
       const currentBlocks = layers.find((z) => z.id === selectedLayerId)?.blocksList || [];
       const newBlocks = (value || []) as any[];
       const newBlockIds = newBlocks.map((b) => b.id);
-      const removedBlocks = currentBlocks.filter((b) => !newBlockIds.includes(b.id) && !b.id.startsWith('temp-'));
+      const removedBlocks = currentBlocks.filter((b) => !newBlockIds.includes(b.id) && isUuid(b.id));
       if (removedBlocks.length > 0) {
         setDeletedBlockIds((prev) => [...prev, ...removedBlocks.map((b) => b.id)]);
       }

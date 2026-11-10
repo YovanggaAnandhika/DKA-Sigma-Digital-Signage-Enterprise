@@ -4,13 +4,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, Globe, Type, Clock, Users, Images, Radio, Plus, Check, ListMusic, Search } from 'lucide-react';
 import { useLayoutEditor } from '../context/LayoutEditorContext';
 import { addMediaBlock, addPlaylistBlock, addWidgetBlock, createLayer } from '@/lib/services/studio/layout.service';
-import { DEFAULT_WEBVIEWS, WEBVIEW_STORAGE_KEY, WebViewConfig } from '@/app/(dashboard)/studio/components/webview/types';
-import { DEFAULT_TICKERS, TICKER_STORAGE_KEY, TickerConfig } from '@/app/(dashboard)/studio/components/ticker/types';
-import { DEFAULT_CLOCKS, CLOCK_STORAGE_KEY, ClockWeatherConfig } from '@/app/(dashboard)/studio/components/clock/types';
-import { DEFAULT_QUEUES, QUEUE_STORAGE_KEY, QueueDisplayConfig } from '@/app/(dashboard)/studio/components/ticket/types';
+import { WebViewConfig } from '@/app/(dashboard)/studio/components/webview/types';
+import { TickerConfig } from '@/app/(dashboard)/studio/components/ticker/types';
+import { ClockWeatherConfig } from '@/app/(dashboard)/studio/components/clock/types';
+import { QueueDisplayConfig } from '@/app/(dashboard)/studio/components/ticket/types';
 import { PhotoAlbum } from '@/app/(dashboard)/studio/components/album/types';
-import { DEFAULT_LIVESTREAMS, LiveStreamConfig } from '@/app/(dashboard)/studio/components/livestream/types';
-import { ensureUuid } from '@/lib/services/studio/widgetHelper';
+import { LiveStreamConfig } from '@/app/(dashboard)/studio/components/livestream/types';
+import { isUuid } from '@/lib/services/studio/widgetHelper';
 
 import { invokeApi } from '@/lib/core/invokeApi';
 import { getAlbums, getLiveStreams } from '@/lib/services';
@@ -27,13 +27,13 @@ export default function ComponentPickerModal() {
 
   const [activeTab, setActiveTab] = useState<'playlist' | 'webview' | 'ticker' | 'clock' | 'queue' | 'album' | 'livestream'>('playlist');
   const [searchQuery, setSearchQuery] = useState('');
-  const [webviews, setWebviews] = useState<WebViewConfig[]>(DEFAULT_WEBVIEWS);
-  const [tickers, setTickers] = useState<TickerConfig[]>(DEFAULT_TICKERS);
-  const [clocks, setClocks] = useState<ClockWeatherConfig[]>(DEFAULT_CLOCKS);
-  const [queues, setQueues] = useState<QueueDisplayConfig[]>(DEFAULT_QUEUES);
+  const [webviews, setWebviews] = useState<WebViewConfig[]>([]);
+  const [tickers, setTickers] = useState<TickerConfig[]>([]);
+  const [clocks, setClocks] = useState<ClockWeatherConfig[]>([]);
+  const [queues, setQueues] = useState<QueueDisplayConfig[]>([]);
   const [albums, setAlbums] = useState<PhotoAlbum[]>([]);
   const [albumsError, setAlbumsError] = useState('');
-  const [liveStreams, setLiveStreams] = useState<LiveStreamConfig[]>(DEFAULT_LIVESTREAMS);
+  const [liveStreams, setLiveStreams] = useState<LiveStreamConfig[]>([]);
 
   const query = searchQuery.toLowerCase().trim();
 
@@ -94,29 +94,19 @@ export default function ComponentPickerModal() {
             }
             return [];
           }),
-          getLiveStreams().catch(() => DEFAULT_LIVESTREAMS),
+          getLiveStreams().catch(() => []),
         ]);
 
         if (!isMounted) return;
 
-        if (qRes?.itemsList?.length) {
-          setQueues(qRes.itemsList.map((item: any) => ({ ...item, id: ensureUuid(item.id) })));
-        }
-        if (tRes?.itemsList?.length) {
-          setTickers(tRes.itemsList.map((item: any) => ({
-            ...item,
-            id: ensureUuid(item.id),
-            messages: item.messagesList || item.messages || [],
-          })));
-        }
-        if (cRes?.itemsList?.length) {
-          setClocks(cRes.itemsList.map((item: any) => ({ ...item, id: ensureUuid(item.id) })));
-        }
-        if (wRes?.itemsList?.length) {
-          setWebviews(wRes.itemsList.map((item: any) => ({ ...item, id: ensureUuid(item.id) })));
-        }
-        setAlbums(albumList);
-        if (streamList?.length) setLiveStreams(streamList);
+        setQueues((qRes?.itemsList || []).filter((item: QueueDisplayConfig) => isUuid(item.id)));
+        setTickers((tRes?.itemsList || [])
+          .filter((item: TickerConfig) => isUuid(item.id))
+          .map((item: any) => ({ ...item, messages: item.messagesList || item.messages || [] })));
+        setClocks((cRes?.itemsList || []).filter((item: ClockWeatherConfig) => isUuid(item.id)));
+        setWebviews((wRes?.itemsList || []).filter((item: WebViewConfig) => isUuid(item.id)));
+        setAlbums(albumList.filter((item) => isUuid(item.id)));
+        setLiveStreams((streamList || []).filter((item) => isUuid(item.id)));
       } catch (e) {
         console.warn('Gagal memuat komponen dari backend', e);
       }
@@ -166,8 +156,7 @@ export default function ComponentPickerModal() {
         realZoneId = newZ.id;
       }
 
-      // Pastikan item.id adalah UUID standar
-      const targetWidgetId = ensureUuid(item.id);
+      const targetWidgetId = item.id;
       const res = await addWidgetBlock(realZoneId, widgetType, targetWidgetId, start_time_seconds, duration_seconds).catch((err) => {
         console.warn('Simpan async widget block gagal, diteruskan di tombol Simpan Layout:', err);
         return null;
