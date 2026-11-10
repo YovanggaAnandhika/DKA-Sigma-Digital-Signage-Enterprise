@@ -44,11 +44,13 @@ class LiveStreamZoneRenderer(
     private var glassOverlay: LiveStreamGlassOverlay? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private var reconnectRunnable: Runnable? = null
+    private var bufferingDebounceRunnable: Runnable? = null
     @Volatile private var released = false
     private var isDucked = false
     private var isMuted = true
     private var playbackPaused = false
     @Volatile private var isStreamOffline = true
+    @Volatile private var hasRenderedFirstFrame = false
 
     @SuppressLint("UnsafeOptInUsageError")
     fun createView(parent: ViewGroup, payload: LiveStreamConfigPayload): View {
@@ -131,13 +133,13 @@ class LiveStreamZoneRenderer(
             val grpcFactory = GrpcStreamDataSourceFactory(stub, streamId)
             val secretUri = Uri.parse("sigma-stream://$streamId/live.m3u8")
 
-            // Ultra-low latency buffer: 1.0s - 3.0s buffer window
+            // Ultra-smooth low latency buffer: 2.0s - 6.0s buffer window
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(
-                    /* minBufferMs = */ 1_000,
-                    /* maxBufferMs = */ 3_000,
-                    /* bufferForPlaybackMs = */ 300,
-                    /* bufferForPlaybackAfterRebufferMs = */ 600
+                    /* minBufferMs = */ 2_000,
+                    /* maxBufferMs = */ 6_000,
+                    /* bufferForPlaybackMs = */ 500,
+                    /* bufferForPlaybackAfterRebufferMs = */ 1_000
                 )
                 .setPrioritizeTimeOverSizeThresholds(true)
                 .build()
@@ -148,11 +150,11 @@ class LiveStreamZoneRenderer(
                     .setMimeType(MimeTypes.APPLICATION_M3U8)
                     .setLiveConfiguration(
                         MediaItem.LiveConfiguration.Builder()
-                            .setTargetOffsetMs(1_000L) // 1.0s target latency behind live edge
+                            .setTargetOffsetMs(2_000L) // 2.0s target latency behind live edge
                             .setMinPlaybackSpeed(1.0f) // Never slow down into slow motion
-                            .setMaxPlaybackSpeed(1.20f) // Gentle catch-up when buffered
-                            .setMinOffsetMs(300L)
-                            .setMaxOffsetMs(2_500L)
+                            .setMaxPlaybackSpeed(1.15f) // Gentle catch-up when buffered
+                            .setMinOffsetMs(800L)
+                            .setMaxOffsetMs(3_500L)
                             .build()
                     )
                     .build()
@@ -174,7 +176,9 @@ class LiveStreamZoneRenderer(
                     addListener(object : Player.Listener {
                         override fun onRenderedFirstFrame() {
                             if (!released) {
+                                hasRenderedFirstFrame = true
                                 isStreamOffline = false
+                                bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
                                 posterView?.animate()?.alpha(0f)?.setDuration(250)?.start()
                                 glassOverlay?.setLive(isLowLatency = false)
                             }
@@ -185,16 +189,30 @@ class LiveStreamZoneRenderer(
                             when (playbackState) {
                                 Player.STATE_BUFFERING -> {
                                     if (!isStreamOffline) {
-                                        glassOverlay?.setBuffering(payload.name)
+                                        if (!hasRenderedFirstFrame) {
+                                            glassOverlay?.setBuffering(payload.name)
+                                        } else {
+                                            // Anti-flicker debouncing: ignore transient segment fetches < 1200ms
+                                            bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
+                                            val debounceTask = Runnable {
+                                                if (!released && !isStreamOffline) {
+                                                    glassOverlay?.setBuffering(payload.name)
+                                                }
+                                            }
+                                            bufferingDebounceRunnable = debounceTask
+                                            mainHandler.postDelayed(debounceTask, 1_200L)
+                                        }
                                     }
                                 }
                                 Player.STATE_READY -> {
+                                    bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
                                     if (isPlaying) {
                                         isStreamOffline = false
                                         glassOverlay?.setLive(isLowLatency = false)
                                     }
                                 }
                                 Player.STATE_ENDED, Player.STATE_IDLE -> {
+                                    bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
                                     isStreamOffline = true
                                     glassOverlay?.setOffline(payload.name)
                                 }
@@ -204,6 +222,8 @@ class LiveStreamZoneRenderer(
                         override fun onPlayerError(error: PlaybackException) {
                             Log.w(TAG, "gRPC Secret Pipe error stream=$streamId: ${error.message} (code: ${error.errorCode})")
                             if (!released) {
+                                bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
+                                hasRenderedFirstFrame = false
                                 isStreamOffline = true
                                 posterView?.animate()?.alpha(1f)?.setDuration(200)?.start()
                                 glassOverlay?.setOffline(payload.name, "Siaran Offline")
@@ -284,7 +304,9 @@ class LiveStreamZoneRenderer(
                     addListener(object : Player.Listener {
                         override fun onRenderedFirstFrame() {
                             if (!released) {
+                                hasRenderedFirstFrame = true
                                 isStreamOffline = false
+                                bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
                                 posterView?.animate()?.alpha(0f)?.setDuration(250)?.start()
                                 glassOverlay?.setLive(isLowLatency = false)
                             }
@@ -295,16 +317,30 @@ class LiveStreamZoneRenderer(
                             when (playbackState) {
                                 Player.STATE_BUFFERING -> {
                                     if (!isStreamOffline) {
-                                        glassOverlay?.setBuffering(payload.name)
+                                        if (!hasRenderedFirstFrame) {
+                                            glassOverlay?.setBuffering(payload.name)
+                                        } else {
+                                            // Anti-flicker debouncing: ignore transient segment fetches < 1200ms
+                                            bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
+                                            val debounceTask = Runnable {
+                                                if (!released && !isStreamOffline) {
+                                                    glassOverlay?.setBuffering(payload.name)
+                                                }
+                                            }
+                                            bufferingDebounceRunnable = debounceTask
+                                            mainHandler.postDelayed(debounceTask, 1_200L)
+                                        }
                                     }
                                 }
                                 Player.STATE_READY -> {
+                                    bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
                                     if (isPlaying) {
                                         isStreamOffline = false
                                         glassOverlay?.setLive(isLowLatency = false)
                                     }
                                 }
                                 Player.STATE_ENDED, Player.STATE_IDLE -> {
+                                    bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
                                     isStreamOffline = true
                                     glassOverlay?.setOffline(payload.name)
                                 }
@@ -314,6 +350,8 @@ class LiveStreamZoneRenderer(
                         override fun onPlayerError(error: PlaybackException) {
                             Log.w(TAG, "HLS/RTSP playback error stream=${payload.streamId}: ${error.message} (code: ${error.errorCode})")
                             if (!released) {
+                                bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
+                                hasRenderedFirstFrame = false
                                 isStreamOffline = true
                                 posterView?.animate()?.alpha(1f)?.setDuration(200)?.start()
                                 glassOverlay?.setOffline(payload.name, "Siaran Offline")
