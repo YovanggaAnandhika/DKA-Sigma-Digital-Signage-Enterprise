@@ -16,21 +16,6 @@ export interface ClockWeatherConfig {
   createdAt?: string;
 }
 
-export function getClockTimezone(city: string, fallback = 'Asia/Jakarta'): string {
-  switch (city) {
-    case 'Makassar':
-    case 'Denpasar':
-      return 'Asia/Makassar';
-    case 'Jakarta':
-    case 'Surabaya':
-    case 'Bandung':
-    case 'Medan':
-      return 'Asia/Jakarta';
-    default:
-      return fallback;
-  }
-}
-
 export const CLOCK_THEME_STYLES: Record<ClockWeatherConfig['theme'], {
   backgroundColor: string;
   textColor: string;

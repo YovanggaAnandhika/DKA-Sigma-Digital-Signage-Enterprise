@@ -75,7 +75,6 @@ export default function EditDisplayPage() {
         screen_width: sw,
         screen_height: sh,
         orientation: orientationVal,
-        timezone: formData.timezone,
         display_group_id: formData.displayGroupId || undefined,
         schedule_id: formData.schedule_id || undefined,
         power_schedule_enabled: formData.power_schedule_enabled,
@@ -224,18 +223,14 @@ export default function EditDisplayPage() {
 
           <div>
             <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-              Zona Waktu (Timezone)
+              Zona Waktu Perangkat
             </label>
-            <SingleSelect
-              value={formData.timezone}
-              onChange={(val) => setFormData({ ...formData, timezone: val })}
-              options={[
-                { value: 'Asia/Jakarta', label: 'WIB · Asia/Jakarta' },
-                { value: 'Asia/Makassar', label: 'WITA · Asia/Makassar' },
-                { value: 'Asia/Jayapura', label: 'WIT · Asia/Jayapura' },
-                { value: 'UTC', label: 'UTC' },
-              ]}
-            />
+            <div className="form-input" aria-readonly="true" style={{ color: 'var(--text-secondary)' }}>
+              {formData.timezone}
+            </div>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+              Mengikuti zona waktu pada pengaturan Android player dan diperbarui otomatis.
+            </span>
           </div>
 
           {/* Power Schedule / CEC Eco Mode */}

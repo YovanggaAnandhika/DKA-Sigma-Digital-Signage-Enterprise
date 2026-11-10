@@ -235,8 +235,7 @@ impl ManifestServiceImpl {
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("Clock not found"))?;
 
-            let city = row.weather_city.unwrap_or_else(|| row.timezone.clone());
-            let timezone = crate::common::timezone_for_city(&city, &row.timezone);
+            let timezone = row.timezone;
             let legacy_glass = (row.background_color == "transparent" && row.text_color == "#ffffff")
                 || (row.background_color == "#1a2233"
                     && matches!(row.text_color.as_str(), "#ffffff" | "#f8fafc"));
@@ -257,7 +256,7 @@ impl ManifestServiceImpl {
             let json_val = serde_json::json!({
                 "id": row.id.to_string(),
                 "name": row.name,
-                "city": city,
+                "city": row.weather_city.unwrap_or_else(|| timezone.clone()),
                 "timezone": timezone,
                 "showSeconds": row.show_seconds,
                 "showDate": row.show_date,

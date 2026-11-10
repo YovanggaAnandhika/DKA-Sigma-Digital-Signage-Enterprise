@@ -321,6 +321,7 @@ impl DeviceRepository {
                 storage_free_bytes = COALESCE($2, storage_free_bytes),
                 storage_total_bytes = COALESCE($3, storage_total_bytes),
                 current_layout_id = COALESCE($4, current_layout_id),
+                timezone = COALESCE($5, timezone),
                 updated_at = NOW()
             WHERE id = $1
             "#,
@@ -329,6 +330,7 @@ impl DeviceRepository {
         .bind(dto.storage_free_bytes)
         .bind(dto.storage_total_bytes)
         .bind(dto.active_layout_id)
+        .bind(dto.timezone.as_deref())
         .execute(&mut *tx)
         .await?;
 

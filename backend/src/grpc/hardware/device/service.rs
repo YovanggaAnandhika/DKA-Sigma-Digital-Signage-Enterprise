@@ -213,10 +213,12 @@ impl DeviceServiceTrait for DeviceServiceImpl {
         } else {
             Some(req.active_manifest_hash)
         };
+        let timezone = crate::common::parse_timezone(&req.timezone);
 
         let dto = HeartbeatDto {
             device_id,
             device_token: req.device_token,
+            timezone,
             storage_free_bytes: Some(req.storage_free_bytes),
             storage_total_bytes: Some(req.storage_total_bytes),
             memory_percent: Some(req.memory_usage_percent),

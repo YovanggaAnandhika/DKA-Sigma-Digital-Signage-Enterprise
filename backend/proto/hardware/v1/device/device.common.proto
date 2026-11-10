@@ -84,6 +84,7 @@ message HeartbeatRequest {
   string current_playing_media_id = 6;
   string active_layout_id = 7;
   string active_manifest_hash = 8;
+  string timezone = 9;
 }
 
 message HeartbeatResponse {
@@ -190,4 +191,3 @@ message DeviceAnalyticsRecord {
 message GetDeviceAnalyticsHistoryResponse {
   repeated DeviceAnalyticsRecord records = 1;
 }
-

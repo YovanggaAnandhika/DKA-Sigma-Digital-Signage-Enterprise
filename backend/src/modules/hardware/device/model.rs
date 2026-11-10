@@ -74,6 +74,7 @@ pub struct PairDeviceResultDto {
 pub struct HeartbeatDto {
     pub device_id: Uuid,
     pub device_token: String,
+    pub timezone: Option<String>,
     pub storage_free_bytes: Option<i64>,
     pub storage_total_bytes: Option<i64>,
     pub memory_percent: Option<i32>,

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Clock, Check, CloudSun, Calendar, MapPin, Droplets, Wind, Save, RefreshCw } from 'lucide-react';
-import { CITY_PRESETS, CLOCK_THEME_STYLES, ClockWeatherConfig, getClockTimezone } from '../../types';
+import { CITY_PRESETS, CLOCK_THEME_STYLES, ClockWeatherConfig } from '../../types';
 import { getClock, updateClock } from '@/lib/services/studio/clock.service';
 import { modal } from '@/components/ui/ModalDialog';
 
@@ -84,7 +84,7 @@ export default function EditClockWeatherPage() {
   };
 
   const weather = CITY_PRESETS[city] || CITY_PRESETS['Makassar'];
-  const timeZone = getClockTimezone(city);
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   const timeParts = new Intl.DateTimeFormat('en-GB', {
     hour: '2-digit',

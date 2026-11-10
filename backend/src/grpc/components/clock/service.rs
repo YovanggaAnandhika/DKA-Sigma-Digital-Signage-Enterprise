@@ -29,8 +29,8 @@ struct ClockRow {
 
 impl ClockRow {
     fn into_proto(self) -> Clock {
-        let city = self.weather_city.unwrap_or_else(|| self.timezone.clone());
-        let timezone = crate::common::timezone_for_city(&city, &self.timezone);
+        let timezone = self.timezone;
+        let city = self.weather_city.unwrap_or_else(|| timezone.clone());
         let legacy_glass = (self.background_color == "transparent" && self.text_color == "#ffffff")
             || (self.background_color == "#1a2233"
                 && matches!(self.text_color.as_str(), "#ffffff" | "#f8fafc"));
@@ -93,7 +93,6 @@ impl ClockServiceTrait for ClockServiceImpl {
         let req = request.into_inner();
         let id = Uuid::new_v4();
         let city = if req.city.is_empty() { "Makassar".to_string() } else { req.city };
-        let timezone = crate::common::timezone_for_city(&city, "Asia/Jakarta");
         let clock_format = if req.is_24_hour { "24h".to_string() } else { "12h".to_string() };
         let font_size = if req.time_font_size > 0 { req.time_font_size } else { 48 };
 
@@ -106,7 +105,7 @@ impl ClockServiceTrait for ClockServiceImpl {
             VALUES (
                 $1,
                 COALESCE((SELECT id FROM system_corporations LIMIT 1), '00000000-0000-0000-0000-000000000000'::uuid),
-                $2, $9, $3, $4, true, $5,
+                $2, 'Asia/Jakarta', $3, $4, true, $5,
                 COALESCE(NULLIF($6, ''), 'transparent'),
                 COALESCE(NULLIF($7, ''), '#ffffff'),
                 $8
@@ -124,7 +123,6 @@ impl ClockServiceTrait for ClockServiceImpl {
         .bind(&req.background_color)
         .bind(&req.text_color)
         .bind(&city)
-        .bind(&timezone)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -193,18 +191,12 @@ impl ClockServiceTrait for ClockServiceImpl {
         let id = Uuid::from_str(&req.id).map_err(|_| Status::invalid_argument("Invalid id"))?;
         let clock_format = Some(if req.is_24_hour { "24h" } else { "12h" }.to_string());
         let font_size = if req.time_font_size > 0 { req.time_font_size } else { 0 };
-        let timezone = if req.city.is_empty() {
-            String::new()
-        } else {
-            crate::common::timezone_for_city(&req.city, "Asia/Jakarta")
-        };
 
         let row = sqlx::query_as::<_, ClockRow>(
             r#"
             UPDATE components_clocks
             SET name = COALESCE(NULLIF($2, ''), name),
                 weather_city = COALESCE(NULLIF($3, ''), weather_city),
-                timezone = COALESCE(NULLIF($9, ''), timezone),
                 show_seconds = $4,
                 clock_format = COALESCE($5, clock_format),
                 font_size = CASE WHEN $6 > 0 THEN $6 ELSE font_size END,
@@ -225,7 +217,6 @@ impl ClockServiceTrait for ClockServiceImpl {
         .bind(font_size)
         .bind(&req.background_color)
         .bind(&req.text_color)
-        .bind(&timezone)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;

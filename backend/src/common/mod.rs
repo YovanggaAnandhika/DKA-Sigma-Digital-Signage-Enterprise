@@ -1,28 +1,22 @@
 use serde::{Deserialize, Serialize};
 use tonic::Status;
 
-pub fn timezone_for_city(city: &str, fallback: &str) -> String {
-    match city.trim() {
-        "Makassar" | "Denpasar" => "Asia/Makassar".to_string(),
-        "Jakarta" | "Surabaya" | "Bandung" | "Medan" => "Asia/Jakarta".to_string(),
-        _ => fallback.to_string(),
-    }
+pub fn parse_timezone(timezone: &str) -> Option<String> {
+    timezone
+        .trim()
+        .parse::<chrono_tz::Tz>()
+        .ok()
+        .map(|timezone| timezone.name().to_string())
 }
 
 #[cfg(test)]
 mod timezone_tests {
-    use super::timezone_for_city;
+    use super::parse_timezone;
 
     #[test]
-    fn maps_supported_cities_to_their_indonesian_timezones() {
-        assert_eq!(timezone_for_city("Makassar", "UTC"), "Asia/Makassar");
-        assert_eq!(timezone_for_city("Denpasar", "UTC"), "Asia/Makassar");
-        assert_eq!(timezone_for_city("Jakarta", "UTC"), "Asia/Jakarta");
-    }
-
-    #[test]
-    fn preserves_timezone_for_unknown_cities() {
-        assert_eq!(timezone_for_city("Unknown", "UTC"), "UTC");
+    fn accepts_iana_timezones_and_rejects_invalid_values() {
+        assert_eq!(parse_timezone(" Asia/Makassar "), Some("Asia/Makassar".into()));
+        assert_eq!(parse_timezone("not-a-timezone"), None);
     }
 }
 

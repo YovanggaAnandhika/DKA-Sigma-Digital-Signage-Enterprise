@@ -192,6 +192,7 @@ class DeviceRepositoryImpl(
                 .setStorageFreeBytes(stat.availableBytes)
                 .setStorageTotalBytes(stat.totalBytes)
                 .setMemoryUsagePercent(30)
+                .setTimezone(java.util.TimeZone.getDefault().id)
                 .apply {
                     if (!currentMediaId.isNullOrEmpty()) setCurrentPlayingMediaId(currentMediaId)
                     if (!activeLayoutId.isNullOrEmpty()) setActiveLayoutId(activeLayoutId)

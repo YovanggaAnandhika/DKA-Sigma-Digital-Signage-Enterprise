@@ -159,20 +159,25 @@ class ClockZoneRenderer(
             else -> "hh:mm"
         }
         val timeFormat = SimpleDateFormat(timePattern, Locale.forLanguageTag("id-ID")).apply {
-            timeZone = TimeZone.getTimeZone(payload.timezone)
+            timeZone = TimeZone.getDefault()
         }
         val secondsFormat = SimpleDateFormat("ss", Locale.forLanguageTag("id-ID")).apply {
-            timeZone = TimeZone.getTimeZone(payload.timezone)
+            timeZone = TimeZone.getDefault()
         }
         val periodFormat = SimpleDateFormat("a", Locale.forLanguageTag("id-ID")).apply {
-            timeZone = TimeZone.getTimeZone(payload.timezone)
+            timeZone = TimeZone.getDefault()
         }
         val dateFormat = SimpleDateFormat("EEEE, d MMMM yyyy", Locale.forLanguageTag("id-ID")).apply {
-            timeZone = TimeZone.getTimeZone(payload.timezone)
+            timeZone = TimeZone.getDefault()
         }
         val runnable = object : Runnable {
             override fun run() {
                 val now = Date()
+                val deviceTimeZone = TimeZone.getDefault()
+                timeFormat.timeZone = deviceTimeZone
+                secondsFormat.timeZone = deviceTimeZone
+                periodFormat.timeZone = deviceTimeZone
+                dateFormat.timeZone = deviceTimeZone
                 mainTime.text = timeFormat.format(now)
                 secondsText.text = if (payload.showSeconds) ":${secondsFormat.format(now)}" else ""
                 periodText.text = if (payload.is24Hour) "" else periodFormat.format(now)
