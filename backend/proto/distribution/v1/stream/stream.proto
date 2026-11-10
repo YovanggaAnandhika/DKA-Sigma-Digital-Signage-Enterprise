@@ -21,4 +21,7 @@ service StreamService {
   rpc ListDeviceScreenshots(ListDeviceScreenshotsRequest) returns (ListDeviceScreenshotsResponse);
   rpc GetLatestDeviceTelemetry(GetLatestDeviceTelemetryRequest) returns (GetLatestDeviceTelemetryResponse);
   rpc UploadScreenshot(UploadScreenshotRequest) returns (UploadScreenshotResponse);
+
+  // CMS watches realtime CPU/RAM/zones/log of one device (requires can_manage_distribution)
+  rpc WatchDeviceDiagnostics(WatchDeviceDiagnosticsRequest) returns (stream DeviceDiagnosticsEvent);
 }

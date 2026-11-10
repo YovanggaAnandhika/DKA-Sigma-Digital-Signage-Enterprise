@@ -10,6 +10,7 @@ import {
 } from './context/DisplayDetailContext';
 import DisplayCommandToolbar from './components/DisplayCommandToolbar';
 import DisplayTelemetryCard from './components/DisplayTelemetryCard';
+import LiveDeviceMonitor from './components/LiveDeviceMonitor';
 
 const DisplayPlaybackDiagnostics = dynamic(
   () => import('./components/DisplayPlaybackDiagnostics'),
@@ -56,7 +57,7 @@ const DisplayScreenshotModal = dynamic(
 );
 
 function DisplayDetailView() {
-  const { device, loading } = useDisplayDetail();
+  const { device, deviceId, loading } = useDisplayDetail();
 
   if (loading || !device) {
     return (
@@ -71,6 +72,7 @@ function DisplayDetailView() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <DisplayCommandToolbar />
       <DisplayTelemetryCard />
+      <LiveDeviceMonitor deviceId={deviceId} />
       <DisplayPlaybackDiagnostics />
       <DisplayAnalyticsChart />
       <DisplayPlaybackAuditTable />

@@ -45,6 +45,7 @@ import com.dkaapis.sigma.presentation.player.canvas.model.ZoneRenderContextPaylo
 import com.dkaapis.sigma.presentation.player.coordinator.PlayerKeyCoordinator
 import com.dkaapis.sigma.presentation.player.coordinator.PlayerOverlayCoordinator
 import com.dkaapis.sigma.presentation.player.coordinator.PlayerSleepCoordinator
+import com.dkaapis.sigma.presentation.player.diagnostics.DiagnosticsCollector
 import com.dkaapis.sigma.presentation.player.gesture.TwoFingerSwipeDetector
 import com.dkaapis.sigma.presentation.player.settings.PlayerSettingsDialog
 import com.dkaapis.sigma.presentation.player.settings.model.PlayerSettingsPayload
@@ -229,6 +230,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             tokenStorage = tokenStorage,
             listener = this
         )
+        val collector = DiagnosticsCollector(this, zoneManager)
+        streamManager.diagnosticsProvider = collector::snapshot
     }
 
     private fun setupViews() {

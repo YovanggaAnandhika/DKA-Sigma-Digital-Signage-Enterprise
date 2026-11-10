@@ -2,6 +2,7 @@ package com.dkaapis.sigma.presentation.renderers
 
 import android.annotation.SuppressLint
 import android.content.Context
+import signage.distribution.v1.stream.StreamCommon
 import android.graphics.Color
 import android.net.Uri
 import android.os.Handler
@@ -50,10 +51,35 @@ class LiveStreamZoneRenderer(
     @Volatile private var isStreamOffline = true
     @Volatile private var hasRenderedFirstFrame = false
     private var activePlaybackUrl: String = ""
+    private var streamId: String = ""
+    private var streamName: String = ""
+    @Volatile private var lastError: String = ""
+
+    /** Status untuk panel realtime CMS (dibaca dari thread lain; semua field @Volatile/immutable). */
+    fun diagnostics(): StreamCommon.ZoneDiagnostics {
+        val format = exoPlayer?.videoFormat
+        val state = when {
+            released -> "IDLE"
+            isStreamOffline -> if (lastError.isNotEmpty()) "ERROR" else "OFFLINE"
+            exoPlayer?.isPlaying == true -> "PLAYING"
+            else -> "BUFFERING"
+        }
+        return StreamCommon.ZoneDiagnostics.newBuilder()
+            .setZoneId(streamId).setMediaId(streamId).setKind("LIVE").setMediaName(streamName)
+            .setState(state).setTransport(if (activePlaybackUrl.startsWith("rtsp")) "RTSP" else "HLS")
+            .setCodec(format?.sampleMimeType.orEmpty())
+            .setResolution(if (format != null && format.width > 0) "${format.width}x${format.height}" else "")
+            .setBitrateKbps(if (format != null && format.bitrate > 0) format.bitrate / 1000 else 0)
+            .setDroppedFrames(exoPlayer?.videoDecoderCounters?.droppedBufferCount ?: 0)
+            .setLastError(lastError)
+            .build()
+    }
 
     @SuppressLint("UnsafeOptInUsageError")
     fun createView(parent: ViewGroup, payload: LiveStreamConfigPayload): View {
         this.isMuted = payload.isMuted
+        this.streamId = payload.streamId
+        this.streamName = payload.name
         val container = FrameLayout(context).apply {
             layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -192,6 +218,7 @@ class LiveStreamZoneRenderer(
                         override fun onRenderedFirstFrame() {
                             if (!released) {
                                 hasRenderedFirstFrame = true
+                                lastError = ""
                                 isStreamOffline = false
                                 reconnectRunnable?.let(mainHandler::removeCallbacks)
                                 bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
@@ -239,6 +266,7 @@ class LiveStreamZoneRenderer(
 
                         override fun onPlayerError(error: PlaybackException) {
                             Log.w(TAG, "HLS/RTSP playback error stream=${payload.streamId}: ${error.message} (code: ${error.errorCode})")
+                            lastError = "${error.errorCodeName} (${error.errorCode})"
                             if (!released) {
                                 bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
                                 hasRenderedFirstFrame = false

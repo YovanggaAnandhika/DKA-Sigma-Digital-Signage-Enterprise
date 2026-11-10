@@ -11,6 +11,7 @@ import com.dkaapis.sigma.presentation.renderers.LiveStreamZoneRenderer
 import com.dkaapis.sigma.presentation.renderers.VideoZoneRenderer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import signage.distribution.v1.stream.StreamCommon
 
 /**
  * Orkestrator Zona & Canvas Layout untuk Signage Player:
@@ -29,6 +30,7 @@ class PlayerZoneManager {
     private val clockRenderers = mutableListOf<ClockZoneRenderer>()
     private val albumRenderers = mutableListOf<AlbumZoneRenderer>()
     private val liveStreamRenderers = mutableListOf<LiveStreamZoneRenderer>()
+    private val staticZoneDiagnostics = mutableListOf<StreamCommon.ZoneDiagnostics>()
     private var timelineJob: Job? = null
     private var playbackPaused = false
 
@@ -81,7 +83,24 @@ class PlayerZoneManager {
                     onDuckingChanged = payload.onDuckingChanged,
                     onQueueTapNext = payload.onQueueTapNext
                 )
-                widgetView?.let { zoneView.addView(it) }
+                widgetView?.let {
+                    zoneView.addView(it)
+                    if (widgetBlock.widgetType != ZoneWidgetType.LIVESTREAM) {
+                        val kind = when (widgetBlock.widgetType) {
+                            ZoneWidgetType.QUEUE -> "QUEUE"
+                            ZoneWidgetType.ALBUM -> "IMAGE"
+                            else -> "OTHER"
+                        }
+                        staticZoneDiagnostics.add(
+                            StreamCommon.ZoneDiagnostics.newBuilder()
+                                .setZoneId(zone.id)
+                                .setKind(kind)
+                                .setMediaName(zone.name)
+                                .setState("PLAYING")
+                                .build()
+                        )
+                    }
+                }
             } else {
                 val (videoItems, firstImageFile) = mediaResolver.resolveMedia(zone, manifest, payload.storageRepo)
                 if (videoItems.isNotEmpty()) {
@@ -94,6 +113,16 @@ class PlayerZoneManager {
                     val renderer = ImageZoneRenderer(activity)
                     val view = renderer.createView(zoneView, firstImageFile)
                     zoneView.addView(view)
+                    staticZoneDiagnostics.add(
+                        StreamCommon.ZoneDiagnostics.newBuilder()
+                            .setZoneId(zone.id)
+                            .setMediaId(zone.blocks.firstOrNull()?.mediaItemId.orEmpty())
+                            .setKind("IMAGE")
+                            .setMediaName(firstImageFile.name)
+                            .setState("PLAYING")
+                            .setTransport("FILE")
+                            .build()
+                    )
                 }
             }
 
@@ -139,6 +168,10 @@ class PlayerZoneManager {
 
     fun getVideoRenderers(): List<VideoZoneRenderer> = videoRenderers
 
+    fun getLiveRenderers(): List<LiveStreamZoneRenderer> = liveStreamRenderers
+
+    fun getStaticZoneDiagnostics(): List<StreamCommon.ZoneDiagnostics> = staticZoneDiagnostics.toList()
+
     fun release() {
         timelineJob?.cancel()
         timelineJob = null
@@ -153,6 +186,7 @@ class PlayerZoneManager {
         albumRenderers.clear()
         liveStreamRenderers.forEach { it.release() }
         liveStreamRenderers.clear()
+        staticZoneDiagnostics.clear()
     }
 
     companion object {

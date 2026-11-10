@@ -9,6 +9,7 @@ enum ServerCommandType {
   COMMAND_REBOOT_PLAYER = 3;
   COMMAND_EMERGENCY_BROADCAST = 4;
   COMMAND_CLEAR_CACHE = 5;
+  COMMAND_LOG_STREAM = 6; // payload_json: {"enabled":true}
 }
 
 message StreamServerMessage {
@@ -26,6 +27,8 @@ message StreamClientMessage {
     HeartbeatPing ping = 4;
     CommandAck command_ack = 5;
     ScreenshotUpload screenshot = 6;
+    LiveDiagnostics diagnostics = 7;
+    LogBatch logs = 8;
   }
 }
 
@@ -146,5 +149,50 @@ message UploadScreenshotResponse {
   string file_url = 2;
 }
 
+// --- Live diagnostics (realtime, in-memory only; never persisted) ---
 
+message ZoneDiagnostics {
+  string zone_id = 1;
+  string kind = 2;        // VIDEO | LIVE | IMAGE | QUEUE | OTHER
+  string media_name = 3;
+  string state = 4;       // PLAYING | BUFFERING | ERROR | OFFLINE | IDLE
+  string transport = 5;   // RTSP | FILE | -
+  string codec = 6;
+  string resolution = 7;
+  int32 bitrate_kbps = 8;
+  int32 dropped_frames = 9;
+  string last_error = 10;
+  string media_id = 11;
+}
 
+message LiveDiagnostics {
+  int64 timestamp_ms = 1;
+  float cpu_percent = 2;
+  int32 memory_percent = 3;
+  int32 heap_used_mb = 4;
+  int32 heap_max_mb = 5;
+  repeated ZoneDiagnostics zones = 6;
+  float temperature_c = 7;
+}
+
+message LogLine {
+  int64 timestamp_ms = 1;
+  string level = 2; // V D I W E
+  string tag = 3;
+  string message = 4;
+}
+
+message LogBatch {
+  repeated LogLine lines = 1;
+}
+
+message WatchDeviceDiagnosticsRequest {
+  string device_id = 1;
+}
+
+message DeviceDiagnosticsEvent {
+  oneof payload {
+    LiveDiagnostics diagnostics = 1;
+    LogBatch logs = 2;
+  }
+}

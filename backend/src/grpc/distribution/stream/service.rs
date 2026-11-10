@@ -13,6 +13,8 @@ use crate::grpc::proto::distribution::v1::stream::{
     ListDeviceScreenshotsRequest, ListDeviceScreenshotsResponse, DeviceScreenshotItem,
     GetLatestDeviceTelemetryRequest, GetLatestDeviceTelemetryResponse, LatestTelemetryData,
     UploadScreenshotRequest, UploadScreenshotResponse,
+    WatchDeviceDiagnosticsRequest, DeviceDiagnosticsEvent, LogBatch,
+    device_diagnostics_event,
 };
 
 pub struct StreamServiceImpl {
@@ -31,6 +33,42 @@ type DisplayStreamResponse = Pin<Box<dyn Stream<Item = Result<StreamServerMessag
 #[tonic::async_trait]
 impl StreamServiceTrait for StreamServiceImpl {
     type DisplayStreamStream = DisplayStreamResponse;
+    type WatchDeviceDiagnosticsStream = Pin<Box<dyn Stream<Item = Result<DeviceDiagnosticsEvent, Status>> + Send + 'static>>;
+
+    async fn watch_device_diagnostics(
+        &self,
+        request: Request<WatchDeviceDiagnosticsRequest>,
+    ) -> Result<Response<Self::WatchDeviceDiagnosticsStream>, Status> {
+        crate::grpc::middleware::require_permission(&request, "can_manage_distribution")?;
+        let device_id = Uuid::parse_str(&request.get_ref().device_id)
+            .map_err(|_| Status::invalid_argument("ID Device tidak valid"))?;
+
+        let mut subscription = self.manager.subscribe_diagnostics(device_id);
+        let backlog = subscription.backlog.clone();
+        let manager = self.manager.clone();
+        let out = async_stream::stream! {
+            if !backlog.is_empty() {
+                yield Ok(DeviceDiagnosticsEvent {
+                    payload: Some(device_diagnostics_event::Payload::Logs(LogBatch { lines: backlog })),
+                });
+            }
+            let mut refresh = tokio::time::interval_at(
+                tokio::time::Instant::now() + tokio::time::Duration::from_secs(30),
+                tokio::time::Duration::from_secs(30),
+            );
+            loop {
+                tokio::select! {
+                    event = subscription.recv() => match event {
+                        Ok(ev) => yield Ok(ev),
+                        Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                        Err(_) => break,
+                    },
+                    _ = refresh.tick() => manager.send_log_stream(device_id, true),
+                }
+            }
+        };
+        Ok(Response::new(Box::pin(out) as Self::WatchDeviceDiagnosticsStream))
+    }
 
     async fn display_stream(
         &self,
@@ -106,6 +144,16 @@ impl StreamServiceTrait for StreamServiceImpl {
                                                         }
                                                     }
                                                 }
+                                                crate::grpc::proto::distribution::v1::stream::stream_client_message::Payload::Diagnostics(d) => {
+                                                    manager.diagnostics.publish(dev_id, DeviceDiagnosticsEvent {
+                                                        payload: Some(device_diagnostics_event::Payload::Diagnostics(d)),
+                                                    });
+                                                }
+                                                crate::grpc::proto::distribution::v1::stream::stream_client_message::Payload::Logs(l) => {
+                                                    manager.diagnostics.publish(dev_id, DeviceDiagnosticsEvent {
+                                                        payload: Some(device_diagnostics_event::Payload::Logs(l)),
+                                                    });
+                                                }
                                                 crate::grpc::proto::distribution::v1::stream::stream_client_message::Payload::CommandAck(ack) => {
                                                     tracing::info!("Received command ACK from device {}: success={}, msg={}", dev_id, ack.success, ack.error_message);
                                                 }
@@ -158,6 +206,7 @@ impl StreamServiceTrait for StreamServiceImpl {
                             LiveCommandType::RebootPlayer => ServerCommandType::CommandRebootPlayer as i32,
                             LiveCommandType::EmergencyBroadcast => ServerCommandType::CommandEmergencyBroadcast as i32,
                             LiveCommandType::ClearCache => ServerCommandType::CommandClearCache as i32,
+                            LiveCommandType::LogStream => ServerCommandType::CommandLogStream as i32,
                         };
 
                         yield StreamServerMessage {
@@ -208,6 +257,7 @@ impl StreamServiceTrait for StreamServiceImpl {
             ServerCommandType::CommandRebootPlayer => LiveCommandType::RebootPlayer,
             ServerCommandType::CommandEmergencyBroadcast => LiveCommandType::EmergencyBroadcast,
             ServerCommandType::CommandClearCache => LiveCommandType::ClearCache,
+            ServerCommandType::CommandLogStream => LiveCommandType::LogStream,
             ServerCommandType::CommandUnspecified if !req.payload_json.is_empty() => LiveCommandType::EmergencyBroadcast,
             _ => LiveCommandType::ReloadManifest,
         };

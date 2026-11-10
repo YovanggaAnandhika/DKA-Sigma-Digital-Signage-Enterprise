@@ -3,6 +3,7 @@ package com.dkaapis.sigma.presentation.player.stream
 import android.util.Log
 import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
 import com.dkaapis.sigma.data.local.TokenStorage
+import com.dkaapis.sigma.presentation.player.diagnostics.AppLogStreamer
 import com.dkaapis.sigma.presentation.player.stream.model.QueueSyncStatePayload
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -12,6 +13,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import signage.distribution.v1.stream.StreamCommon
 import signage.distribution.v1.stream.StreamServiceGrpcKt
@@ -32,6 +34,17 @@ class PlayerStreamManager(
     private val touchBroadcaster = PlayerTouchBroadcaster(channelFactory, tokenStorage)
     private var streamJob: Job? = null
 
+    /** Diisi Activity; dipanggil tiap 2 dtk untuk dikirim ke panel realtime CMS. */
+    var diagnosticsProvider: (() -> StreamCommon.LiveDiagnostics)? = null
+    private val logStreamer = AppLogStreamer(scope) { batch ->
+        clientMessageFlow.tryEmit(
+            StreamCommon.StreamClientMessage.newBuilder()
+                .setDeviceId(currentDeviceId).setDeviceToken(tokenStorage.getDeviceToken().orEmpty())
+                .setTimestamp(System.currentTimeMillis()).setLogs(batch).build()
+        )
+    }
+    @Volatile private var currentDeviceId = ""
+
     // Outgoing client stream channel for DisplayStream
     private val clientMessageFlow = MutableSharedFlow<StreamCommon.StreamClientMessage>(
         replay = 1,
@@ -45,6 +58,7 @@ class PlayerStreamManager(
     ) {
         if (deviceId.isBlank()) return
         stopStream()
+        currentDeviceId = deviceId
 
         streamJob = scope.launch(Dispatchers.IO) {
             while (isActive) {
@@ -80,6 +94,19 @@ class PlayerStreamManager(
                         }
                     }
 
+                    val diagJob = launch {
+                        while (isActive) {
+                            delay(2_000L)
+                            // ExoPlayer hanya boleh dibaca dari main thread
+                            val d = withContext(Dispatchers.Main) { diagnosticsProvider?.let { runCatching(it).getOrNull() } } ?: continue
+                            clientMessageFlow.emit(
+                                StreamCommon.StreamClientMessage.newBuilder()
+                                    .setDeviceId(deviceId).setDeviceToken(deviceToken)
+                                    .setTimestamp(System.currentTimeMillis()).setDiagnostics(d).build()
+                            )
+                        }
+                    }
+
                     try {
                         // Panggil RPC streaming dua arah
                         val responseFlow = stub.displayStream(clientMessageFlow)
@@ -91,6 +118,7 @@ class PlayerStreamManager(
                         }
                     } finally {
                         pingJob.cancel()
+                        diagJob.cancel()
                     }
                 }.onFailure { err ->
                     Log.w(TAG, "gRPC DisplayStream disconnected: ${err.message}, reconnecting in 1s...")
@@ -106,6 +134,10 @@ class PlayerStreamManager(
             StreamCommon.ServerCommandType.COMMAND_CAPTURE_SCREENSHOT -> listener.onCaptureScreenshot()
             StreamCommon.ServerCommandType.COMMAND_REBOOT_PLAYER -> listener.onReboot()
             StreamCommon.ServerCommandType.COMMAND_CLEAR_CACHE -> listener.onClearCache()
+            StreamCommon.ServerCommandType.COMMAND_LOG_STREAM -> {
+                val on = runCatching { JSONObject(msg.payloadJson).optBoolean("enabled", false) }.getOrDefault(false)
+                if (on) logStreamer.enable() else logStreamer.disable()
+            }
             else -> {
                 // Parse payload_json jika ada (e.g. CALL_QUEUE, UNPAIR, RESET_QUEUE, dll)
                 if (msg.payloadJson.isNotBlank()) {
@@ -162,6 +194,7 @@ class PlayerStreamManager(
     }
 
     fun stopStream() {
+        logStreamer.disable()
         streamJob?.cancel()
         streamJob = null
     }

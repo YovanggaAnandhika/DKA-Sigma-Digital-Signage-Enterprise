@@ -244,6 +244,12 @@ class VideoZoneRenderer(
 
     fun getCurrentPlaybackStats(): AssetStatsData? {
         checkAndRecoverFromStall()
+        return currentPlaybackStats()
+    }
+
+    fun getDiagnosticsStats(): AssetStatsData? = currentPlaybackStats()
+
+    private fun currentPlaybackStats(): AssetStatsData? {
         val player = exoPlayer ?: return null
         val idx = player.currentMediaItemIndex
         val item = playlistItems.getOrNull(idx)
