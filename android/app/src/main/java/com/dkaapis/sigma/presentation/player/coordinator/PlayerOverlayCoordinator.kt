@@ -1,17 +1,11 @@
 package com.dkaapis.sigma.presentation.player.coordinator
 
-import android.app.Activity
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.Color
-import android.graphics.Rect
 import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -19,18 +13,19 @@ import android.view.ViewGroup
 import android.view.ViewOutlineProvider
 import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import com.dkaapis.sigma.presentation.renderers.glass.GlassDrawableFactory
 
-/** Overlay status dengan snapshot frosted saat sync; video di balik overlay tertahan sampai selesai. */
-class PlayerOverlayCoordinator(context: Context) {
+/**
+ * Overlay status loading, sync, & clear cache dengan tampilan Fullscreen Glassmorphism modern.
+ * Memadukan backdrop blur (RenderEffect pada canvas di Android 12+), ambient specular tint,
+ * dan floating frosted glass card presisi di tengah layar.
+ */
+class PlayerOverlayCoordinator(context: Context, private val canvas: View) {
 
-    private val activity = context as? Activity
     private val density = context.resources.displayMetrics.density
-    private val handler = Handler(Looper.getMainLooper())
     private val badge = TextView(context)
     private val title = TextView(context)
     private val detail = TextView(context)
@@ -38,97 +33,76 @@ class PlayerOverlayCoordinator(context: Context) {
 
     val root = FrameLayout(context)
     val isVisible get() = root.visibility == View.VISIBLE
-    private lateinit var backdrop: ImageView
-    private lateinit var card: FrameLayout
-    private var hasSnapshot = false
-    private var captureInProgress = false
-    private var captureUnavailable = false
-    private var pendingShow = false
-    private var captureGeneration = 0
 
     init {
         root.visibility = View.GONE
-        val pad = (14 * density).toInt()
+
+        // 1. Fullscreen translucent glass veil: subtle light frosting (bukan abu-abu gelap)
+        // Ketika canvas kosong (putih) atau berisi konten terakhir, efek frosted glass tetap cerah & bersih
+        root.setBackgroundColor(Color.argb(35, 255, 255, 255))
+
+        // 2. Status Badge Pill
+        val padX = (16 * density).toInt()
+        val padY = (6 * density).toInt()
         badge.run {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
             typeface = Typeface.DEFAULT_BOLD
-            letterSpacing = 0.05f
+            letterSpacing = 0.06f
             gravity = Gravity.CENTER
-            setPadding(pad, (5 * density).toInt(), pad, (5 * density).toInt())
-            layoutParams = lp(LinearLayout.LayoutParams.WRAP_CONTENT, bottom = 14)
+            setPadding(padX, padY, padX, padY)
+            layoutParams = lp(LinearLayout.LayoutParams.WRAP_CONTENT, bottom = 16)
         }
+
+        // 3. Title Text
         title.run {
-            setTextColor(Color.parseColor("#0F172A"))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
+            setShadowLayer(8f, 0f, 2f, 0xCC000000.toInt())
             layoutParams = lp(LinearLayout.LayoutParams.WRAP_CONTENT, bottom = 12)
         }
+
+        // 4. Progress Bar
         bar.run {
             max = 100
             progressDrawable?.setTint(SKY)
             indeterminateDrawable?.setTint(SKY)
-            layoutParams = lp((6 * density).toInt().coerceAtLeast(4), bottom = 12, matchWidth = true)
+            layoutParams = lp((5 * density).toInt().coerceAtLeast(4), bottom = 12, matchWidth = true)
         }
+
+        // 5. Detail Subtitle Text
         detail.run {
-            setTextColor(Color.parseColor("#334155"))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f)
+            setTextColor(Color.parseColor("#F1F5F9"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             setLineSpacing(4f, 1f)
+            setShadowLayer(6f, 0f, 2f, 0xCC000000.toInt())
         }
-        val glassBackground = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = 22 * density
-            setColor(Color.TRANSPARENT)
-            setStroke((1.2f * density).toInt().coerceAtLeast(1), Color.argb(180, 255, 255, 255))
-        }
-        val frostBackground = GradientDrawable(
-            GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(
-                Color.argb(112, 255, 255, 255),
-                Color.argb(58, 255, 255, 255),
-                Color.argb(86, 241, 245, 249)
-            )
-        )
-        backdrop = ImageView(context).apply {
-            scaleType = ImageView.ScaleType.CENTER_CROP
-            layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        }
-        card = FrameLayout(context).apply {
-            background = glassBackground
-            clipToOutline = true
+
+        // 6. Frosted Glass Floating Card (Crystalline Glass dengan specular rim)
+        val card = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            background = GlassDrawableFactory.createMacOsTahoeGlassCard(24 * density, density)
+            elevation = 20 * density
             outlineProvider = ViewOutlineProvider.BACKGROUND
-            elevation = 16 * density
-            val w = (440 * density).toInt().coerceAtMost((context.resources.displayMetrics.widthPixels * 0.85f).toInt())
+            clipToOutline = true
+            setPadding(
+                (36 * density).toInt(),
+                (28 * density).toInt(),
+                (36 * density).toInt(),
+                (28 * density).toInt()
+            )
+            val w = (480 * density).toInt().coerceAtMost((context.resources.displayMetrics.widthPixels * 0.85f).toInt())
             layoutParams = FrameLayout.LayoutParams(w, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER)
-            addView(backdrop)
-            addView(View(context).apply {
-                background = frostBackground
-                layoutParams = FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-            })
-            addView(LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER_HORIZONTAL
-                setPadding((32 * density).toInt(), (24 * density).toInt(), (32 * density).toInt(), (24 * density).toInt())
-                listOf(badge, title, bar, detail).forEach(::addView)
-            })
+            listOf(badge, title, bar, detail).forEach(::addView)
         }
-        root.setBackgroundColor(Color.argb(25, 255, 255, 255))
+
         root.layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         root.addView(card)
-        root.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-            override fun onViewAttachedToWindow(v: View) {
-                if (pendingShow && !hasSnapshot && !captureUnavailable) captureBackdrop()
-            }
 
-            override fun onViewDetachedFromWindow(v: View) = Unit
-        })
         show("● SINKRONISASI JADWAL", SKY and 0xFFFFFF, "Memulai HNDSigma Player...", "")
     }
 
@@ -143,7 +117,7 @@ class PlayerOverlayCoordinator(context: Context) {
         titleText: String,
         detailText: String,
         progress: Int? = null,
-        titleColor: Int = Color.parseColor("#0F172A"),
+        titleColor: Int = Color.WHITE,
         badgeTextRgb: Int = rgb
     ) {
         badge.text = badgeText
@@ -154,100 +128,33 @@ class PlayerOverlayCoordinator(context: Context) {
         detail.text = detailText
         bar.isIndeterminate = progress == null
         if (progress != null) bar.progress = progress
-        pendingShow = true
-        if (!hasSnapshot && !captureUnavailable) {
-            if (root.isAttachedToWindow) {
-                captureBackdrop()
-                if (captureInProgress) return
-            } else {
-                root.visibility = View.VISIBLE
-            }
-        }
+
         root.visibility = View.VISIBLE
         root.alpha = 1f
+
+        // Hardware-accelerated full canvas blur di belakang overlay
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            canvas.setRenderEffect(RenderEffect.createBlurEffect(24f * density, 24f * density, Shader.TileMode.CLAMP))
+        }
     }
 
     fun hide() {
-        pendingShow = false
-        captureGeneration++
-        if (captureInProgress) {
-            root.animate().cancel()
-            root.visibility = View.GONE
-            return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            canvas.setRenderEffect(null)
         }
         if (!isVisible) return
-        root.animate().alpha(0f).setDuration(600L).setInterpolator(DecelerateInterpolator(2f))
+        root.animate()
+            .alpha(0f)
+            .setDuration(450L)
+            .setInterpolator(DecelerateInterpolator(2f))
             .withEndAction {
                 root.visibility = View.GONE
                 root.alpha = 1f
-                backdrop.setImageDrawable(null)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) backdrop.setRenderEffect(null)
-                hasSnapshot = false
-                captureUnavailable = false
-            }.start()
+            }
+            .start()
     }
 
     fun postDelayed(ms: Long, r: Runnable) = root.postDelayed(r, ms)
-
-    private fun captureBackdrop() {
-        val sourceActivity = activity
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || sourceActivity == null) {
-            captureUnavailable = true
-            return
-        }
-        if (captureInProgress || hasSnapshot || !root.isAttachedToWindow) return
-
-        captureInProgress = true
-        root.post {
-            if (!pendingShow || !root.isAttachedToWindow || card.width == 0 || card.height == 0) {
-                captureInProgress = false
-                captureUnavailable = true
-                root.visibility = View.VISIBLE
-                return@post
-            }
-            val location = IntArray(2)
-            card.getLocationInWindow(location)
-            val sourceRect = Rect(
-                location[0],
-                location[1],
-                location[0] + card.width,
-                location[1] + card.height
-            )
-            val bitmap = Bitmap.createBitmap(card.width, card.height, Bitmap.Config.ARGB_8888)
-            val generation = ++captureGeneration
-            root.visibility = View.INVISIBLE
-            android.view.PixelCopy.request(
-                sourceActivity.window,
-                sourceRect,
-                bitmap,
-                { result ->
-                    captureInProgress = false
-                    if (generation != captureGeneration) {
-                        bitmap.recycle()
-                        if (pendingShow) captureBackdrop()
-                        return@request
-                    }
-                    if (result == android.view.PixelCopy.SUCCESS) {
-                        backdrop.setImageBitmap(bitmap)
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            backdrop.setRenderEffect(
-                                RenderEffect.createBlurEffect(16f * density, 16f * density, Shader.TileMode.CLAMP)
-                            )
-                        }
-                        hasSnapshot = true
-                    } else {
-                        bitmap.recycle()
-                        captureUnavailable = true
-                    }
-                    if (pendingShow) {
-                        root.visibility = View.VISIBLE
-                        root.alpha = 1f
-                    }
-                },
-                handler
-            )
-        }
-    }
 
     private companion object {
         val SKY = 0xFF38BDF8.toInt()

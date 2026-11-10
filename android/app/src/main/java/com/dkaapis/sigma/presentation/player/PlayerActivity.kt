@@ -242,7 +242,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         canvasLayout = SignageCanvasLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         }
-        statusOverlay = PlayerOverlayCoordinator(this)
+        statusOverlay = PlayerOverlayCoordinator(this, canvasLayout)
         sleep = PlayerSleepCoordinator(this, canvasLayout, audioManager, zoneManager, telemetryManager) { hasActivePlayback }
         setContentView(FrameLayout(this).apply {
             setBackgroundColor(Color.WHITE) // Default background color in Android Signage is clean WHITE
@@ -466,18 +466,17 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     override fun onClearCache() {
         runOnUiThread {
-            hasActivePlayback = false
-            zoneManager.release()
-            canvasLayout.removeAllViews()
-            viewModel.resetActiveManifest()
             WatchdogService.setPlaybackActive(this@PlayerActivity, false)
+            statusOverlay.show(
+                "● BERSIHKAN CACHE", AMBER, "Membersihkan Cache Media Lokal...",
+                "Menghapus cache media dan manifest lokal...", badgeTextRgb = 0xF59E0B
+            )
 
             telemetryManager.handleClearCache(
                 onShowUiProgress = {
-                    statusOverlay.show(
-                        "BERSIHKAN CACHE", AMBER, "Membersihkan Cache Media Lokal...",
-                        "Menghapus cache media dan manifest lokal..."
-                    )
+                    // Biarkan konten terakhir tetap tampil di canvas di balik blur kaca saat membersihkan cache.
+                    // Manifest aktif di-reset agar tidak memicu transisi sebelum sync baru masuk.
+                    viewModel.resetActiveManifest()
                 },
                 onSyncRequested = {
                     statusOverlay.postDelayed(1000) { viewModel.syncManifest(force = true) }
