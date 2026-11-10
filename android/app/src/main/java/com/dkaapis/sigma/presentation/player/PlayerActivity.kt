@@ -356,7 +356,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         }
 
         loadingOverlay = FrameLayout(this).apply {
-            setBackgroundColor(Color.parseColor("#4D000000")) // Subtle translucent ambient scrim
+            setBackgroundColor(Color.argb(25, 255, 255, 255)) // Subtle translucent white frost scrim
             layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             addView(glassCard)
         }
@@ -369,11 +369,40 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             setOnClickListener { setScreenSleepMode(false, isManual = true) }
         }
         setContentView(FrameLayout(this).apply {
-            setBackgroundColor(Color.BLACK)
+            setBackgroundColor(Color.WHITE) // Default background color in Android Signage is clean WHITE
             addView(canvasLayout)
             addView(loadingOverlay)
             addView(sleepBlackoutOverlay)
         })
+    }
+
+    private fun showLoadingOverlay() {
+        loadingOverlay.visibility = View.VISIBLE
+        loadingOverlay.alpha = 1f
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            canvasLayout.setRenderEffect(
+                android.graphics.RenderEffect.createBlurEffect(
+                    20f, 20f, android.graphics.Shader.TileMode.CLAMP
+                )
+            )
+        }
+    }
+
+    private fun hideLoadingOverlay() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            canvasLayout.setRenderEffect(null)
+        }
+        if (loadingOverlay.visibility == View.VISIBLE) {
+            loadingOverlay.animate()
+                .alpha(0f)
+                .setDuration(600L)
+                .setInterpolator(android.view.animation.DecelerateInterpolator(2.0f))
+                .withEndAction {
+                    loadingOverlay.visibility = View.GONE
+                    loadingOverlay.alpha = 1f
+                }
+                .start()
+        }
     }
 
     private fun observeState() {
@@ -388,7 +417,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                     is PlayerUiState.SyncingManifest -> {
                         if (!hasActivePlayback || loadingOverlay.visibility == View.VISIBLE) {
                             WatchdogService.setPlaybackActive(this@PlayerActivity, false)
-                            loadingOverlay.visibility = View.VISIBLE
+                            showLoadingOverlay()
                             badgeText.text = "● SINKRONISASI JADWAL"
                             badgeText.setTextColor(Color.parseColor("#38BDF8"))
                             badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x3538BDF8.toInt(), 0x8038BDF8.toInt(), 999f)
@@ -401,7 +430,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                     is PlayerUiState.DownloadingAssets -> {
                         if (!hasActivePlayback || loadingOverlay.visibility == View.VISIBLE) {
                             WatchdogService.setPlaybackActive(this@PlayerActivity, false)
-                            loadingOverlay.visibility = View.VISIBLE
+                            showLoadingOverlay()
                             badgeText.text = "● MENGUNDUH ASET MEDIA"
                             badgeText.setTextColor(Color.parseColor("#34D399"))
                             badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x3510B981.toInt(), 0x8010B981.toInt(), 999f)
@@ -429,17 +458,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                         hasActivePlayback = true
                         WatchdogService.setPlaybackActive(this@PlayerActivity, true)
 
-                        if (loadingOverlay.visibility == View.VISIBLE) {
-                            loadingOverlay.animate()
-                                .alpha(0f)
-                                .setDuration(600L)
-                                .setInterpolator(android.view.animation.DecelerateInterpolator(2.0f))
-                                .withEndAction {
-                                    loadingOverlay.visibility = View.GONE
-                                    loadingOverlay.alpha = 1f
-                                }
-                                .start()
-                        }
+                        hideLoadingOverlay()
                         renderManifest(state.manifest)
 
                         val devId = deviceRepo.getSavedDeviceId()
@@ -448,7 +467,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                         }
                     }
                     is PlayerUiState.Error -> {
-                        loadingOverlay.visibility = View.VISIBLE
+                        showLoadingOverlay()
                         badgeText.text = "● KENDALA"
                         badgeText.setTextColor(Color.parseColor("#FF6B6B"))
                         badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x35EF4444.toInt(), 0x80EF4444.toInt(), 999f)
@@ -647,9 +666,10 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     override fun onChunkProgress(progress: ChunkProgressModel) {
         runOnUiThread {
-            loadingOverlay.visibility = View.VISIBLE
+            showLoadingOverlay()
             badgeText.text = "● SINKRONISASI KONTEN REALTIME"
             badgeText.setTextColor(Color.parseColor("#10B981"))
+            badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x3510B981.toInt(), 0x8010B981.toInt(), 999f)
             progressBar.isIndeterminate = false
             progressBar.progress = progress.percent
 
@@ -665,24 +685,26 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             progressBar.progress = 100
             badgeText.text = "✓ TERVERIFIKASI"
             badgeText.setTextColor(Color.parseColor("#10B981"))
+            badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x3510B981.toInt(), 0x8010B981.toInt(), 999f)
             loadingText.text = "Transmisi Seluruh Chunk Selesai (SHA-256 Valid)"
             subDetailText.text = "$fileName\nSeluruh $totalChunks chunk berhasil diterima & terverifikasi."
             loadingOverlay.postDelayed({
-                if (viewModel.uiState.value is PlayerUiState.Playing) loadingOverlay.visibility = View.GONE
+                if (viewModel.uiState.value is PlayerUiState.Playing) hideLoadingOverlay()
             }, 2000)
         }
     }
 
     override fun onChunkCancelled(fileName: String) {
         runOnUiThread {
-            loadingOverlay.visibility = View.VISIBLE
+            showLoadingOverlay()
             badgeText.text = "✖ DIBATALKAN"
             badgeText.setTextColor(Color.parseColor("#EF4444"))
+            badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x35EF4444.toInt(), 0x80EF4444.toInt(), 999f)
             loadingText.text = "Transmisi Chunk Dibatalkan"
             loadingText.setTextColor(Color.parseColor("#EF4444"))
             subDetailText.text = fileName.ifBlank { "Pengunggahan dibatalkan oleh pengguna dari CMS." }
             loadingOverlay.postDelayed({
-                if (viewModel.uiState.value is PlayerUiState.Playing) loadingOverlay.visibility = View.GONE
+                if (viewModel.uiState.value is PlayerUiState.Playing) hideLoadingOverlay()
             }, 2500)
         }
     }
@@ -701,10 +723,11 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
             telemetryManager.handleClearCache(
                 onShowUiProgress = {
-                    loadingOverlay.visibility = View.VISIBLE
+                    showLoadingOverlay()
                     progressBar.isIndeterminate = true
                     badgeText.text = "BERSIHKAN CACHE"
                     badgeText.setTextColor(Color.parseColor("#F59E0B"))
+                    badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x35F59E0B.toInt(), 0x80F59E0B.toInt(), 999f)
                     loadingText.setTextColor(Color.WHITE)
                     loadingText.text = "Membersihkan Cache Media Lokal..."
                     subDetailText.text = "Menghapus cache media dan manifest lokal..."
@@ -722,10 +745,11 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     override fun onReboot() {
         runOnUiThread {
-            loadingOverlay.visibility = View.VISIBLE
+            showLoadingOverlay()
             progressBar.isIndeterminate = true
             badgeText.text = "● MEMUAT ULANG"
             badgeText.setTextColor(Color.parseColor("#3B82F6"))
+            badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x3538BDF8.toInt(), 0x8038BDF8.toInt(), 999f)
             loadingText.text = "Memuat Ulang Player..."
             subDetailText.text = "Mengeksekusi perintah reboot/restart dari CMS..."
 
