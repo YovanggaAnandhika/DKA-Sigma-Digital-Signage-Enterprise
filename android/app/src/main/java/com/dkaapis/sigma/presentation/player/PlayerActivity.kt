@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
@@ -59,6 +60,7 @@ import com.dkaapis.sigma.presentation.renderers.QueueZoneRenderer
 import com.dkaapis.sigma.service.PlayerForegroundService
 import com.dkaapis.sigma.service.WatchdogService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -103,8 +105,10 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private var activeQueueDataJson: String? = null
     private var lastDownloadProgressReportTime: Long = 0L
     private var hasActivePlayback: Boolean = false
+    private var isQueueCallInProgress: Boolean = false
 
     private companion object {
+        const val TAG = "PlayerActivity"
         const val SKY = 0x38BDF8
         const val GREEN = 0x10B981
         const val RED = 0xEF4444
@@ -337,10 +341,35 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                 reconcileQueueState()
             },
             onDuckingChanged = { isDucked -> zoneManager.setDuckedVolume(isDucked) },
-            onQueueTapNext = { ticketNum, counterNm ->
-                audioManager.speakQueueTicket(QueueSpeechPayload(ticketNumber = ticketNum, counterName = counterNm))
-                deviceRepo.getSavedDeviceId()?.let { devId ->
-                    streamManager.broadcastTouch(devId, activeQueueDisplayId, ticketNum, counterNm)
+            onQueueTapNext = { counterNm ->
+                if (!isQueueCallInProgress) {
+                    isQueueCallInProgress = true
+                    lifecycleScope.launch {
+                        try {
+                            val queueId = activeQueueDisplayId
+                            check(queueId.isNotBlank()) { "Layar antrean belum tersinkron dengan backend" }
+                            val (ticketNumber, counterName) = streamManager.callNextTicket(queueId, counterNm)
+                            activeQueueRenderer?.updateCall(ticketNumber, counterName)
+                            audioManager.speakQueueTicket(
+                                QueueSpeechPayload(ticketNumber = ticketNumber, counterName = counterName)
+                            )
+                            deviceRepo.getSavedDeviceId()?.let { deviceId ->
+                                streamManager.broadcastTouch(deviceId, queueId, ticketNumber, counterName)
+                            }
+                        } catch (error: CancellationException) {
+                            throw error
+                        } catch (error: Exception) {
+                            Log.w(TAG, "Panggilan antrean ditolak backend: ${error.message}")
+                            Toast.makeText(
+                                this@PlayerActivity,
+                                "Panggilan gagal: ${error.message ?: "tidak dapat menghubungi backend"}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            reconcileQueueState()
+                        } finally {
+                            isQueueCallInProgress = false
+                        }
+                    }
                 }
             }
         )
@@ -499,7 +528,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                 return@runOnUiThread
             }
 
-            activeQueueRenderer?.updateCall(event.ticketNumber, event.counterName)
+            reconcileQueueState()
             audioManager.speakQueueTicket(
                 QueueSpeechPayload(
                     ticketNumber = event.ticketNumber,
@@ -518,7 +547,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         runOnUiThread {
             if (activeQueueDisplayId.isBlank()) return@runOnUiThread
             if (targetQueueId.isNotBlank() && targetQueueId != activeQueueDisplayId) return@runOnUiThread
-            activeQueueRenderer?.resetQueue(resetToNumber)
+            reconcileQueueState()
         }
     }
 
@@ -526,7 +555,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         runOnUiThread {
             if (activeQueueDisplayId.isBlank()) return@runOnUiThread
             if (targetQueueId.isNotBlank() && targetQueueId != activeQueueDisplayId) return@runOnUiThread
-            activeQueueRenderer?.setCounterStatus(counterName, status)
+            reconcileQueueState()
             audioManager.speakCounterStatus(CounterStatusPayload(counterName = counterName, status = status))
         }
     }

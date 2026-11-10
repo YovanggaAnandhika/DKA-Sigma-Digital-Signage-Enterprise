@@ -34,7 +34,7 @@ class ZoneWidgetRendererFactory {
         albumSlides: List<AlbumSlidePayload>,
         onQueueCreated: (QueueZoneRenderer, queueId: String, widgetDataJson: String?) -> Unit,
         onDuckingChanged: (isDucked: Boolean) -> Unit,
-        onQueueTapNext: (ticketNum: String, counterNm: String) -> Unit
+        onQueueTapNext: (counterNm: String) -> Unit
     ): View? {
         val jsonStr = block.widgetDataJson ?: "{}"
         return when (block.widgetType) {

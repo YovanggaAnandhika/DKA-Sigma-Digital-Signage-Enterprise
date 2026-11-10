@@ -41,6 +41,43 @@ fn latest_assigned_schedule(
 pub struct ManifestService;
 
 impl ManifestService {
+    async fn queue_config_fingerprint(
+        pool: &DbPool,
+        queue_id: Uuid,
+    ) -> Result<Option<String>, AppError> {
+        let config: Option<serde_json::Value> = sqlx::query_scalar(
+            r#"
+            SELECT jsonb_build_object(
+                'display', to_jsonb(d) - ARRAY['current_sequence', 'created_at', 'updated_at'],
+                'items', COALESCE((
+                    SELECT jsonb_agg(to_jsonb(i) - ARRAY['created_at', 'updated_at'] ORDER BY i.z_index, i.id)
+                    FROM components_queue_layout_items i
+                    WHERE i.queue_display_id = d.id
+                ), '[]'::jsonb),
+                'counters', COALESCE((
+                    SELECT jsonb_agg(to_jsonb(c) - ARRAY[
+                        'current_ticket_number', 'last_called_at', 'status', 'status_note', 'created_at', 'updated_at'
+                    ] ORDER BY c.counter_number, c.id)
+                    FROM components_queue_counters c
+                    WHERE c.queue_display_id = d.id
+                ), '[]'::jsonb),
+                'audios', COALESCE((
+                    SELECT jsonb_agg(to_jsonb(a) - ARRAY['created_at', 'updated_at'] ORDER BY a.id)
+                    FROM components_queue_audios a
+                    WHERE a.queue_display_id = d.id
+                ), '[]'::jsonb)
+            )
+            FROM components_queue_displays d
+            WHERE d.id = $1
+            "#,
+        )
+        .bind(queue_id)
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(config.map(|value| value.to_string()))
+    }
+
     pub async fn get_manifest_for_device(
         pool: &DbPool,
         device_id: Uuid,
@@ -383,6 +420,11 @@ impl ManifestService {
                     )
                     .as_bytes(),
                 );
+                if let Some(queue_id) = b.block.queue_id {
+                    if let Some(config) = Self::queue_config_fingerprint(pool, queue_id).await? {
+                        hasher.update(config.as_bytes());
+                    }
+                }
             }
         }
         for a in &assets_vec {

@@ -16,5 +16,5 @@ data class ZoneRenderContextPayload(
     val storageRepo: MediaStorageRepositoryImpl,
     val onQueueReady: (renderer: QueueZoneRenderer, queueId: String, widgetDataJson: String?) -> Unit,
     val onDuckingChanged: (isDucked: Boolean) -> Unit,
-    val onQueueTapNext: (ticketNum: String, counterNm: String) -> Unit
+    val onQueueTapNext: (counterNm: String) -> Unit
 )

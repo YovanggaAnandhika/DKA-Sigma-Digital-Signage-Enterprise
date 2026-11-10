@@ -160,6 +160,10 @@ class PlayerStreamManager(
         return queueSyncHelper.syncQueueState(queueDisplayId, activeCounterName, currentJson)
     }
 
+    suspend fun callNextTicket(queueDisplayId: String, counterName: String): Pair<String, String> {
+        return queueSyncHelper.callNextTicket(queueDisplayId, counterName)
+    }
+
     fun broadcastTouch(
         deviceId: String,
         queueId: String,

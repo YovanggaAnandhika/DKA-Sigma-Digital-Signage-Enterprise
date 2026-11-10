@@ -6,6 +6,8 @@ import com.dkaapis.sigma.presentation.player.stream.model.QueueSyncStatePayload
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import signage.components.v1.queue.ticket.TicketCommon
+import signage.components.v1.queue.ticket.QueueTicketServiceGrpcKt
 import signage.components.v1.queue.display.DisplayCommon
 import signage.components.v1.queue.display.QueueDisplayServiceGrpcKt
 
@@ -80,6 +82,36 @@ class QueueSyncHelper(
         }.onFailure { err ->
             Log.w(TAG, "Gagal rekonsiliasi antrian gRPC saat rekoneksi: ${err.message}")
         }.getOrNull()
+    }
+
+    suspend fun callNextTicket(
+        queueDisplayId: String,
+        counterName: String
+    ): Pair<String, String> = withContext(Dispatchers.IO) {
+        require(queueDisplayId.isNotBlank()) { "Queue display ID is required" }
+
+        val channel = channelFactory.getChannel()
+        val displayStub = QueueDisplayServiceGrpcKt.QueueDisplayServiceCoroutineStub(channel)
+        val detail = displayStub.getQueueDisplay(
+            DisplayCommon.GetQueueDisplayRequest.newBuilder()
+                .setId(queueDisplayId)
+                .build()
+        )
+        val counter = detail.countersList.firstOrNull {
+            it.counterName.equals(counterName, ignoreCase = true)
+        } ?: detail.countersList.firstOrNull { it.isActive }
+            ?: throw IllegalStateException("Backend tidak memiliki loket aktif untuk antrean ini")
+
+        val ticketStub = QueueTicketServiceGrpcKt.QueueTicketServiceCoroutineStub(channel)
+        val response = ticketStub.callNextTicket(
+            TicketCommon.CallNextTicketRequest.newBuilder()
+                .setQueueDisplayId(queueDisplayId)
+                .setCounterId(counter.id)
+                .build()
+        )
+        val ticketNumber = response.ticket.ticketNumber
+        check(ticketNumber.isNotBlank()) { "Backend tidak mengembalikan nomor antrean" }
+        ticketNumber to response.counter.counterName
     }
 
     companion object {

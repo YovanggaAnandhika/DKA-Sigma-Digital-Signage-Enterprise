@@ -36,7 +36,7 @@ class QueueZoneRenderer(
         context: Context,
         onCallAudioStarted: () -> Unit = {},
         onCallAudioFinished: () -> Unit = {},
-        onUserTapNext: (ticketNumber: String, counterName: String) -> Unit = { _, _ -> }
+        onUserTapNext: (counterName: String) -> Unit = {}
     ) : this(context, QueueCallbacksPayload(onCallAudioStarted, onCallAudioFinished, onUserTapNext))
 
     private val visualEffectHelper = QueueVisualEffectHelper()
@@ -247,13 +247,7 @@ class QueueZoneRenderer(
             .replace("{petugas}", "Petugas")
     }
 
-    fun callNext(): String {
-        currentSequence++
-        val formattedNumber = "$currentPrefix-${String.format(Locale.US, "%03d", currentSequence)}"
-        updateDisplay(formattedNumber, currentCounter)
-        callbacks.onUserTapNext(formattedNumber, currentCounter)
-        return formattedNumber
-    }
+    fun callNext() = callbacks.onUserTapNext(currentCounter)
 
     fun cycleNextCounter(): String {
         if (countersList.isEmpty()) return currentCounter

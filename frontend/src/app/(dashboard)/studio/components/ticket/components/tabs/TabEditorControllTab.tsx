@@ -395,14 +395,9 @@ export default function TabEditorControllTab() {
     try {
       let nextNumber = queue.currentNumber || simulator.currentNumber || `${queue.prefix || 'A'}-000`;
       if (queue.id) {
-        const res = await apiCallNextTicket(queue.id, activeCounter.id).catch(() => null);
-        if (res && res.ticket && res.ticket.ticketNumber) {
-          nextNumber = res.ticket.ticketNumber;
-        } else {
-          const curSeq = parseInt(nextNumber.replace(/[^0-9]/g, ''), 10) || 0;
-          const nextSeq = curSeq + 1;
-          nextNumber = `${queue.prefix || 'A'}-${String(nextSeq).padStart(3, '0')}`;
-        }
+        const res = await apiCallNextTicket(queue.id, activeCounter.id);
+        nextNumber = res?.ticket?.ticketNumber;
+        if (!nextNumber) throw new Error('Backend tidak mengembalikan nomor antrean.');
       } else {
         const curSeq = parseInt(nextNumber.replace(/[^0-9]/g, ''), 10) || 0;
         const nextSeq = curSeq + 1;
@@ -463,33 +458,56 @@ export default function TabEditorControllTab() {
           queue
         );
       }
-    } catch {
+    } catch (error) {
       finishCalling();
       stopInvertEffect();
+      await modal.alert({
+        title: 'Panggilan tidak tersimpan',
+        message: error instanceof Error ? error.message : 'Backend tidak dapat memproses panggilan.',
+        variant: 'danger',
+      });
     }
   };
 
   // Recall current ticket
-  const handleRecall = () => {
+  const handleRecall = async () => {
     if (!beginCalling()) return;
     startInvertEffect();
-    const curNumber = queue.currentNumber || simulator.currentNumber || `${queue.prefix || 'A'}-001`;
-    recordCallHistory(curNumber, activeCounter.counterName, 'recall');
+    let curNumber = queue.currentNumber || simulator.currentNumber || `${queue.prefix || 'A'}-001`;
+    try {
+      if (queue.id) {
+        const sync = await getQueueSyncState(queue.id);
+        curNumber = sync.currentTicketNumber || sync.current_ticket_number;
+        if (!curNumber) throw new Error('Backend belum memiliki nomor antrean aktif.');
+      }
+      recordCallHistory(curNumber, activeCounter.counterName, 'recall');
 
-    broadcastToAndroid({
-      type: 'CALL_QUEUE',
-      queueName: queue.name,
-      ticketNumber: curNumber,
-      counterName: activeCounter.counterName,
-      callType: 'recall',
-      ticketLabel: queue.ticketLabel,
-      counterLabel: queue.counterLabel,
-      ttsTemplateCall: queue.ttsTemplateCall,
-      ttsTemplateRecall: queue.ttsTemplateRecall,
-    });
+      broadcastToAndroid({
+        type: 'CALL_QUEUE',
+        queueName: queue.name,
+        ticketNumber: curNumber,
+        counterName: activeCounter.counterName,
+        callType: 'recall',
+        ticketLabel: queue.ticketLabel,
+        counterLabel: queue.counterLabel,
+        ttsTemplateCall: queue.ttsTemplateCall,
+        ttsTemplateRecall: queue.ttsTemplateRecall,
+      });
 
-    if (queue.audioChimeEnabled) {
-      triggerChime(() => {
+      if (queue.audioChimeEnabled) {
+        triggerChime(() => {
+          speakQueueAnnouncement(
+            curNumber,
+            activeCounter.counterName,
+            true,
+            () => {
+              finishCalling();
+              stopInvertEffect();
+            },
+            queue
+          );
+        });
+      } else {
         speakQueueAnnouncement(
           curNumber,
           activeCounter.counterName,
@@ -500,18 +518,15 @@ export default function TabEditorControllTab() {
           },
           queue
         );
+      }
+    } catch (error) {
+      finishCalling();
+      stopInvertEffect();
+      await modal.alert({
+        title: 'Panggilan ulang tidak terkirim',
+        message: error instanceof Error ? error.message : 'Backend tidak dapat membaca nomor aktif.',
+        variant: 'danger',
       });
-    } else {
-      speakQueueAnnouncement(
-        curNumber,
-        activeCounter.counterName,
-        true,
-        () => {
-          finishCalling();
-          stopInvertEffect();
-        },
-        queue
-      );
     }
   };
 
@@ -522,14 +537,9 @@ export default function TabEditorControllTab() {
     try {
       let prevNumber = queue.currentNumber || simulator.currentNumber || `${queue.prefix || 'A'}-001`;
       if (queue.id) {
-        const res = await apiCallPreviousTicket(queue.id, activeCounter.id).catch(() => null);
-        if (res && res.ticket && res.ticket.ticketNumber) {
-          prevNumber = res.ticket.ticketNumber;
-        } else {
-          const curSeq = parseInt(prevNumber.replace(/[^0-9]/g, ''), 10) || 1;
-          const prevSeq = Math.max(0, curSeq - 1);
-          prevNumber = `${queue.prefix || 'A'}-${String(prevSeq).padStart(3, '0')}`;
-        }
+        const res = await apiCallPreviousTicket(queue.id, activeCounter.id);
+        prevNumber = res?.ticket?.ticketNumber;
+        if (!prevNumber) throw new Error('Backend tidak mengembalikan nomor antrean sebelumnya.');
       } else {
         const curSeq = parseInt(prevNumber.replace(/[^0-9]/g, ''), 10) || 1;
         const prevSeq = Math.max(0, curSeq - 1);
@@ -590,9 +600,14 @@ export default function TabEditorControllTab() {
           queue
         );
       }
-    } catch {
+    } catch (error) {
       finishCalling();
       stopInvertEffect();
+      await modal.alert({
+        title: 'Panggilan sebelumnya tidak tersimpan',
+        message: error instanceof Error ? error.message : 'Backend tidak dapat memproses panggilan.',
+        variant: 'danger',
+      });
     }
   };
 
@@ -600,7 +615,7 @@ export default function TabEditorControllTab() {
   const handleStatusChange = async (newStatus: 'ACTIVE' | 'BREAK' | 'LOCKED') => {
     try {
       if (activeCounter.id && !activeCounter.id.startsWith('cnt-')) {
-        await apiSetCounterStatus(activeCounter.id, newStatus).catch(() => null);
+        await apiSetCounterStatus(activeCounter.id, newStatus);
       }
 
       setQueue((prev) => ({
@@ -623,7 +638,13 @@ export default function TabEditorControllTab() {
         queue,
         () => {}
       );
-    } catch {}
+    } catch (error) {
+      await modal.alert({
+        title: 'Status loket tidak tersimpan',
+        message: error instanceof Error ? error.message : 'Backend tidak dapat memperbarui status loket.',
+        variant: 'danger',
+      });
+    }
   };
 
   const handleToggleLock = () => {
@@ -654,7 +675,7 @@ export default function TabEditorControllTab() {
 
     try {
       if (queue.id) {
-        await apiResetQueue(queue.id, 0).catch(() => null);
+        await apiResetQueue(queue.id, 0);
       }
       const initialNum = `${queue.prefix || 'A'}-000`;
       setQueue((prev) => ({
@@ -680,8 +701,13 @@ export default function TabEditorControllTab() {
         variant: 'success',
       });
       stopInvertEffect();
-    } catch {
+    } catch (error) {
       stopInvertEffect();
+      await modal.alert({
+        title: 'Antrean gagal direset',
+        message: error instanceof Error ? error.message : 'Backend tidak dapat mereset antrean.',
+        variant: 'danger',
+      });
     }
   };
 
