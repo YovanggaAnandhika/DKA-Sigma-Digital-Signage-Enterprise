@@ -16,6 +16,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.rtsp.RtspMediaSource
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -24,6 +25,7 @@ import coil.load
 import com.dkaapis.sigma.data.local.ServerConfig
 import com.dkaapis.sigma.presentation.renderers.glass.LiveStreamGlassOverlay
 import com.dkaapis.sigma.presentation.renderers.model.LiveStreamConfigPayload
+import com.dkaapis.sigma.presentation.util.DeviceCapabilityHelper
 
 /**
  * Modern High-Performance Live Stream Zone Renderer for Android Player.
@@ -95,9 +97,16 @@ class LiveStreamZoneRenderer(
             payload.streamId.isNotBlank() ||
             rawTarget.startsWith("/streams/")
 
-        // Direct zero-transcode RTSP stream from OBS ingest (`live/<streamId>`)
+        // Invariant:
+        // Hardware adaptation matrix:
+        // - Low-spec devices (Xiaomi TV, Polytron TV, 1GB RAM) with 720p displays:
+        //   Use `hd/live/<streamId>` (scaled <= 720p, Constrained Baseline H.264, 0 B-frames, separate AAC audio).
+        // - High-end devices (Poco X5, Android Smartboard):
+        //   Use direct raw `live/<streamId>` (native 1080p, ultra-low latency).
+        val isLowSpec = DeviceCapabilityHelper.isLowSpecDevice(context)
+        val initialPrefix = if (isLowSpec) "hd/live" else "live"
         val playbackUrl = if (isServerHosted && payload.streamId.isNotBlank()) {
-            "rtsp://${ServerConfig.getHost(context)}:$RTSP_PORT/live/${payload.streamId}"
+            "rtsp://${ServerConfig.getHost(context)}:$RTSP_PORT/$initialPrefix/${payload.streamId}"
         } else {
             targetUrl
         }
@@ -127,17 +136,29 @@ class LiveStreamZoneRenderer(
         try {
             val targetUri = Uri.parse(targetUrl)
             val isRtsp = targetUri.scheme.equals("rtsp", ignoreCase = true)
+            val isLowSpec = DeviceCapabilityHelper.isLowSpecDevice(context)
+            val targetBufferBytes = if (isLowSpec) 6 * 1024 * 1024 else 24 * 1024 * 1024
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(
-                    /* minBufferMs = */ if (isRtsp) 800 else 1_500,
-                    /* maxBufferMs = */ if (isRtsp) 2_500 else 4_000,
-                    /* bufferForPlaybackMs = */ if (isRtsp) 200 else 300,
-                    /* bufferForPlaybackAfterRebufferMs = */ if (isRtsp) 350 else 600
+                    /* minBufferMs = */ if (isRtsp) (if (isLowSpec) 1_200 else 800) else 1_500,
+                    /* maxBufferMs = */ if (isRtsp) (if (isLowSpec) 3_500 else 2_500) else 4_000,
+                    /* bufferForPlaybackMs = */ if (isRtsp) (if (isLowSpec) 350 else 200) else 300,
+                    /* bufferForPlaybackAfterRebufferMs = */ if (isRtsp) (if (isLowSpec) 600 else 350) else 600
                 )
+                .setTargetBufferBytes(targetBufferBytes)
                 .setBackBuffer(0, false)
                 .setPrioritizeTimeOverSizeThresholds(true)
                 .build()
-            val player = ExoPlayer.Builder(context)
+
+            val renderersFactory = DefaultRenderersFactory(context).apply {
+                setEnableDecoderFallback(true)
+                setExtensionRendererMode(
+                    if (isLowSpec) DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
+                    else DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
+                )
+            }
+
+            val player = ExoPlayer.Builder(context, renderersFactory)
                 .setLoadControl(loadControl)
                 .setWakeMode(C.WAKE_MODE_NETWORK)
                 .build()
