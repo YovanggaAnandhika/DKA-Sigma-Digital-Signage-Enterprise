@@ -25,8 +25,34 @@ export async function GET(
   grpcReq.setFileName(fileWithQuery);
 
   return new Promise<Response>((resolve) => {
-    client.getStreamSegment(grpcReq, (err, response) => {
+    client.getStreamSegment(grpcReq, async (err, response) => {
       if (err || !response || !response.getSuccess()) {
+        // Direct fallback to streamer engine if gRPC bridge is unavailable
+        try {
+          const streamerHlsBase = (process.env.HND_STREAMER_INTERNAL_URL || 'http://dka-product-sigma-streamer:8889')
+            .replace(':8889', ':8888');
+          const targetFile = file === 'live.m3u8' ? 'index.m3u8?cookieCheck=1' : fileWithQuery;
+          const fallbackRes = await fetch(`${streamerHlsBase}/live/${streamId}/${targetFile}`, {
+            cache: 'no-store',
+          });
+          if (fallbackRes.ok) {
+            const raw = await fallbackRes.arrayBuffer();
+            const isPlaylist = file.endsWith('.m3u8');
+            const ct = fallbackRes.headers.get('content-type') || (isPlaylist ? 'application/vnd.apple.mpegurl' : 'video/MP2T');
+            return resolve(
+              new Response(raw, {
+                status: 200,
+                headers: {
+                  'Content-Type': ct,
+                  'Content-Length': String(raw.byteLength),
+                  'Cache-Control': isPlaylist ? 'no-cache, no-store, must-revalidate' : 'public, max-age=60, immutable',
+                  'Access-Control-Allow-Origin': '*',
+                  'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+                },
+              })
+            );
+          }
+        } catch {}
         return resolve(new NextResponse(null, { status: 404 }));
       }
 
@@ -206,7 +232,27 @@ export async function POST(
       return new NextResponse(null, { status: upstream?.status || 502 });
     }
 
-    const sdpAnswer = await upstream.text();
+    let sdpAnswer = await upstream.text();
+
+    // Clean unreachable private container candidates from SDP answer
+    // MediaMTX advertises 127.0.0.1 and internal Docker subnet IPs (172.x.x.x)
+    // which causes physical devices on local Wi-Fi to stall on dead ICE candidates.
+    sdpAnswer = sdpAnswer
+      .split('\n')
+      .filter((line) => {
+        if (!line.startsWith('a=candidate:')) return true;
+        if (
+          line.includes(' 127.0.0.1 ') ||
+          line.includes(' 172.23.') ||
+          line.includes(' 172.17.') ||
+          line.includes(' 10.20.30.63 ')
+        ) {
+          return false;
+        }
+        return true;
+      })
+      .join('\n');
+
     return new Response(sdpAnswer, {
       status: 201,
       headers: {

@@ -124,6 +124,7 @@ This project is an enterprise-grade digital signage management and streaming pla
   - `8890/udp` → `dka-product-sigma-streamer:8890` (SRT UDP Ingest)
   - `50051/tcp+udp` → `dka-product-sigma-backend:50051` (Tonic gRPC Server)
   - `80/tcp` (`sigma.dkaapis.test`) → `dka-product-sigma-frontend:80` (Next.js App Router)
+  - *Catatan Port Privilege*: Port < 1024 (seperti port 80) merupakan privileged port pada OS Unix/Android yang rentan mengalami *Connection Reset* pada lingkungan virtualisasi Docker Desktop VPNKit atau firewall AP Wi-Fi kantor. Akses streaming Android player diprioritaskan melalui kanal stateless bebas session atau gRPC `GetStreamSegment` di port 50051.
 - **Host LAN Wi-Fi IP Invariant (`MTX_WEBRTCADDITIONALHOSTS`)**:
   - `MTX_WEBRTCADDITIONALHOSTS` di `compose.yml` WAJIB selalu menyertakan IP Wi-Fi lokal komputer pengembang (misalnya `192.168.1.52`) di samping domain lokal `sigma.dkaapis.test`, agar negosiasi ICE UDP WebRTC dari perangkat Android fisik di jaringan Wi-Fi lokal tidak mengalami kegagalan/timeout.
 - **Internal Docker Service URLs (`compose.yml`)**:
@@ -213,3 +214,23 @@ This project is an enterprise-grade digital signage management and streaming pla
   - Perintah administratif (`ReloadManifest`, `RebootPlayer`, `ClearCache`) strictly mewajibkan izin `can_manage_distribution` via JWT Bearer token.
   - Sinyal real-time player/antrean (`CommandEmergencyBroadcast` dengan payload `CALL_QUEUE`, `ASSET_DOWNLOAD_PROGRESS`, `ASSET_DOWNLOAD_COMPLETE`) diizinkan untuk dikirimkan oleh player Android tanpa penolakan `Code: 16 (UNAUTHENTICATED)`.
   - Android player (`PlayerTouchBroadcaster`) tetap menyematkan header `Authorization: Bearer <token>` dari `TokenStorage` jika tersedia.
+
+### 5. Database Relative URL Invariant (Strict No-Domain Rule)
+- Domain lokal seperti `sigma.dkaapis.test` HANYA berlaku di mesin pengembang host (`/etc/hosts`) dan **DILARANG KERAS disimpan ke dalam database PostgreSQL** (`components_live_streams`, `studio_layer_blocks`, `studio_media_items`, dll).
+- Seluruh kolom endpoint, poster, maupun sumber stream (`source_url`, `server_hls_endpoint`, `poster_image_url`) **WAJIB HANYA menyimpan URL relatif** (contoh: `/streams/<stream_id>/live.m3u8` atau `/streams/<stream_id>/whip`).
+- Penyelesaian (*resolving*) ke absolute URL adalah tanggung jawab penuh masing-masing client runtime:
+  - **Android Player**: Menggunakan `ServerConfig.getHost(context)` (misalnya `http://10.20.30.97` atau IP server yang diinput device).
+  - **Frontend Web**: Menggunakan URL relatif browser atau `window.location.origin`.
+  - **Backend Relay**: Menggunakan internal Docker DNS hostname (`http://dka-product-sigma-streamer:8889` / `:8888`).
+
+### 6. Dedicated Stateless Player Stream Channel (Zero Cookie & Zero Session)
+- Player signage adalah perangkat keras (*appliance*) yang bekerja 24/7 dan **TIDAK BOLEH** dibebani oleh mekanisme browser seperti dynamic cookie challenge (`cookieCheck=1`), parameter sesi MediaMTX (`?session=<uuid>`), maupun proteksi autentikasi yang memicu redirect 302 / error 404.
+- Backend/Gateway menyediakan jalur pengiriman streaming terpisah khusus player:
+  - Menghandle cookie check dan redirect secara server-to-server.
+  - Menghapus (*strip*) parameter query `?session=...` dari playlist `.m3u8` agar segmen `.ts` bersifat *stateless* dan *cacheable*.
+  - Menyajikan payload murni langsung ke ExoPlayer tanpa risiko `HttpDataSourceException: Connection reset` atau `Source error (code: 2001)`.
+
+### 7. Anti-Flapping Buffering/Offline State Machine pada Player
+- Saat siaran sedang tidak aktif, belum dipublikasikan (*offline*), atau mengalami gangguan jaringan:
+  - Player WAJIB mempertahankan tampilan **"Siaran Offline"** yang elegan (menggunakan UI glassmorphism modern dengan indikator retry halus).
+  - **DILARANG KERAS meloncat ke state "BUFFERING"** di setiap interval percobaan reconnecting (`reconnectRunnable`) ketika belum ada aliran paket/frame riil yang diterima. State buffering HANYA boleh aktif ketika media source telah terhubung dan sedang mengisi buffer playback frame pertama.

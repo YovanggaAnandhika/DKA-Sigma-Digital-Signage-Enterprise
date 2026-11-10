@@ -78,7 +78,7 @@ services:
       MTX_APIADDRESS: ":9997"
       MTX_AUTHMETHOD: "http"
       MTX_AUTHHTTPADDRESS: "http://dka-product-sigma-frontend:80/api/streamer/auth"
-      MTX_AUTHHTTPEXCLUDE: '[{"action":"read"},{"action":"playback"},{"action":"api"},{"action":"metrics"}]'
+      MTX_AUTHHTTPEXCLUDE: '[{"action":"read"},{"action":"playback"}]'
       MTX_RTMP: "yes"
       MTX_RTMPADDRESS: ":1935"
       MTX_RTSP: "yes"
@@ -90,7 +90,7 @@ services:
       MTX_WEBRTCALLOWORIGINS: '["*"]'
       MTX_WEBRTCLOCALUDPADDRESS: ":8189"
       MTX_WEBRTCLOCALTCPADDRESS: ":8189"
-      MTX_WEBRTCADDITIONALHOSTS: "10.20.30.97,10.20.30.63,sigma.dkaapis.test"
+      MTX_WEBRTCADDITIONALHOSTS: "10.20.30.97,sigma.dkaapis.test"
       MTX_HLS: "yes"
       MTX_HLSADDRESS: ":8888"
       MTX_HLSVARIANT: "mpegts"

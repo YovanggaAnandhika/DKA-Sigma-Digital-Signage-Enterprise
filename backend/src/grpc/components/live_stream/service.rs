@@ -365,14 +365,32 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
             Err(_) => {
                 // Fetch directly from internal Docker streamer engine (dka-product-sigma-streamer:8888)
                 let target_file = if file_name == "live.m3u8" { "index.m3u8" } else { file_name };
+                let query_str = if query.is_empty() && target_file == "index.m3u8" {
+                    "?cookieCheck=1".to_string()
+                } else {
+                    query
+                };
                 let url = format!(
                     "{}/live/{}/{}{}",
                     self.relay_manager.streamer_hls_url().trim_end_matches('/'),
                     stream_id,
                     target_file,
-                    query
+                    query_str
                 );
-                match self.relay_manager.http_client().get(&url).send().await {
+                let mut resp_res = self.relay_manager.http_client().get(&url).send().await;
+                if let Ok(ref resp) = resp_res {
+                    if resp.status().is_redirection() {
+                        if let Some(loc) = resp.headers().get(reqwest::header::LOCATION).and_then(|h| h.to_str().ok()) {
+                            let next_url = if loc.starts_with("http://") || loc.starts_with("https://") {
+                                loc.to_string()
+                            } else {
+                                format!("{}{}", self.relay_manager.streamer_hls_url().trim_end_matches('/'), loc)
+                            };
+                            resp_res = self.relay_manager.http_client().get(&next_url).send().await;
+                        }
+                    }
+                }
+                match resp_res {
                     Ok(resp) if resp.status().is_success() => {
                         match resp.bytes().await {
                             Ok(b) => b.to_vec(),
