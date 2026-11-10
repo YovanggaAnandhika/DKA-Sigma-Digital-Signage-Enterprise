@@ -71,6 +71,7 @@ data class TickerConfigPayload(
  */
 data class ClockConfigPayload(
     val city: String = "Makassar",
+    val timezone: String = "Asia/Jakarta",
     val showSeconds: Boolean = true,
     val is24Hour: Boolean = true,
     val backgroundColorHex: String = "transparent",
@@ -84,6 +85,7 @@ data class ClockConfigPayload(
     companion object {
         fun fromJson(json: JSONObject): ClockConfigPayload = ClockConfigPayload(
             city = json.optString("city", "Makassar"),
+            timezone = json.optString("timezone", "Asia/Jakarta"),
             showSeconds = json.optBoolean("showSeconds", true),
             is24Hour = json.optBoolean("is24Hour", true),
             backgroundColorHex = json.optString("backgroundColor", "transparent").ifBlank { "transparent" },

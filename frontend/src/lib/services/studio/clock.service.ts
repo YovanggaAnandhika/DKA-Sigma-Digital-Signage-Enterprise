@@ -5,6 +5,7 @@ type ClockProtoObject = {
   id: string;
   name: string;
   city: string;
+  timezone?: string;
   showSeconds?: boolean;
   show_seconds?: boolean;
   is24Hour?: boolean;
@@ -28,6 +29,7 @@ function mapClock(item: ClockProtoObject): ClockWeatherConfig {
     id: item.id,
     name: item.name,
     city: item.city || 'Makassar',
+    timezone: item.timezone || 'Asia/Jakarta',
     showSeconds: Boolean(item.showSeconds ?? item.show_seconds ?? true),
     is24Hour: Boolean(item.is24Hour ?? item.is_24_hour ?? true),
     theme: (item.theme as any) || 'glass',

@@ -199,7 +199,8 @@ export default function CreateClockWeatherPage() {
                   minute: '2-digit',
                   second: showSeconds ? '2-digit' : undefined,
                   hour12: !is24Hour,
-                })}
+                  timeZone: 'Asia/Jakarta',
+                }).replace(/\./g, ':')}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', color: 'rgba(255,255,255,0.8)', marginTop: '8px', fontWeight: 600 }}>
                 <Calendar size={14} style={{ color: '#60a5fa' }} />

@@ -29,7 +29,8 @@ struct ClockRow {
 
 impl ClockRow {
     fn into_proto(self) -> Clock {
-        let city = self.weather_city.unwrap_or(self.timezone);
+        let timezone = self.timezone;
+        let city = self.weather_city.unwrap_or_else(|| timezone.clone());
         let is_24_hour = self.clock_format.contains("24");
         Clock {
             id: self.id.to_string(),
@@ -45,6 +46,7 @@ impl ClockRow {
             border_radius: 12,
             time_font_size: self.font_size,
             date_font_size: 14,
+            timezone,
             created_at: self.created_at.to_rfc3339(),
             updated_at: self.updated_at.to_rfc3339(),
         }
@@ -214,4 +216,3 @@ impl ClockServiceTrait for ClockServiceImpl {
         Ok(Response::new(DeleteClockResponse { success: true }))
     }
 }
-

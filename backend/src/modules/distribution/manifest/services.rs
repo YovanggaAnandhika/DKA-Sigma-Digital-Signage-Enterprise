@@ -92,6 +92,20 @@ impl ManifestService {
         Ok(config.map(|value| value.to_string()))
     }
 
+    async fn ticker_config_fingerprint(
+        pool: &DbPool,
+        ticker_id: Uuid,
+    ) -> Result<Option<String>, AppError> {
+        let config: Option<serde_json::Value> = sqlx::query_scalar(
+            "SELECT to_jsonb(t) - ARRAY['created_at', 'updated_at'] FROM components_tickers t WHERE t.id = $1",
+        )
+        .bind(ticker_id)
+        .fetch_optional(pool)
+        .await?;
+
+        Ok(config.map(|value| value.to_string()))
+    }
+
     pub async fn get_manifest_for_device(
         pool: &DbPool,
         device_id: Uuid,
@@ -441,6 +455,11 @@ impl ManifestService {
                 }
                 if let Some(clock_id) = b.block.clock_id {
                     if let Some(config) = Self::clock_config_fingerprint(pool, clock_id).await? {
+                        hasher.update(config.as_bytes());
+                    }
+                }
+                if let Some(ticker_id) = b.block.ticker_id {
+                    if let Some(config) = Self::ticker_config_fingerprint(pool, ticker_id).await? {
                         hasher.update(config.as_bytes());
                     }
                 }

@@ -2,6 +2,7 @@ export interface ClockWeatherConfig {
   id: string;
   name: string;
   city: string;
+  timezone?: string;
   showSeconds: boolean;
   is24Hour: boolean;
   theme: 'glass' | 'dark' | 'emerald' | 'gold';

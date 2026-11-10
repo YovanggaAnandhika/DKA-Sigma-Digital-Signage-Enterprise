@@ -19,6 +19,7 @@ import com.dkaapis.sigma.presentation.util.ColorParser
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 class ClockZoneRenderer(
     private val context: Context
@@ -77,12 +78,14 @@ class ClockZoneRenderer(
         container.addView(cityText)
 
         val timePattern = when {
-            payload.is24Hour && payload.showSeconds -> "HH.mm.ss"
-            payload.is24Hour -> "HH.mm"
-            payload.showSeconds -> "hh.mm.ss a"
-            else -> "hh.mm a"
+            payload.is24Hour && payload.showSeconds -> "HH:mm:ss"
+            payload.is24Hour -> "HH:mm"
+            payload.showSeconds -> "hh:mm:ss a"
+            else -> "hh:mm a"
         }
-        val timeFormat = SimpleDateFormat(timePattern, Locale.forLanguageTag("id-ID"))
+        val timeFormat = SimpleDateFormat(timePattern, Locale.forLanguageTag("id-ID")).apply {
+            timeZone = TimeZone.getTimeZone(payload.timezone)
+        }
         val runnable = object : Runnable {
             override fun run() {
                 timeText.text = timeFormat.format(Date())

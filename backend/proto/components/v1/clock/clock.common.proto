@@ -20,6 +20,7 @@ message Clock {
   int32 border_radius = 13;
   int32 time_font_size = 14;
   int32 date_font_size = 15;
+  string timezone = 16;
 }
 
 message CreateClockRequest {

@@ -174,41 +174,41 @@ impl ManifestServiceImpl {
             struct TickerManifestRow {
                 id: Uuid,
                 name: String,
-                badge: String,
-                messages: Vec<String>,
+                text_content: String,
+                badge_label: Option<String>,
                 speed: String,
-                theme: String,
                 font_size: i32,
                 background_color: String,
                 text_color: String,
-                badge_background_color: String,
-                badge_text_color: String,
-                border_color: String,
-                border_radius: i32,
+                badge_bg_color: Option<String>,
+                badge_text_color: Option<String>,
             }
 
-            if let Ok(Some(row)) = sqlx::query_as::<_, TickerManifestRow>(
-                "SELECT id, name, badge, messages, speed, theme, font_size, background_color, text_color, badge_background_color, badge_text_color, border_color, border_radius FROM components_tickers WHERE id = $1"
+            let row = sqlx::query_as::<_, TickerManifestRow>(
+                "SELECT id, name, text_content, badge_label, speed, font_size, background_color, text_color, badge_bg_color, badge_text_color FROM components_tickers WHERE id = $1"
             )
             .bind(tid)
-            .fetch_optional(pool).await {
-                let json_val = serde_json::json!({
-                    "id": row.id.to_string(),
-                    "name": row.name,
-                    "badge": row.badge,
-                    "messages": row.messages,
-                    "speed": row.speed,
-                    "theme": row.theme,
-                    "fontSize": row.font_size,
-                    "backgroundColor": row.background_color,
-                    "textColor": row.text_color,
-                    "badgeBackgroundColor": row.badge_background_color,
-                    "badgeTextColor": row.badge_text_color,
-                    "borderColor": row.border_color,
-                    "borderRadius": row.border_radius,
-                });
-                return Ok(Some(json_val.to_string()));
-            }
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::not_found("Ticker not found"))?;
+
+            let json_val = serde_json::json!({
+                "id": row.id.to_string(),
+                "name": row.name,
+                "badge": row.badge_label.unwrap_or_default(),
+                "messages": [row.text_content],
+                "speed": row.speed,
+                "theme": "blue",
+                "fontSize": row.font_size,
+                "backgroundColor": row.background_color,
+                "textColor": row.text_color,
+                "badgeBackgroundColor": row.badge_bg_color.unwrap_or_else(|| "#2563eb".to_string()),
+                "badgeTextColor": row.badge_text_color.unwrap_or_else(|| "#ffffff".to_string()),
+                "borderColor": "#60a5fa",
+                "borderRadius": 8,
+            });
+            return Ok(Some(json_val.to_string()));
         }
 
         if let Some(cid) = clock_id {
@@ -235,10 +235,12 @@ impl ManifestServiceImpl {
             .map_err(|e| Status::internal(e.to_string()))?
             .ok_or_else(|| Status::not_found("Clock not found"))?;
 
+            let timezone = row.timezone;
             let json_val = serde_json::json!({
                 "id": row.id.to_string(),
                 "name": row.name,
-                "city": row.weather_city.unwrap_or(row.timezone),
+                "city": row.weather_city.unwrap_or_else(|| timezone.clone()),
+                "timezone": timezone,
                 "showSeconds": row.show_seconds,
                 "showDate": row.show_date,
                 "is24Hour": row.clock_format.contains("24"),

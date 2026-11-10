@@ -147,7 +147,8 @@ export default function ZoneWidgetRenderer({
             minute: '2-digit',
             second: activeBlock.widgetData?.showSeconds ? '2-digit' : undefined,
             hour12: activeBlock.widgetData?.is24Hour === false,
-          })}
+            timeZone: activeBlock.widgetData?.timezone || 'Asia/Jakarta',
+          }).replace(/\./g, ':')}
         </div>
         <div style={{
           fontSize: `${Math.max(7, Math.round((activeBlock.widgetData?.dateFontSize || 14) * scale))}px`,
