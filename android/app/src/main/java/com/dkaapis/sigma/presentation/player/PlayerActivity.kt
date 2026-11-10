@@ -242,7 +242,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         canvasLayout = SignageCanvasLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         }
-        statusOverlay = PlayerOverlayCoordinator(this, canvasLayout)
+        statusOverlay = PlayerOverlayCoordinator(this)
         sleep = PlayerSleepCoordinator(this, canvasLayout, audioManager, zoneManager, telemetryManager) { hasActivePlayback }
         setContentView(FrameLayout(this).apply {
             setBackgroundColor(Color.WHITE) // Default background color in Android Signage is clean WHITE
@@ -262,26 +262,22 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                         finish()
                     }
                     is PlayerUiState.SyncingManifest -> {
-                        if (!hasActivePlayback || statusOverlay.isVisible) {
-                            WatchdogService.setPlaybackActive(this@PlayerActivity, false)
-                            statusOverlay.show(
-                                "● SINKRONISASI JADWAL", SKY, state.message,
-                                "Mengecek pembaruan jadwal dan integritas manifest..."
-                            )
-                        }
+                        WatchdogService.setPlaybackActive(this@PlayerActivity, false)
+                        statusOverlay.show(
+                            "● SINKRONISASI JADWAL", SKY, state.message,
+                            "Mengecek pembaruan jadwal dan integritas manifest..."
+                        )
                     }
                     is PlayerUiState.DownloadingAssets -> {
-                        if (!hasActivePlayback || statusOverlay.isVisible) {
-                            WatchdogService.setPlaybackActive(this@PlayerActivity, false)
-                            val downloadedMb = String.format(Locale.US, "%.1f", state.downloadedBytes / (1024.0 * 1024.0))
-                            val totalMb = String.format(Locale.US, "%.1f", state.totalBytes / (1024.0 * 1024.0))
-                            statusOverlay.show(
-                                "● MENGUNDUH ASET MEDIA", GREEN,
-                                "Mengunduh Aset Media (${state.assetIndex}/${state.total}) • ${state.progressPercent}%",
-                                "${state.currentFileName}\n[ $downloadedMb MB / $totalMb MB ]",
-                                state.progressPercent, badgeTextRgb = 0x34D399
-                            )
-                        }
+                        WatchdogService.setPlaybackActive(this@PlayerActivity, false)
+                        val downloadedMb = String.format(Locale.US, "%.1f", state.downloadedBytes / (1024.0 * 1024.0))
+                        val totalMb = String.format(Locale.US, "%.1f", state.totalBytes / (1024.0 * 1024.0))
+                        statusOverlay.show(
+                            "● MENGUNDUH ASET MEDIA", GREEN,
+                            "Mengunduh Aset Media (${state.assetIndex}/${state.total}) • ${state.progressPercent}%",
+                            "${state.currentFileName}\n[ $downloadedMb MB / $totalMb MB ]",
+                            state.progressPercent, badgeTextRgb = 0x34D399
+                        )
 
                         val devId = deviceRepo.getSavedDeviceId()
                         val now = System.currentTimeMillis()
