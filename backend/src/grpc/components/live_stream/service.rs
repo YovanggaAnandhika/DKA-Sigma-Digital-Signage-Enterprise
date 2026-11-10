@@ -358,15 +358,23 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
             .and_then(|f| f.to_str())
             .ok_or_else(|| Status::invalid_argument("Invalid file name"))?;
 
-        let file_path = format!("{}/streams/{}/{}", self.relay_manager.upload_dir(), stream_id, file_name);
+        // Live stream segments (.m3u8, .ts) are dynamic and fetched directly from internal streamer
+        let is_stream_file = file_name.ends_with(".m3u8") || file_name.ends_with(".ts");
+        let data = if !is_stream_file {
+            let file_path = format!("{}/streams/{}/{}", self.relay_manager.upload_dir(), stream_id, file_name);
+            tokio::fs::read(&file_path).await.ok()
+        } else {
+            None
+        };
 
-        let data = match tokio::fs::read(&file_path).await {
-            Ok(d) => d,
-            Err(_) => {
+        let data = match data {
+            Some(d) => d,
+            None => {
                 // Fetch directly from internal Docker streamer engine (dka-product-sigma-streamer:8888)
                 let target_file = if file_name == "live.m3u8" { "index.m3u8" } else { file_name };
 
-                let prefixes = ["live", "hd/live", "webrtc/live"];
+                // Prioritize 'hd/live' (normalized 0-B-frame 1.0s GOP + AAC audio), then 'live' (raw RTMP ingest)
+                let prefixes = ["hd/live", "live", "webrtc/live"];
                 let mut found_bytes: Option<Vec<u8>> = None;
 
                 for prefix in prefixes {

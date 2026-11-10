@@ -5,14 +5,12 @@ import androidx.media3.common.C
 import androidx.media3.datasource.BaseDataSource
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import signage.components.v1.live_stream.LiveStreamCommon
-import signage.components.v1.live_stream.LiveStreamServiceGrpcKt
+import signage.components.v1.live_stream.LiveStreamServiceGrpc
 import java.io.ByteArrayInputStream
 import java.io.EOFException
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 /**
  * Secret Pipe DataSource for ExoPlayer:
@@ -23,7 +21,7 @@ import java.io.IOException
  * MediaMTX cookie/session challenges, and WebRTC UDP NAT traversal problems.
  */
 class GrpcStreamDataSource(
-    private val stub: LiveStreamServiceGrpcKt.LiveStreamServiceCoroutineStub,
+    private val stub: LiveStreamServiceGrpc.LiveStreamServiceBlockingStub,
     private val defaultStreamId: String = ""
 ) : BaseDataSource(/* isNetwork = */ true) {
 
@@ -51,11 +49,8 @@ class GrpcStreamDataSource(
             .build()
 
         val response = try {
-            runBlocking(Dispatchers.IO) {
-                withTimeout(8_000L) {
-                    stub.getStreamSegment(request)
-                }
-            }
+            stub.withDeadlineAfter(3_500L, TimeUnit.MILLISECONDS)
+                .getStreamSegment(request)
         } catch (e: Exception) {
             throw IOException("gRPC GetStreamSegment failed for $streamId/$fileName: ${e.message}", e)
         }
@@ -108,7 +103,7 @@ class GrpcStreamDataSource(
 }
 
 class GrpcStreamDataSourceFactory(
-    private val stub: LiveStreamServiceGrpcKt.LiveStreamServiceCoroutineStub,
+    private val stub: LiveStreamServiceGrpc.LiveStreamServiceBlockingStub,
     private val defaultStreamId: String = ""
 ) : DataSource.Factory {
     override fun createDataSource(): DataSource {

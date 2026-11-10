@@ -26,7 +26,7 @@ import com.dkaapis.sigma.data.local.ServerConfig
 import com.dkaapis.sigma.presentation.renderers.glass.LiveStreamGlassOverlay
 import com.dkaapis.sigma.presentation.renderers.model.LiveStreamConfigPayload
 import com.dkaapis.sigma.presentation.renderers.player.GrpcStreamDataSourceFactory
-import signage.components.v1.live_stream.LiveStreamServiceGrpcKt
+import signage.components.v1.live_stream.LiveStreamServiceGrpc
 
 /**
  * Modern High-Performance Live Stream Zone Renderer for Android Player.
@@ -127,12 +127,19 @@ class LiveStreamZoneRenderer(
 
         try {
             val grpcChannel = GrpcChannelFactory(context).getChannel()
-            val stub = LiveStreamServiceGrpcKt.LiveStreamServiceCoroutineStub(grpcChannel)
+            val stub = LiveStreamServiceGrpc.newBlockingStub(grpcChannel)
             val grpcFactory = GrpcStreamDataSourceFactory(stub, streamId)
             val secretUri = Uri.parse("sigma-stream://$streamId/live.m3u8")
 
+            // Ultra-low latency buffer: 1.0s - 3.0s buffer window
             val loadControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(1_500, 8_000, 500, 1_000)
+                .setBufferDurationsMs(
+                    /* minBufferMs = */ 1_000,
+                    /* maxBufferMs = */ 3_000,
+                    /* bufferForPlaybackMs = */ 300,
+                    /* bufferForPlaybackAfterRebufferMs = */ 600
+                )
+                .setPrioritizeTimeOverSizeThresholds(true)
                 .build()
 
             fun buildMediaSource(): HlsMediaSource {
@@ -141,11 +148,11 @@ class LiveStreamZoneRenderer(
                     .setMimeType(MimeTypes.APPLICATION_M3U8)
                     .setLiveConfiguration(
                         MediaItem.LiveConfiguration.Builder()
-                            .setTargetOffsetMs(1_500L)
-                            .setMinPlaybackSpeed(1.0f)
-                            .setMaxPlaybackSpeed(1.15f)
-                            .setMinOffsetMs(500L)
-                            .setMaxOffsetMs(4_000L)
+                            .setTargetOffsetMs(1_000L) // 1.0s target latency behind live edge
+                            .setMinPlaybackSpeed(1.0f) // Never slow down into slow motion
+                            .setMaxPlaybackSpeed(1.20f) // Gentle catch-up when buffered
+                            .setMinOffsetMs(300L)
+                            .setMaxOffsetMs(2_500L)
                             .build()
                     )
                     .build()

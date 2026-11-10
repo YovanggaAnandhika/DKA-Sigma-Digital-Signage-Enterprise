@@ -35,36 +35,55 @@ class GrpcChannelFactory(
         } catch (_: Exception) {
             false
         }
+
+        @Volatile
+        private var sharedChannel: ManagedChannel? = null
+        private var cachedKey: String? = null
+
+        @Synchronized
+        fun getSharedChannel(host: String, port: Int, useTls: Boolean): ManagedChannel {
+            val key = "$host:$port:$useTls"
+            val existing = sharedChannel
+            if (existing != null && !existing.isShutdown && !existing.isTerminated && cachedKey == key) {
+                return existing
+            }
+
+            try {
+                existing?.shutdownNow()
+            } catch (_: Exception) {}
+
+            val builder = OkHttpChannelBuilder.forAddress(host, port)
+                .keepAliveTime(15, TimeUnit.SECONDS)
+                .keepAliveTimeout(10, TimeUnit.SECONDS)
+                .keepAliveWithoutCalls(true)
+                .flowControlWindow(1024 * 1024) // 1MB window: eliminates stream buffer starvation & dropped frames
+                .maxInboundMessageSize(16 * 1024 * 1024) // 16MB max message size for HD video chunks
+
+            if (!useTls) {
+                builder.usePlaintext()
+            }
+
+            val newChannel = builder.build()
+            sharedChannel = newChannel
+            cachedKey = key
+            return newChannel
+        }
+
+        @Synchronized
+        fun shutdownSharedChannel() {
+            try {
+                sharedChannel?.shutdownNow()
+            } catch (_: Exception) {}
+            sharedChannel = null
+            cachedKey = null
+        }
     }
 
-    private var channel: ManagedChannel? = null
-
-    @Synchronized
     fun getChannel(): ManagedChannel {
-        val current = channel
-        if (current != null && !current.isShutdown && !current.isTerminated) {
-            return current
-        }
-
-        val builder = OkHttpChannelBuilder.forAddress(host, port)
-            .keepAliveTime(15, TimeUnit.SECONDS)
-            .keepAliveTimeout(10, TimeUnit.SECONDS)
-            .keepAliveWithoutCalls(true)
-
-        if (!useTls) {
-            builder.usePlaintext()
-        }
-
-        val newChannel = builder.build()
-        channel = newChannel
-        return newChannel
+        return getSharedChannel(host, port, useTls)
     }
 
-    @Synchronized
     fun shutdown() {
-        try {
-            channel?.shutdownNow()
-        } catch (_: Exception) {}
-        channel = null
+        shutdownSharedChannel()
     }
 }
