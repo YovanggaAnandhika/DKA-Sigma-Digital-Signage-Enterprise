@@ -199,6 +199,7 @@ class LiveStreamZoneRenderer(
                 .setWakeMode(C.WAKE_MODE_NETWORK)
                 .build()
                 .apply {
+                    videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
                     val mediaItem = MediaItem.Builder()
                         .setUri(targetUri)
                         .setLiveConfiguration(
@@ -304,7 +305,7 @@ class LiveStreamZoneRenderer(
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
                 useController = false
-                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
                 (videoSurfaceView as? android.view.SurfaceView)?.setZOrderMediaOverlay(true)
                 this.player = player
             }
