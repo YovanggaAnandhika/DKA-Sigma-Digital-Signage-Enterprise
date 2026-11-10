@@ -95,12 +95,9 @@ class LiveStreamZoneRenderer(
             payload.streamId.isNotBlank() ||
             rawTarget.startsWith("/streams/")
 
-        // Invariant:
-        // All server-hosted streams (both WHIP and RTMP) are normalized by MediaMTX into `hd/live/<streamId>`
-        // with Constrained Baseline H.264 (zero B-frames) and AAC audio (48kHz stereo).
-        // Reading `hd/live/<streamId>` ensures 100% stable RTSP playback on Android hardware decoders without frame drops.
+        // Direct zero-transcode RTSP stream from OBS ingest (`live/<streamId>`)
         val playbackUrl = if (isServerHosted && payload.streamId.isNotBlank()) {
-            "rtsp://${ServerConfig.getHost(context)}:$RTSP_PORT/hd/live/${payload.streamId}"
+            "rtsp://${ServerConfig.getHost(context)}:$RTSP_PORT/live/${payload.streamId}"
         } else {
             targetUrl
         }
@@ -132,10 +129,10 @@ class LiveStreamZoneRenderer(
             val isRtsp = targetUri.scheme.equals("rtsp", ignoreCase = true)
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(
-                    /* minBufferMs = */ if (isRtsp) 1_000 else 1_500,
-                    /* maxBufferMs = */ if (isRtsp) 3_000 else 4_000,
-                    /* bufferForPlaybackMs = */ if (isRtsp) 250 else 300,
-                    /* bufferForPlaybackAfterRebufferMs = */ if (isRtsp) 500 else 600
+                    /* minBufferMs = */ if (isRtsp) 80 else 1_500,
+                    /* maxBufferMs = */ if (isRtsp) 200 else 4_000,
+                    /* bufferForPlaybackMs = */ if (isRtsp) 30 else 300,
+                    /* bufferForPlaybackAfterRebufferMs = */ if (isRtsp) 50 else 600
                 )
                 .setBackBuffer(0, false)
                 .setPrioritizeTimeOverSizeThresholds(true)
@@ -147,17 +144,13 @@ class LiveStreamZoneRenderer(
                 .apply {
                     val mediaItem = MediaItem.Builder()
                         .setUri(targetUri)
-                        .apply {
-                            if (!isRtsp) {
-                                setLiveConfiguration(
-                                    MediaItem.LiveConfiguration.Builder()
-                                        .setTargetOffsetMs(1_500L)
-                                        .setMinPlaybackSpeed(1.0f)
-                                        .setMaxPlaybackSpeed(1.15f)
-                                        .build()
-                                )
-                            }
-                        }
+                        .setLiveConfiguration(
+                            MediaItem.LiveConfiguration.Builder()
+                                .setTargetOffsetMs(if (isRtsp) 50L else 1_500L)
+                                .setMinPlaybackSpeed(1.0f)
+                                .setMaxPlaybackSpeed(if (isRtsp) 1.25f else 1.15f)
+                                .build()
+                        )
                         .build()
 
                     if (isRtsp) {
@@ -165,7 +158,7 @@ class LiveStreamZoneRenderer(
                         setMediaSource(
                             RtspMediaSource.Factory()
                                 .setForceUseRtpTcp(true)
-                                .setTimeoutMs(10_000L)
+                                .setTimeoutMs(3_000L)
                                 .createMediaSource(mediaItem)
                         )
                     } else {
@@ -246,7 +239,7 @@ class LiveStreamZoneRenderer(
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
                 useController = false
-                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT // ZOOM makes the SurfaceView overflow its zone
+                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                 (videoSurfaceView as? android.view.SurfaceView)?.setZOrderMediaOverlay(true)
                 this.player = player
             }
@@ -265,27 +258,22 @@ class LiveStreamZoneRenderer(
                 Log.i(TAG, "Attempting reconnect for stream=${payload.streamId} on $activePlaybackUrl")
                 try {
                     val targetUri = Uri.parse(activePlaybackUrl)
-                    val isRtsp = targetUri.scheme.equals("rtsp", ignoreCase = true)
                     val mediaItem = MediaItem.Builder()
                         .setUri(targetUri)
-                        .apply {
-                            if (!isRtsp) {
-                                setLiveConfiguration(
-                                    MediaItem.LiveConfiguration.Builder()
-                                        .setTargetOffsetMs(1_500L)
-                                        .setMinPlaybackSpeed(1.0f)
-                                        .setMaxPlaybackSpeed(1.15f)
-                                        .build()
-                                )
-                            }
-                        }
+                        .setLiveConfiguration(
+                            MediaItem.LiveConfiguration.Builder()
+                                .setTargetOffsetMs(50L)
+                                .setMinPlaybackSpeed(1.0f)
+                                .setMaxPlaybackSpeed(1.25f)
+                                .build()
+                        )
                         .build()
-                    if (isRtsp) {
+                    if (targetUri.scheme.equals("rtsp", ignoreCase = true)) {
                         // Re-create RtspMediaSource with clean socket state
                         exoPlayer?.setMediaSource(
                             RtspMediaSource.Factory()
                                 .setForceUseRtpTcp(true)
-                                .setTimeoutMs(10_000L)
+                                .setTimeoutMs(3_000L)
                                 .createMediaSource(mediaItem)
                         )
                     } else {
