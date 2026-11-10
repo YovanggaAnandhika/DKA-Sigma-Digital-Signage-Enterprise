@@ -37,17 +37,17 @@
     <color name="btn_server_border">#30000000</color>
     <color name="btn_server_text">#1e293b</color>
 
-    <!-- Status Pills — glass tinted, border visible di latar putih -->
-    <color name="status_offline_bg">#22ef4444</color>
-    <color name="status_offline_border">#99ef4444</color>
-    <color name="status_offline_text">#b91c1c</color>
-    <color name="status_connecting_bg">#22f59e0b</color>
-    <color name="status_connecting_border">#99f59e0b</color>
-    <color name="status_connecting_text">#92400e</color>
-    <color name="status_waiting_bg">#220ea5e9</color>
-    <color name="status_waiting_border">#990ea5e9</color>
-    <color name="status_waiting_text">#0369a1</color>
-    <color name="status_success_bg">#2210b981</color>
-    <color name="status_success_border">#9910b981</color>
-    <color name="status_success_text">#047857</color>
+    <!-- Status Pills — teks gelap yang jelas terbaca di latar putih -->
+    <color name="status_offline_bg">#00FFFFFF</color>
+    <color name="status_offline_border">#CCef4444</color>
+    <color name="status_offline_text">#CC991b1b</color>
+    <color name="status_connecting_bg">#00FFFFFF</color>
+    <color name="status_connecting_border">#CCf59e0b</color>
+    <color name="status_connecting_text">#CC78350f</color>
+    <color name="status_waiting_bg">#00FFFFFF</color>
+    <color name="status_waiting_border">#CC0ea5e9</color>
+    <color name="status_waiting_text">#CC0369a1</color>
+    <color name="status_success_bg">#00FFFFFF</color>
+    <color name="status_success_border">#CC16a34a</color>
+    <color name="status_success_text">#CC14532d</color>
 </resources>

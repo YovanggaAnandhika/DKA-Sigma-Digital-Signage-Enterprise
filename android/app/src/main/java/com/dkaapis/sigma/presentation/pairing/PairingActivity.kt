@@ -297,15 +297,13 @@ class PairingActivity : AppCompatActivity() {
 
     private fun setStatusConnecting() {
         binding.llStatusPill.setBackgroundResource(R.drawable.bg_status_pill_connecting)
-        binding.vStatusLed.setBackgroundResource(R.drawable.led_dot_connecting)
-        binding.tvStatusCode.text = "MENGHUBUNGKAN..."
+        binding.tvStatusCode.text = "MENGHUBUNGKAN"
         binding.tvStatusCode.setTextColor(ContextCompat.getColor(this, R.color.status_connecting_text))
         binding.tvPairingCode.visibility = View.GONE
-        binding.pbConnecting.visibility = View.VISIBLE
         binding.tvStatusMessage.setTextColor(ContextCompat.getColor(this, R.color.text_sub))
         binding.tvStatusMessage.text = "Menghubungkan ke ${ServerConfig.getHost(this)}..."
         binding.btnReconnect.isEnabled = false
-        binding.btnReconnect.alpha = 0.6f
+        binding.btnReconnect.alpha = 0.5f
         binding.btnReconnect.text = "Menghubungkan..."
     }
 
@@ -340,20 +338,17 @@ class PairingActivity : AppCompatActivity() {
                 when (state) {
                     is PairingUiState.Initial, is PairingUiState.Registering -> {
                         binding.llStatusPill.setBackgroundResource(R.drawable.bg_status_pill_connecting)
-                        binding.vStatusLed.setBackgroundResource(R.drawable.led_dot_connecting)
-                        binding.tvStatusCode.text = "MENGHUBUNGKAN..."
+                        binding.tvStatusCode.text = "MENGHUBUNGKAN"
                         binding.tvStatusCode.setTextColor(ContextCompat.getColor(this@PairingActivity, R.color.status_connecting_text))
                         binding.tvPairingCode.visibility = View.GONE
-                        binding.pbConnecting.visibility = View.VISIBLE
-                        binding.tvStatusMessage.text = "Menghubungkan dan mendaftarkan perangkat ke server..."
+                        binding.tvStatusMessage.text = "Menghubungkan ke server..."
                         binding.tvStatusMessage.setTextColor(ContextCompat.getColor(this@PairingActivity, R.color.text_sub))
                         binding.btnReconnect.isEnabled = false
-                        binding.btnReconnect.alpha = 0.6f
+                        binding.btnReconnect.alpha = 0.5f
                         binding.btnReconnect.text = "Menghubungkan..."
                     }
                     is PairingUiState.WaitingForAdmin -> {
                         binding.llStatusPill.setBackgroundResource(R.drawable.bg_status_pill_waiting)
-                        binding.vStatusLed.setBackgroundResource(R.drawable.led_dot_waiting)
                         binding.tvStatusCode.text = "MENUNGGU PERSETUJUAN"
                         binding.tvStatusCode.setTextColor(ContextCompat.getColor(this@PairingActivity, R.color.status_waiting_text))
                         val displayCode = state.pairingCode.ifBlank { state.deviceId }
@@ -363,8 +358,7 @@ class PairingActivity : AppCompatActivity() {
                         } else {
                             binding.tvPairingCode.visibility = View.GONE
                         }
-                        binding.pbConnecting.visibility = View.VISIBLE
-                        binding.tvStatusMessage.text = "Layar terdaftar di CMS Studio.\nSilakan setujui perangkat ini di dashboard admin."
+                        binding.tvStatusMessage.text = "Setujui perangkat ini di dashboard CMS Studio."
                         binding.tvStatusMessage.setTextColor(ContextCompat.getColor(this@PairingActivity, R.color.text_sub))
                         binding.btnReconnect.isEnabled = true
                         binding.btnReconnect.alpha = 1.0f
@@ -372,28 +366,24 @@ class PairingActivity : AppCompatActivity() {
                     }
                     is PairingUiState.PairedSuccess -> {
                         binding.llStatusPill.setBackgroundResource(R.drawable.bg_status_pill_success)
-                        binding.vStatusLed.setBackgroundResource(R.drawable.led_dot_success)
                         binding.tvStatusCode.text = "TERHUBUNG"
                         binding.tvStatusCode.setTextColor(ContextCompat.getColor(this@PairingActivity, R.color.status_success_text))
                         binding.tvPairingCode.visibility = View.GONE
-                        binding.pbConnecting.visibility = View.GONE
-                        binding.tvStatusMessage.text = "Perangkat berhasil disetujui! Membuka tampilan player..."
+                        binding.tvStatusMessage.text = "Perangkat disetujui. Memuat player..."
                         binding.tvStatusMessage.setTextColor(ContextCompat.getColor(this@PairingActivity, R.color.status_success_text))
                         startActivity(Intent(this@PairingActivity, PlayerActivity::class.java))
                         finish()
                     }
                     is PairingUiState.Error -> {
                         binding.llStatusPill.setBackgroundResource(R.drawable.bg_status_pill_offline)
-                        binding.vStatusLed.setBackgroundResource(R.drawable.led_dot_offline)
                         binding.tvStatusCode.text = "OFFLINE"
                         binding.tvStatusCode.setTextColor(ContextCompat.getColor(this@PairingActivity, R.color.status_offline_text))
                         binding.tvPairingCode.visibility = View.GONE
-                        binding.pbConnecting.visibility = View.GONE
                         binding.tvStatusMessage.text = formatHumanErrorMessage(state.message)
                         binding.tvStatusMessage.setTextColor(ContextCompat.getColor(this@PairingActivity, R.color.text_sub))
                         binding.btnReconnect.isEnabled = true
                         binding.btnReconnect.alpha = 1.0f
-                        binding.btnReconnect.text = "Hubungkan Ulang"
+                        binding.btnReconnect.text = "Coba Lagi"
                     }
                 }
             }
