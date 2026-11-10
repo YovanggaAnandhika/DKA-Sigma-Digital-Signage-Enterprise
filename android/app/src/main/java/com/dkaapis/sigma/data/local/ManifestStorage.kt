@@ -1,9 +1,6 @@
 package com.dkaapis.sigma.data.local
 
 import android.content.Context
-import com.dkaapis.sigma.domain.model.Manifest
-import org.json.JSONArray
-import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 
@@ -12,14 +9,14 @@ class ManifestStorage(context: Context) {
     private val manifestDir: File = File(context.filesDir, "manifest").apply {
         if (!exists()) mkdirs()
     }
-    private val activeManifestFile: File = File(manifestDir, "manifest.active.json")
+    private val activeManifestFile: File = File(manifestDir, "manifest.active.pb")
 
     @Synchronized
-    fun saveManifest(manifestJsonString: String): Boolean {
-        val tempFile = File(manifestDir, "manifest.tmp.json")
+    fun saveManifest(bytes: ByteArray): Boolean {
+        val tempFile = File(manifestDir, "manifest.tmp.pb")
         return try {
             FileOutputStream(tempFile).use { fos ->
-                fos.write(manifestJsonString.toByteArray(Charsets.UTF_8))
+                fos.write(bytes)
                 fos.flush()
             }
             tempFile.renameTo(activeManifestFile)
@@ -30,10 +27,10 @@ class ManifestStorage(context: Context) {
     }
 
     @Synchronized
-    fun getActiveManifestJson(): String? {
+    fun getActiveManifest(): ByteArray? {
         if (!activeManifestFile.exists()) return null
         return try {
-            activeManifestFile.readText(Charsets.UTF_8)
+            activeManifestFile.readBytes()
         } catch (e: Exception) {
             null
         }

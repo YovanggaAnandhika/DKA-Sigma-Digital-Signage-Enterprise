@@ -4,14 +4,11 @@ import android.content.Context
 import android.util.Log
 import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
 import com.dkaapis.sigma.data.local.ManifestStorage
-import com.dkaapis.sigma.data.repository.mapper.ManifestJsonDeserializer
-import com.dkaapis.sigma.data.repository.mapper.ManifestJsonSerializer
 import com.dkaapis.sigma.data.repository.mapper.ManifestProtoMapper
 import com.dkaapis.sigma.domain.model.Manifest
 import com.dkaapis.sigma.domain.repository.ManifestRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
 import signage.distribution.v1.manifest.ManifestCommon
 import signage.distribution.v1.manifest.ManifestServiceGrpcKt
 
@@ -28,8 +25,6 @@ class ManifestRepositoryImpl(
 ) : ManifestRepository {
 
     private val protoMapper = ManifestProtoMapper()
-    private val jsonDeserializer = ManifestJsonDeserializer()
-    private val jsonSerializer = ManifestJsonSerializer()
 
     override suspend fun fetchActiveManifest(deviceId: String, currentHash: String): Result<Manifest?> = withContext(Dispatchers.IO) {
         runCatching {
@@ -45,10 +40,8 @@ class ManifestRepositoryImpl(
             when {
                 response.isUpToDate -> getLocalCachedManifest()
                 response.hasManifest() -> {
-                    val parsed = protoMapper.mapToDomain(response.manifest)
-                    val json = jsonSerializer.serialize(parsed)
-                    manifestStorage.saveManifest(json)
-                    parsed
+                    manifestStorage.saveManifest(response.manifest.toByteArray())
+                    protoMapper.mapToDomain(response.manifest)
                 }
                 else -> getLocalCachedManifest()
             }
@@ -59,18 +52,8 @@ class ManifestRepositoryImpl(
     }
 
     override suspend fun getLocalCachedManifest(): Manifest? = withContext(Dispatchers.IO) {
-        val json = manifestStorage.getActiveManifestJson() ?: return@withContext null
-        runCatching {
-            jsonDeserializer.parse(JSONObject(json))
-        }.getOrNull()
-    }
-
-    override suspend fun saveManifestLocally(manifest: Manifest): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching {
-            val json = jsonSerializer.serialize(manifest)
-            val success = manifestStorage.saveManifest(json)
-            if (!success) error("Gagal menulis manifest ke penyimpanan lokal")
-        }
+        val bytes = manifestStorage.getActiveManifest() ?: return@withContext null
+        runCatching { protoMapper.mapToDomain(ManifestCommon.CompiledManifest.parseFrom(bytes)) }.getOrNull()
     }
 
     override suspend fun clearManifestCache(): Result<Unit> = withContext(Dispatchers.IO) {

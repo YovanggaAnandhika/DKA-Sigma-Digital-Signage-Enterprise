@@ -19,7 +19,6 @@ class SyncManifestUseCase(
         if (remoteResult.isSuccess) {
             val remoteManifest = remoteResult.getOrNull()
             if (remoteManifest != null) {
-                manifestRepository.saveManifestLocally(remoteManifest)
                 return Result.success(remoteManifest)
             }
             // Hash sama (up-to-date), kembalikan cached manifest

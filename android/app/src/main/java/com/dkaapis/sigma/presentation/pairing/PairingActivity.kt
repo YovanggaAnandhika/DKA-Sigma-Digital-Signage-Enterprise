@@ -23,6 +23,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.dkaapis.sigma.R
+import com.dkaapis.sigma.presentation.common.createExpandedSheet
 import com.dkaapis.sigma.data.grpc.GrpcChannelFactory
 import com.dkaapis.sigma.data.local.ServerConfig
 import com.dkaapis.sigma.data.local.TokenStorage
@@ -191,36 +192,7 @@ class PairingActivity : AppCompatActivity() {
     private fun showServerConfigBottomSheet() {
         if (serverConfigDialog?.isShowing == true) return
 
-        val dialog = BottomSheetDialog(this).apply {
-            setContentView(R.layout.bottom_sheet_server_config)
-            window?.setBackgroundDrawableResource(android.R.color.transparent)
-            window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-            behavior.state = BottomSheetBehavior.STATE_EXPANDED
-            behavior.skipCollapsed = true
-            setOnShowListener {
-                val bottomSheet = findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
-                if (bottomSheet != null) {
-                    bottomSheet.setBackgroundColor(Color.TRANSPARENT)
-                    val b = BottomSheetBehavior.from(bottomSheet)
-                    b.state = BottomSheetBehavior.STATE_EXPANDED
-                    b.skipCollapsed = true
-
-                    val displayMetrics = resources.displayMetrics
-                    val isLandscape = displayMetrics.widthPixels > displayMetrics.heightPixels
-                    val lp = bottomSheet.layoutParams
-                    if (isLandscape) {
-                        val targetWidth = minOf(
-                            displayMetrics.widthPixels - (48 * displayMetrics.density).toInt(),
-                            (560 * displayMetrics.density).toInt()
-                        )
-                        lp.width = targetWidth
-                        if (lp is CoordinatorLayout.LayoutParams) {
-                            lp.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-                        }
-                        bottomSheet.layoutParams = lp
-                    }
-                }
-            }
+        val dialog = createExpandedSheet(this, R.layout.bottom_sheet_server_config, landscapeMaxDp = 560).apply {
             setOnDismissListener {
                 gestureTriggered = false
                 isTwoFingerTracking = false

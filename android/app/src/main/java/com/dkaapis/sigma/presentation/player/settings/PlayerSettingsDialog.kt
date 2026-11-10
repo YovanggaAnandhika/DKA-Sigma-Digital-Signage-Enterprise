@@ -14,6 +14,7 @@ import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import com.dkaapis.sigma.R
+import com.dkaapis.sigma.presentation.common.createExpandedSheet
 import com.dkaapis.sigma.presentation.player.settings.model.PlayerSettingsPayload
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -37,46 +38,10 @@ class PlayerSettingsDialog(
     fun show(payload: PlayerSettingsPayload) {
         if (isShowing()) return
 
-        val dialog = BottomSheetDialog(context).apply {
-            setContentView(R.layout.bottom_sheet_player_settings)
-            window?.setBackgroundDrawableResource(android.R.color.transparent)
-            window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-            behavior.state = BottomSheetBehavior.STATE_EXPANDED
-            behavior.skipCollapsed = true
-            setOnShowListener {
-                val bottomSheet = findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
-                if (bottomSheet != null) {
-                    bottomSheet.setBackgroundColor(Color.TRANSPARENT)
-                    val b = BottomSheetBehavior.from(bottomSheet)
-                    b.state = BottomSheetBehavior.STATE_EXPANDED
-                    b.skipCollapsed = true
-
-                    val displayMetrics = context.resources.displayMetrics
-                    val isLandscape = displayMetrics.widthPixels > displayMetrics.heightPixels
-                    val lp = bottomSheet.layoutParams
-                    val targetHeight = (displayMetrics.heightPixels * (if (isLandscape) 0.92f else 0.85f)).toInt()
-                    if (isLandscape) {
-                        val targetWidth = minOf(
-                            displayMetrics.widthPixels - (48 * displayMetrics.density).toInt(),
-                            (580 * displayMetrics.density).toInt()
-                        )
-                        lp.width = targetWidth
-                    } else {
-                        val targetWidth = minOf(
-                            displayMetrics.widthPixels - (32 * displayMetrics.density).toInt(),
-                            (480 * displayMetrics.density).toInt()
-                        )
-                        lp.width = targetWidth
-                    }
-                    lp.height = targetHeight
-                    if (lp is CoordinatorLayout.LayoutParams) {
-                        lp.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-                    }
-                    bottomSheet.layoutParams = lp
-                }
-            }
-            setOnDismissListener { activeDialog = null }
-        }
+        val dialog = createExpandedSheet(
+            context, R.layout.bottom_sheet_player_settings,
+            landscapeMaxDp = 580, portraitMaxDp = 480, heightFraction = 0.92f to 0.85f
+        ).apply { setOnDismissListener { activeDialog = null } }
         activeDialog = dialog
 
         dialog.findViewById<TextView>(R.id.tvSettingsDeviceId)?.text =
