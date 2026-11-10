@@ -229,7 +229,7 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
             // Show live pill
             liveBadgePill.visibility = View.VISIBLE
             liveBadgePill.alpha = 0f
-            liveBadgeText.text = if (isLowLatency) "LIVE • WHEP 0.2s" else "LIVE • HLS"
+            liveBadgeText.text = if (isLowLatency) "LIVE • WHEP 0.2s" else "LIVE • RTSP"
             liveBadgePill.animate().alpha(1f).setDuration(200).start()
 
             // Pulse live dot animation
