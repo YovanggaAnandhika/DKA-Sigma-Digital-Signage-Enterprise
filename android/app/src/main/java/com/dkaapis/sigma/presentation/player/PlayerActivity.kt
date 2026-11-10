@@ -2,23 +2,14 @@ package com.dkaapis.sigma.presentation.player
 
 import android.content.ComponentCallbacks2
 import android.content.Intent
-import android.content.pm.ActivityInfo
 import android.graphics.Color
-import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.PowerManager
-import android.view.Gravity
-import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.view.ViewOutlineProvider
 import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
@@ -27,7 +18,6 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import android.view.KeyEvent
 import android.view.MotionEvent
-import com.dkaapis.sigma.presentation.renderers.glass.GlassDrawableFactory
 import com.dkaapis.sigma.data.local.AnalyticsLocalBuffer
 import com.dkaapis.sigma.data.analytics.AnalyticsSyncManager
 import com.dkaapis.sigma.data.analytics.DeviceHardwareProfiler
@@ -41,7 +31,6 @@ import com.dkaapis.sigma.data.repository.DeviceRepositoryImpl
 import com.dkaapis.sigma.data.repository.ManifestRepositoryImpl
 import com.dkaapis.sigma.data.repository.MediaStorageRepositoryImpl
 import com.dkaapis.sigma.domain.model.Manifest
-import com.dkaapis.sigma.domain.model.PowerSchedule
 import com.dkaapis.sigma.domain.usecase.DownloadAndVerifyMediaUseCase
 import com.dkaapis.sigma.domain.usecase.RegisterAndPairUseCase
 import com.dkaapis.sigma.domain.usecase.SyncManifestUseCase
@@ -53,10 +42,11 @@ import com.dkaapis.sigma.presentation.player.audio.model.QueueSpeechPayload
 import com.dkaapis.sigma.presentation.player.canvas.PlayerZoneManager
 import com.dkaapis.sigma.presentation.player.canvas.SignageCanvasLayout
 import com.dkaapis.sigma.presentation.player.canvas.model.ZoneRenderContextPayload
+import com.dkaapis.sigma.presentation.player.coordinator.PlayerOverlayCoordinator
+import com.dkaapis.sigma.presentation.player.coordinator.PlayerSleepCoordinator
 import com.dkaapis.sigma.presentation.player.gesture.TwoFingerSwipeDetector
 import com.dkaapis.sigma.presentation.player.settings.PlayerSettingsDialog
 import com.dkaapis.sigma.presentation.player.settings.model.PlayerSettingsPayload
-import com.dkaapis.sigma.presentation.player.stream.DeviceSseEventParser
 import com.dkaapis.sigma.presentation.player.stream.OnDeviceEventListener
 import com.dkaapis.sigma.presentation.player.stream.PlayerStreamManager
 import com.dkaapis.sigma.presentation.player.stream.model.ChunkProgressModel
@@ -67,11 +57,8 @@ import com.dkaapis.sigma.presentation.renderers.QueueZoneRenderer
 import com.dkaapis.sigma.service.PlayerForegroundService
 import com.dkaapis.sigma.service.WatchdogService
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.util.Calendar
 import java.util.Locale
 
 /**
@@ -95,23 +82,21 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private lateinit var settingsDialog: PlayerSettingsDialog
 
     private lateinit var canvasLayout: SignageCanvasLayout
-    private lateinit var loadingOverlay: FrameLayout
-    private lateinit var sleepBlackoutOverlay: View
-    private lateinit var badgeText: TextView
-    private lateinit var loadingText: TextView
-    private lateinit var subDetailText: TextView
-    private lateinit var progressBar: ProgressBar
+    private lateinit var statusOverlay: PlayerOverlayCoordinator
+    private lateinit var sleep: PlayerSleepCoordinator
 
     private var activeQueueRenderer: QueueZoneRenderer? = null
     private var activeQueueDisplayId: String = ""
     private var activeQueueDataJson: String? = null
     private var lastDownloadProgressReportTime: Long = 0L
     private var hasActivePlayback: Boolean = false
-    private var screenWakeLock: PowerManager.WakeLock? = null
-    private var cpuPartialWakeLock: PowerManager.WakeLock? = null
-    private var isScreenSleepActive: Boolean = false
-    private var manualSleepOverride: Boolean? = null
-    private var activePowerSchedule: PowerSchedule? = null
+
+    private companion object {
+        const val SKY = 0x38BDF8
+        const val GREEN = 0x10B981
+        const val RED = 0xEF4444
+        const val AMBER = 0xF59E0B
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -120,7 +105,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         setupViews()
         observeState()
         startBackgroundServices()
-        startPowerScheduleMonitor()
+        sleep.acquireScreenLock()
+        sleep.startMonitor()
 
         viewModel.initializePlayer()
         startRealtimeStreams()
@@ -143,7 +129,6 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
         }
-        acquireScreenWakeLock()
         runCatching {
             @Suppress("DEPRECATION")
             window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
@@ -162,54 +147,6 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         }
     }
 
-    @Suppress("DEPRECATION")
-    private fun acquireScreenWakeLock() {
-        runCatching {
-            val pm = getSystemService(POWER_SERVICE) as? PowerManager ?: return
-            if (cpuPartialWakeLock?.isHeld == true) {
-                cpuPartialWakeLock?.release()
-                cpuPartialWakeLock = null
-            }
-            if (screenWakeLock?.isHeld == true) return
-            // shortcut: SCREEN_BRIGHT_WAKE_LOCK deprecated in API 13, tapi tetap dibutuhkan pada firmware TV (Polytron/MediaTek/Realtek) yang mengabaikan FLAG_KEEP_SCREEN_ON saat idle lama
-            screenWakeLock = pm.newWakeLock(
-                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
-                "HNDSigma:SignageScreenWakeLock"
-            ).apply {
-                setReferenceCounted(false)
-                acquire()
-            }
-        }
-    }
-
-    private fun releaseScreenWakeLock() {
-        runCatching {
-            if (screenWakeLock?.isHeld == true) {
-                screenWakeLock?.release()
-            }
-            screenWakeLock = null
-        }
-        runCatching {
-            if (cpuPartialWakeLock?.isHeld == true) {
-                cpuPartialWakeLock?.release()
-            }
-            cpuPartialWakeLock = null
-        }
-    }
-
-    private fun acquireCpuOnlyWakeLock() {
-        runCatching {
-            if (cpuPartialWakeLock?.isHeld == true) return
-            val pm = getSystemService(POWER_SERVICE) as? PowerManager ?: return
-            cpuPartialWakeLock = pm.newWakeLock(
-                PowerManager.PARTIAL_WAKE_LOCK,
-                "HNDSigma:SignageCpuSleepWakeLock"
-            ).apply {
-                setReferenceCounted(false)
-                acquire()
-            }
-        }
-    }
 
     private fun initDependencies() {
         tokenStorage = TokenStorage(this)
@@ -283,126 +220,17 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     }
 
     private fun setupViews() {
-        val density = resources.displayMetrics.density
-
         canvasLayout = SignageCanvasLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         }
-        badgeText = TextView(this).apply {
-            text = "● SINKRONISASI JADWAL"
-            setTextColor(Color.parseColor("#38BDF8"))
-            setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11f)
-            typeface = Typeface.DEFAULT_BOLD
-            letterSpacing = 0.05f
-            gravity = Gravity.CENTER
-            val pillPadH = (14 * density).toInt()
-            val pillPadV = (5 * density).toInt()
-            setPadding(pillPadH, pillPadV, pillPadH, pillPadV)
-            background = GlassDrawableFactory.createStatusPillDrawable(0x3538BDF8.toInt(), 0x8038BDF8.toInt(), 999f)
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                bottomMargin = (14 * density).toInt()
-            }
-        }
-        loadingText = TextView(this).apply {
-            text = "Memulai HNDSigma Player..."
-            setTextColor(Color.WHITE)
-            setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 15f)
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            setShadowLayer(4f, 0f, 1f, 0xB0000000.toInt())
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                bottomMargin = (12 * density).toInt()
-            }
-        }
-        progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
-            isIndeterminate = true
-            max = 100
-            progress = 0
-            progressDrawable?.setTint(Color.parseColor("#38BDF8"))
-            indeterminateDrawable?.setTint(Color.parseColor("#38BDF8"))
-            val barH = (6 * density).toInt().coerceAtLeast(4)
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, barH).apply {
-                bottomMargin = (12 * density).toInt()
-            }
-        }
-        subDetailText = TextView(this).apply {
-            text = ""
-            setTextColor(Color.parseColor("#CBD5E1"))
-            setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11.5f)
-            gravity = Gravity.CENTER
-            setLineSpacing(4f, 1f)
-            setShadowLayer(4f, 0f, 1f, 0x99000000.toInt())
-        }
-
-        // Floating macOS Tahoe Transparent Glass Card Container
-        val glassCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            background = GlassDrawableFactory.createMacOsTahoeGlassCard(22 * density, density)
-            elevation = 16 * density
-            outlineProvider = ViewOutlineProvider.BACKGROUND
-            val padH = (32 * density).toInt()
-            val padV = (24 * density).toInt()
-            setPadding(padH, padV, padH, padV)
-            val cardW = (440 * density).toInt().coerceAtMost((resources.displayMetrics.widthPixels * 0.85f).toInt())
-            layoutParams = FrameLayout.LayoutParams(cardW, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                gravity = Gravity.CENTER
-            }
-
-            addView(badgeText)
-            addView(loadingText)
-            addView(progressBar)
-            addView(subDetailText)
-        }
-
-        loadingOverlay = FrameLayout(this).apply {
-            setBackgroundColor(Color.argb(25, 255, 255, 255)) // Subtle translucent white frost scrim
-            layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-            addView(glassCard)
-        }
-        sleepBlackoutOverlay = View(this).apply {
-            setBackgroundColor(Color.BLACK)
-            layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-            visibility = View.GONE
-            isClickable = true
-            isFocusable = true
-            setOnClickListener { setScreenSleepMode(false, isManual = true) }
-        }
+        statusOverlay = PlayerOverlayCoordinator(this, canvasLayout)
+        sleep = PlayerSleepCoordinator(this, canvasLayout, audioManager, zoneManager, telemetryManager) { hasActivePlayback }
         setContentView(FrameLayout(this).apply {
             setBackgroundColor(Color.WHITE) // Default background color in Android Signage is clean WHITE
             addView(canvasLayout)
-            addView(loadingOverlay)
-            addView(sleepBlackoutOverlay)
+            addView(statusOverlay.root)
+            addView(sleep.blackout)
         })
-    }
-
-    private fun showLoadingOverlay() {
-        loadingOverlay.visibility = View.VISIBLE
-        loadingOverlay.alpha = 1f
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            canvasLayout.setRenderEffect(
-                android.graphics.RenderEffect.createBlurEffect(
-                    20f, 20f, android.graphics.Shader.TileMode.CLAMP
-                )
-            )
-        }
-    }
-
-    private fun hideLoadingOverlay() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            canvasLayout.setRenderEffect(null)
-        }
-        if (loadingOverlay.visibility == View.VISIBLE) {
-            loadingOverlay.animate()
-                .alpha(0f)
-                .setDuration(600L)
-                .setInterpolator(android.view.animation.DecelerateInterpolator(2.0f))
-                .withEndAction {
-                    loadingOverlay.visibility = View.GONE
-                    loadingOverlay.alpha = 1f
-                }
-                .start()
-        }
     }
 
     private fun observeState() {
@@ -415,33 +243,25 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                         finish()
                     }
                     is PlayerUiState.SyncingManifest -> {
-                        if (!hasActivePlayback || loadingOverlay.visibility == View.VISIBLE) {
+                        if (!hasActivePlayback || statusOverlay.isVisible) {
                             WatchdogService.setPlaybackActive(this@PlayerActivity, false)
-                            showLoadingOverlay()
-                            badgeText.text = "● SINKRONISASI JADWAL"
-                            badgeText.setTextColor(Color.parseColor("#38BDF8"))
-                            badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x3538BDF8.toInt(), 0x8038BDF8.toInt(), 999f)
-                            loadingText.setTextColor(Color.WHITE)
-                            loadingText.text = state.message
-                            subDetailText.text = "Mengecek pembaruan jadwal dan integritas manifest..."
-                            progressBar.isIndeterminate = true
+                            statusOverlay.show(
+                                "● SINKRONISASI JADWAL", SKY, state.message,
+                                "Mengecek pembaruan jadwal dan integritas manifest..."
+                            )
                         }
                     }
                     is PlayerUiState.DownloadingAssets -> {
-                        if (!hasActivePlayback || loadingOverlay.visibility == View.VISIBLE) {
+                        if (!hasActivePlayback || statusOverlay.isVisible) {
                             WatchdogService.setPlaybackActive(this@PlayerActivity, false)
-                            showLoadingOverlay()
-                            badgeText.text = "● MENGUNDUH ASET MEDIA"
-                            badgeText.setTextColor(Color.parseColor("#34D399"))
-                            badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x3510B981.toInt(), 0x8010B981.toInt(), 999f)
-                            loadingText.setTextColor(Color.WHITE)
-                            progressBar.isIndeterminate = false
-                            progressBar.progress = state.progressPercent
-
                             val downloadedMb = String.format(Locale.US, "%.1f", state.downloadedBytes / (1024.0 * 1024.0))
                             val totalMb = String.format(Locale.US, "%.1f", state.totalBytes / (1024.0 * 1024.0))
-                            loadingText.text = "Mengunduh Aset Media (${state.assetIndex}/${state.total}) • ${state.progressPercent}%"
-                            subDetailText.text = "${state.currentFileName}\n[ $downloadedMb MB / $totalMb MB ]"
+                            statusOverlay.show(
+                                "● MENGUNDUH ASET MEDIA", GREEN,
+                                "Mengunduh Aset Media (${state.assetIndex}/${state.total}) • ${state.progressPercent}%",
+                                "${state.currentFileName}\n[ $downloadedMb MB / $totalMb MB ]",
+                                state.progressPercent, badgeTextRgb = 0x34D399
+                            )
                         }
 
                         val devId = deviceRepo.getSavedDeviceId()
@@ -458,7 +278,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                         hasActivePlayback = true
                         WatchdogService.setPlaybackActive(this@PlayerActivity, true)
 
-                        hideLoadingOverlay()
+                        statusOverlay.hide()
                         renderManifest(state.manifest)
 
                         val devId = deviceRepo.getSavedDeviceId()
@@ -467,20 +287,16 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                         }
                     }
                     is PlayerUiState.Error -> {
-                        showLoadingOverlay()
-                        badgeText.text = "● KENDALA"
-                        badgeText.setTextColor(Color.parseColor("#FF6B6B"))
-                        badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x35EF4444.toInt(), 0x80EF4444.toInt(), 999f)
-                        loadingText.setTextColor(Color.parseColor("#FF6B6B"))
                         val cleanMessage = if (state.message.contains("404")) {
                             "Berkas media tidak ditemukan di server (HTTP 404)"
                         } else {
                             state.message
                         }
-                        loadingText.text = "Kendala: $cleanMessage"
-                        subDetailText.text = "Menunggu perintah sinkronisasi dari server CMS..."
-                        progressBar.isIndeterminate = false
-                        progressBar.progress = 0
+                        statusOverlay.show(
+                            "● KENDALA", RED, "Kendala: $cleanMessage",
+                            "Menunggu perintah sinkronisasi dari server CMS...", 0,
+                            titleColor = Color.parseColor("#FF6B6B"), badgeTextRgb = 0xFF6B6B
+                        )
                     }
                     else -> Unit
                 }
@@ -492,9 +308,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         activeQueueRenderer = null
         activeQueueDisplayId = ""
         activeQueueDataJson = null
-        activePowerSchedule = manifest.powerSchedule
-        manualSleepOverride = null
-        evaluatePowerSchedule()
+        sleep.setSchedule(manifest.powerSchedule)
 
         val payload = ZoneRenderContextPayload(
             activity = this,
@@ -546,103 +360,6 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         }
     }
 
-    private fun startPowerScheduleMonitor() {
-        lifecycleScope.launch {
-            while (isActive) {
-                evaluatePowerSchedule()
-                delay(30_000L)
-            }
-        }
-    }
-
-    private fun evaluatePowerSchedule() {
-        if (manualSleepOverride != null) return
-        val ps = activePowerSchedule
-        if (ps == null || !ps.enabled) {
-            if (isScreenSleepActive) setScreenSleepMode(false, isManual = false)
-            return
-        }
-        val shouldSleep = isCurrentlyInSleepWindow(ps.sleepTime, ps.wakeTime)
-        if (shouldSleep != isScreenSleepActive) {
-            setScreenSleepMode(shouldSleep, isManual = false)
-        }
-    }
-
-    private fun isCurrentlyInSleepWindow(sleepTimeStr: String, wakeTimeStr: String): Boolean {
-        fun parseMinutes(timeStr: String): Int? {
-            val parts = timeStr.trim().split(":")
-            if (parts.size < 2) return null
-            val h = parts[0].toIntOrNull() ?: return null
-            val m = parts[1].toIntOrNull() ?: return null
-            return (h * 60) + m
-        }
-        val sleepMins = parseMinutes(sleepTimeStr) ?: return false
-        val wakeMins = parseMinutes(wakeTimeStr) ?: return false
-        if (sleepMins == wakeMins) return false
-
-        val cal = Calendar.getInstance()
-        val nowMins = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
-        return if (sleepMins < wakeMins) {
-            nowMins in sleepMins until wakeMins
-        } else {
-            // Rentang lintas tengah malam (misal 22:00 s/d 06:00)
-            nowMins >= sleepMins || nowMins < wakeMins
-        }
-    }
-
-    /**
-     * Mengatur mode tidur layar (Toko Tutup):
-     * 1. Mencoba kirim sinyal HDMI-CEC Standby / Wake jika hardware mendukung.
-     * 2. Menurunkan kecerahan jendela ke minimum (0.0f), menampilkan layar hitam pekat (blackout),
-     *    dan menjeda pemutaran video + suara sementara aplikasi dan gRPC stream tetap hidup.
-     */
-    private fun setScreenSleepMode(sleep: Boolean, isManual: Boolean) {
-        runOnUiThread {
-            if (isManual) {
-                manualSleepOverride = sleep
-            }
-            if (isScreenSleepActive == sleep && sleepBlackoutOverlay.visibility == (if (sleep) View.VISIBLE else View.GONE)) {
-                return@runOnUiThread
-            }
-            isScreenSleepActive = sleep
-
-            val lp = window.attributes
-            if (sleep) {
-                // Lepas semua pengunci layar (WakeLock, FLAG_KEEP_SCREEN_ON, decorView.keepScreenOn)
-                // agar panel backlight TV diizinkan mati penuh oleh driver display/SurfaceControl/CEC
-                releaseScreenWakeLock()
-                acquireCpuOnlyWakeLock()
-                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                window.decorView.keepScreenOn = false
-                canvasLayout.keepScreenOn = false
-
-                lp.screenBrightness = 0.0f // Redupkan backlight ke titik terendah OS secara instan
-                window.attributes = lp
-                sleepBlackoutOverlay.visibility = View.VISIBLE
-                sleepBlackoutOverlay.bringToFront()
-                audioManager.stopCurrentVoice()
-                zoneManager.pausePlayback()
-                WatchdogService.setPlaybackActive(this, false)
-            } else {
-                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                window.decorView.keepScreenOn = true
-                canvasLayout.keepScreenOn = true
-                lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
-                window.attributes = lp
-                sleepBlackoutOverlay.visibility = View.GONE
-                acquireScreenWakeLock()
-                if (hasActivePlayback) {
-                    zoneManager.resumePlayback()
-                    WatchdogService.setPlaybackActive(this, true)
-                }
-            }
-
-            // Kirim sinyal power off/on panel (SurfaceControl / sysfs bl_power / HDMI-CEC) di background thread
-            lifecycleScope.launch(Dispatchers.IO) {
-                telemetryManager.handleDisplayPowerCec(turnOn = !sleep)
-            }
-        }
-    }
 
     private fun startBackgroundServices() {
         runCatching {
@@ -666,46 +383,40 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     override fun onChunkProgress(progress: ChunkProgressModel) {
         runOnUiThread {
-            showLoadingOverlay()
-            badgeText.text = "● SINKRONISASI KONTEN REALTIME"
-            badgeText.setTextColor(Color.parseColor("#10B981"))
-            badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x3510B981.toInt(), 0x8010B981.toInt(), 999f)
-            progressBar.isIndeterminate = false
-            progressBar.progress = progress.percent
-
             val upMb = String.format(Locale.US, "%.1f", progress.uploadedBytes / (1024.0 * 1024.0))
             val totMb = String.format(Locale.US, "%.1f", progress.totalBytes / (1024.0 * 1024.0))
-            loadingText.text = "Menerima Transmisi Chunk (${progress.completedChunks}/${progress.totalChunks}) • ${progress.percent}%"
-            subDetailText.text = "${progress.fileName}\n[ $upMb MB / $totMb MB ]"
+            statusOverlay.show(
+                "● SINKRONISASI KONTEN REALTIME", GREEN,
+                "Menerima Transmisi Chunk (${progress.completedChunks}/${progress.totalChunks}) • ${progress.percent}%",
+                "${progress.fileName}\n[ $upMb MB / $totMb MB ]", progress.percent
+            )
         }
     }
 
     override fun onChunkComplete(fileName: String, totalChunks: Int) {
         runOnUiThread {
-            progressBar.progress = 100
-            badgeText.text = "✓ TERVERIFIKASI"
-            badgeText.setTextColor(Color.parseColor("#10B981"))
-            badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x3510B981.toInt(), 0x8010B981.toInt(), 999f)
-            loadingText.text = "Transmisi Seluruh Chunk Selesai (SHA-256 Valid)"
-            subDetailText.text = "$fileName\nSeluruh $totalChunks chunk berhasil diterima & terverifikasi."
-            loadingOverlay.postDelayed({
-                if (viewModel.uiState.value is PlayerUiState.Playing) hideLoadingOverlay()
-            }, 2000)
+            statusOverlay.show(
+                "✓ TERVERIFIKASI", GREEN, "Transmisi Seluruh Chunk Selesai (SHA-256 Valid)",
+                "$fileName\nSeluruh $totalChunks chunk berhasil diterima & terverifikasi.", 100
+            )
+            hideOverlayWhenPlaying(2000)
         }
     }
 
     override fun onChunkCancelled(fileName: String) {
         runOnUiThread {
-            showLoadingOverlay()
-            badgeText.text = "✖ DIBATALKAN"
-            badgeText.setTextColor(Color.parseColor("#EF4444"))
-            badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x35EF4444.toInt(), 0x80EF4444.toInt(), 999f)
-            loadingText.text = "Transmisi Chunk Dibatalkan"
-            loadingText.setTextColor(Color.parseColor("#EF4444"))
-            subDetailText.text = fileName.ifBlank { "Pengunggahan dibatalkan oleh pengguna dari CMS." }
-            loadingOverlay.postDelayed({
-                if (viewModel.uiState.value is PlayerUiState.Playing) hideLoadingOverlay()
-            }, 2500)
+            statusOverlay.show(
+                "✖ DIBATALKAN", RED, "Transmisi Chunk Dibatalkan",
+                fileName.ifBlank { "Pengunggahan dibatalkan oleh pengguna dari CMS." },
+                titleColor = Color.parseColor("#EF4444")
+            )
+            hideOverlayWhenPlaying(2500)
+        }
+    }
+
+    private fun hideOverlayWhenPlaying(delayMs: Long) {
+        statusOverlay.postDelayed(delayMs) {
+            if (viewModel.uiState.value is PlayerUiState.Playing) statusOverlay.hide()
         }
     }
 
@@ -723,17 +434,13 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
             telemetryManager.handleClearCache(
                 onShowUiProgress = {
-                    showLoadingOverlay()
-                    progressBar.isIndeterminate = true
-                    badgeText.text = "BERSIHKAN CACHE"
-                    badgeText.setTextColor(Color.parseColor("#F59E0B"))
-                    badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x35F59E0B.toInt(), 0x80F59E0B.toInt(), 999f)
-                    loadingText.setTextColor(Color.WHITE)
-                    loadingText.text = "Membersihkan Cache Media Lokal..."
-                    subDetailText.text = "Menghapus cache media dan manifest lokal..."
+                    statusOverlay.show(
+                        "BERSIHKAN CACHE", AMBER, "Membersihkan Cache Media Lokal...",
+                        "Menghapus cache media dan manifest lokal..."
+                    )
                 },
                 onSyncRequested = {
-                    loadingOverlay.postDelayed({ viewModel.syncManifest(force = true) }, 1000)
+                    statusOverlay.postDelayed(1000) { viewModel.syncManifest(force = true) }
                 }
             )
         }
@@ -745,17 +452,11 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     override fun onReboot() {
         runOnUiThread {
-            showLoadingOverlay()
-            progressBar.isIndeterminate = true
-            badgeText.text = "● MEMUAT ULANG"
-            badgeText.setTextColor(Color.parseColor("#3B82F6"))
-            badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x3538BDF8.toInt(), 0x8038BDF8.toInt(), 999f)
-            loadingText.text = "Memuat Ulang Player..."
-            subDetailText.text = "Mengeksekusi perintah reboot/restart dari CMS..."
-
-            loadingOverlay.postDelayed({
-                telemetryManager.handleReboot()
-            }, 600)
+            statusOverlay.show(
+                "● MEMUAT ULANG", SKY, "Memuat Ulang Player...",
+                "Mengeksekusi perintah reboot/restart dari CMS...", badgeTextRgb = 0x3B82F6
+            )
+            statusOverlay.postDelayed(600) { telemetryManager.handleReboot() }
         }
     }
 
@@ -766,13 +467,9 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         }
     }
 
-    override fun onScreenSleep() {
-        setScreenSleepMode(true, isManual = true)
-    }
+    override fun onScreenSleep() = sleep.setSleep(true, manual = true)
 
-    override fun onScreenWake() {
-        setScreenSleepMode(false, isManual = true)
-    }
+    override fun onScreenWake() = sleep.setSleep(false, manual = true)
 
     override fun onQueueCall(event: QueueCallEventModel) {
         runOnUiThread {
@@ -821,8 +518,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     override fun onResume() {
         super.onResume()
-        if (!isScreenSleepActive) {
-            acquireScreenWakeLock()
+        if (!sleep.isSleeping) {
+            sleep.acquireScreenLock()
             if (hasActivePlayback) {
                 zoneManager.resumePlayback()
                 WatchdogService.setPlaybackActive(this, true)
@@ -849,7 +546,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
-            if (!isScreenSleepActive) acquireScreenWakeLock()
+            if (!sleep.isSleeping) sleep.acquireScreenLock()
             runCatching {
                 WindowCompat.getInsetsController(window, window.decorView).hide(WindowInsetsCompat.Type.systemBars())
             }
@@ -891,8 +588,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (isScreenSleepActive) {
-            setScreenSleepMode(false, isManual = true)
+        if (sleep.isSleeping) {
+            sleep.setSleep(false, manual = true)
             return true
         }
 
@@ -977,7 +674,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         keySequenceHandler.removeCallbacks(delayedOpenSettingsRunnable)
         hasActivePlayback = false
         WatchdogService.setPlaybackActive(this, false)
-        releaseScreenWakeLock()
+        sleep.releaseLocks()
         audioManager.release()
         zoneManager.release()
         streamManager.stopStream()
@@ -1006,7 +703,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                     playerSettingsStorage.setKioskModeEnabled(enabled)
                 },
                 onScreenSleepRequested = {
-                    setScreenSleepMode(true, isManual = true)
+                    sleep.setSleep(true, manual = true)
                 },
                 onExitAppRequested = {
                     exitApplicationCompletely()
@@ -1030,7 +727,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     override fun onDestroy() {
         super.onDestroy()
         keySequenceHandler.removeCallbacks(delayedOpenSettingsRunnable)
-        releaseScreenWakeLock()
+        sleep.releaseLocks()
         audioManager.release()
         streamManager.stopStream()
         telemetryManager.stop()
