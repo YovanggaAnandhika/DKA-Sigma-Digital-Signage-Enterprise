@@ -42,6 +42,7 @@ import com.dkaapis.sigma.presentation.player.audio.model.QueueSpeechPayload
 import com.dkaapis.sigma.presentation.player.canvas.PlayerZoneManager
 import com.dkaapis.sigma.presentation.player.canvas.SignageCanvasLayout
 import com.dkaapis.sigma.presentation.player.canvas.model.ZoneRenderContextPayload
+import com.dkaapis.sigma.presentation.player.coordinator.PlayerKeyCoordinator
 import com.dkaapis.sigma.presentation.player.coordinator.PlayerOverlayCoordinator
 import com.dkaapis.sigma.presentation.player.coordinator.PlayerSleepCoordinator
 import com.dkaapis.sigma.presentation.player.gesture.TwoFingerSwipeDetector
@@ -84,6 +85,17 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private lateinit var canvasLayout: SignageCanvasLayout
     private lateinit var statusOverlay: PlayerOverlayCoordinator
     private lateinit var sleep: PlayerSleepCoordinator
+    private val keys by lazy {
+        PlayerKeyCoordinator(
+            isSleeping = { sleep.isSleeping },
+            wake = { sleep.setSleep(false, manual = true) },
+            openSettings = ::openSettingsBottomSheet,
+            exitApp = ::exitApplicationCompletely,
+            isSettingsShowing = { settingsDialog.isShowing() },
+            dismissSettings = { settingsDialog.dismiss() },
+            toast = { Toast.makeText(this, it, Toast.LENGTH_SHORT).show() }
+        )
+    }
 
     private var activeQueueRenderer: QueueZoneRenderer? = null
     private var activeQueueDisplayId: String = ""
@@ -577,101 +589,17 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         return super.dispatchTouchEvent(ev)
     }
 
-    private var lastBackPressTimestamp = 0L
-    private var backPressCount = 0
-    private val keySequenceHandler = Handler(Looper.getMainLooper())
-    private val delayedOpenSettingsRunnable = Runnable {
-        if (backPressCount in 2..3) {
-            backPressCount = 0
-            openSettingsBottomSheet()
-        }
-    }
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?) =
+        keys.onKeyDown(keyCode, event) || super.onKeyDown(keyCode, event)
 
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (sleep.isSleeping) {
-            sleep.setSleep(false, manual = true)
-            return true
-        }
+    override fun onKeyLongPress(keyCode: Int, event: KeyEvent?) =
+        keys.onKeyLongPress(keyCode) || super.onKeyLongPress(keyCode, event)
 
-        // 1. Tombol langsung pada remote: Menu, Settings, Info, Guide
-        if (keyCode == KeyEvent.KEYCODE_MENU ||
-            keyCode == KeyEvent.KEYCODE_SETTINGS ||
-            keyCode == KeyEvent.KEYCODE_INFO ||
-            keyCode == KeyEvent.KEYCODE_GUIDE ||
-            keyCode == KeyEvent.KEYCODE_PROG_RED) {
-            openSettingsBottomSheet()
-            return true
-        }
-
-        // 2. Mulai tracking long-press untuk tombol DPAD Center (OK), Enter, dan Back
-        if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
-            keyCode == KeyEvent.KEYCODE_ENTER ||
-            keyCode == KeyEvent.KEYCODE_BACK) {
-            event?.startTracking()
-            return true
-        }
-
-        return super.onKeyDown(keyCode, event)
-    }
-
-    override fun onKeyLongPress(keyCode: Int, event: KeyEvent?): Boolean {
-        // Tahan tombol OK / Center atau tombol Back selama 1.5 - 2 detik untuk membuka pengaturan
-        if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
-            keyCode == KeyEvent.KEYCODE_ENTER ||
-            keyCode == KeyEvent.KEYCODE_BACK) {
-            keySequenceHandler.removeCallbacks(delayedOpenSettingsRunnable)
-            backPressCount = 0
-            openSettingsBottomSheet()
-            return true
-        }
-        return super.onKeyLongPress(keyCode, event)
-    }
-
-    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
-        if (event?.isCanceled == true) {
-            return true
-        }
-
-        // Tekan Back 2x cepat -> Buka Pengaturan | Tekan Back 4x cepat -> Tutup Aplikasi Sempurna
-        if (keyCode == KeyEvent.KEYCODE_BACK) {
-            val now = System.currentTimeMillis()
-            if (now - lastBackPressTimestamp <= 1200L) {
-                backPressCount++
-            } else {
-                backPressCount = 1
-            }
-            lastBackPressTimestamp = now
-            keySequenceHandler.removeCallbacks(delayedOpenSettingsRunnable)
-
-            when {
-                backPressCount >= 4 -> {
-                    backPressCount = 0
-                    settingsDialog.dismiss()
-                    Toast.makeText(this, "Menutup HNDSigma Player...", Toast.LENGTH_SHORT).show()
-                    exitApplicationCompletely()
-                    return true
-                }
-                backPressCount == 1 -> {
-                    if (settingsDialog.isShowing()) {
-                        settingsDialog.dismiss()
-                    } else {
-                        Toast.makeText(this, "Tekan Back 2x: Pengaturan • 4x: Keluar Aplikasi", Toast.LENGTH_SHORT).show()
-                    }
-                    return true
-                }
-                else -> {
-                    // Tunggu 450ms untuk melihat apakah pengguna lanjut menekan sampai 4x
-                    keySequenceHandler.postDelayed(delayedOpenSettingsRunnable, 450L)
-                    return true
-                }
-            }
-        }
-
-        return super.onKeyUp(keyCode, event)
-    }
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?) =
+        keys.onKeyUp(keyCode, event) || super.onKeyUp(keyCode, event)
 
     private fun exitApplicationCompletely() {
-        keySequenceHandler.removeCallbacks(delayedOpenSettingsRunnable)
+        keys.cancelPending()
         hasActivePlayback = false
         WatchdogService.setPlaybackActive(this, false)
         sleep.releaseLocks()
@@ -726,7 +654,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     override fun onDestroy() {
         super.onDestroy()
-        keySequenceHandler.removeCallbacks(delayedOpenSettingsRunnable)
+        keys.cancelPending()
         sleep.releaseLocks()
         audioManager.release()
         streamManager.stopStream()
