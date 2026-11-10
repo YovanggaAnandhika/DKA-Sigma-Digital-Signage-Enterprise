@@ -425,7 +425,10 @@ class LiveStreamZoneRenderer(
 
     fun release() {
         released = true
+        bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
+        bufferingDebounceRunnable = null
         reconnectRunnable?.let(mainHandler::removeCallbacks)
+        reconnectRunnable = null
         mainHandler.removeCallbacksAndMessages(null)
         exoPlayer?.release()
         exoPlayer = null
