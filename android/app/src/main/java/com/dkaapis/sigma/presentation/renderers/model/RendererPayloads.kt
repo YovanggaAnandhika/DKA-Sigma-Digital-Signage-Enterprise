@@ -72,6 +72,7 @@ data class TickerConfigPayload(
 data class ClockConfigPayload(
     val city: String = "Makassar",
     val showSeconds: Boolean = true,
+    val is24Hour: Boolean = true,
     val backgroundColorHex: String = "transparent",
     val textColorHex: String = "#ffffff",
     val subtitleColorHex: String = "#94a3b8",
@@ -84,6 +85,7 @@ data class ClockConfigPayload(
         fun fromJson(json: JSONObject): ClockConfigPayload = ClockConfigPayload(
             city = json.optString("city", "Makassar"),
             showSeconds = json.optBoolean("showSeconds", true),
+            is24Hour = json.optBoolean("is24Hour", true),
             backgroundColorHex = json.optString("backgroundColor", "transparent").ifBlank { "transparent" },
             textColorHex = json.optString("textColor", "#ffffff").ifBlank { "#ffffff" },
             subtitleColorHex = json.optString("subtitleColor", "#94a3b8").ifBlank { "#94a3b8" },

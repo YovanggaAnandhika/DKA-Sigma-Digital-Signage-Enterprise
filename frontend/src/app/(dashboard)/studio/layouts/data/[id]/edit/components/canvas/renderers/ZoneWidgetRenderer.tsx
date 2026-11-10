@@ -142,7 +142,12 @@ export default function ZoneWidgetRenderer({
           lineHeight: 1.1,
           whiteSpace: 'nowrap',
         }}>
-          {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: activeBlock.widgetData?.showSeconds ? '2-digit' : undefined })}
+          {new Date().toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: activeBlock.widgetData?.showSeconds ? '2-digit' : undefined,
+            hour12: activeBlock.widgetData?.is24Hour === false,
+          })}
         </div>
         <div style={{
           fontSize: `${Math.max(7, Math.round((activeBlock.widgetData?.dateFontSize || 14) * scale))}px`,

@@ -216,41 +216,42 @@ impl ManifestServiceImpl {
             struct ClockManifestRow {
                 id: Uuid,
                 name: String,
-                city: String,
+                timezone: String,
+                clock_format: String,
                 show_seconds: bool,
-                is_24_hour: bool,
-                theme: String,
+                show_date: bool,
+                font_size: i32,
                 background_color: String,
                 text_color: String,
-                subtitle_color: String,
-                border_color: String,
-                border_radius: i32,
-                time_font_size: i32,
-                date_font_size: i32,
+                weather_city: Option<String>,
             }
 
-            if let Ok(Some(row)) = sqlx::query_as::<_, ClockManifestRow>(
-                "SELECT id, name, city, show_seconds, is_24_hour, theme, background_color, text_color, subtitle_color, border_color, border_radius, time_font_size, date_font_size FROM components_clocks WHERE id = $1"
+            let row = sqlx::query_as::<_, ClockManifestRow>(
+                "SELECT id, name, timezone, clock_format, show_seconds, show_date, font_size, background_color, text_color, weather_city FROM components_clocks WHERE id = $1"
             )
             .bind(cid)
-            .fetch_optional(pool).await {
-                let json_val = serde_json::json!({
-                    "id": row.id.to_string(),
-                    "name": row.name,
-                    "city": row.city,
-                    "showSeconds": row.show_seconds,
-                    "is24Hour": row.is_24_hour,
-                    "theme": row.theme,
-                    "backgroundColor": row.background_color,
-                    "textColor": row.text_color,
-                    "subtitleColor": row.subtitle_color,
-                    "borderColor": row.border_color,
-                    "borderRadius": row.border_radius,
-                    "timeFontSize": row.time_font_size,
-                    "dateFontSize": row.date_font_size,
-                });
-                return Ok(Some(json_val.to_string()));
-            }
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::not_found("Clock not found"))?;
+
+            let json_val = serde_json::json!({
+                "id": row.id.to_string(),
+                "name": row.name,
+                "city": row.weather_city.unwrap_or(row.timezone),
+                "showSeconds": row.show_seconds,
+                "showDate": row.show_date,
+                "is24Hour": row.clock_format.contains("24"),
+                "theme": "glass",
+                "backgroundColor": row.background_color,
+                "textColor": row.text_color,
+                "subtitleColor": "#94a3b8",
+                "borderColor": "#1e3a8a",
+                "borderRadius": 12,
+                "timeFontSize": row.font_size,
+                "dateFontSize": 14,
+            });
+            return Ok(Some(json_val.to_string()));
         }
 
         if let Some(wid) = webview_id {
