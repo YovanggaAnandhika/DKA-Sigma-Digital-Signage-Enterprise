@@ -16,16 +16,17 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import com.dkaapis.sigma.presentation.player.ui.ModernIntroGraphicView
 import com.dkaapis.sigma.presentation.renderers.glass.GlassDrawableFactory
 
 /**
- * Overlay status loading, sync, & clear cache dengan tampilan Fullscreen Glassmorphism modern.
- * Memadukan backdrop blur (RenderEffect pada canvas di Android 12+), ambient specular tint,
- * dan floating frosted glass card presisi di tengah layar.
+ * Overlay status loading, sync, & clear cache dengan tampilan Fullscreen Glassmorphism modern
+ * dan animasi intro grafis futuristik (glowing pulsating orbit rings & core lens).
  */
 class PlayerOverlayCoordinator(context: Context, private val canvas: View) {
 
     private val density = context.resources.displayMetrics.density
+    private val introGraphic = ModernIntroGraphicView(context)
     private val badge = TextView(context)
     private val title = TextView(context)
     private val detail = TextView(context)
@@ -37,11 +38,26 @@ class PlayerOverlayCoordinator(context: Context, private val canvas: View) {
     init {
         root.visibility = View.GONE
 
-        // 1. Fullscreen translucent glass veil: subtle light frosting (bukan abu-abu gelap)
-        // Ketika canvas kosong (putih) atau berisi konten terakhir, efek frosted glass tetap cerah & bersih
+        // 1. Fullscreen translucent glass veil: subtle light frosting
         root.setBackgroundColor(Color.argb(35, 255, 255, 255))
 
-        // 2. Status Badge Pill
+        // Fullscreen dynamic ambient aurora background di balik kartu kaca
+        val backgroundGraphic = ModernIntroGraphicView(context).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        }
+        root.addView(backgroundGraphic)
+
+        // 2. Animated Modern Graphic Hero Orb di dalam kartu kaca
+        val graphicSize = (72 * density).toInt()
+        introGraphic.layoutParams = LinearLayout.LayoutParams(graphicSize, graphicSize).apply {
+            gravity = Gravity.CENTER_HORIZONTAL
+            bottomMargin = (14 * density).toInt()
+        }
+
+        // 3. Status Badge Pill
         val padX = (16 * density).toInt()
         val padY = (6 * density).toInt()
         badge.run {
@@ -50,54 +66,52 @@ class PlayerOverlayCoordinator(context: Context, private val canvas: View) {
             letterSpacing = 0.06f
             gravity = Gravity.CENTER
             setPadding(padX, padY, padX, padY)
-            layoutParams = lp(LinearLayout.LayoutParams.WRAP_CONTENT, bottom = 16)
+            layoutParams = lp(LinearLayout.LayoutParams.WRAP_CONTENT, bottom = 14)
         }
 
-        // 3. Title Text
+        // 4. Title Text (Tajam dan kontras tinggi di atas kaca cerah)
         title.run {
-            setTextColor(Color.WHITE)
+            setTextColor(Color.parseColor("#0F172A"))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
-            setShadowLayer(8f, 0f, 2f, 0xCC000000.toInt())
-            layoutParams = lp(LinearLayout.LayoutParams.WRAP_CONTENT, bottom = 12)
+            layoutParams = lp(LinearLayout.LayoutParams.WRAP_CONTENT, bottom = 10)
         }
 
-        // 4. Progress Bar
+        // 5. Progress Bar
         bar.run {
             max = 100
             progressDrawable?.setTint(SKY)
             indeterminateDrawable?.setTint(SKY)
-            layoutParams = lp((5 * density).toInt().coerceAtLeast(4), bottom = 12, matchWidth = true)
+            layoutParams = lp((5 * density).toInt().coerceAtLeast(4), bottom = 10, matchWidth = true)
         }
 
-        // 5. Detail Subtitle Text
+        // 6. Detail Subtitle Text
         detail.run {
-            setTextColor(Color.parseColor("#F1F5F9"))
+            setTextColor(Color.parseColor("#334155"))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             setLineSpacing(4f, 1f)
-            setShadowLayer(6f, 0f, 2f, 0xCC000000.toInt())
         }
 
-        // 6. Frosted Glass Floating Card (Crystalline Glass dengan specular rim)
+        // 7. Frosted Glass Floating Card (Crystalline Glass dengan specular rim)
         val card = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            background = GlassDrawableFactory.createMacOsTahoeGlassCard(24 * density, density)
+            background = GlassDrawableFactory.createMacOsTahoeGlassCard(26 * density, density)
             elevation = 20 * density
             outlineProvider = ViewOutlineProvider.BACKGROUND
             clipToOutline = true
             setPadding(
                 (36 * density).toInt(),
-                (28 * density).toInt(),
+                (24 * density).toInt(),
                 (36 * density).toInt(),
-                (28 * density).toInt()
+                (24 * density).toInt()
             )
             val w = (480 * density).toInt().coerceAtMost((context.resources.displayMetrics.widthPixels * 0.85f).toInt())
             layoutParams = FrameLayout.LayoutParams(w, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER)
-            listOf(badge, title, bar, detail).forEach(::addView)
+            listOf(introGraphic, badge, title, bar, detail).forEach(::addView)
         }
 
         root.layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
@@ -117,12 +131,12 @@ class PlayerOverlayCoordinator(context: Context, private val canvas: View) {
         titleText: String,
         detailText: String,
         progress: Int? = null,
-        titleColor: Int = Color.WHITE,
+        titleColor: Int = Color.parseColor("#0F172A"),
         badgeTextRgb: Int = rgb
     ) {
         badge.text = badgeText
         badge.setTextColor(0xFF000000.toInt() or badgeTextRgb)
-        badge.background = GlassDrawableFactory.createStatusPillDrawable(0x35000000 or rgb, 0x80000000.toInt() or rgb, 999f)
+        badge.background = GlassDrawableFactory.createStatusPillDrawable(0x25000000 or rgb, 0x80000000.toInt() or rgb, 999f)
         title.setTextColor(titleColor)
         title.text = titleText
         detail.text = detailText

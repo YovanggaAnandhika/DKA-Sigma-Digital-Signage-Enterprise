@@ -302,16 +302,28 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                         }
                     }
                     is PlayerUiState.Error -> {
-                        val cleanMessage = if (state.message.contains("404")) {
-                            "Berkas media tidak ditemukan di server (HTTP 404)"
+                        val isManifestEmpty = state.message.contains("Manifest kosong", ignoreCase = true) ||
+                                state.message.contains("kosong", ignoreCase = true)
+
+                        if (isManifestEmpty) {
+                            // Layar standby intro / belum ada playlist tayang (bukan kendala error)
+                            statusOverlay.show(
+                                "● STANDBY", SKY, "HNDSigma Digital Signage",
+                                "Menunggu alokasi jadwal tayang dari Web CMS...",
+                                progress = null, badgeTextRgb = 0x38BDF8
+                            )
                         } else {
-                            state.message
+                            val cleanMessage = if (state.message.contains("404")) {
+                                "Berkas media tidak ditemukan di server (HTTP 404)"
+                            } else {
+                                state.message
+                            }
+                            statusOverlay.show(
+                                "● SINKRONISASI", SKY, cleanMessage,
+                                "Mencoba menghubungkan kembali ke server CMS...",
+                                progress = null, badgeTextRgb = 0x38BDF8
+                            )
                         }
-                        statusOverlay.show(
-                            "● KENDALA", RED, "Kendala: $cleanMessage",
-                            "Menunggu perintah sinkronisasi dari server CMS...", 0,
-                            titleColor = Color.parseColor("#FF6B6B"), badgeTextRgb = 0xFF6B6B
-                        )
                     }
                     else -> Unit
                 }
