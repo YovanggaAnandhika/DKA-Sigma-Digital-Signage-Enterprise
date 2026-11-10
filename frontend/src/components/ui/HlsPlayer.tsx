@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Tv, Loader2 } from 'lucide-react';
 
-export type StreamPlaybackStatus = 'OFFLINE' | 'BUFFERING' | 'LIVE';
+export type StreamPlaybackStatus = 'IDLE' | 'OFFLINE' | 'BUFFERING' | 'LIVE';
 
 interface HlsPlayerProps {
   src: string;
@@ -539,104 +539,197 @@ export default function HlsPlayer({
         }}
       />
 
-      {/* Buffering Overlay */}
+      {/* Live Micro Glass Pill */}
+      {status === 'LIVE' && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '12px',
+            left: '12px',
+            zIndex: 10,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '4px 10px',
+            borderRadius: '999px',
+            backgroundColor: 'rgba(15, 23, 42, 0.68)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255, 255, 255, 0.16)',
+            borderTop: '1px solid rgba(255, 255, 255, 0.28)',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+            color: '#ffffff',
+            fontSize: '0.6875rem',
+            fontWeight: 800,
+            letterSpacing: '0.04em',
+            pointerEvents: 'none',
+          }}
+        >
+          <span
+            style={{
+              width: '7px',
+              height: '7px',
+              borderRadius: '50%',
+              backgroundColor: '#10b981',
+              boxShadow: '0 0 8px #10b981',
+            }}
+          />
+          LIVE &bull; WHEP
+        </div>
+      )}
+
+      {/* Buffering Frosted Glass Overlay */}
       {status === 'BUFFERING' && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 4,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: hasFirstFrame ? 'rgba(9, 13, 22, 0.45)' : 'rgba(9, 13, 22, 0.82)',
+            backdropFilter: 'blur(8px)',
+            pointerEvents: 'none',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px 28px',
+              borderRadius: '20px',
+              backgroundColor: 'rgba(15, 23, 42, 0.75)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(255, 255, 255, 0.18)',
+              borderTop: '1.5px solid rgba(255, 255, 255, 0.35)',
+              boxShadow: '0 16px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(56, 189, 248, 0.15)',
+              gap: '12px',
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                border: '1px solid rgba(56, 189, 248, 0.25)',
+              }}
+            >
+              <Loader2 size={24} className="animate-spin" style={{ color: '#38bdf8' }} />
+            </div>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '2px 8px',
+                borderRadius: '999px',
+                backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                color: '#38bdf8',
+                fontSize: '0.625rem',
+                fontWeight: 800,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+              }}
+            >
+              MEMUAT SIARAN
+            </div>
+            <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#f8fafc', letterSpacing: '0.01em' }}>
+              Memuat Siaran Ultra-Low Latency...
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stream Off Frosted Glass Overlay */}
+      {status === 'OFFLINE' && (
         <div
           style={{
             position: 'absolute',
             inset: 0,
             zIndex: 3,
             display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '10px',
-            backgroundColor: hasFirstFrame ? 'rgba(9, 13, 22, 0.45)' : 'rgba(9, 13, 22, 0.85)',
-            backdropFilter: 'blur(3px)',
-            color: '#ffffff',
-            pointerEvents: 'none',
-          }}
-        >
-          <Loader2
-            size={32}
-            className="animate-spin"
-            style={{ color: 'var(--primary-400)' }}
-          />
-          <div style={{ fontSize: '0.8125rem', fontWeight: 700, letterSpacing: '0.02em' }}>
-            Memuat Aliran Video...
-          </div>
-        </div>
-      )}
-
-      {/* Stream Off Overlay */}
-      {status === 'OFFLINE' && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 2,
-            display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
             padding: '24px',
-            textAlign: 'center',
             backgroundColor: '#090d16',
-            color: 'rgba(255,255,255,0.7)',
           }}
         >
           <div
             style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '50%',
-              backgroundColor: 'rgba(239, 68, 68, 0.12)',
-              border: '1px solid rgba(239, 68, 68, 0.25)',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              marginBottom: '12px',
+              padding: '28px 36px',
+              borderRadius: '24px',
+              backgroundColor: 'rgba(11, 15, 25, 0.85)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(239, 68, 68, 0.25)',
+              borderTop: '1.5px solid rgba(255, 255, 255, 0.25)',
+              boxShadow: '0 20px 48px rgba(0, 0, 0, 0.65), 0 0 25px rgba(239, 68, 68, 0.12)',
+              textAlign: 'center',
+              maxWidth: '420px',
             }}
           >
-            <Tv size={22} style={{ color: 'var(--accent-red)' }} />
-          </div>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '3px 10px',
-              borderRadius: '9999px',
-              backgroundColor: 'rgba(239, 68, 68, 0.14)',
-              color: 'var(--accent-red)',
-              fontSize: '0.68rem',
-              fontWeight: 800,
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              marginBottom: '8px',
-            }}
-          >
-            <span
+            <div
               style={{
-                width: '6px',
-                height: '6px',
+                width: '48px',
+                height: '48px',
                 borderRadius: '50%',
-                backgroundColor: 'var(--accent-red)',
+                backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '14px',
               }}
-            />
-            {fallbackTitle}
+            >
+              <Tv size={22} style={{ color: '#ef4444' }} />
+            </div>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '3px 10px',
+                borderRadius: '9999px',
+                backgroundColor: 'rgba(239, 68, 68, 0.14)',
+                color: '#ef4444',
+                fontSize: '0.6875rem',
+                fontWeight: 800,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                marginBottom: '10px',
+              }}
+            >
+              <span
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ef4444',
+                }}
+              />
+              {fallbackTitle}
+            </div>
+            <p
+              style={{
+                fontSize: '0.75rem',
+                color: 'rgba(248, 250, 252, 0.65)',
+                lineHeight: 1.5,
+                margin: 0,
+              }}
+            >
+              {fallbackDescription}
+            </p>
           </div>
-          <p
-            style={{
-              fontSize: '0.75rem',
-              color: 'rgba(255,255,255,0.5)',
-              maxWidth: '360px',
-              lineHeight: 1.5,
-              margin: 0,
-            }}
-          >
-            {fallbackDescription}
-          </p>
         </div>
       )}
     </div>

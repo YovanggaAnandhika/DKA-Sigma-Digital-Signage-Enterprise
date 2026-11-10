@@ -26,6 +26,7 @@ class VideoZoneRenderer(
     private var currentItemMuted: Boolean = false
     private var playlistItems: List<VideoPlaylistItem> = emptyList()
     private var duckAnimator: ValueAnimator? = null
+    private var bufferingGlassCard: android.view.View? = null
 
     var onPlaybackCompleted: ((mediaId: String, durationSeconds: Int) -> Unit)? = null
     private var lastTrackIndex: Int = -1
@@ -149,6 +150,7 @@ class VideoZoneRenderer(
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     android.util.Log.i("VideoZoneRenderer", "Playback state: $playbackState (READY=3, ENDED=4)")
+                    bufferingGlassCard?.visibility = if (playbackState == Player.STATE_BUFFERING) android.view.View.VISIBLE else android.view.View.GONE
                 }
             })
 
@@ -162,6 +164,39 @@ class VideoZoneRenderer(
             this.player = player
             keepScreenOn = true
         }
+
+        val bufferingCard = android.widget.LinearLayout(context).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER
+            setPadding(32, 16, 32, 16)
+            background = com.dkaapis.sigma.presentation.renderers.glass.GlassDrawableFactory.createGlassCardDrawable(cornerRadiusPx = 28f, strokeWidthPx = 1)
+            visibility = android.view.View.GONE
+
+            val spinner = android.widget.ProgressBar(context).apply {
+                isIndeterminate = true
+                indeterminateTintList = android.content.res.ColorStateList.valueOf(0xFF38BDF8.toInt())
+                layoutParams = android.widget.LinearLayout.LayoutParams(40, 40).apply {
+                    marginEnd = 16
+                }
+            }
+            val text = android.widget.TextView(context).apply {
+                setText("Memuat Video...")
+                setTextColor(android.graphics.Color.WHITE)
+                textSize = 12f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+            }
+            addView(spinner)
+            addView(text)
+        }
+        val cardLp = android.widget.FrameLayout.LayoutParams(
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = android.view.Gravity.CENTER
+        }
+        view.addView(bufferingCard, cardLp)
+        bufferingGlassCard = bufferingCard
+
         playerView = view
         return view
     }
@@ -318,5 +353,6 @@ class VideoZoneRenderer(
         exoPlayer = null
         playerView?.player = null
         playerView = null
+        bufferingGlassCard = null
     }
 }

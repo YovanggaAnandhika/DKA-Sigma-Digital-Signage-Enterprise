@@ -12,6 +12,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import coil.load
+import com.dkaapis.sigma.presentation.renderers.glass.GlassDrawableFactory
 import com.dkaapis.sigma.presentation.renderers.queue.QueueCanvasView
 import com.dkaapis.sigma.presentation.renderers.queue.QueueStatusOverlayHelper
 import com.dkaapis.sigma.presentation.renderers.queue.QueueVisualEffectHelper
@@ -171,6 +172,16 @@ class QueueZoneRenderer(
                 when (meta.itemType.lowercase()) {
                     "number", "ticket_number" -> {
                         numberTextView = this
+                        background = if (meta.backgroundColor.isNotBlank() && meta.backgroundColor != "transparent") {
+                            bgDrawable
+                        } else {
+                            GlassDrawableFactory.createGlassCardDrawable(
+                                cornerRadiusPx = if (meta.borderRadius > 0f) meta.borderRadius else 24f,
+                                strokeWidthPx = 2,
+                                isHighlight = true
+                            )
+                        }
+                        setTextColor(if (meta.textColor.isNotBlank() && meta.textColor != "transparent") ColorParser.parseColor(meta.textColor) else 0xFF38BDF8.toInt())
                         val canClick = !isInactive()
                         isClickable = canClick
                         isFocusable = canClick
@@ -179,6 +190,15 @@ class QueueZoneRenderer(
                     "counter", "counter_loket" -> {
                         counterTextView = this
                         originalCounterBgColor = ColorParser.parseColor(meta.backgroundColor)
+                        background = if (meta.backgroundColor.isNotBlank() && meta.backgroundColor != "transparent") {
+                            bgDrawable
+                        } else {
+                            GlassDrawableFactory.createStatusPillDrawable(
+                                bgColor = 0xDD1E293B.toInt(),
+                                strokeColor = 0x55F59E0B.toInt(),
+                                cornerRadiusPx = if (meta.borderRadius > 0f) meta.borderRadius else 18f
+                            )
+                        }
                         val canClick = !isInactive()
                         isClickable = canClick
                         isFocusable = canClick
@@ -318,14 +338,14 @@ class QueueZoneRenderer(
     fun startCallEffect(ticketNumber: String, counterName: String) {
         val target = parentZoneView ?: canvasView ?: return
         callbacks.onCallAudioStarted()
-        visualEffectHelper.startCallEffect(target) {
+        visualEffectHelper.startCallEffect(target, numberTextView) {
             applyDisplayText(ticketNumber, counterName)
         }
     }
 
     fun stopCallEffect() {
         val target = parentZoneView ?: canvasView ?: return
-        visualEffectHelper.stopCallEffect(target) {
+        visualEffectHelper.stopCallEffect(target, numberTextView) {
             if (currentStatus == "ACTIVE") {
                 val bg = counterTextView?.background as? GradientDrawable
                 if (bg != null && originalCounterBgColor != Color.TRANSPARENT) {
@@ -334,6 +354,11 @@ class QueueZoneRenderer(
             }
             callbacks.onCallAudioFinished()
         }
+    }
+
+    fun release() {
+        val target = parentZoneView ?: canvasView
+        visualEffectHelper.release(target, numberTextView)
     }
 
     private fun resolveGravity(align: String): Int = when (align.lowercase()) {

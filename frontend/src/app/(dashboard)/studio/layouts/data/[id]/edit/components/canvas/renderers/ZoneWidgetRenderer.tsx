@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { RotateCcw, Bell, Radio } from 'lucide-react';
+import HlsPlayer from '@/components/ui/HlsPlayer';
 import { Layer } from '../../../context/LayoutStateContext';
 import { injectQueueVariables, createDefaultQueueLayoutItems } from '@/app/(dashboard)/studio/components/ticket/types';
 
@@ -242,6 +243,34 @@ export default function ZoneWidgetRenderer({
               );
             }
 
+            const isTicketNumber = item.itemType === 'ticket_number';
+            const isCounterLoket = item.itemType === 'counter_loket';
+
+            let itemBg = hasBg ? item.backgroundColor : 'transparent';
+            let itemBorder = hasBg && item.config?.borderWidth
+              ? `${item.config.borderWidth}px solid ${item.config.borderColor || 'rgba(0,0,0,0.1)'}`
+              : 'none';
+            let itemBackdrop = 'none';
+            let itemBoxShadow = 'none';
+            let itemTransform = 'scale(1)';
+
+            if (isTicketNumber && !hasBg) {
+              itemBg = 'rgba(15, 23, 42, 0.72)';
+              itemBackdrop = 'blur(16px)';
+              itemBorder = isCallingQueue
+                ? '2px solid #38bdf8'
+                : '1px solid rgba(255, 255, 255, 0.18)';
+              itemBoxShadow = isCallingQueue
+                ? '0 0 30px rgba(56, 189, 248, 0.8), 0 10px 25px rgba(0,0,0,0.5)'
+                : '0 8px 32px rgba(0, 0, 0, 0.35)';
+              itemTransform = isCallingQueue ? 'scale(1.035)' : 'scale(1)';
+            } else if (isCounterLoket && !hasBg) {
+              itemBg = 'rgba(30, 41, 59, 0.85)';
+              itemBackdrop = 'blur(12px)';
+              itemBorder = '1px solid rgba(245, 158, 11, 0.4)';
+              itemBoxShadow = '0 4px 16px rgba(0, 0, 0, 0.3)';
+            }
+
             return (
               <div
                 key={item.id}
@@ -251,12 +280,15 @@ export default function ZoneWidgetRenderer({
                   top: `${topPct}%`,
                   width: `${widthPct}%`,
                   height: `${heightPct}%`,
-                  backgroundColor: hasBg ? item.backgroundColor : 'transparent',
-                  color: item.textColor || '#ffffff',
-                  borderRadius: borderRadiusCqw,
-                  border: hasBg && item.config?.borderWidth
-                    ? `${item.config.borderWidth}px solid ${item.config.borderColor || 'rgba(0,0,0,0.1)'}`
-                    : 'none',
+                  backgroundColor: itemBg,
+                  backdropFilter: itemBackdrop,
+                  boxShadow: itemBoxShadow,
+                  transform: itemTransform,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  color: item.textColor || (isTicketNumber ? '#38bdf8' : '#ffffff'),
+                  borderRadius: borderRadiusCqw || (isTicketNumber ? 'calc(24 / 1920 * 100cqw)' : isCounterLoket ? 'calc(16 / 1920 * 100cqw)' : undefined),
+                  border: itemBorder,
+                  borderTop: isTicketNumber && !hasBg ? '1.5px solid rgba(255, 255, 255, 0.35)' : itemBorder,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent:
@@ -265,7 +297,7 @@ export default function ZoneWidgetRenderer({
                       : item.textAlign === 'right'
                       ? 'flex-end'
                       : 'flex-start',
-                  padding: hasBg ? '0 calc(12 / 1920 * 100cqw)' : 0,
+                  padding: hasBg || isTicketNumber || isCounterLoket ? '0 calc(12 / 1920 * 100cqw)' : 0,
                   overflow: 'hidden',
                   zIndex: item.zIndex || 1,
                   userSelect: 'none',
@@ -296,7 +328,7 @@ export default function ZoneWidgetRenderer({
               position: 'absolute',
               top: '50%',
               left: '50%',
-              transform: 'translate(-50%, -50%)',
+              transform: isCallingQueue ? 'translate(-50%, -50%) scale(1.02)' : 'translate(-50%, -50%) scale(1)',
               zIndex: 35,
               display: 'flex',
               alignItems: 'center',
@@ -307,11 +339,10 @@ export default function ZoneWidgetRenderer({
               borderRadius: '12px',
               border: isCallingQueue ? '1px solid #10b981' : '1px solid rgba(56, 189, 248, 0.5)',
               boxShadow: isCallingQueue
-                ? '0 12px 36px rgba(0, 0, 0, 0.75), 0 0 25px rgba(16, 185, 129, 0.45)'
+                ? '0 12px 36px rgba(0, 0, 0, 0.75), 0 0 25px rgba(16, 185, 129, 0.65)'
                 : '0 12px 36px rgba(0, 0, 0, 0.75), 0 0 20px rgba(56, 189, 248, 0.25)',
               transition: 'all 0.2s ease',
               pointerEvents: 'auto',
-              filter: isCallingQueue ? 'invert(1)' : 'none',
               userSelect: 'none',
             }}
           >
@@ -397,55 +428,29 @@ export default function ZoneWidgetRenderer({
 
   if (activeBlock.widgetType === 'livestream') {
     const ls = activeBlock.widgetData || {};
-    const sourceType = ls.sourceType || 'HLS';
     const url = ls.sourceUrl || '';
-
     const streamEndpoint = ls.serverHlsEndpoint || (ls.id ? `/streams/${ls.id}/live.m3u8` : url);
-
-    if (streamEndpoint) {
-      return (
-        <video
-          src={streamEndpoint}
-          poster={ls.posterImageUrl || undefined}
-          autoPlay
-          muted={ls.isMuted ?? true}
-          loop
-          playsInline
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            filter: filterCssString,
-          }}
-        />
-      );
-    }
 
     return (
       <div
         style={{
           position: 'absolute',
           inset: 0,
-          backgroundColor: 'var(--bg-primary)',
-          color: 'var(--text-primary)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: `${Math.max(4, Math.round(8 * scale))}px`,
-          padding: `${Math.max(6, Math.round(16 * scale))}px`,
-          textAlign: 'center',
+          width: '100%',
+          height: '100%',
+          overflow: 'hidden',
+          filter: filterCssString,
         }}
       >
-        <Radio size={Math.max(18, Math.round(32 * scale))} style={{ color: 'var(--accent-rose)' }} />
-        <div style={{ fontWeight: 800, fontSize: `${Math.max(10, Math.round(18 * scale))}px` }}>
-          {ls.name || 'Siaran Langsung'}
-        </div>
-        <div style={{ fontSize: `${Math.max(8, Math.round(12 * scale))}px`, color: 'var(--text-muted)' }}>
-          {sourceType} &bull; {ls.streamMode === 'SERVER_HOSTED_HLS' ? 'Server HLS Relay' : 'Direct Stream'}
-        </div>
+        <HlsPlayer
+          src={streamEndpoint}
+          poster={ls.posterImageUrl || undefined}
+          isMuted={ls.isMuted ?? true}
+          volume={ls.volumeLevel ? ls.volumeLevel / 100 : 0.8}
+          autoPlay
+          fallbackTitle={ls.name || 'Siaran Offline'}
+          fallbackDescription="Menunggu siaran dimulai dari OBS Studio / encoder..."
+        />
       </div>
     );
   }

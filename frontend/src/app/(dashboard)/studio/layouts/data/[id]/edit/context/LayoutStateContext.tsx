@@ -246,6 +246,7 @@ export function LayoutStateProvider({ children }: { children: ReactNode }) {
           blocksList: blocks,
         };
       }));
+      sanitizedLayers.sort((a: any, b: any) => (Number(b.zIndex) || 0) - (Number(a.zIndex) || 0));
       setLayers(sanitizedLayers);
       showToast('Template layout dan seluruh posisi layer berhasil disimpan!');
     } catch (err: any) {

@@ -21,6 +21,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import coil.load
 import com.dkaapis.sigma.data.local.ServerConfig
+import com.dkaapis.sigma.presentation.renderers.glass.LiveStreamGlassOverlay
 import com.dkaapis.sigma.presentation.renderers.model.LiveStreamConfigPayload
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -68,6 +69,7 @@ class LiveStreamZoneRenderer(
     private var playerView: PlayerView? = null
     private var posterView: ImageView? = null
     private var webRtcView: SurfaceViewRenderer? = null
+    private var glassOverlay: LiveStreamGlassOverlay? = null
     @Volatile private var peerConnection: PeerConnection? = null
     @Volatile private var remoteVideoTrack: VideoTrack? = null
     @Volatile private var remoteAudioTrack: AudioTrack? = null
@@ -111,19 +113,28 @@ class LiveStreamZoneRenderer(
         val rawTarget = payload.effectivePlaybackUrl.ifBlank { payload.sourceUrl }
         val targetUrl = resolveUrl(rawTarget)
 
+        val overlay = LiveStreamGlassOverlay(context)
+        glassOverlay = overlay
+
         if (!payload.isRelayActive) {
+            overlay.setIdle(payload.name)
+            container.addView(overlay)
             Log.i(TAG, "Live stream relay is inactive (stream=${payload.streamId})")
             return container
         }
+
+        overlay.setBuffering(payload.name)
 
         if (payload.streamMode == "SERVER_HOSTED_HLS" && payload.streamId.isNotBlank()) {
             startWhepPlayback(container, targetUrl, payload)
         } else if (targetUrl.isNotBlank()) {
             startHlsPlayback(container, targetUrl, payload)
         } else {
+            overlay.setOffline(payload.name, "URL siaran tidak tersedia")
             Log.w(TAG, "Live stream has no playback URL (stream=${payload.streamId})")
         }
 
+        container.addView(overlay)
         return container
     }
 
@@ -147,6 +158,7 @@ class LiveStreamZoneRenderer(
                             if (!released) {
                                 fallbackRunnable?.let(mainHandler::removeCallbacks)
                                 posterView?.animate()?.alpha(0f)?.setDuration(250)?.start()
+                                glassOverlay?.setLive(isLowLatency = true)
                             }
                         }
                     }
@@ -292,6 +304,7 @@ class LiveStreamZoneRenderer(
     ) {
         if (released || exoPlayer != null || hlsUrl.isBlank()) return
         Log.w(TAG, "$reason; falling back to HLS for stream=${payload.streamId}")
+        glassOverlay?.setBuffering(payload.name)
         fallbackRunnable?.let(mainHandler::removeCallbacks)
         connectionJob?.cancel()
         closePeerConnection()
@@ -339,6 +352,16 @@ class LiveStreamZoneRenderer(
                         override fun onRenderedFirstFrame() {
                             if (!released) {
                                 posterView?.animate()?.alpha(0f)?.setDuration(250)?.start()
+                                glassOverlay?.setLive(isLowLatency = false)
+                            }
+                        }
+
+                        override fun onPlaybackStateChanged(playbackState: Int) {
+                            if (released) return
+                            when (playbackState) {
+                                Player.STATE_BUFFERING -> glassOverlay?.setBuffering(payload.name)
+                                Player.STATE_READY -> if (isPlaying) glassOverlay?.setLive(isLowLatency = false)
+                                Player.STATE_ENDED, Player.STATE_IDLE -> glassOverlay?.setOffline(payload.name)
                             }
                         }
 
@@ -346,6 +369,7 @@ class LiveStreamZoneRenderer(
                             Log.w(TAG, "HLS/RTSP playback error stream=${payload.streamId}: ${error.message} (code: ${error.errorCode})")
                             if (released) return
                             posterView?.animate()?.alpha(1f)?.setDuration(200)?.start()
+                            glassOverlay?.setOffline(payload.name, "Menghubungkan ulang...")
 
                             if (payload.autoReconnect) {
                                 reconnectRunnable?.let(mainHandler::removeCallbacks)
@@ -511,6 +535,8 @@ class LiveStreamZoneRenderer(
         }
         webRtcView = null
         posterView = null
+        glassOverlay?.hideAll()
+        glassOverlay = null
     }
 
     companion object {
