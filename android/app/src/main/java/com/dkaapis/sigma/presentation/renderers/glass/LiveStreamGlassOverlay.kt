@@ -29,13 +29,18 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var currentState = StreamState.NONE
 
-    // Centered modal card container
+    // Centered modal card container (Offline / Standby)
     private val centerModalCard: LinearLayout
     private val centerIconContainer: FrameLayout
     private val centerStatusPill: TextView
     private val centerTitleText: TextView
     private val centerSubText: TextView
     private val centerProgressBar: ProgressBar
+
+    // Floating modern transparent glass buffering pill (No bulky card!)
+    private val glassBufferingPill: LinearLayout
+    private val bufferingSpinner: ProgressBar
+    private val bufferingLabel: TextView
 
     // Top-left live badge pill
     private val liveBadgePill: LinearLayout
@@ -49,13 +54,13 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
 
         val density = context.resources.displayMetrics.density
 
-        // --- Centered Modal Glass Card ---
+        // --- Centered Modal Glass Card (For Offline / Standby only - Modern Luminous Light Glass) ---
         centerModalCard = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            background = GlassDrawableFactory.createGlassCardDrawable(24 * density)
-            val padH = (28 * density).toInt()
-            val padV = (24 * density).toInt()
+            background = GlassDrawableFactory.createStatusPillDrawable(0xE6FFFFFF.toInt(), 0x40CBD5E1.toInt(), 20 * density)
+            val padH = (24 * density).toInt()
+            val padV = (18 * density).toInt()
             setPadding(padH, padV, padH, padV)
             layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
                 gravity = Gravity.CENTER
@@ -65,19 +70,19 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
 
         // Circular Icon Badge Container
         centerIconContainer = FrameLayout(context).apply {
-            val size = (48 * density).toInt()
+            val size = (44 * density).toInt()
             layoutParams = LinearLayout.LayoutParams(size, size).apply {
-                bottomMargin = (12 * density).toInt()
+                bottomMargin = (10 * density).toInt()
             }
             background = GlassDrawableFactory.createStatusPillDrawable(0x22EF4444.toInt(), 0x55EF4444.toInt(), size.toFloat())
         }
 
-        // Central indeterminate spinner
+        // Central indeterminate spinner (for offline card if needed)
         centerProgressBar = ProgressBar(context).apply {
-            layoutParams = LinearLayout.LayoutParams((36 * density).toInt(), (36 * density).toInt()).apply {
-                bottomMargin = (14 * density).toInt()
+            layoutParams = LinearLayout.LayoutParams((32 * density).toInt(), (32 * density).toInt()).apply {
+                bottomMargin = (10 * density).toInt()
             }
-            indeterminateDrawable?.setTint(0xFF38BDF8.toInt())
+            indeterminateDrawable?.setTint(0xFF0284C7.toInt())
             visibility = View.GONE
         }
 
@@ -90,16 +95,16 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
             val pillPadH = (12 * density).toInt()
             val pillPadV = (4 * density).toInt()
             setPadding(pillPadH, pillPadV, pillPadH, pillPadV)
-            background = GlassDrawableFactory.createStatusPillDrawable(0x28EF4444.toInt(), 0x55EF4444.toInt(), 999f)
+            background = GlassDrawableFactory.createStatusPillDrawable(0x18EF4444.toInt(), 0x40EF4444.toInt(), 999f)
             layoutParams = LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
                 bottomMargin = (8 * density).toInt()
             }
         }
 
-        // Main Title Text
+        // Main Title Text (Deep dark slate for light theme)
         centerTitleText = TextView(context).apply {
-            setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+            setTextColor(0xFF0F172A.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
@@ -109,8 +114,8 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
 
         // Subtitle / Description Text
         centerSubText = TextView(context).apply {
-            setTextColor(0xFF94A3B8.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(0xFF475569.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
             gravity = Gravity.CENTER
             maxLines = 2
             layoutParams = LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
@@ -122,11 +127,45 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
         centerModalCard.addView(centerSubText)
         addView(centerModalCard)
 
-        // --- Top-Left Live Badge Pill ---
+        // --- Floating Modern Luminous Light Glass Buffering Pill ---
+        glassBufferingPill = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = GlassDrawableFactory.createStatusPillDrawable(0xEAFFFFFF.toInt(), 0x660284C7.toInt(), 999f)
+            val padH = (14 * density).toInt()
+            val padV = (8 * density).toInt()
+            setPadding(padH, padV, (18 * density).toInt(), padV)
+            layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
+                gravity = Gravity.CENTER
+            }
+            visibility = View.GONE
+        }
+
+        bufferingSpinner = ProgressBar(context).apply {
+            val size = (16 * density).toInt()
+            layoutParams = LinearLayout.LayoutParams(size, size).apply {
+                rightMargin = (8 * density).toInt()
+            }
+            indeterminateDrawable?.setTint(0xFF0284C7.toInt())
+        }
+
+        bufferingLabel = TextView(context).apply {
+            text = "Memuat Siaran..."
+            setTextColor(0xFF0F172A.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        glassBufferingPill.addView(bufferingSpinner)
+        glassBufferingPill.addView(bufferingLabel)
+        addView(glassBufferingPill)
+
+        // --- Top-Left Live Badge Pill (Modern Luminous Light Glass) ---
         liveBadgePill = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = GlassDrawableFactory.createStatusPillDrawable(0xAA0B0F19.toInt(), 0x4410B981.toInt(), 999f)
+            background = GlassDrawableFactory.createStatusPillDrawable(0xEAFFFFFF.toInt(), 0x6610B981.toInt(), 999f)
             val pillPadH = (10 * density).toInt()
             val pillPadV = (5 * density).toInt()
             setPadding(pillPadH, pillPadV, pillPadH, pillPadV)
@@ -148,8 +187,8 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
         }
 
         liveBadgeText = TextView(context).apply {
-            text = "LIVE • 0.2s"
-            setTextColor(0xFF10B981.toInt())
+            text = "LIVE • RTSP"
+            setTextColor(0xFF065F46.toInt())
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
             typeface = Typeface.DEFAULT_BOLD
         }
@@ -163,17 +202,12 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
         mainHandler.post {
             currentState = StreamState.BUFFERING
             liveBadgePill.visibility = View.GONE
+            centerModalCard.visibility = View.GONE
 
-            centerModalCard.visibility = View.VISIBLE
-            centerModalCard.alpha = 1f
-            centerProgressBar.visibility = View.VISIBLE
-
-            centerStatusPill.text = "BUFFERING"
-            centerStatusPill.setTextColor(0xFF38BDF8.toInt())
-            centerStatusPill.background = GlassDrawableFactory.createStatusPillDrawable(0x280284C7.toInt(), 0x5538BDF8.toInt(), 999f)
-
-            centerTitleText.text = if (streamName.isNotBlank()) streamName else "Memuat Aliran Siaran..."
-            centerSubText.text = "Menghubungkan ke jalur ultra-low latency..."
+            // Sleek modern transparent glass pill without obstructing screen with a card
+            bufferingLabel.text = if (streamName.isNotBlank()) "Memuat $streamName..." else "Memuat Siaran..."
+            glassBufferingPill.visibility = View.VISIBLE
+            glassBufferingPill.alpha = 1f
         }
     }
 
@@ -181,6 +215,7 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
         mainHandler.post {
             currentState = StreamState.OFFLINE
             liveBadgePill.visibility = View.GONE
+            glassBufferingPill.visibility = View.GONE
 
             centerModalCard.visibility = View.VISIBLE
             centerModalCard.alpha = 1f
@@ -199,6 +234,7 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
         mainHandler.post {
             currentState = StreamState.IDLE
             liveBadgePill.visibility = View.GONE
+            glassBufferingPill.visibility = View.GONE
 
             centerModalCard.visibility = View.VISIBLE
             centerModalCard.alpha = 1f
@@ -217,12 +253,20 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
         mainHandler.post {
             currentState = StreamState.LIVE
 
-            // Smoothly fade out center card
+            // Smoothly fade out center card & buffering pill
             if (centerModalCard.visibility == View.VISIBLE) {
                 centerModalCard.animate()
                     .alpha(0f)
-                    .setDuration(220)
+                    .setDuration(180)
                     .withEndAction { centerModalCard.visibility = View.GONE }
+                    .start()
+            }
+
+            if (glassBufferingPill.visibility == View.VISIBLE) {
+                glassBufferingPill.animate()
+                    .alpha(0f)
+                    .setDuration(180)
+                    .withEndAction { glassBufferingPill.visibility = View.GONE }
                     .start()
             }
 
@@ -245,6 +289,7 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
         mainHandler.post {
             currentState = StreamState.NONE
             centerModalCard.visibility = View.GONE
+            glassBufferingPill.visibility = View.GONE
             liveBadgePill.visibility = View.GONE
         }
     }

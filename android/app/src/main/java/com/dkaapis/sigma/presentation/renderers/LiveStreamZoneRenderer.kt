@@ -2,6 +2,7 @@ package com.dkaapis.sigma.presentation.renderers
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Color
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -55,7 +56,7 @@ class LiveStreamZoneRenderer(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            setBackgroundColor(0xFF0F172A.toInt())
+            setBackgroundColor(Color.TRANSPARENT)
         }
 
         val resolvedPosterUrl = resolveUrl(payload.posterImageUrl)
@@ -87,15 +88,15 @@ class LiveStreamZoneRenderer(
             return container
         }
 
-        overlay.setOffline(payload.name, "Menghubungkan...")
+        overlay.setBuffering(payload.name)
 
         val isServerHosted = payload.streamMode == "SERVER_HOSTED_HLS" ||
             payload.streamId.isNotBlank() ||
             rawTarget.startsWith("/streams/")
 
-        // Server-hosted streams play raw RTSP from MediaMTX (continuous frames, ~300 ms, no HLS chunking).
+        // Direct zero-transcode RTSP stream from OBS ingest (`live/<streamId>`)
         val playbackUrl = if (isServerHosted && payload.streamId.isNotBlank()) {
-            "rtsp://${ServerConfig.getHost(context)}:$RTSP_PORT/hd/live/${payload.streamId}"
+            "rtsp://${ServerConfig.getHost(context)}:$RTSP_PORT/live/${payload.streamId}"
         } else {
             targetUrl
         }
@@ -125,7 +126,13 @@ class LiveStreamZoneRenderer(
             val targetUri = Uri.parse(targetUrl)
             val isRtsp = targetUri.scheme.equals("rtsp", ignoreCase = true)
             val loadControl = DefaultLoadControl.Builder()
-                .setBufferDurationsMs(1_000, 3_000, 300, 600)
+                .setBufferDurationsMs(
+                    /* minBufferMs = */ if (isRtsp) 200 else 1_500,
+                    /* maxBufferMs = */ if (isRtsp) 1_000 else 4_000,
+                    /* bufferForPlaybackMs = */ if (isRtsp) 50 else 300,
+                    /* bufferForPlaybackAfterRebufferMs = */ if (isRtsp) 100 else 600
+                )
+                .setPrioritizeTimeOverSizeThresholds(true)
                 .build()
             val player = ExoPlayer.Builder(context)
                 .setLoadControl(loadControl)
