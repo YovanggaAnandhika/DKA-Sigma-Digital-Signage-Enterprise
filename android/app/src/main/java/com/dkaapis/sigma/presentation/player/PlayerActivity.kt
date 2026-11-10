@@ -14,6 +14,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.ViewOutlineProvider
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -26,6 +27,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import android.view.KeyEvent
 import android.view.MotionEvent
+import com.dkaapis.sigma.presentation.renderers.glass.GlassDrawableFactory
 import com.dkaapis.sigma.data.local.AnalyticsLocalBuffer
 import com.dkaapis.sigma.data.analytics.AnalyticsSyncManager
 import com.dkaapis.sigma.data.analytics.DeviceHardwareProfiler
@@ -281,56 +283,82 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     }
 
     private fun setupViews() {
+        val density = resources.displayMetrics.density
+
         canvasLayout = SignageCanvasLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         }
         badgeText = TextView(this).apply {
-            text = "● SINKRONISASI KONTEN REALTIME"
-            setTextColor(Color.parseColor("#10B981"))
-            textSize = 14f
+            text = "● SINKRONISASI JADWAL"
+            setTextColor(Color.parseColor("#38BDF8"))
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11f)
             typeface = Typeface.DEFAULT_BOLD
+            letterSpacing = 0.05f
             gravity = Gravity.CENTER
-            setPadding(0, 0, 0, 16)
+            val pillPadH = (14 * density).toInt()
+            val pillPadV = (5 * density).toInt()
+            setPadding(pillPadH, pillPadV, pillPadH, pillPadV)
+            background = GlassDrawableFactory.createStatusPillDrawable(0x3538BDF8.toInt(), 0x8038BDF8.toInt(), 999f)
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                bottomMargin = (14 * density).toInt()
+            }
         }
         loadingText = TextView(this).apply {
             text = "Memulai HNDSigma Player..."
             setTextColor(Color.WHITE)
-            textSize = 24f
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 15f)
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
-            setPadding(0, 0, 0, 24)
+            setShadowLayer(4f, 0f, 1f, 0xB0000000.toInt())
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                bottomMargin = (12 * density).toInt()
+            }
         }
         progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
-            isIndeterminate = false
+            isIndeterminate = true
             max = 100
             progress = 0
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 24).apply {
-                setMargins(120, 0, 120, 24)
-                gravity = Gravity.CENTER_HORIZONTAL
+            progressDrawable?.setTint(Color.parseColor("#38BDF8"))
+            indeterminateDrawable?.setTint(Color.parseColor("#38BDF8"))
+            val barH = (6 * density).toInt().coerceAtLeast(4)
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, barH).apply {
+                bottomMargin = (12 * density).toInt()
             }
         }
         subDetailText = TextView(this).apply {
             text = ""
-            setTextColor(Color.parseColor("#94A3B8"))
-            textSize = 14f
+            setTextColor(Color.parseColor("#CBD5E1"))
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11.5f)
             gravity = Gravity.CENTER
-            setLineSpacing(8f, 1f)
+            setLineSpacing(4f, 1f)
+            setShadowLayer(4f, 0f, 1f, 0x99000000.toInt())
         }
+
+        // Floating macOS Tahoe Transparent Glass Card Container
+        val glassCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            background = GlassDrawableFactory.createMacOsTahoeGlassCard(22 * density, density)
+            elevation = 16 * density
+            outlineProvider = ViewOutlineProvider.BACKGROUND
+            val padH = (32 * density).toInt()
+            val padV = (24 * density).toInt()
+            setPadding(padH, padV, padH, padV)
+            val cardW = (440 * density).toInt().coerceAtMost((resources.displayMetrics.widthPixels * 0.85f).toInt())
+            layoutParams = FrameLayout.LayoutParams(cardW, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                gravity = Gravity.CENTER
+            }
+
+            addView(badgeText)
+            addView(loadingText)
+            addView(progressBar)
+            addView(subDetailText)
+        }
+
         loadingOverlay = FrameLayout(this).apply {
-            setBackgroundColor(Color.parseColor("#990B0F19"))
+            setBackgroundColor(Color.parseColor("#4D000000")) // Subtle translucent ambient scrim
             layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-            addView(LinearLayout(this@PlayerActivity).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER_HORIZONTAL
-                layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
-                    gravity = Gravity.CENTER
-                    setMargins(64, 0, 64, 0)
-                }
-                addView(badgeText)
-                addView(loadingText)
-                addView(progressBar)
-                addView(subDetailText)
-            })
+            addView(glassCard)
         }
         sleepBlackoutOverlay = View(this).apply {
             setBackgroundColor(Color.BLACK)
@@ -363,6 +391,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                             loadingOverlay.visibility = View.VISIBLE
                             badgeText.text = "● SINKRONISASI JADWAL"
                             badgeText.setTextColor(Color.parseColor("#38BDF8"))
+                            badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x3538BDF8.toInt(), 0x8038BDF8.toInt(), 999f)
                             loadingText.setTextColor(Color.WHITE)
                             loadingText.text = state.message
                             subDetailText.text = "Mengecek pembaruan jadwal dan integritas manifest..."
@@ -374,7 +403,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                             WatchdogService.setPlaybackActive(this@PlayerActivity, false)
                             loadingOverlay.visibility = View.VISIBLE
                             badgeText.text = "● MENGUNDUH ASET MEDIA"
-                            badgeText.setTextColor(Color.parseColor("#10B981"))
+                            badgeText.setTextColor(Color.parseColor("#34D399"))
+                            badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x3510B981.toInt(), 0x8010B981.toInt(), 999f)
                             loadingText.setTextColor(Color.WHITE)
                             progressBar.isIndeterminate = false
                             progressBar.progress = state.progressPercent
@@ -402,8 +432,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                         if (loadingOverlay.visibility == View.VISIBLE) {
                             loadingOverlay.animate()
                                 .alpha(0f)
-                                .setDuration(450L)
-                                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                                .setDuration(600L)
+                                .setInterpolator(android.view.animation.DecelerateInterpolator(2.0f))
                                 .withEndAction {
                                     loadingOverlay.visibility = View.GONE
                                     loadingOverlay.alpha = 1f
@@ -419,9 +449,10 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                     }
                     is PlayerUiState.Error -> {
                         loadingOverlay.visibility = View.VISIBLE
-                        badgeText.text = "KENDALA"
-                        badgeText.setTextColor(Color.parseColor("#EF4444"))
-                        loadingText.setTextColor(Color.parseColor("#EF4444"))
+                        badgeText.text = "● KENDALA"
+                        badgeText.setTextColor(Color.parseColor("#FF6B6B"))
+                        badgeText.background = GlassDrawableFactory.createStatusPillDrawable(0x35EF4444.toInt(), 0x80EF4444.toInt(), 999f)
+                        loadingText.setTextColor(Color.parseColor("#FF6B6B"))
                         val cleanMessage = if (state.message.contains("404")) {
                             "Berkas media tidak ditemukan di server (HTTP 404)"
                         } else {

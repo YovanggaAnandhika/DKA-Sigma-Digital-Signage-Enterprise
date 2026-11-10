@@ -102,7 +102,7 @@ class PlayerZoneManager {
             // Transisi halus masuk dari zoom out ke posisi zona masing-masing diiringi opasitas bertahap
             val targetAlpha = zone.opacity.coerceIn(0.0f, 1.0f)
             zoneView.animateEntrance(
-                delayMs = (index * 60L).coerceAtMost(300L),
+                delayMs = (index * 140L).coerceAtMost(600L),
                 targetAlpha = targetAlpha
             )
         }

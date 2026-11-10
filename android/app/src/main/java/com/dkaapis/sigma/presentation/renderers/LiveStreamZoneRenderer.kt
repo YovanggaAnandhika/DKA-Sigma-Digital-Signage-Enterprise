@@ -47,6 +47,7 @@ class LiveStreamZoneRenderer(
     private var playbackPaused = false
     @Volatile private var isStreamOffline = true
     @Volatile private var hasRenderedFirstFrame = false
+    private var activePlaybackUrl: String = ""
 
     @SuppressLint("UnsafeOptInUsageError")
     fun createView(parent: ViewGroup, payload: LiveStreamConfigPayload): View {
@@ -122,6 +123,7 @@ class LiveStreamZoneRenderer(
             Log.w(TAG, "No HLS/RTSP playback URL for stream=${payload.streamId}")
             return
         }
+        this.activePlaybackUrl = targetUrl
         try {
             val targetUri = Uri.parse(targetUrl)
             val isRtsp = targetUri.scheme.equals("rtsp", ignoreCase = true)
@@ -168,6 +170,7 @@ class LiveStreamZoneRenderer(
                             if (!released) {
                                 hasRenderedFirstFrame = true
                                 isStreamOffline = false
+                                reconnectRunnable?.let(mainHandler::removeCallbacks)
                                 bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
                                 posterView?.animate()?.alpha(0f)?.setDuration(250)?.start()
                                 glassOverlay?.setLive(isLowLatency = false)
@@ -198,6 +201,7 @@ class LiveStreamZoneRenderer(
                                     bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
                                     if (isPlaying) {
                                         isStreamOffline = false
+                                        reconnectRunnable?.let(mainHandler::removeCallbacks)
                                         glassOverlay?.setLive(isLowLatency = false)
                                     }
                                 }
@@ -205,6 +209,7 @@ class LiveStreamZoneRenderer(
                                     bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
                                     isStreamOffline = true
                                     glassOverlay?.setOffline(payload.name)
+                                    scheduleReconnect(payload, delayMs = 2_000L)
                                 }
                             }
                         }
@@ -217,20 +222,7 @@ class LiveStreamZoneRenderer(
                                 isStreamOffline = true
                                 posterView?.animate()?.alpha(1f)?.setDuration(200)?.start()
                                 glassOverlay?.setOffline(payload.name, "Siaran Offline")
-
-                                if (payload.autoReconnect) {
-                                    reconnectRunnable?.let(mainHandler::removeCallbacks)
-                                    val runnable = Runnable {
-                                        if (!released && exoPlayer != null) {
-                                            Log.i(TAG, "Reconnecting stream=${payload.streamId}")
-                                            exoPlayer?.seekToDefaultPosition()
-                                            exoPlayer?.prepare()
-                                            exoPlayer?.play()
-                                        }
-                                    }
-                                    reconnectRunnable = runnable
-                                    mainHandler.postDelayed(runnable, 4_000L)
-                                }
+                                scheduleReconnect(payload, delayMs = 2_500L)
                             }
                         }
                     })
@@ -254,6 +246,37 @@ class LiveStreamZoneRenderer(
         } catch (error: Exception) {
             Log.e(TAG, "Failed to initialize ExoPlayer for stream=${payload.streamId}: ${error.message}", error)
         }
+    }
+
+    private fun scheduleReconnect(payload: LiveStreamConfigPayload, delayMs: Long = 3_000L) {
+        if (released || !payload.autoReconnect) return
+        reconnectRunnable?.let(mainHandler::removeCallbacks)
+        val runnable = Runnable {
+            if (!released && exoPlayer != null && isStreamOffline) {
+                Log.i(TAG, "Attempting reconnect for stream=${payload.streamId} on $activePlaybackUrl")
+                try {
+                    val targetUri = Uri.parse(activePlaybackUrl)
+                    if (targetUri.scheme.equals("rtsp", ignoreCase = true)) {
+                        // Re-create RtspMediaSource with clean socket state
+                        exoPlayer?.setMediaSource(
+                            RtspMediaSource.Factory()
+                                .setForceUseRtpTcp(true)
+                                .createMediaSource(MediaItem.fromUri(targetUri))
+                        )
+                    } else {
+                        exoPlayer?.seekToDefaultPosition()
+                    }
+                    exoPlayer?.prepare()
+                    exoPlayer?.play()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Reconnect attempt error: ${e.message}")
+                }
+                // Keep polling every 3.5s until stream is back online
+                scheduleReconnect(payload, delayMs = 3_500L)
+            }
+        }
+        reconnectRunnable = runnable
+        mainHandler.postDelayed(runnable, delayMs)
     }
 
     private fun currentAudioVolume(): Float =

@@ -69,19 +69,19 @@ class ZoneContainerView @JvmOverloads constructor(
 
     /**
      * Transisi halus masuk dari zoom out ke posisi masing-masing zona
-     * diiringi opasitas perlahan dari transparan menjadi tampak.
+     * diiringi opasitas perlahan dari transparan menjadi tampak dengan kurva Apple macOS ultra-smooth.
      */
     fun animateEntrance(delayMs: Long = 0L, targetAlpha: Float = 1.0f) {
         alpha = 0f
-        scaleX = 0.92f
-        scaleY = 0.92f
+        scaleX = 0.94f
+        scaleY = 0.94f
         animate()
             .alpha(targetAlpha)
             .scaleX(1.0f)
             .scaleY(1.0f)
             .setStartDelay(delayMs)
-            .setDuration(650L)
-            .setInterpolator(android.view.animation.DecelerateInterpolator(2.0f))
+            .setDuration(950L)
+            .setInterpolator(android.view.animation.DecelerateInterpolator(2.4f))
             .start()
     }
 
