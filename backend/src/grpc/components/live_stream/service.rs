@@ -365,11 +365,6 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
             Err(_) => {
                 // Fetch directly from internal Docker streamer engine (dka-product-sigma-streamer:8888)
                 let target_file = if file_name == "live.m3u8" { "index.m3u8" } else { file_name };
-                let query_str = if query.is_empty() && target_file == "index.m3u8" {
-                    "?cookieCheck=1".to_string()
-                } else {
-                    query
-                };
 
                 let prefixes = ["live", "hd/live", "webrtc/live"];
                 let mut found_bytes: Option<Vec<u8>> = None;
@@ -381,31 +376,14 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
                         prefix,
                         stream_id,
                         target_file,
-                        query_str
+                        query
                     );
-                    let mut resp_res = self.relay_manager
+                    let resp_res = self.relay_manager
                         .http_client()
                         .get(&url)
-                        .header(reqwest::header::COOKIE, "cookieCheck=1")
+                        .header(reqwest::header::AUTHORIZATION, "Bearer dkasigma_pipe")
                         .send()
                         .await;
-                    if let Ok(ref resp) = resp_res {
-                        if resp.status().is_redirection() {
-                            if let Some(loc) = resp.headers().get(reqwest::header::LOCATION).and_then(|h| h.to_str().ok()) {
-                                let next_url = if loc.starts_with("http://") || loc.starts_with("https://") {
-                                    loc.to_string()
-                                } else {
-                                    format!("{}{}", self.relay_manager.streamer_hls_url().trim_end_matches('/'), loc)
-                                };
-                                resp_res = self.relay_manager
-                                    .http_client()
-                                    .get(&next_url)
-                                    .header(reqwest::header::COOKIE, "cookieCheck=1")
-                                    .send()
-                                    .await;
-                            }
-                        }
-                    }
 
                     if let Ok(resp) = resp_res {
                         if resp.status().is_success() {

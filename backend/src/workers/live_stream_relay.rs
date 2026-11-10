@@ -129,8 +129,6 @@ impl LiveStreamRelayManager {
         source_url: &str,
         _low_latency: bool,
     ) {
-        self.stop_relay(&stream_id).await;
-
         let upper_type = source_type.to_uppercase();
 
         if upper_type == "RTMP" || upper_type == "SRT" || upper_type == "WEBRTC" || upper_type == "WHIP" {
@@ -140,6 +138,8 @@ impl LiveStreamRelayManager {
             );
             return;
         }
+
+        self.stop_relay(&stream_id).await;
 
         let (stop_tx, mut stop_rx) = oneshot::channel::<()>();
         {

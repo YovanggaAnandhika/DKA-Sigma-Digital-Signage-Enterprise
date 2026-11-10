@@ -35,10 +35,10 @@ export async function GET(
 
           const prefixes = ['hd/live', 'webrtc/live', 'live'];
           for (const prefix of prefixes) {
-            const targetFile = file === 'live.m3u8' ? 'index.m3u8?cookieCheck=1' : fileWithQuery;
+            const targetFile = file === 'live.m3u8' ? 'index.m3u8' : fileWithQuery;
             const fallbackRes = await fetch(`${streamerHlsBase}/${prefix}/${streamId}/${targetFile}`, {
               headers: {
-                Cookie: 'cookieCheck=1',
+                Authorization: 'Bearer dkasigma_pipe',
                 'User-Agent': 'HNDSigma-Player-Gateway/1.0',
               },
               cache: 'no-store',
