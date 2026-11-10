@@ -21,6 +21,7 @@ import {
 import { ServerCommandType } from '@/lib/services/hardware/device.service';
 import { api } from '@/lib/services';
 import { useDisplayDetail } from '../context/DisplayDetailContext';
+import { formatIndonesianDateTime } from './formatIndonesianDateTime';
 
 export default function DisplayCommandToolbar() {
   const router = useRouter();
@@ -334,7 +335,7 @@ export default function DisplayCommandToolbar() {
         <div className="card-elevated" style={{ padding: '14px 16px' }}>
           <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>Heartbeat</div>
           <div style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px' }}>
-            {device.lastHeartbeatAt ? new Date(device.lastHeartbeatAt).toLocaleTimeString('id-ID') : '-'}
+            {device.lastHeartbeatAt ? formatIndonesianDateTime(device.lastHeartbeatAt) : '-'}
           </div>
           <div
             style={{

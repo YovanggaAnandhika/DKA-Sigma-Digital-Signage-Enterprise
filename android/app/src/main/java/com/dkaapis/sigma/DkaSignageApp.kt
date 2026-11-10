@@ -30,6 +30,7 @@ class DkaSignageApp : Application() {
             try {
                 val crashFile = File(filesDir, "last_crash.txt")
                 crashFile.writeText(
+                    "Crash Time Ms: ${System.currentTimeMillis()}\n" +
                     "Crash Time: ${Date()}\n" +
                     "Device: ${Build.MANUFACTURER} ${Build.MODEL} (Android ${Build.VERSION.RELEASE}, API ${Build.VERSION.SDK_INT})\n" +
                     "Thread: ${thread.name}\n" +

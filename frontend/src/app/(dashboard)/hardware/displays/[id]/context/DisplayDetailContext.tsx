@@ -15,6 +15,7 @@ import {
   AssetStats,
 } from '@/lib/services/hardware/device.service';
 import { Film, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { formatIndonesianDateTime } from '../components/formatIndonesianDateTime';
 
 export function cleanMediaTitle(raw?: string): string {
   if (!raw) return 'Tidak ada video aktif (Standby)';
@@ -296,7 +297,7 @@ export function DisplayDetailProvider({
       l.id,
       `"${(l.mediaName || l.mediaId || '').replace(/"/g, '""')}"`,
       `"${(l.layoutName || l.layoutId || '').replace(/"/g, '""')}"`,
-      `"${new Date(l.startedAt).toLocaleString('id-ID')}"`,
+      `"${formatIndonesianDateTime(l.startedAt)}"`,
       l.durationSeconds,
       l.isCompleted ? 'Selesai' : 'Sebagian',
     ]);

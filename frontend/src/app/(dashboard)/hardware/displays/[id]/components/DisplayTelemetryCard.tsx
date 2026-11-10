@@ -13,6 +13,7 @@ import {
 import { ServerCommandType } from '@/lib/services/hardware/device.service';
 import { getMediaStreamUrl } from '@/lib/services/studio/media.service';
 import { useDisplayDetail } from '../context/DisplayDetailContext';
+import { formatIndonesianDateTime } from './formatIndonesianDateTime';
 
 export default function DisplayTelemetryCard() {
   const {
@@ -160,7 +161,7 @@ export default function DisplayTelemetryCard() {
           </div>
           {screenshots.length > 0 && (
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              {new Date(screenshots[0].capturedAt).toLocaleTimeString('id-ID')}
+              {formatIndonesianDateTime(screenshots[0].capturedAt)}
             </span>
           )}
         </div>

@@ -3,6 +3,7 @@
 import React from 'react';
 import { Activity } from 'lucide-react';
 import { useDisplayDetail, cleanMediaTitle } from '../context/DisplayDetailContext';
+import { formatIndonesianDateTime } from './formatIndonesianDateTime';
 
 export default function DisplayAnalyticsChart() {
   const {
@@ -228,7 +229,8 @@ export default function DisplayAnalyticsChart() {
                   textAnchor="start"
                   fontFamily="monospace"
                 >
-                  {new Date(sortedHistory[0].recordedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  <title>{formatIndonesianDateTime(sortedHistory[0].recordedAt)}</title>
+                  {formatIndonesianDateTime(sortedHistory[0].recordedAt)}
                 </text>
                 {sortedHistory.length > 2 && (
                   <text
@@ -239,7 +241,8 @@ export default function DisplayAnalyticsChart() {
                     textAnchor="middle"
                     fontFamily="monospace"
                   >
-                    {new Date(sortedHistory[Math.floor(sortedHistory.length / 2)].recordedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    <title>{formatIndonesianDateTime(sortedHistory[Math.floor(sortedHistory.length / 2)].recordedAt)}</title>
+                    {formatIndonesianDateTime(sortedHistory[Math.floor(sortedHistory.length / 2)].recordedAt)}
                   </text>
                 )}
                 <text
@@ -250,7 +253,8 @@ export default function DisplayAnalyticsChart() {
                   textAnchor="end"
                   fontFamily="monospace"
                 >
-                  {new Date(sortedHistory[sortedHistory.length - 1].recordedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  <title>{formatIndonesianDateTime(sortedHistory[sortedHistory.length - 1].recordedAt)}</title>
+                  {formatIndonesianDateTime(sortedHistory[sortedHistory.length - 1].recordedAt)}
                 </text>
               </g>
             )}
@@ -277,7 +281,7 @@ export default function DisplayAnalyticsChart() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-              Waktu: {new Date(hoveredPoint.recordedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              Waktu: {formatIndonesianDateTime(hoveredPoint.recordedAt)}
             </span>
             <span style={{ color: 'var(--text-muted)' }}>•</span>
             <span style={{ color: 'var(--accent-cyan)', fontWeight: 700 }}>

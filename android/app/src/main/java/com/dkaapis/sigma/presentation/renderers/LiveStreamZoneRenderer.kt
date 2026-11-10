@@ -56,6 +56,7 @@ class LiveStreamZoneRenderer(
     @Volatile private var lastError: String = ""
 
     /** Status untuk panel realtime CMS (dibaca dari thread lain; semua field @Volatile/immutable). */
+    @SuppressLint("UnsafeOptInUsageError")
     fun diagnostics(): StreamCommon.ZoneDiagnostics {
         val format = exoPlayer?.videoFormat
         val state = when {
@@ -63,6 +64,13 @@ class LiveStreamZoneRenderer(
             isStreamOffline -> if (lastError.isNotEmpty()) "ERROR" else "OFFLINE"
             exoPlayer?.isPlaying == true -> "PLAYING"
             else -> "BUFFERING"
+        }
+        val playbackState = when (exoPlayer?.playbackState) {
+            Player.STATE_IDLE -> "IDLE"
+            Player.STATE_BUFFERING -> "BUFFERING"
+            Player.STATE_READY -> if (exoPlayer?.isPlaying == true) "PLAYING" else "READY"
+            Player.STATE_ENDED -> "ENDED"
+            else -> "UNKNOWN"
         }
         return StreamCommon.ZoneDiagnostics.newBuilder()
             .setZoneId(streamId).setMediaId(streamId).setKind("LIVE").setMediaName(streamName)
@@ -72,6 +80,8 @@ class LiveStreamZoneRenderer(
             .setBitrateKbps(if (format != null && format.bitrate > 0) format.bitrate / 1000 else 0)
             .setDroppedFrames(exoPlayer?.videoDecoderCounters?.droppedBufferCount ?: 0)
             .setLastError(lastError)
+            .setBufferedDurationMs(exoPlayer?.totalBufferedDuration?.coerceAtLeast(0L) ?: 0L)
+            .setPlaybackState(playbackState)
             .build()
     }
 

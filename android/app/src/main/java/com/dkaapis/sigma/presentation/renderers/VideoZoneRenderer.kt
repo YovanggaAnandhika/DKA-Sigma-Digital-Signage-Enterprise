@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
@@ -14,6 +15,7 @@ import androidx.media3.ui.PlayerView
 import com.dkaapis.sigma.data.analytics.AssetStatsData
 import com.dkaapis.sigma.presentation.renderers.model.VideoPlaylistItem
 import com.dkaapis.sigma.presentation.util.DeviceCapabilityHelper
+import signage.distribution.v1.stream.StreamCommon
 import java.io.File
 
 class VideoZoneRenderer(
@@ -34,6 +36,7 @@ class VideoZoneRenderer(
     private var currentTrackElapsedMs: Long = 0L
     private var lastCheckedRenderedFrames: Int = -1
     private var stallTickCount: Int = 0
+    @Volatile private var lastPlaybackError = ""
 
     fun createView(parent: ViewGroup, videoFile: File, isMuted: Boolean = false, volumeLevel: Int = 100): PlayerView {
         return createPlaylistView(parent, listOf(VideoPlaylistItem(videoFile, 0, isMuted, volumeLevel = volumeLevel)))
@@ -133,6 +136,7 @@ class VideoZoneRenderer(
                 }
 
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    lastPlaybackError = "${error.errorCodeName} (${error.errorCode})"
                     android.util.Log.e("VideoZoneRenderer", "Playback error in playlist item $currentMediaItemIndex (${error.errorCodeName}): ${error.message}, cause: ${error.cause?.message}", error)
                     // Auto-fallback: lewati video korup otomatis agar layar tidak hang/layar hitam
                     try {
@@ -146,6 +150,10 @@ class VideoZoneRenderer(
                     } catch (e: Exception) {
                         android.util.Log.e("VideoZoneRenderer", "Gagal auto-recover: ${e.message}")
                     }
+                }
+
+                override fun onRenderedFirstFrame() {
+                    lastPlaybackError = ""
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
@@ -247,7 +255,35 @@ class VideoZoneRenderer(
         return currentPlaybackStats()
     }
 
-    fun getDiagnosticsStats(): AssetStatsData? = currentPlaybackStats()
+    @androidx.annotation.OptIn(markerClass = [UnstableApi::class])
+    fun getDiagnostics(): StreamCommon.ZoneDiagnostics? {
+        val player = exoPlayer ?: return null
+        val item = playlistItems.getOrNull(player.currentMediaItemIndex)
+        val format = player.videoFormat
+        val state = when (player.playbackState) {
+            Player.STATE_IDLE -> "IDLE"
+            Player.STATE_BUFFERING -> "BUFFERING"
+            Player.STATE_READY -> if (player.isPlaying) "PLAYING" else "PAUSED"
+            Player.STATE_ENDED -> "ENDED"
+            else -> "UNKNOWN"
+        }
+        val mediaName = item?.mediaName.takeIf { !it.isNullOrBlank() } ?: item?.file?.name.orEmpty()
+        return StreamCommon.ZoneDiagnostics.newBuilder()
+            .setZoneId(zoneName)
+            .setMediaId(item?.mediaId.orEmpty())
+            .setKind("VIDEO")
+            .setMediaName(mediaName)
+            .setState(state)
+            .setTransport("FILE")
+            .setCodec(format?.sampleMimeType.orEmpty())
+            .setResolution(if (format != null && format.width > 0) "${format.width}x${format.height}" else "")
+            .setBitrateKbps(format?.bitrate?.takeIf { it > 0 }?.div(1000) ?: 0)
+            .setDroppedFrames(player.videoDecoderCounters?.droppedBufferCount ?: 0)
+            .setLastError(lastPlaybackError)
+            .setBufferedDurationMs(player.totalBufferedDuration.coerceAtLeast(0L))
+            .setPlaybackState(state)
+            .build()
+    }
 
     private fun currentPlaybackStats(): AssetStatsData? {
         val player = exoPlayer ?: return null

@@ -3,6 +3,7 @@
 import React from 'react';
 import { ShieldCheck, Download } from 'lucide-react';
 import { useDisplayDetail } from '../context/DisplayDetailContext';
+import { formatIndonesianDateTime } from './formatIndonesianDateTime';
 
 export default function DisplayPlaybackAuditTable() {
   const { playbackLogs, handleExportCSV } = useDisplayDetail();
@@ -87,7 +88,7 @@ export default function DisplayPlaybackAuditTable() {
                     {log.layoutName || log.layoutId || '-'}
                   </td>
                   <td style={{ padding: '10px 12px', color: 'var(--text-muted)' }}>
-                    {new Date(log.startedAt).toLocaleString('id-ID')}
+                    {formatIndonesianDateTime(log.startedAt)}
                   </td>
                   <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>
                     {log.durationSeconds} detik

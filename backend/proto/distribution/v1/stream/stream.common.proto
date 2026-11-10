@@ -163,6 +163,8 @@ message ZoneDiagnostics {
   int32 dropped_frames = 9;
   string last_error = 10;
   string media_id = 11;
+  int64 buffered_duration_ms = 12;
+  string playback_state = 13;
 }
 
 message LiveDiagnostics {
@@ -173,6 +175,8 @@ message LiveDiagnostics {
   int32 heap_max_mb = 5;
   repeated ZoneDiagnostics zones = 6;
   float temperature_c = 7;
+  int64 last_crash_timestamp_ms = 8;
+  string last_crash_summary = 9;
 }
 
 message LogLine {
