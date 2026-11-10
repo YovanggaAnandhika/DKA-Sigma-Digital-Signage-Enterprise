@@ -24,4 +24,8 @@ class RegisterAndPairUseCase(
     fun isAlreadyPaired(): Boolean {
         return deviceRepository.isPaired()
     }
+
+    fun clearCredentials() {
+        deviceRepository.clearCredentials()
+    }
 }

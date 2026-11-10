@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/services';
 import type { Device, DisplayGroup, Schedule, Resolution } from '@/lib/services';
+import { ServerCommandType, pushDeviceCommand } from '@/lib/services/hardware/device.service';
 import { ArrowLeft, Save, RefreshCw, Trash2 } from 'lucide-react';
 import { SingleSelect } from '@/components/ui/SingleSelect';
 
@@ -301,6 +302,7 @@ export default function EditDisplayPage() {
                 if (!confirm(`Putus hubungan dan unbind player "${formData.name}"?\n\nPerangkat akan dihapus dari sistem CMS dan kembali ke mode registrasi pairing awal.`)) return;
                 try {
                   setSaving(true);
+                  await pushDeviceCommand(params.id, ServerCommandType.COMMAND_EMERGENCY_BROADCAST, JSON.stringify({ type: 'UNPAIR' })).catch(() => {});
                   await api.deleteDevice(params.id);
                   router.push('/hardware/displays/player');
                 } catch (err: any) {

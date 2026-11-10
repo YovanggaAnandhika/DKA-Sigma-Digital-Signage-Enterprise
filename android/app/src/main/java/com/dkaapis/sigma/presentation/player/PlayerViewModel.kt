@@ -118,20 +118,36 @@ class PlayerViewModel(
                     }
                 } else {
                     val err = result.exceptionOrNull()
-                    if (!registerAndPairUseCase.isAlreadyPaired()) {
+                    val errMsg = err?.message ?: ""
+                    val isDeviceUnpairedOrDeleted = errMsg.contains("Device not found", ignoreCase = true) ||
+                            errMsg.contains("NOT_FOUND", ignoreCase = true) ||
+                            errMsg.contains("Invalid device token", ignoreCase = true) ||
+                            errMsg.contains("UNAUTHENTICATED", ignoreCase = true)
+
+                    if (!registerAndPairUseCase.isAlreadyPaired() || isDeviceUnpairedOrDeleted) {
+                        registerAndPairUseCase.clearCredentials()
                         _uiState.value = PlayerUiState.NotPaired
                     } else if (activeManifest == null || force) {
-                        _uiState.value = PlayerUiState.Error(err?.message ?: "Gagal sinkronisasi manifest")
+                        _uiState.value = PlayerUiState.Error(errMsg.ifBlank { "Gagal sinkronisasi manifest" })
                     } else {
-                        android.util.Log.w("PlayerViewModel", "Manifest sync failed: ${err?.message}, continuing active playback.")
+                        android.util.Log.w("PlayerViewModel", "Manifest sync failed: $errMsg, continuing active playback.")
                     }
                 }
             } catch (e: Exception) {
                 if (e !is CancellationException) {
-                    if (activeManifest == null || force) {
-                        _uiState.value = PlayerUiState.Error(e.message ?: "Gagal sinkronisasi")
+                    val errMsg = e.message ?: ""
+                    val isDeviceUnpairedOrDeleted = errMsg.contains("Device not found", ignoreCase = true) ||
+                            errMsg.contains("NOT_FOUND", ignoreCase = true) ||
+                            errMsg.contains("Invalid device token", ignoreCase = true) ||
+                            errMsg.contains("UNAUTHENTICATED", ignoreCase = true)
+
+                    if (isDeviceUnpairedOrDeleted) {
+                        registerAndPairUseCase.clearCredentials()
+                        _uiState.value = PlayerUiState.NotPaired
+                    } else if (activeManifest == null || force) {
+                        _uiState.value = PlayerUiState.Error(errMsg.ifBlank { "Gagal sinkronisasi" })
                     } else {
-                        android.util.Log.w("PlayerViewModel", "Sync exception: ${e.message}, continuing active playback.")
+                        android.util.Log.w("PlayerViewModel", "Sync exception: $errMsg, continuing active playback.")
                     }
                 }
             }

@@ -17,7 +17,7 @@ import {
   Sun,
   CircleX,
 } from 'lucide-react';
-import { ServerCommandType } from '@/lib/services/hardware/device.service';
+import { ServerCommandType, pushDeviceCommand } from '@/lib/services/hardware/device.service';
 import { api } from '@/lib/services';
 import { useDisplayDetail } from '../context/DisplayDetailContext';
 
@@ -45,6 +45,8 @@ export default function DisplayCommandToolbar() {
     }
     try {
       setUnbinding(true);
+      // Kirim perintah real-time UNPAIR jika player sedang online agar langsung kembali ke pairing mode
+      await pushDeviceCommand(device.id, ServerCommandType.COMMAND_EMERGENCY_BROADCAST, JSON.stringify({ type: 'UNPAIR' })).catch(() => {});
       await api.deleteDevice(device.id);
       router.push('/hardware/displays/player');
     } catch (err: any) {
