@@ -32,6 +32,12 @@ function mapTicker(item: TickerProtoObject): TickerConfig {
     speed: (item.speed as any) || 'normal',
     theme: (item.theme as any) || 'blue',
     fontSize: item.fontSize || item.font_size || 16,
+    backgroundColor: item.backgroundColor,
+    textColor: item.textColor,
+    badgeBackgroundColor: item.badgeBackgroundColor,
+    badgeTextColor: item.badgeTextColor,
+    borderColor: item.borderColor,
+    borderRadius: item.borderRadius,
     createdAt: item.createdAt || item.created_at,
   };
 }

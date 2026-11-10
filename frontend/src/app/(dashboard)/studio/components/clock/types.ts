@@ -6,8 +6,22 @@ export interface ClockWeatherConfig {
   showSeconds: boolean;
   is24Hour: boolean;
   theme: 'glass' | 'dark' | 'emerald' | 'gold';
+  backgroundColor?: string;
+  textColor?: string;
+  subtitleColor?: string;
+  borderColor?: string;
+  borderRadius?: number;
+  timeFontSize?: number;
+  dateFontSize?: number;
   createdAt?: string;
 }
+
+export const CLOCK_THEME_STYLES: Record<ClockWeatherConfig['theme'], { backgroundColor: string; textColor: string }> = {
+  glass: { backgroundColor: '#1a2233', textColor: '#f8fafc' },
+  dark: { backgroundColor: '#0f172a', textColor: '#f8fafc' },
+  emerald: { backgroundColor: '#064e3b', textColor: '#ffffff' },
+  gold: { backgroundColor: '#78350f', textColor: '#ffffff' },
+};
 
 export const CLOCK_STORAGE_KEY = 'dka_signage_clock_widgets';
 

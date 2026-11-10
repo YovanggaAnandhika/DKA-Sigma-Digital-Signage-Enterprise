@@ -31,18 +31,34 @@ impl ClockRow {
     fn into_proto(self) -> Clock {
         let timezone = self.timezone;
         let city = self.weather_city.unwrap_or_else(|| timezone.clone());
+        let legacy_glass = (self.background_color == "transparent" && self.text_color == "#ffffff")
+            || (self.background_color == "#e9eef4" && self.text_color == "#0f172a");
+        let background_color = if legacy_glass { "#1a2233" } else { &self.background_color };
+        let text_color = if legacy_glass { "#f8fafc" } else { &self.text_color };
         let is_24_hour = self.clock_format.contains("24");
+        let theme = match background_color {
+            "#1a2233" => "glass",
+            "#0f172a" => "dark",
+            "#064e3b" => "emerald",
+            "#78350f" => "gold",
+            _ => "glass",
+        };
+        let (subtitle_color, border_color) = if theme == "glass" {
+            ("#526175", "#d5dee9")
+        } else {
+            ("#94a3b8", "#1e3a8a")
+        };
         Clock {
             id: self.id.to_string(),
             name: self.name,
             city,
             show_seconds: self.show_seconds,
             is_24_hour,
-            theme: "glass".to_string(),
-            background_color: self.background_color,
-            text_color: self.text_color,
-            subtitle_color: "#94a3b8".to_string(),
-            border_color: "#1e3a8a".to_string(),
+            theme: theme.to_string(),
+            background_color: background_color.to_string(),
+            text_color: text_color.to_string(),
+            subtitle_color: subtitle_color.to_string(),
+            border_color: border_color.to_string(),
             border_radius: 12,
             time_font_size: self.font_size,
             date_font_size: 14,
@@ -168,7 +184,7 @@ impl ClockServiceTrait for ClockServiceImpl {
     ) -> Result<Response<Clock>, Status> {
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        let clock_format = if req.is_24_hour { Some("24h".to_string()) } else { None };
+        let clock_format = Some(if req.is_24_hour { "24h" } else { "12h" }.to_string());
         let font_size = if req.time_font_size > 0 { req.time_font_size } else { 0 };
 
         let row = sqlx::query_as::<_, ClockRow>(

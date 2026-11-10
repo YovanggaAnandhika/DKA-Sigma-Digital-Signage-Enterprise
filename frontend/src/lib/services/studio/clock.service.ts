@@ -1,5 +1,5 @@
 import { invokeApi } from '../../core/invokeApi';
-import { ClockWeatherConfig } from '../../../app/(dashboard)/studio/components/clock/types';
+import { CLOCK_THEME_STYLES, ClockWeatherConfig } from '../../../app/(dashboard)/studio/components/clock/types';
 
 type ClockProtoObject = {
   id: string;
@@ -33,6 +33,13 @@ function mapClock(item: ClockProtoObject): ClockWeatherConfig {
     showSeconds: Boolean(item.showSeconds ?? item.show_seconds ?? true),
     is24Hour: Boolean(item.is24Hour ?? item.is_24_hour ?? true),
     theme: (item.theme as any) || 'glass',
+    backgroundColor: item.backgroundColor,
+    textColor: item.textColor,
+    subtitleColor: item.subtitleColor,
+    borderColor: item.borderColor,
+    borderRadius: item.borderRadius,
+    timeFontSize: item.timeFontSize,
+    dateFontSize: item.dateFontSize,
     createdAt: item.createdAt || item.created_at,
   };
 }
@@ -51,17 +58,22 @@ export async function getClock(id: string): Promise<ClockWeatherConfig> {
 }
 
 export async function createClock(payload: Partial<ClockWeatherConfig>): Promise<ClockWeatherConfig> {
+  const colors = CLOCK_THEME_STYLES[payload.theme || 'glass'];
   const res = await invokeApi<ClockProtoObject>('/api/grpc/studio/clock/CreateClock', {
     name: payload.name,
     city: payload.city,
     showSeconds: payload.showSeconds,
     is24Hour: payload.is24Hour,
     theme: payload.theme,
+    backgroundColor: colors.backgroundColor,
+    textColor: payload.textColor || colors.textColor,
+    timeFontSize: payload.timeFontSize || 48,
   });
   return mapClock(res);
 }
 
 export async function updateClock(id: string, payload: Partial<ClockWeatherConfig>): Promise<ClockWeatherConfig> {
+  const colors = CLOCK_THEME_STYLES[payload.theme || 'glass'];
   const res = await invokeApi<ClockProtoObject>('/api/grpc/studio/clock/UpdateClock', {
     id,
     name: payload.name,
@@ -69,6 +81,9 @@ export async function updateClock(id: string, payload: Partial<ClockWeatherConfi
     showSeconds: payload.showSeconds,
     is24Hour: payload.is24Hour,
     theme: payload.theme,
+    backgroundColor: colors.backgroundColor,
+    textColor: payload.textColor || colors.textColor,
+    timeFontSize: payload.timeFontSize,
   });
   return mapClock(res);
 }

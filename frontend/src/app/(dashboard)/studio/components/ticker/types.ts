@@ -6,6 +6,12 @@ export interface TickerConfig {
   speed: 'slow' | 'normal' | 'fast';
   theme: 'blue' | 'red' | 'dark' | 'emerald' | 'amber';
   fontSize: number;
+  backgroundColor?: string;
+  textColor?: string;
+  badgeBackgroundColor?: string;
+  badgeTextColor?: string;
+  borderColor?: string;
+  borderRadius?: number;
   createdAt?: string;
 }
 

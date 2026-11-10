@@ -19,7 +19,7 @@ export default function CreateTickerPage() {
   const [newMessage, setNewMessage] = useState('');
   const [speed, setSpeed] = useState<'slow' | 'normal' | 'fast'>('normal');
   const [theme, setTheme] = useState<'blue' | 'red' | 'dark' | 'emerald' | 'amber'>('blue');
-  const [fontSize, setFontSize] = useState(16);
+  const [fontSize, setFontSize] = useState(24);
 
   const handleAddMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,8 +161,8 @@ export default function CreateTickerPage() {
             </label>
             <input
               type="number"
-              min={12}
-              max={28}
+              min={14}
+              max={48}
               value={fontSize}
               onChange={(e) => setFontSize(Number(e.target.value))}
               className="form-input"
@@ -255,7 +255,7 @@ export default function CreateTickerPage() {
               alignItems: 'center',
               boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
               position: 'relative',
-              height: '56px',
+              height: `${Math.max(56, fontSize * 1.75)}px`,
               minWidth: 0,
             }}
           >

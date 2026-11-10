@@ -216,7 +216,7 @@ export default function EditTickerPage() {
               <input
                 type="range"
                 min="14"
-                max="24"
+                max="48"
                 value={fontSize}
                 onChange={(e) => setFontSize(Number(e.target.value))}
                 style={{ width: '100%', marginTop: '6px' }}
@@ -253,7 +253,7 @@ export default function EditTickerPage() {
                 display: 'flex',
                 alignItems: 'center',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                height: '52px',
+                height: `${Math.max(52, fontSize * 1.75)}px`,
                 minWidth: 0,
               }}
             >

@@ -236,6 +236,11 @@ impl ManifestServiceImpl {
             .ok_or_else(|| Status::not_found("Clock not found"))?;
 
             let timezone = row.timezone;
+            let legacy_glass = (row.background_color == "transparent" && row.text_color == "#ffffff")
+                || (row.background_color == "#e9eef4" && row.text_color == "#0f172a");
+            let background_color = if legacy_glass { "#1a2233" } else { &row.background_color };
+            let text_color = if legacy_glass { "#f8fafc" } else { &row.text_color };
+            let is_glass = background_color == "#1a2233";
             let json_val = serde_json::json!({
                 "id": row.id.to_string(),
                 "name": row.name,
@@ -245,10 +250,10 @@ impl ManifestServiceImpl {
                 "showDate": row.show_date,
                 "is24Hour": row.clock_format.contains("24"),
                 "theme": "glass",
-                "backgroundColor": row.background_color,
-                "textColor": row.text_color,
+                "backgroundColor": background_color,
+                "textColor": text_color,
                 "subtitleColor": "#94a3b8",
-                "borderColor": "#1e3a8a",
+                "borderColor": if is_glass { "#334155" } else { "#1e3a8a" },
                 "borderRadius": 12,
                 "timeFontSize": row.font_size,
                 "dateFontSize": 14,

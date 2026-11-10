@@ -1,12 +1,77 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { RotateCcw, Bell, Radio } from 'lucide-react';
 import HlsPlayer from '@/components/ui/HlsPlayer';
 import { Layer } from '../../../context/LayoutStateContext';
 import { injectQueueVariables, createDefaultQueueLayoutItems } from '@/app/(dashboard)/studio/components/ticket/types';
 
 const Marquee = 'marquee' as any;
+
+function TickerMarquee({
+  text,
+  speed,
+  scale,
+  fontSize,
+  color,
+}: {
+  text: string;
+  speed: string;
+  scale: number;
+  fontSize: number;
+  color: string;
+}) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    const content = textRef.current;
+    if (!viewport || !content) return;
+
+    const pixelsPerSecond = (speed === 'fast' ? 160 : speed === 'slow' ? 50 : 95) * scale;
+    let animation: Animation | undefined;
+    const animate = () => {
+      animation?.cancel();
+      const distance = viewport.clientWidth + content.scrollWidth;
+      if (distance === 0) return;
+      animation = content.animate(
+        [
+          { transform: `translateX(${viewport.clientWidth}px)` },
+          { transform: `translateX(-${content.scrollWidth}px)` },
+        ],
+        { duration: (distance / pixelsPerSecond) * 1000, iterations: Infinity, easing: 'linear' },
+      );
+    };
+
+    const observer = new ResizeObserver(animate);
+    observer.observe(viewport);
+    observer.observe(content);
+    animate();
+    return () => {
+      observer.disconnect();
+      animation?.cancel();
+    };
+  }, [text, speed, scale]);
+
+  return (
+    <div ref={viewportRef} style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+      <span
+        ref={textRef}
+        style={{
+          display: 'inline-block',
+          whiteSpace: 'nowrap',
+          fontSize: `${fontSize * scale}px`,
+          fontWeight: 700,
+          lineHeight: 1,
+          color,
+        }}
+      >
+        {text}
+      </span>
+    </div>
+  );
+}
 
 interface ZoneWidgetRendererProps {
   activeBlock: any;
@@ -73,8 +138,8 @@ export default function ZoneWidgetRenderer({
           display: 'flex',
           alignItems: 'center',
           overflow: 'hidden',
-          padding: `0 ${Math.max(3, Math.round(12 * scale))}px`,
-          gap: `${Math.max(3, Math.round(12 * scale))}px`,
+          padding: `0 ${Math.max(1, Math.floor(12 * scale))}px`,
+          gap: `${Math.max(1, Math.floor(12 * scale))}px`,
         }}
       >
         {activeBlock.widgetData?.badge && (
@@ -82,10 +147,10 @@ export default function ZoneWidgetRenderer({
             style={{
               backgroundColor: activeBlock.widgetData?.badgeBackgroundColor || 'rgba(255,255,255,0.2)',
               color: activeBlock.widgetData?.badgeTextColor || '#ffffff',
-              padding: `${Math.max(1, Math.round(2 * scale))}px ${Math.max(3, Math.round(8 * scale))}px`,
-              borderRadius: `${Math.max(2, Math.round(4 * scale))}px`,
+              padding: `${Math.max(1, Math.floor(2 * scale))}px ${Math.max(1, Math.floor(8 * scale))}px`,
+              borderRadius: `${Math.max(1, Math.floor(4 * scale))}px`,
               fontWeight: 800,
-              fontSize: `${Math.max(7, Math.round(12 * scale))}px`,
+              fontSize: `${12 * scale}px`,
               whiteSpace: 'nowrap',
               flexShrink: 0,
             }}
@@ -93,26 +158,13 @@ export default function ZoneWidgetRenderer({
             {activeBlock.widgetData.badge}
           </span>
         )}
-        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', alignItems: 'center' }}>
-          <Marquee
-            scrollamount={
-              activeBlock.widgetData?.speed === 'fast'
-                ? Math.max(3, Math.round(12 * scale))
-                : activeBlock.widgetData?.speed === 'slow'
-                ? Math.max(1, Math.round(4 * scale))
-                : Math.max(2, Math.round(7 * scale))
-            }
-            style={{
-              fontSize: `${Math.max(8, Math.round((activeBlock.widgetData?.fontSize || 16) * scale))}px`,
-              fontWeight: 600,
-              whiteSpace: 'nowrap',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            {(activeBlock.widgetData?.messagesList || activeBlock.widgetData?.messages || ['HNDSigma Teks Berjalan']).join('  ✦  ')}
-          </Marquee>
-        </div>
+        <TickerMarquee
+          text={(activeBlock.widgetData?.messagesList || activeBlock.widgetData?.messages || ['HNDSigma Teks Berjalan']).join('  ✦  ')}
+          speed={activeBlock.widgetData?.speed || 'normal'}
+          scale={scale}
+          fontSize={activeBlock.widgetData?.fontSize || 16}
+          color={activeBlock.widgetData?.textColor || '#ffffff'}
+        />
       </div>
     );
   }
