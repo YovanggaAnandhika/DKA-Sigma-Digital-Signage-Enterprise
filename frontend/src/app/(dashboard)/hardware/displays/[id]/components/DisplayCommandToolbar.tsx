@@ -4,7 +4,6 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  ArrowLeft,
   Play,
   RefreshCw,
   Camera,
@@ -21,7 +20,6 @@ import {
 import { ServerCommandType } from '@/lib/services/hardware/device.service';
 import { api } from '@/lib/services';
 import { useDisplayDetail } from '../context/DisplayDetailContext';
-import { formatIndonesianDateTime } from './formatIndonesianDateTime';
 
 export default function DisplayCommandToolbar() {
   const router = useRouter();
@@ -40,12 +38,6 @@ export default function DisplayCommandToolbar() {
 
   if (!device) return null;
 
-  const isTrulyOnline = Boolean(
-    device.isOnline &&
-    device.lastHeartbeatAt &&
-    (Date.now() - new Date(device.lastHeartbeatAt).getTime() <= 10000)
-  );
-
   const handleUnbind = async () => {
     if (!device) return;
     if (!confirm(`Putus hubungan dan unbind player "${device.name}"?\n\nPerangkat akan dihapus dari sistem CMS dan kembali ke mode pairing awal.`)) {
@@ -63,52 +55,7 @@ export default function DisplayCommandToolbar() {
 
   return (
     <>
-      {/* Header Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Link
-            href="/hardware/displays/player"
-            className="btn btn-outline"
-            style={{
-              width: '42px',
-              minWidth: '42px',
-              height: '42px',
-              padding: 0,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '50%',
-            }}
-            aria-label="Kembali ke Layar Pemutar"
-            title="Kembali ke Layar Pemutar"
-          >
-            <ArrowLeft size={18} />
-          </Link>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h1 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
-                {device.name}
-              </h1>
-              <span
-                title={isTrulyOnline ? 'Online' : 'Offline'}
-                aria-label={isTrulyOnline ? 'Online' : 'Offline'}
-                style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: isTrulyOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
-                  boxShadow: isTrulyOnline ? '0 0 6px rgba(16, 185, 129, 0.5)' : 'none',
-                  display: 'inline-block',
-                }}
-              />
-            </div>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: '2px', fontFamily: 'monospace' }}>
-              ID: {device.id}
-            </p>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <Link href={`/player/${device.id}`} target="_blank" className="btn btn-outline" title="Buka Kiosk Player Simulator di Browser">
             <Play size={14} />
             <span>Web Player</span>
@@ -208,7 +155,6 @@ export default function DisplayCommandToolbar() {
             <Unlink2 size={14} />
             <span>{unbinding ? 'Memutuskan...' : 'Unbind Layar'}</span>
           </button>
-        </div>
       </div>
 
       {cmdFeedback && (
@@ -299,56 +245,6 @@ export default function DisplayCommandToolbar() {
           </div>
         </div>
       )}
-
-      {/* Overview Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-        <div className="card-elevated" style={{ padding: '14px 16px' }}>
-          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>ID Perangkat</div>
-          <div style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--text-primary)', marginTop: '4px' }}>
-            {!device.isPaired ? '●●●●●●' : (device.hardwareFingerprint?.substring(0, 10) || device.id.substring(0, 8).toUpperCase())}
-          </div>
-          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            {device.isPaired ? 'Terhubung' : 'Menunggu persetujuan'}
-          </div>
-        </div>
-
-        <div className="card-elevated" style={{ padding: '14px 16px' }}>
-          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>Resolusi</div>
-          <div style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px' }}>
-            {device.screenWidth && device.screenHeight ? `${device.screenWidth} × ${device.screenHeight}` : '1920 × 1080'}
-          </div>
-          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px', textTransform: 'capitalize' }}>
-            {device.orientation}
-          </div>
-        </div>
-
-        <div className="card-elevated" style={{ padding: '14px 16px' }}>
-          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>Alamat IP</div>
-          <div style={{ fontSize: '1.125rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--text-primary)', marginTop: '4px' }}>
-            {device.ipAddress || '127.0.0.1'}
-          </div>
-          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Stream Aktif
-          </div>
-        </div>
-
-        <div className="card-elevated" style={{ padding: '14px 16px' }}>
-          <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 600 }}>Heartbeat</div>
-          <div style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px' }}>
-            {device.lastHeartbeatAt ? formatIndonesianDateTime(device.lastHeartbeatAt) : '-'}
-          </div>
-          <div
-            style={{
-              fontSize: '0.6875rem',
-              color: isTrulyOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
-              marginTop: '2px',
-              fontWeight: 600,
-            }}
-          >
-            {isTrulyOnline ? 'Sinkron (Online)' : 'Terputus (Offline)'}
-          </div>
-        </div>
-      </div>
 
       {/* Physical Pairing Verification Modal */}
       {showPairModal && (

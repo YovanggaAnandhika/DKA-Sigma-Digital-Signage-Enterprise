@@ -3,7 +3,6 @@
 import React from 'react';
 import {
   Cpu,
-  Activity,
   HardDrive,
   Thermometer,
   Image as ImageIcon,
@@ -29,7 +28,7 @@ function ResourceGauge({
   const percentage = value == null ? 0 : Math.min(100, Math.max(0, value));
 
   return (
-    <div style={{ minWidth: 0, padding: '12px 10px 8px', borderRadius: 8, background: 'var(--bg-surface-elevated)' }}>
+    <div style={{ minWidth: 0, padding: '8px 10px 4px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
         <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 600 }}>{label}</span>
         <strong style={{ color, fontSize: '0.95rem', fontVariantNumeric: 'tabular-nums' }}>
@@ -119,8 +118,8 @@ export default function DisplayTelemetryCard() {
           </div>
 
           {/* Storage & Suhu Tiles */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--bg-surface-elevated)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', paddingTop: 10, borderTop: '1px solid var(--border-subtle)' }}>
+            <div style={{ padding: '4px 8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', marginBottom: '4px' }}>
                 <HardDrive size={13} />
                 <span style={{ fontSize: '0.6875rem', fontWeight: 500 }}>Penyimpanan</span>
@@ -130,7 +129,7 @@ export default function DisplayTelemetryCard() {
               </div>
             </div>
 
-            <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--bg-surface-elevated)' }}>
+            <div style={{ padding: '4px 8px', borderLeft: '1px solid var(--border-subtle)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', marginBottom: '4px' }}>
                 <Thermometer size={13} />
                 <span style={{ fontSize: '0.6875rem', fontWeight: 500 }}>Suhu & Jaringan</span>
