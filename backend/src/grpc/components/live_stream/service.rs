@@ -410,30 +410,7 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
                     if let Ok(resp) = resp_res {
                         if resp.status().is_success() {
                             if let Ok(b) = resp.bytes().await {
-                                let mut raw = b.to_vec();
-                                if file_name.ends_with(".m3u8") {
-                                    if let Ok(text) = String::from_utf8(raw.clone()) {
-                                        let clean_lines: Vec<String> = text
-                                            .lines()
-                                            .map(|line| {
-                                                if let Some(idx) = line.find("?session=") {
-                                                    let before = &line[..idx];
-                                                    if let Some(rest_idx) = line[idx..]
-                                                        .find(|c: char| c == '&' || c.is_whitespace() || c == '"')
-                                                    {
-                                                        format!("{}{}", before, &line[idx + rest_idx..])
-                                                    } else {
-                                                        before.to_string()
-                                                    }
-                                                } else {
-                                                    line.to_string()
-                                                }
-                                            })
-                                            .collect();
-                                        raw = clean_lines.join("\n").into_bytes();
-                                    }
-                                }
-                                found_bytes = Some(raw);
+                                found_bytes = Some(b.to_vec());
                                 break;
                             }
                         }

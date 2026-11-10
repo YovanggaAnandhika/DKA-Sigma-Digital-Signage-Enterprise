@@ -44,13 +44,8 @@ export async function GET(
               cache: 'no-store',
             });
             if (fallbackRes.ok) {
-              let raw = await fallbackRes.arrayBuffer();
+              const raw = await fallbackRes.arrayBuffer();
               const isPlaylist = file.endsWith('.m3u8');
-              if (isPlaylist) {
-                const text = new TextDecoder().decode(raw);
-                const cleanText = text.replace(/\?session=[a-zA-Z0-9_-]+/g, '');
-                raw = new TextEncoder().encode(cleanText).buffer as ArrayBuffer;
-              }
               const ct =
                 fallbackRes.headers.get('content-type') ||
                 (isPlaylist ? 'application/vnd.apple.mpegurl' : 'video/MP2T');
