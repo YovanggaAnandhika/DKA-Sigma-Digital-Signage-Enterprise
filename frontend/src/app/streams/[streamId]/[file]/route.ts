@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { LiveStreamServiceClient } from '@/lib/api/components/v1/live_stream/live_stream_grpc_pb';
-import { GetStreamSegmentRequest, GetLiveStreamRequest } from '@/lib/api/components/v1/live_stream/live_stream.common_pb';
+import { GetLiveStreamRequest } from '@/lib/api/components/v1/live_stream/live_stream.common_pb';
 import { getGrpcClient } from '@/lib/core/grpcClient';
 
 export async function GET(
@@ -17,82 +17,36 @@ export async function GET(
   const search = req.nextUrl.search || '';
   const fileWithQuery = search ? `${file}${search}` : file;
 
-  // Reuse singleton multiplexed HTTP/2 gRPC channel to prevent socket & memory leaks
-  const client = getGrpcClient(LiveStreamServiceClient);
+  // Browser HLS fallback: fetch directly from the internal streamer (no gRPC hop).
+  const streamerHlsBase = (
+    process.env.HND_STREAMER_INTERNAL_URL || 'http://dka-product-sigma-streamer:8889'
+  ).replace(':8889', ':8888');
+  const isPlaylist = file.endsWith('.m3u8');
+  const targetFile = file === 'live.m3u8' ? 'index.m3u8' : fileWithQuery;
 
-  const grpcReq = new GetStreamSegmentRequest();
-  grpcReq.setStreamId(streamId);
-  grpcReq.setFileName(fileWithQuery);
-
-  return new Promise<Response>((resolve) => {
-    client.getStreamSegment(grpcReq, async (err, response) => {
-      if (err || !response || !response.getSuccess()) {
-        // Direct stateless fallback to streamer engine if gRPC bridge is unavailable
-        try {
-          const streamerHlsBase = (
-            process.env.HND_STREAMER_INTERNAL_URL || 'http://dka-product-sigma-streamer:8889'
-          ).replace(':8889', ':8888');
-
-          const prefixes = ['hd/live', 'webrtc/live', 'live'];
-          for (const prefix of prefixes) {
-            const targetFile = file === 'live.m3u8' ? 'index.m3u8' : fileWithQuery;
-            const fallbackRes = await fetch(`${streamerHlsBase}/${prefix}/${streamId}/${targetFile}`, {
-              headers: {
-                Authorization: 'Bearer dkasigma_pipe',
-                'User-Agent': 'HNDSigma-Player-Gateway/1.0',
-              },
-              cache: 'no-store',
-            });
-            if (fallbackRes.ok) {
-              const raw = await fallbackRes.arrayBuffer();
-              const isPlaylist = file.endsWith('.m3u8');
-              const ct =
-                fallbackRes.headers.get('content-type') ||
-                (isPlaylist ? 'application/vnd.apple.mpegurl' : 'video/MP2T');
-              return resolve(
-                new Response(raw, {
-                  status: 200,
-                  headers: {
-                    'Content-Type': ct,
-                    'Content-Length': String(raw.byteLength),
-                    'Cache-Control': isPlaylist
-                      ? 'no-cache, no-store, must-revalidate'
-                      : 'public, max-age=60, immutable',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-                  },
-                })
-              );
-            }
-          }
-        } catch {}
-        return resolve(new NextResponse(null, { status: 404 }));
-      }
-
-      const rawData = response.getData_asU8();
-      const isPlaylist = file.endsWith('.m3u8');
-      const contentType =
-        response.getContentType() ||
-        (isPlaylist ? 'application/vnd.apple.mpegurl' : 'video/MP2T');
-
-      const cacheControl = isPlaylist
-        ? 'no-cache, no-store, must-revalidate'
-        : 'public, max-age=60, immutable';
-
-      resolve(
-        new Response(rawData as unknown as BodyInit, {
-          status: 200,
-          headers: {
-            'Content-Type': contentType,
-            'Content-Length': String(rawData.byteLength),
-            'Cache-Control': cacheControl,
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-          },
-        })
-      );
-    });
-  });
+  for (const prefix of ['hd/live', 'webrtc/live', 'live']) {
+    try {
+      const res = await fetch(`${streamerHlsBase}/${prefix}/${streamId}/${targetFile}`, {
+        headers: { Authorization: 'Bearer dkasigma_pipe' },
+        cache: 'no-store',
+      });
+      if (!res.ok) continue;
+      const raw = await res.arrayBuffer();
+      return new Response(raw, {
+        status: 200,
+        headers: {
+          'Content-Type':
+            res.headers.get('content-type') ||
+            (isPlaylist ? 'application/vnd.apple.mpegurl' : 'video/MP2T'),
+          'Content-Length': String(raw.byteLength),
+          'Cache-Control': isPlaylist ? 'no-cache, no-store, must-revalidate' : 'public, max-age=60, immutable',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+        },
+      });
+    } catch {}
+  }
+  return new NextResponse(null, { status: 404 });
 }
 
 export async function OPTIONS() {

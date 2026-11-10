@@ -56,8 +56,6 @@ class GrpcChannelFactory(
                 .keepAliveTime(15, TimeUnit.SECONDS)
                 .keepAliveTimeout(10, TimeUnit.SECONDS)
                 .keepAliveWithoutCalls(true)
-                .flowControlWindow(1024 * 1024) // 1MB window: eliminates stream buffer starvation & dropped frames
-                .maxInboundMessageSize(16 * 1024 * 1024) // 16MB max message size for HD video chunks
 
             if (!useTls) {
                 builder.usePlaintext()

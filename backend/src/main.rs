@@ -172,7 +172,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.upload_dir.clone(),
         config.streamer_api_url.clone(),
         config.streamer_rtmp_url.clone(),
-        config.streamer_hls_url.clone(),
     );
     let relay_manager_startup = relay_manager.clone();
     let pool_startup = pool.clone();

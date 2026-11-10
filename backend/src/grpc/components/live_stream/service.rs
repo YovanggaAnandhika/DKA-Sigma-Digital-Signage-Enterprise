@@ -7,7 +7,7 @@ use crate::grpc::proto::components::v1::live_stream::{
     live_stream_service_server::LiveStreamService as LiveStreamServiceTrait,
     CreateLiveStreamRequest, GetLiveStreamRequest, ListLiveStreamsRequest, ListLiveStreamsResponse,
     UpdateLiveStreamRequest, DeleteLiveStreamRequest, DeleteLiveStreamResponse,
-    ToggleRelayHostRequest, GetStreamSegmentRequest, GetStreamSegmentResponse, LiveStream,
+    ToggleRelayHostRequest, LiveStream,
 };
 use crate::grpc::proto::common::v1::PaginationResponse;
 
@@ -338,96 +338,5 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         }
 
         Ok(Response::new(row.into_proto()))
-    }
-
-    async fn get_stream_segment(
-        &self,
-        request: Request<GetStreamSegmentRequest>,
-    ) -> Result<Response<GetStreamSegmentResponse>, Status> {
-        let req = request.into_inner();
-        let stream_id = Uuid::from_str(&req.stream_id)
-            .map_err(|_| Status::invalid_argument("Invalid stream id"))?;
-
-        let (raw_file, query) = match req.file_name.split_once('?') {
-            Some((f, q)) => (f, format!("?{}", q)),
-            None => (req.file_name.as_str(), String::new()),
-        };
-
-        let file_name = std::path::Path::new(raw_file)
-            .file_name()
-            .and_then(|f| f.to_str())
-            .ok_or_else(|| Status::invalid_argument("Invalid file name"))?;
-
-        // Live stream segments (.m3u8, .ts) are dynamic and fetched directly from internal streamer
-        let is_stream_file = file_name.ends_with(".m3u8") || file_name.ends_with(".ts");
-        let data = if !is_stream_file {
-            let file_path = format!("{}/streams/{}/{}", self.relay_manager.upload_dir(), stream_id, file_name);
-            tokio::fs::read(&file_path).await.ok()
-        } else {
-            None
-        };
-
-        let data = match data {
-            Some(d) => d,
-            None => {
-                // Fetch directly from internal Docker streamer engine (dka-product-sigma-streamer:8888)
-                let target_file = if file_name == "live.m3u8" { "index.m3u8" } else { file_name };
-
-                // Prioritize 'hd/live' (normalized 0-B-frame 1.0s GOP + AAC audio), then 'live' (raw RTMP ingest)
-                let prefixes = ["hd/live", "live", "webrtc/live"];
-                let mut found_bytes: Option<Vec<u8>> = None;
-
-                for prefix in prefixes {
-                    let url = format!(
-                        "{}/{}/{}/{}{}",
-                        self.relay_manager.streamer_hls_url().trim_end_matches('/'),
-                        prefix,
-                        stream_id,
-                        target_file,
-                        query
-                    );
-                    let resp_res = self.relay_manager
-                        .http_client()
-                        .get(&url)
-                        .header(reqwest::header::AUTHORIZATION, "Bearer dkasigma_pipe")
-                        .send()
-                        .await;
-
-                    if let Ok(resp) = resp_res {
-                        if resp.status().is_success() {
-                            if let Ok(b) = resp.bytes().await {
-                                found_bytes = Some(b.to_vec());
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                match found_bytes {
-                    Some(b) => b,
-                    None => {
-                        return Ok(Response::new(GetStreamSegmentResponse {
-                            success: false,
-                            content_type: String::new(),
-                            data: Vec::new(),
-                        }));
-                    }
-                }
-            }
-        };
-
-        let content_type = if file_name.ends_with(".m3u8") {
-            "application/vnd.apple.mpegurl"
-        } else if file_name.ends_with(".ts") {
-            "video/MP2T"
-        } else {
-            "application/octet-stream"
-        };
-
-        Ok(Response::new(GetStreamSegmentResponse {
-            success: true,
-            content_type: content_type.to_string(),
-            data,
-        }))
     }
 }

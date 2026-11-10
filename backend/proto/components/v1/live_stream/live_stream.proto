@@ -11,6 +11,5 @@ service LiveStreamService {
   rpc UpdateLiveStream(UpdateLiveStreamRequest) returns (LiveStream);
   rpc DeleteLiveStream(DeleteLiveStreamRequest) returns (DeleteLiveStreamResponse);
   rpc ToggleRelayHost(ToggleRelayHostRequest) returns (LiveStream);
-  rpc GetStreamSegment(GetStreamSegmentRequest) returns (GetStreamSegmentResponse);
 }
 

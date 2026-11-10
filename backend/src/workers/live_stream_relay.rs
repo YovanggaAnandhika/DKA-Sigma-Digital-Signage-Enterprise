@@ -14,7 +14,6 @@ pub struct LiveStreamRelayManager {
     upload_dir: String,
     streamer_api_url: String,
     streamer_rtmp_url: String,
-    streamer_hls_url: String,
     http_client: reqwest::Client,
 }
 
@@ -44,7 +43,6 @@ impl LiveStreamRelayManager {
         upload_dir: String,
         streamer_api_url: String,
         streamer_rtmp_url: String,
-        streamer_hls_url: String,
     ) -> Self {
         let http_client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(3))
@@ -56,24 +54,11 @@ impl LiveStreamRelayManager {
             upload_dir,
             streamer_api_url,
             streamer_rtmp_url,
-            streamer_hls_url,
             http_client,
         };
 
         mgr.spawn_streamer_monitor();
         mgr
-    }
-
-    pub fn upload_dir(&self) -> &str {
-        &self.upload_dir
-    }
-
-    pub fn streamer_hls_url(&self) -> &str {
-        &self.streamer_hls_url
-    }
-
-    pub fn http_client(&self) -> &reqwest::Client {
-        &self.http_client
     }
 
     /// Background monitor that polls internal Docker MediaMTX API (`STREAMER_API_URL/v3/paths/list`)

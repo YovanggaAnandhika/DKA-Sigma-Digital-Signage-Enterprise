@@ -122,9 +122,10 @@ This project is an enterprise-grade digital signage management and streaming pla
   - `1935/tcp` → `dka-product-sigma-streamer:1935` (RTMP Ingest from OBS Studio / Hardware Encoders)
   - `8189/udp` & `8189/tcp` → `dka-product-sigma-streamer:8189` (WebRTC ICE Media Transport for sub-second `150–350 ms` playback)
   - `8890/udp` → `dka-product-sigma-streamer:8890` (SRT UDP Ingest)
+  - `8554/tcp` → `dka-product-sigma-streamer:8554` (RTSP read untuk Android player; WAJIB di-forward di gateway)
   - `50051/tcp+udp` → `dka-product-sigma-backend:50051` (Tonic gRPC Server)
   - `80/tcp` (`sigma.dkaapis.test`) → `dka-product-sigma-frontend:80` (Next.js App Router)
-  - *Catatan Port Privilege*: Port < 1024 (seperti port 80) merupakan privileged port pada OS Unix/Android yang rentan mengalami *Connection Reset* pada lingkungan virtualisasi Docker Desktop VPNKit atau firewall AP Wi-Fi kantor. Akses streaming Android player diprioritaskan melalui kanal stateless bebas session atau gRPC `GetStreamSegment` di port 50051.
+  - *Catatan Port Privilege*: Port < 1024 (seperti port 80) merupakan privileged port pada OS Unix/Android yang rentan mengalami *Connection Reset* pada lingkungan virtualisasi Docker Desktop VPNKit atau firewall AP Wi-Fi kantor. Akses streaming Android player memakai RTSP murni (TCP interleaved) di port 8554, tanpa HTTP/cookie/session.
 - **Host LAN Wi-Fi IP Invariant (`MTX_WEBRTCADDITIONALHOSTS`)**:
   - `MTX_WEBRTCADDITIONALHOSTS` di `compose.yml` WAJIB selalu menyertakan IP Wi-Fi lokal komputer pengembang (misalnya `192.168.1.52`) di samping domain lokal `sigma.dkaapis.test`, agar negosiasi ICE UDP WebRTC dari perangkat Android fisik di jaringan Wi-Fi lokal tidak mengalami kegagalan/timeout.
 - **Internal Docker Service URLs (`compose.yml`)**:
@@ -235,8 +236,7 @@ This project is an enterprise-grade digital signage management and streaming pla
   - Player WAJIB mempertahankan tampilan **"Siaran Offline"** yang elegan (menggunakan UI glassmorphism modern dengan indikator retry halus).
   - **DILARANG KERAS meloncat ke state "BUFFERING"** di setiap interval percobaan reconnecting (`reconnectRunnable`) ketika belum ada aliran paket/frame riil yang diterima. State buffering HANYA boleh aktif ketika media source telah terhubung dan sedang mengisi buffer playback frame pertama.
 
-### 8. gRPC Secret Pipe Low-Latency & Zero-Drop Streaming Invariants
-- **1MB HTTP/2 Flow Control Window**: `GrpcChannelFactory.kt` mengonfigurasi `.flowControlWindow(1024 * 1024)` dan `.maxInboundMessageSize(16 * 1024 * 1024)` pada `OkHttpChannelBuilder`, mengeliminasi starvation pause dan drop frame gRPC saat menerima paket video 500KB–1MB.
-- **Shared Multiplexed ManagedChannel**: Seluruh gRPC calls pada Android (telemetry, touch broadcast, command stream, asset download, dan video chunk dataSource) berbagi satu kanal tunggal HTTP/2 yang dipelihara sebagai shared singleton di `GrpcChannelFactory`.
-- **Direct Blocking Stub execution di ExoPlayer Loader**: `GrpcStreamDataSource` memanfaatkan `LiveStreamServiceGrpc.LiveStreamServiceBlockingStub` dengan deadline 3.5 detik yang dieksekusi sinkron langsung pada background thread `Loader$LoadTask` milik ExoPlayer, menghilangkan overhead coroutine switching (`runBlocking`/`Dispatchers.IO`).
-- **1-Second HLS Segment Alignment**: MediaMTX diatur dengan `MTX_HLSSEGMENTDURATION: "1s"` dan `MTX_HLSSEGMENTCOUNT: "5"`. Pipeline `hd/live/` menghasilkan baseline H.264 (0 B-frames) dengan strict 1-second GOP (`-g 30 -keyint_min 30`) dan audio AAC, memungkinkan ExoPlayer mencapai target latency sub-second hingga ~1.0–1.2 detik secara mulus tanpa slow-motion drift.
+### 8. Android Live Stream = RTSP Murni (Bukan HLS / gRPC Chunk)
+- Android player memutar siaran server-hosted via `rtsp://<ServerConfig.getHost>:8554/hd/live/<stream_id>` memakai `RtspMediaSource` (`setForceUseRtpTcp(true)`), bukan HLS dan bukan proxy segmen gRPC (RPC `GetStreamSegment` sudah dihapus). Latensi ~300 ms, tanpa kedip buffering akibat chunk.
+- `hd/live/` = H.264 baseline 0 B-frame + **AAC** (ExoPlayer RTSP tidak mendukung Opus). `webrtc/live/` tetap Opus untuk WHEP browser.
+- Callback auth MediaMTX (`/api/streamer/auth`) bergantung pada Next dev server; bila frontend hang (CPU 100%) OBS/RTSP/WHEP timeout. Restart `dka-product-sigma-frontend` bila itu terjadi.

@@ -10,7 +10,6 @@ pub struct Config {
     pub upload_dir: String,
     pub streamer_api_url: String,
     pub streamer_rtmp_url: String,
-    pub streamer_hls_url: String,
 }
 
 impl Config {
@@ -44,8 +43,6 @@ impl Config {
                 .unwrap_or_else(|_| "http://dka-product-sigma-streamer:9997".to_string()),
             streamer_rtmp_url: env::var("STREAMER_RTMP_URL")
                 .unwrap_or_else(|_| "rtsp://dka-product-sigma-streamer:8554".to_string()),
-            streamer_hls_url: env::var("STREAMER_HLS_URL")
-                .unwrap_or_else(|_| "http://dka-product-sigma-streamer:8888".to_string()),
         }
     }
 }

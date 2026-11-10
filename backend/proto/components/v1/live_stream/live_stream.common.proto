@@ -84,14 +84,3 @@ message ToggleRelayHostRequest {
   bool is_relay_active = 2;
 }
 
-message GetStreamSegmentRequest {
-  string stream_id = 1;
-  string file_name = 2;
-}
-
-message GetStreamSegmentResponse {
-  bool success = 1;
-  string content_type = 2;
-  bytes data = 3;
-}
-
