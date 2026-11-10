@@ -370,40 +370,46 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
                 } else {
                     query
                 };
-                let url = format!(
-                    "{}/live/{}/{}{}",
-                    self.relay_manager.streamer_hls_url().trim_end_matches('/'),
-                    stream_id,
-                    target_file,
-                    query_str
-                );
-                let mut resp_res = self.relay_manager
-                    .http_client()
-                    .get(&url)
-                    .header(reqwest::header::COOKIE, "cookieCheck=1")
-                    .send()
-                    .await;
-                if let Ok(ref resp) = resp_res {
-                    if resp.status().is_redirection() {
-                        if let Some(loc) = resp.headers().get(reqwest::header::LOCATION).and_then(|h| h.to_str().ok()) {
-                            let next_url = if loc.starts_with("http://") || loc.starts_with("https://") {
-                                loc.to_string()
-                            } else {
-                                format!("{}{}", self.relay_manager.streamer_hls_url().trim_end_matches('/'), loc)
-                            };
-                            resp_res = self.relay_manager
-                                .http_client()
-                                .get(&next_url)
-                                .header(reqwest::header::COOKIE, "cookieCheck=1")
-                                .send()
-                                .await;
+
+                let prefixes = ["live", "hd/live", "webrtc/live"];
+                let mut found_bytes: Option<Vec<u8>> = None;
+
+                for prefix in prefixes {
+                    let url = format!(
+                        "{}/{}/{}/{}{}",
+                        self.relay_manager.streamer_hls_url().trim_end_matches('/'),
+                        prefix,
+                        stream_id,
+                        target_file,
+                        query_str
+                    );
+                    let mut resp_res = self.relay_manager
+                        .http_client()
+                        .get(&url)
+                        .header(reqwest::header::COOKIE, "cookieCheck=1")
+                        .send()
+                        .await;
+                    if let Ok(ref resp) = resp_res {
+                        if resp.status().is_redirection() {
+                            if let Some(loc) = resp.headers().get(reqwest::header::LOCATION).and_then(|h| h.to_str().ok()) {
+                                let next_url = if loc.starts_with("http://") || loc.starts_with("https://") {
+                                    loc.to_string()
+                                } else {
+                                    format!("{}{}", self.relay_manager.streamer_hls_url().trim_end_matches('/'), loc)
+                                };
+                                resp_res = self.relay_manager
+                                    .http_client()
+                                    .get(&next_url)
+                                    .header(reqwest::header::COOKIE, "cookieCheck=1")
+                                    .send()
+                                    .await;
+                            }
                         }
                     }
-                }
-                match resp_res {
-                    Ok(resp) if resp.status().is_success() => {
-                        match resp.bytes().await {
-                            Ok(b) => {
+
+                    if let Ok(resp) = resp_res {
+                        if resp.status().is_success() {
+                            if let Ok(b) = resp.bytes().await {
                                 let mut raw = b.to_vec();
                                 if file_name.ends_with(".m3u8") {
                                     if let Ok(text) = String::from_utf8(raw.clone()) {
@@ -427,18 +433,16 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
                                         raw = clean_lines.join("\n").into_bytes();
                                     }
                                 }
-                                raw
-                            }
-                            Err(_) => {
-                                return Ok(Response::new(GetStreamSegmentResponse {
-                                    success: false,
-                                    content_type: String::new(),
-                                    data: Vec::new(),
-                                }));
+                                found_bytes = Some(raw);
+                                break;
                             }
                         }
                     }
-                    _ => {
+                }
+
+                match found_bytes {
+                    Some(b) => b,
+                    None => {
                         return Ok(Response::new(GetStreamSegmentResponse {
                             success: false,
                             content_type: String::new(),

@@ -154,14 +154,6 @@ export async function POST(
         });
       }
 
-      const currentSourceType = (liveStream.sourceType || '').toUpperCase();
-      if (currentSourceType !== 'WHIP') {
-        return new NextResponse(`Forbidden: Live stream is configured for ${currentSourceType || 'another protocol'}, not WHIP`, {
-          status: 403,
-          headers: { 'Access-Control-Allow-Origin': '*' },
-        });
-      }
-
       if (liveStream.requiresAuth) {
         const expectedToken = (liveStream.ingestPassword || '').trim();
         const providedToken = authHeader.replace(/^Bearer\s+/i, '').trim();
