@@ -565,7 +565,12 @@ impl ManifestServiceTrait for ManifestServiceImpl {
             Some(req.client_current_hash)
         };
 
-        let sync_res = ManifestService::get_manifest_for_device(&self.pool, device_id, client_hash)
+        let sync_res = ManifestService::get_manifest_for_device(
+            &self.pool,
+            device_id,
+            client_hash,
+            false,
+        )
             .await
             .map_err(Status::from)?;
 
@@ -595,11 +600,30 @@ impl ManifestServiceTrait for ManifestServiceImpl {
             .await
             .map_err(Status::from)?;
 
-        let sync_res = ManifestService::get_manifest_for_device(&self.pool, device_id, None)
+        let sync_res =
+            ManifestService::get_manifest_for_device(&self.pool, device_id, None, true)
             .await
             .map_err(Status::from)?;
 
-        let hash = sync_res.manifest.map(|m| m.version_hash).unwrap_or_default();
+        let hash = if let Some(manifest) = sync_res.manifest {
+            let hash = manifest.version_hash.clone();
+            if manifest.layout_id == layout_id {
+                let snapshot = serde_json::to_value(manifest).map_err(|e| {
+                    Status::internal(format!("Failed to serialize assigned manifest: {e}"))
+                })?;
+                crate::modules::distribution::manifest::repositories::ManifestRepository::save_assigned_layout_manifest(
+                    &self.pool,
+                    device_id,
+                    &hash,
+                    snapshot,
+                )
+                .await
+                .map_err(|e| Status::internal(format!("Failed to save assigned manifest: {e}")))?;
+            }
+            hash
+        } else {
+            String::new()
+        };
 
         Ok(Response::new(AssignLayoutToDeviceResponse {
             success: true,

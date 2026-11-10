@@ -24,6 +24,8 @@ pub struct DeviceEntity {
     pub storage_total_bytes: i64,
     pub storage_free_bytes: i64,
     pub current_layout_id: Option<Uuid>,
+    pub assigned_layout_manifest: Option<serde_json::Value>,
+    pub assigned_layout_version_hash: Option<String>,
     pub display_group_id: Option<Uuid>,
     pub schedule_id: Option<Uuid>,
     pub schedule_assigned_at: Option<DateTime<Utc>>,

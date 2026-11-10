@@ -228,7 +228,15 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             .await
             .map_err(Status::from)?;
 
-        let mut needs_manifest_sync = match crate::modules::distribution::manifest::services::ManifestService::get_manifest_for_device(&self.pool, device_id, client_hash).await {
+        let manifest_sync =
+            crate::modules::distribution::manifest::services::ManifestService::get_manifest_for_device(
+                &self.pool,
+                device_id,
+                client_hash,
+                false,
+            )
+            .await;
+        let mut needs_manifest_sync = match manifest_sync {
             Ok(res) => !res.is_up_to_date,
             Err(_) => false,
         };

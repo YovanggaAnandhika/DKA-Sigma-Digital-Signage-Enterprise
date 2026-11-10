@@ -1,0 +1,3 @@
+ALTER TABLE hardware_devices
+DROP COLUMN assigned_layout_version_hash,
+DROP COLUMN assigned_layout_manifest;

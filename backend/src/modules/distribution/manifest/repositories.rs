@@ -34,4 +34,36 @@ impl ManifestRepository {
         tx.commit().await?;
         Ok(())
     }
+
+    pub async fn save_assigned_layout_manifest(
+        pool: &DbPool,
+        device_id: Uuid,
+        version_hash: &str,
+        manifest: serde_json::Value,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "UPDATE hardware_devices SET assigned_layout_manifest = $2, assigned_layout_version_hash = $3, updated_at = NOW() WHERE id = $1",
+        )
+        .bind(device_id)
+        .bind(manifest)
+        .bind(version_hash)
+        .execute(pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn save_assigned_layout_version_hash(
+        pool: &DbPool,
+        device_id: Uuid,
+        version_hash: &str,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "UPDATE hardware_devices SET assigned_layout_version_hash = $2, updated_at = NOW() WHERE id = $1 AND assigned_layout_version_hash IS NULL",
+        )
+        .bind(device_id)
+        .bind(version_hash)
+        .execute(pool)
+        .await?;
+        Ok(())
+    }
 }

@@ -18,6 +18,24 @@ use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+fn assigned_snapshot_response(
+    snapshot: &serde_json::Value,
+    client_hash: Option<&str>,
+) -> Result<ManifestSyncResponseDto, AppError> {
+    let manifest: CompiledManifestDto = serde_json::from_value(snapshot.clone())
+        .map_err(|e| AppError::Internal(format!("Invalid assigned manifest snapshot: {e}")))?;
+    if client_hash == Some(manifest.version_hash.as_str()) {
+        return Ok(ManifestSyncResponseDto {
+            is_up_to_date: true,
+            manifest: None,
+        });
+    }
+    Ok(ManifestSyncResponseDto {
+        is_up_to_date: false,
+        manifest: Some(manifest),
+    })
+}
+
 fn latest_assigned_schedule(
     device_schedule_id: Option<Uuid>,
     device_assigned_at: Option<chrono::DateTime<Utc>>,
@@ -110,6 +128,7 @@ impl ManifestService {
         pool: &DbPool,
         device_id: Uuid,
         client_hash: Option<String>,
+        force_rebuild: bool,
     ) -> Result<ManifestSyncResponseDto, AppError> {
         let device = DeviceRepository::find_by_id(pool, device_id)
             .await?
@@ -202,6 +221,30 @@ impl ManifestService {
                         manifest: None,
                     });
                 }
+            }
+        } else if !force_rebuild && active_schedule_id.is_none() {
+            if let Some(snapshot) = &device.assigned_layout_manifest {
+                return assigned_snapshot_response(snapshot, client_hash.as_deref());
+            }
+            if let Some(published_hash) = &device.assigned_layout_version_hash {
+                if client_hash.as_deref() != Some(published_hash) {
+                    tracing::warn!(
+                        device_id = %device_id,
+                        "Assigned manifest snapshot is unavailable; refusing to send unsnapshotted draft"
+                    );
+                }
+                return Ok(ManifestSyncResponseDto {
+                    is_up_to_date: true,
+                    manifest: None,
+                });
+            }
+            if let Some(client_hash) = client_hash.as_deref() {
+                ManifestRepository::save_assigned_layout_version_hash(pool, device_id, client_hash)
+                    .await?;
+                return Ok(ManifestSyncResponseDto {
+                    is_up_to_date: true,
+                    manifest: None,
+                });
             }
         }
 
@@ -525,6 +568,21 @@ impl ManifestService {
             power_schedule,
         };
 
+        if !force_rebuild
+            && active_schedule_id.is_none()
+            && device.current_layout_id == Some(compiled.layout_id)
+        {
+            ManifestRepository::save_assigned_layout_manifest(
+                pool,
+                device_id,
+                &compiled.version_hash,
+                serde_json::to_value(&compiled).map_err(|e| {
+                    AppError::Internal(format!("Failed to serialize assigned manifest: {e}"))
+                })?,
+            )
+            .await?;
+        }
+
         Ok(ManifestSyncResponseDto {
             is_up_to_date: false,
             manifest: Some(compiled),
@@ -543,7 +601,7 @@ impl ManifestService {
 
 #[cfg(test)]
 mod tests {
-    use super::latest_assigned_schedule;
+    use super::{assigned_snapshot_response, latest_assigned_schedule};
     use chrono::{TimeZone, Utc};
     use uuid::Uuid;
 
@@ -566,5 +624,37 @@ mod tests {
             latest_assigned_schedule(Some(device_id), Some(later), Some(group_id), Some(later)),
             Some(device_id)
         );
+    }
+
+    #[test]
+    fn assigned_manifest_stays_pinned_until_reassignment() {
+        let version_hash = "published-version";
+        let snapshot = serde_json::json!({
+            "manifest_id": Uuid::new_v4(),
+            "device_id": Uuid::new_v4(),
+            "version_hash": version_hash,
+            "generated_at": "2026-11-11T00:00:00Z",
+            "layout_id": Uuid::new_v4(),
+            "layout_name": "Published",
+            "canvas_width": 1920,
+            "canvas_height": 1080,
+            "orientation": "landscape",
+            "background_color": "#000000",
+            "background_image_url": null,
+            "resolution_id": null,
+            "layers": [],
+            "required_assets": [],
+            "total_download_size_bytes": 0,
+            "is_canary": false,
+            "power_schedule": null
+        });
+
+        let current = assigned_snapshot_response(&snapshot, Some(version_hash)).unwrap();
+        assert!(current.is_up_to_date);
+        assert!(current.manifest.is_none());
+
+        let stale = assigned_snapshot_response(&snapshot, Some("older-version")).unwrap();
+        assert!(!stale.is_up_to_date);
+        assert_eq!(stale.manifest.unwrap().version_hash, version_hash);
     }
 }
