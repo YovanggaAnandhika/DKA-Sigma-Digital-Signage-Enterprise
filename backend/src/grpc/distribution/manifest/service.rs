@@ -237,9 +237,14 @@ impl ManifestServiceImpl {
 
             let timezone = row.timezone;
             let legacy_glass = (row.background_color == "transparent" && row.text_color == "#ffffff")
-                || (row.background_color == "#e9eef4" && row.text_color == "#0f172a");
-            let background_color = if legacy_glass { "#1a2233" } else { &row.background_color };
-            let text_color = if legacy_glass { "#f8fafc" } else { &row.text_color };
+                || (row.background_color == "#1a2233"
+                    && matches!(row.text_color.as_str(), "#ffffff" | "#f8fafc"));
+            let background_color = if legacy_glass || row.background_color == "#1a2233" {
+                "#e9eef4"
+            } else {
+                &row.background_color
+            };
+            let text_color = if legacy_glass { "#0f172a" } else { &row.text_color };
             let theme = match background_color {
                 "#1a2233" | "#e9eef4" => "glass",
                 "#0f172a" => "dark",

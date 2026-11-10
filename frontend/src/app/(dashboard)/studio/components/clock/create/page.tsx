@@ -210,7 +210,7 @@ export default function CreateClockWeatherPage() {
               borderRadius: '20px',
               background: CLOCK_THEME_STYLES[theme].backgroundColor,
               backdropFilter: 'blur(16px)',
-              border: '1px solid var(--border-subtle)',
+              border: `1px solid ${CLOCK_THEME_STYLES[theme].borderColor}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -230,26 +230,26 @@ export default function CreateClockWeatherPage() {
                   timeZone: 'Asia/Jakarta',
                 }).replace(/\./g, ':')}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', color: 'rgba(255,255,255,0.8)', marginTop: '8px', fontWeight: 600 }}>
-                <Calendar size={14} style={{ color: '#60a5fa' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', color: CLOCK_THEME_STYLES[theme].subtitleColor, marginTop: '8px', fontWeight: 600 }}>
+                <Calendar size={14} style={{ color: CLOCK_THEME_STYLES[theme].locationColor }} />
                 <span>{time.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', borderLeft: '1px solid rgba(255,255,255,0.15)', paddingLeft: '24px' }}>
-              <div style={{ padding: '12px', borderRadius: '16px', backgroundColor: 'rgba(255,255,255,0.1)' }}>
-                <CloudSun size={40} style={{ color: '#fbbf24' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', borderLeft: `1px solid ${CLOCK_THEME_STYLES[theme].borderColor}`, paddingLeft: '24px' }}>
+              <div style={{ padding: '12px', borderRadius: '16px', backgroundColor: CLOCK_THEME_STYLES[theme].dividerColor }}>
+                <CloudSun size={40} style={{ color: CLOCK_THEME_STYLES[theme].conditionColor }} />
               </div>
 
               <div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
                   <span style={{ fontSize: '2.5rem', fontWeight: 900, lineHeight: 1 }}>{weather.temp}°</span>
-                  <span style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.7)' }}>C</span>
+                  <span style={{ fontSize: '1rem', color: CLOCK_THEME_STYLES[theme].subtitleColor }}>C</span>
                 </div>
-                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#fef08a', marginTop: '4px' }}>
+                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: CLOCK_THEME_STYLES[theme].conditionColor, marginTop: '4px' }}>
                   {weather.condition}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.6875rem', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.6875rem', color: CLOCK_THEME_STYLES[theme].subtitleColor, marginTop: '4px' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
                     <MapPin size={10} /> {city}
                   </span>
@@ -257,7 +257,7 @@ export default function CreateClockWeatherPage() {
                     <Droplets size={10} /> {weather.humidity}%
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                    <Wind size={10} /> {weather.windSpeed} km/j
+                    <Wind size={10} /> {weather.windSpeed} km/h
                   </span>
                 </div>
               </div>

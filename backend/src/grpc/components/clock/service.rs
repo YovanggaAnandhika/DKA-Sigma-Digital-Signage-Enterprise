@@ -32,9 +32,14 @@ impl ClockRow {
         let timezone = self.timezone;
         let city = self.weather_city.unwrap_or_else(|| timezone.clone());
         let legacy_glass = (self.background_color == "transparent" && self.text_color == "#ffffff")
-            || (self.background_color == "#e9eef4" && self.text_color == "#0f172a");
-        let background_color = if legacy_glass { "#1a2233" } else { &self.background_color };
-        let text_color = if legacy_glass { "#f8fafc" } else { &self.text_color };
+            || (self.background_color == "#1a2233"
+                && matches!(self.text_color.as_str(), "#ffffff" | "#f8fafc"));
+        let background_color = if legacy_glass || self.background_color == "#1a2233" {
+            "#e9eef4"
+        } else {
+            &self.background_color
+        };
+        let text_color = if legacy_glass { "#0f172a" } else { &self.text_color };
         let is_24_hour = self.clock_format.contains("24");
         let theme = match background_color {
             "#1a2233" | "#e9eef4" => "glass",

@@ -16,11 +16,56 @@ export interface ClockWeatherConfig {
   createdAt?: string;
 }
 
-export const CLOCK_THEME_STYLES: Record<ClockWeatherConfig['theme'], { backgroundColor: string; textColor: string }> = {
-  glass: { backgroundColor: '#1a2233', textColor: '#f8fafc' },
-  dark: { backgroundColor: '#0f172a', textColor: '#f8fafc' },
-  emerald: { backgroundColor: '#064e3b', textColor: '#ffffff' },
-  gold: { backgroundColor: '#78350f', textColor: '#ffffff' },
+export const CLOCK_THEME_STYLES: Record<ClockWeatherConfig['theme'], {
+  backgroundColor: string;
+  textColor: string;
+  subtitleColor: string;
+  borderColor: string;
+  locationColor: string;
+  conditionColor: string;
+  periodColor: string;
+  dividerColor: string;
+}> = {
+  glass: {
+    backgroundColor: '#e9eef4',
+    textColor: '#0f172a',
+    subtitleColor: '#526175',
+    borderColor: '#d5dee9',
+    locationColor: '#2563eb',
+    conditionColor: '#b45309',
+    periodColor: '#0284c7',
+    dividerColor: 'rgba(15,23,42,0.12)',
+  },
+  dark: {
+    backgroundColor: '#0f172a',
+    textColor: '#f8fafc',
+    subtitleColor: '#94a3b8',
+    borderColor: '#1e3a8a',
+    locationColor: '#93c5fd',
+    conditionColor: '#fbbf24',
+    periodColor: '#38bdf8',
+    dividerColor: 'rgba(255,255,255,0.1)',
+  },
+  emerald: {
+    backgroundColor: '#064e3b',
+    textColor: '#ffffff',
+    subtitleColor: '#94a3b8',
+    borderColor: '#1e3a8a',
+    locationColor: '#93c5fd',
+    conditionColor: '#fbbf24',
+    periodColor: '#38bdf8',
+    dividerColor: 'rgba(255,255,255,0.1)',
+  },
+  gold: {
+    backgroundColor: '#78350f',
+    textColor: '#ffffff',
+    subtitleColor: '#94a3b8',
+    borderColor: '#1e3a8a',
+    locationColor: '#93c5fd',
+    conditionColor: '#fbbf24',
+    periodColor: '#38bdf8',
+    dividerColor: 'rgba(255,255,255,0.1)',
+  },
 };
 
 export const CLOCK_STORAGE_KEY = 'dka_signage_clock_widgets';

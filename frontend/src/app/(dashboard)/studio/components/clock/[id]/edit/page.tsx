@@ -269,7 +269,7 @@ export default function EditClockWeatherPage() {
               minHeight: '380px',
               backgroundColor: 'var(--bg-primary)',
               borderRadius: '16px',
-              border: '1px solid var(--border-subtle)',
+              border: `1px solid ${CLOCK_THEME_STYLES[theme].borderColor}`,
               padding: '24px',
               display: 'flex',
               alignItems: 'center',
@@ -290,11 +290,11 @@ export default function EditClockWeatherPage() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', fontWeight: 700, color: '#93c5fd' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', fontWeight: 700, color: CLOCK_THEME_STYLES[theme].locationColor }}>
                   <MapPin size={16} />
                   <span>{weather.city}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem', color: '#fbbf24', fontWeight: 600 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem', color: CLOCK_THEME_STYLES[theme].conditionColor, fontWeight: 600 }}>
                   <CloudSun size={18} />
                   <span>{weather.condition}</span>
                 </div>
@@ -305,27 +305,27 @@ export default function EditClockWeatherPage() {
                   {hours}:{minutes}
                 </span>
                 {showSeconds && (
-                  <span style={{ fontSize: '1.75rem', fontWeight: 700, color: '#94a3b8' }}>
+                  <span style={{ fontSize: '1.75rem', fontWeight: 700, color: CLOCK_THEME_STYLES[theme].subtitleColor }}>
                     :{seconds}
                   </span>
                 )}
                 {!is24Hour && (
-                  <span style={{ fontSize: '1rem', fontWeight: 800, color: '#38bdf8', marginLeft: '4px' }}>
+                  <span style={{ fontSize: '1rem', fontWeight: 800, color: CLOCK_THEME_STYLES[theme].periodColor, marginLeft: '4px' }}>
                     {ampm}
                   </span>
                 )}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', color: '#cbd5e1', marginBottom: '20px' }}>
-                <Calendar size={14} color="#94a3b8" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', color: CLOCK_THEME_STYLES[theme].subtitleColor, marginBottom: '20px' }}>
+                <Calendar size={14} color={CLOCK_THEME_STYLES[theme].subtitleColor} />
                 <span>{formattedDate}</span>
               </div>
 
-              <div style={{ paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ paddingTop: '16px', borderTop: `1px solid ${CLOCK_THEME_STYLES[theme].dividerColor}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ fontSize: '2rem', fontWeight: 800 }}>
                   {weather.temp}°C
                 </div>
-                <div style={{ display: 'flex', gap: '14px', fontSize: '0.75rem', color: '#94a3b8' }}>
+                <div style={{ display: 'flex', gap: '14px', fontSize: '0.75rem', color: CLOCK_THEME_STYLES[theme].subtitleColor }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <Droplets size={12} color="#38bdf8" />
                     <span>{weather.humidity}%</span>

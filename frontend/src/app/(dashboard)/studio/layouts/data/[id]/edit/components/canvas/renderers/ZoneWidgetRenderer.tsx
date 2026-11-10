@@ -5,7 +5,7 @@ import { RotateCcw, Bell, Radio, Calendar, CloudSun, Droplets, MapPin, Wind } fr
 import HlsPlayer from '@/components/ui/HlsPlayer';
 import { Layer } from '../../../context/LayoutStateContext';
 import { injectQueueVariables, createDefaultQueueLayoutItems } from '@/app/(dashboard)/studio/components/ticket/types';
-import { CITY_PRESETS } from '@/app/(dashboard)/studio/components/clock/types';
+import { CITY_PRESETS, CLOCK_THEME_STYLES } from '@/app/(dashboard)/studio/components/clock/types';
 
 const Marquee = 'marquee' as any;
 
@@ -29,7 +29,8 @@ function ClockWidget({ data, scale, width, height }: { data: any; scale: number;
   }).formatToParts(now);
   const getPart = (type: string) => timeParts.find((part) => part.type === type)?.value || '';
   const widgetScale = Math.max(0.1, Math.min(scale * width / 440, scale * height / 230));
-  const textColor = data?.textColor || '#f8fafc';
+  const themeStyle = CLOCK_THEME_STYLES[data?.theme as keyof typeof CLOCK_THEME_STYLES] || CLOCK_THEME_STYLES.glass;
+  const textColor = data?.textColor || themeStyle.textColor;
 
   return (
     <div
@@ -38,9 +39,9 @@ function ClockWidget({ data, scale, width, height }: { data: any; scale: number;
         inset: 0,
         boxSizing: 'border-box',
         padding: `${20 * widgetScale}px ${28 * widgetScale}px`,
-        backgroundColor: data?.backgroundColor || '#1a2233',
+        backgroundColor: data?.backgroundColor || themeStyle.backgroundColor,
         color: textColor,
-        border: `${Math.max(1, widgetScale)}px solid ${data?.borderColor || 'rgba(255,255,255,0.1)'}`,
+        border: `${Math.max(1, widgetScale)}px solid ${data?.borderColor || themeStyle.borderColor}`,
         borderRadius: `${Math.max(4, 24 * widgetScale)}px`,
         boxShadow: '0 12px 28px rgba(0,0,0,0.24)',
         display: 'flex',
@@ -50,11 +51,11 @@ function ClockWidget({ data, scale, width, height }: { data: any; scale: number;
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 * widgetScale, marginBottom: 10 * widgetScale }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 * widgetScale, color: '#93c5fd', fontSize: 14 * widgetScale, fontWeight: 700 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 * widgetScale, color: themeStyle.locationColor, fontSize: 14 * widgetScale, fontWeight: 700 }}>
           <MapPin size={14 * widgetScale} />
           <span>{weather.city}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 * widgetScale, color: '#fbbf24', fontSize: 13 * widgetScale, fontWeight: 600, whiteSpace: 'nowrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 * widgetScale, color: themeStyle.conditionColor, fontSize: 13 * widgetScale, fontWeight: 600, whiteSpace: 'nowrap' }}>
           <CloudSun size={17 * widgetScale} />
           <span>{weather.condition}</span>
         </div>
@@ -65,23 +66,23 @@ function ClockWidget({ data, scale, width, height }: { data: any; scale: number;
           {getPart('hour')}:{getPart('minute')}
         </span>
         {data?.showSeconds !== false && (
-          <span style={{ fontSize: 28 * widgetScale, fontWeight: 700, color: '#94a3b8' }}>:{getPart('second')}</span>
+          <span style={{ fontSize: 28 * widgetScale, fontWeight: 700, color: themeStyle.subtitleColor }}>:{getPart('second')}</span>
         )}
         {getPart('dayPeriod') && (
-          <span style={{ fontSize: 16 * widgetScale, fontWeight: 800, color: '#38bdf8' }}>{getPart('dayPeriod')}</span>
+          <span style={{ fontSize: 16 * widgetScale, fontWeight: 800, color: themeStyle.periodColor }}>{getPart('dayPeriod')}</span>
         )}
       </div>
 
       {data?.showDate !== false && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 * widgetScale, color: '#cbd5e1', fontSize: (data?.dateFontSize || 14) * widgetScale, marginBottom: 12 * widgetScale }}>
-          <Calendar size={14 * widgetScale} color="#94a3b8" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 * widgetScale, color: themeStyle.subtitleColor, fontSize: (data?.dateFontSize || 14) * widgetScale, marginBottom: 12 * widgetScale }}>
+          <Calendar size={14 * widgetScale} color={themeStyle.subtitleColor} />
           <span>{now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone })}</span>
         </div>
       )}
 
-      <div style={{ paddingTop: 10 * widgetScale, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 * widgetScale }}>
+      <div style={{ paddingTop: 10 * widgetScale, borderTop: `1px solid ${themeStyle.dividerColor}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 * widgetScale }}>
         <span style={{ fontSize: 28 * widgetScale, lineHeight: 1, fontWeight: 800 }}>{weather.temp}°C</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 * widgetScale, color: '#94a3b8', fontSize: 12 * widgetScale, whiteSpace: 'nowrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 * widgetScale, color: themeStyle.subtitleColor, fontSize: 12 * widgetScale, whiteSpace: 'nowrap' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 * widgetScale }}>
             <Droplets size={12 * widgetScale} color="#38bdf8" /> {weather.humidity}%
           </span>

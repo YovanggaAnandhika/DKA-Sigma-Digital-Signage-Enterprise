@@ -38,6 +38,11 @@ class ClockZoneRenderer(
         ).coerceAtLeast(0.1f) * scale
         val pad = (20f * densityScale).toInt().coerceAtLeast(1)
         val weather = weatherForCity(payload.city)
+        val isGlass = payload.theme.equals("glass", ignoreCase = true)
+        val locationColor = if (isGlass) "#2563eb".toColorInt() else "#93c5fd".toColorInt()
+        val conditionColor = if (isGlass) "#b45309".toColorInt() else "#fbbf24".toColorInt()
+        val periodColor = if (isGlass) "#0284c7".toColorInt() else "#38bdf8".toColorInt()
+        val dividerColor = if (isGlass) "#1f0f172a".toColorInt() else "#33ffffff".toColorInt()
         val hasBorder = payload.borderColorHex.isNotBlank() && !payload.borderColorHex.equals("transparent", ignoreCase = true)
 
         val container = LinearLayout(context).apply {
@@ -60,7 +65,7 @@ class ClockZoneRenderer(
 
         val locationText = TextView(context).apply {
             text = context.getString(R.string.clock_location, weather.city)
-            setTextColor("#93c5fd".toColorInt())
+            setTextColor(locationColor)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * densityScale)
             includeFontPadding = false
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
@@ -68,7 +73,7 @@ class ClockZoneRenderer(
 
         val conditionText = TextView(context).apply {
             text = context.getString(R.string.clock_condition, weather.condition)
-            setTextColor("#fbbf24".toColorInt())
+            setTextColor(conditionColor)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 13f * densityScale)
             includeFontPadding = false
             gravity = Gravity.END
@@ -94,13 +99,13 @@ class ClockZoneRenderer(
             letterSpacing = -0.02f
         }
         val secondsText = TextView(context).apply {
-            setTextColor("#94a3b8".toColorInt())
+            setTextColor(ColorParser.parseColor(payload.subtitleColorHex, "#526175".toColorInt()))
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 28f * densityScale)
             includeFontPadding = false
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
         }
         val periodText = TextView(context).apply {
-            setTextColor("#38bdf8".toColorInt())
+            setTextColor(periodColor)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * densityScale)
             includeFontPadding = false
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
@@ -112,7 +117,7 @@ class ClockZoneRenderer(
         container.addView(timeRow)
 
         val dateText = TextView(context).apply {
-            setTextColor("#cbd5e1".toColorInt())
+            setTextColor(ColorParser.parseColor(payload.subtitleColorHex, "#526175".toColorInt()))
             setTextSize(TypedValue.COMPLEX_UNIT_PX, payload.dateFontSizeSp * densityScale)
             includeFontPadding = false
             text = ""
@@ -120,7 +125,7 @@ class ClockZoneRenderer(
         if (payload.showDate) container.addView(dateText)
 
         container.addView(View(context).apply {
-            setBackgroundColor("#33ffffff".toColorInt())
+            setBackgroundColor(dividerColor)
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (1f * densityScale).toInt().coerceAtLeast(1)).apply {
                 topMargin = (12f * densityScale).toInt()
             }
@@ -140,7 +145,7 @@ class ClockZoneRenderer(
         }
         val metricsText = TextView(context).apply {
             text = context.getString(R.string.clock_weather_metrics, weather.humidity, weather.windSpeed)
-            setTextColor("#94a3b8".toColorInt())
+            setTextColor(ColorParser.parseColor(payload.subtitleColorHex, "#526175".toColorInt()))
             setTextSize(TypedValue.COMPLEX_UNIT_PX, 12f * densityScale)
             includeFontPadding = false
             gravity = Gravity.END

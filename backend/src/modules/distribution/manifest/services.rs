@@ -454,7 +454,7 @@ impl ManifestService {
                     }
                 }
                 if let Some(clock_id) = b.block.clock_id {
-                    hasher.update(b"clock-renderer-v5");
+                    hasher.update(b"clock-renderer-v6");
                     if let Some(config) = Self::clock_config_fingerprint(pool, clock_id).await? {
                         hasher.update(config.as_bytes());
                     }
