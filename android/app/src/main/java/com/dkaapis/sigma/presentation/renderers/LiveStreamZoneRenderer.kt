@@ -129,10 +129,10 @@ class LiveStreamZoneRenderer(
             val isRtsp = targetUri.scheme.equals("rtsp", ignoreCase = true)
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(
-                    /* minBufferMs = */ if (isRtsp) 80 else 1_500,
-                    /* maxBufferMs = */ if (isRtsp) 200 else 4_000,
-                    /* bufferForPlaybackMs = */ if (isRtsp) 30 else 300,
-                    /* bufferForPlaybackAfterRebufferMs = */ if (isRtsp) 50 else 600
+                    /* minBufferMs = */ if (isRtsp) 800 else 1_500,
+                    /* maxBufferMs = */ if (isRtsp) 2_500 else 4_000,
+                    /* bufferForPlaybackMs = */ if (isRtsp) 200 else 300,
+                    /* bufferForPlaybackAfterRebufferMs = */ if (isRtsp) 350 else 600
                 )
                 .setBackBuffer(0, false)
                 .setPrioritizeTimeOverSizeThresholds(true)
@@ -158,7 +158,7 @@ class LiveStreamZoneRenderer(
                         setMediaSource(
                             RtspMediaSource.Factory()
                                 .setForceUseRtpTcp(true)
-                                .setTimeoutMs(3_000L)
+                                .setTimeoutMs(8_000L)
                                 .createMediaSource(mediaItem)
                         )
                     } else {
@@ -222,9 +222,15 @@ class LiveStreamZoneRenderer(
                                 bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
                                 hasRenderedFirstFrame = false
                                 isStreamOffline = true
+                                // Auto-healing path toggle: if raw `live/` fails (e.g. 1080p profile / audio conflict), try `hd/live/`, and vice-versa
+                                if (activePlaybackUrl.contains("/live/") && !activePlaybackUrl.contains("/hd/live/")) {
+                                    activePlaybackUrl = activePlaybackUrl.replace("/live/", "/hd/live/")
+                                } else if (activePlaybackUrl.contains("/hd/live/")) {
+                                    activePlaybackUrl = activePlaybackUrl.replace("/hd/live/", "/live/")
+                                }
                                 posterView?.animate()?.alpha(1f)?.setDuration(200)?.start()
-                                glassOverlay?.setOffline(payload.name, "Siaran Offline")
-                                scheduleReconnect(payload, delayMs = 2_500L)
+                                glassOverlay?.setOffline(payload.name, "Menunggu siaran dimulai dari OBS Studio / encoder.")
+                                scheduleReconnect(payload, delayMs = 2_000L)
                             }
                         }
                     })
@@ -273,7 +279,7 @@ class LiveStreamZoneRenderer(
                         exoPlayer?.setMediaSource(
                             RtspMediaSource.Factory()
                                 .setForceUseRtpTcp(true)
-                                .setTimeoutMs(3_000L)
+                                .setTimeoutMs(8_000L)
                                 .createMediaSource(mediaItem)
                         )
                     } else {
