@@ -203,6 +203,10 @@ export default function ZoneWidgetRenderer({
   }
 
   if (activeBlock.widgetType === 'ticker') {
+    const tickerFontSize = Math.min(
+      activeBlock.widgetData?.fontSize || 16,
+      Math.max(8, z.height * 0.72),
+    );
     return (
       <div
         style={{
@@ -234,10 +238,10 @@ export default function ZoneWidgetRenderer({
             style={{
               backgroundColor: activeBlock.widgetData?.badgeBackgroundColor || 'rgba(255,255,255,0.2)',
               color: activeBlock.widgetData?.badgeTextColor || '#ffffff',
-              padding: `${Math.max(1, Math.floor(2 * scale))}px ${Math.max(1, Math.floor(8 * scale))}px`,
+              padding: `${Math.max(1, Math.floor(tickerFontSize * 0.1 * scale))}px ${Math.max(1, Math.floor(tickerFontSize * 0.35 * scale))}px`,
               borderRadius: `${Math.max(1, Math.floor(4 * scale))}px`,
               fontWeight: 800,
-              fontSize: `${12 * scale}px`,
+              fontSize: `${tickerFontSize * 0.5 * scale}px`,
               whiteSpace: 'nowrap',
               flexShrink: 0,
             }}
@@ -249,7 +253,7 @@ export default function ZoneWidgetRenderer({
           text={(activeBlock.widgetData?.messagesList || activeBlock.widgetData?.messages || ['HNDSigma Teks Berjalan']).join('  ✦  ')}
           speed={activeBlock.widgetData?.speed || 'normal'}
           scale={scale}
-          fontSize={activeBlock.widgetData?.fontSize || 16}
+          fontSize={tickerFontSize}
           color={activeBlock.widgetData?.textColor || '#ffffff'}
         />
       </div>

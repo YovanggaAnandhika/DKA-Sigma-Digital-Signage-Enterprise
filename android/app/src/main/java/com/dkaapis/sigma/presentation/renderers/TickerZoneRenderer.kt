@@ -19,7 +19,12 @@ class TickerZoneRenderer(
     private val context: Context
 ) {
     fun createView(parent: ViewGroup, payload: TickerConfigPayload = TickerConfigPayload()): View {
-        val scale = (parent as? ZoneContainerView)?.scaleFactorX ?: 1.0f
+        val zone = parent as? ZoneContainerView
+        val scale = zone?.scaleFactorX ?: 1.0f
+        val fontSize = minOf(
+            payload.fontSize.takeIf { it > 0f } ?: 16f,
+            (zone?.zoneHeight?.toFloat() ?: Float.MAX_VALUE).let { (it * 0.72f).coerceAtLeast(8f) }
+        ).coerceAtLeast(8f) * scale
         val pad = (12f * scale).toInt().coerceAtLeast(1)
         val hasBorder = payload.borderColorHex.isNotBlank() && !payload.borderColorHex.equals("transparent", ignoreCase = true)
 
@@ -42,14 +47,15 @@ class TickerZoneRenderer(
         }
 
         if (payload.badgeText.isNotBlank()) {
-            val badgePadH = (8f * scale).toInt().coerceAtLeast(1)
-            val badgePadV = (2f * scale).toInt().coerceAtLeast(1)
+            val badgeFontSize = fontSize * 0.5f
+            val badgePadH = (badgeFontSize * 0.35f).toInt().coerceAtLeast(1)
+            val badgePadV = (badgeFontSize * 0.1f).toInt().coerceAtLeast(1)
 
             container.addView(
                 TextView(context).apply {
                     text = payload.badgeText
                     setTextColor(ColorParser.parseColor(payload.badgeTextColorHex, Color.WHITE))
-                    setTextSize(TypedValue.COMPLEX_UNIT_PX, 12f * scale)
+                    setTextSize(TypedValue.COMPLEX_UNIT_PX, badgeFontSize)
                     includeFontPadding = false
                     typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
                     setPadding(badgePadH, badgePadV, badgePadH, badgePadV)
@@ -70,7 +76,7 @@ class TickerZoneRenderer(
             MarqueeTextView(context).apply {
                 text = payload.textMessage.ifBlank { "HNDSigma Teks Berjalan" }
                 setTextColor(ColorParser.parseColor(payload.textColorHex, Color.WHITE))
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, (if (payload.fontSize > 0f) payload.fontSize else 16f) * scale)
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize)
                 includeFontPadding = false
                 typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
                 speedPixelsPerSec = when (payload.speed.lowercase()) {
