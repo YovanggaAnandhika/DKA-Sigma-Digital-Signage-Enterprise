@@ -9,6 +9,8 @@ import { ClockServiceClient } from '@/lib/api/components/v1/clock/clock_grpc_pb'
 import { GetClockRequest } from '@/lib/api/components/v1/clock/clock.common_pb';
 import { WebviewServiceClient } from '@/lib/api/components/v1/webview/webview_grpc_pb';
 import { GetWebviewRequest } from '@/lib/api/components/v1/webview/webview.common_pb';
+import { LiveStreamServiceClient } from '@/lib/api/components/v1/live_stream/live_stream_grpc_pb';
+import { GetLiveStreamRequest } from '@/lib/api/components/v1/live_stream/live_stream.common_pb';
 import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 import * as grpc from '@grpc/grpc-js';
 
@@ -58,6 +60,18 @@ async function fetchWidgetData(block: any, metadata: grpc.Metadata): Promise<any
       const req = new GetWebviewRequest();
       req.setId(block.webviewId);
       client.getWebview(req, metadata, (err: any, res: any) => {
+        if (err || !res) resolve(null);
+        else resolve(res.toObject());
+      });
+    });
+  }
+
+  if (block.liveStreamId) {
+    return new Promise((resolve) => {
+      const client = new LiveStreamServiceClient(host, creds);
+      const req = new GetLiveStreamRequest();
+      req.setId(block.liveStreamId);
+      client.getLiveStream(req, metadata, (err: any, res: any) => {
         if (err || !res) resolve(null);
         else resolve(res.toObject());
       });

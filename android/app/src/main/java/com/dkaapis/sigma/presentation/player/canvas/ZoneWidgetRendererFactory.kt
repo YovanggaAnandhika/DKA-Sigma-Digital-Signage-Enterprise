@@ -76,6 +76,10 @@ class ZoneWidgetRendererFactory {
             }
             ZoneWidgetType.LIVESTREAM -> {
                 val json = runCatching { JSONObject(jsonStr) }.getOrDefault(JSONObject())
+                val effectiveStreamId = json.optString("id").ifBlank { block.liveStreamId.orEmpty() }
+                if (effectiveStreamId.isNotBlank() && !json.has("id")) {
+                    json.put("id", effectiveStreamId)
+                }
                 val renderer = LiveStreamZoneRenderer(activity)
                 onLiveStreamCreated(renderer)
                 renderer.createView(parent, LiveStreamConfigPayload.fromJson(json))

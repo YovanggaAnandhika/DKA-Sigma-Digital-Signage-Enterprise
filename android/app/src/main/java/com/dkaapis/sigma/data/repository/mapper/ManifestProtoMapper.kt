@@ -47,6 +47,7 @@ class ManifestProtoMapper {
                             id = block.id.ifEmpty { "blk-$j" },
                             mediaItemId = block.mediaItemId.takeIf { it.isNotBlank() },
                             playlistId = block.playlistId.takeIf { it.isNotBlank() },
+                            liveStreamId = block.liveStreamId.takeIf { it.isNotBlank() },
                             widgetType = when {
                                 block.hasQueueId() && block.queueId.isNotBlank() -> ZoneWidgetType.QUEUE
                                 block.hasClockId() && block.clockId.isNotBlank() -> ZoneWidgetType.CLOCK

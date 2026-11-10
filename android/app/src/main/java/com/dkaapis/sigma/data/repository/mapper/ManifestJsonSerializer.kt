@@ -58,6 +58,7 @@ class ManifestJsonSerializer {
                                 put("id", block.id)
                                 if (block.mediaItemId != null) put("mediaItemId", block.mediaItemId)
                                 if (block.playlistId != null) put("playlistId", block.playlistId)
+                                if (block.liveStreamId != null) put("liveStreamId", block.liveStreamId)
                                 put("widgetType", block.widgetType.name)
                                 if (block.widgetDataJson != null) put("widgetDataJson", block.widgetDataJson)
                                 put("durationSeconds", block.durationSeconds)

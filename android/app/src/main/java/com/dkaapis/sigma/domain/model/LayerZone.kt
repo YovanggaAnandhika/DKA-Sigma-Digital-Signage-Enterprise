@@ -23,6 +23,7 @@ data class LayerBlock(
     val id: String,
     val mediaItemId: String? = null,
     val playlistId: String? = null,
+    val liveStreamId: String? = null,
     val widgetType: ZoneWidgetType = ZoneWidgetType.NONE,
     val widgetDataJson: String? = null,
     val startTimeSeconds: Int = 0,

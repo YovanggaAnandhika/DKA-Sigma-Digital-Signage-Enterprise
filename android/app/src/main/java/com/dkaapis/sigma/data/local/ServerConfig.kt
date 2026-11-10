@@ -20,7 +20,7 @@ object ServerConfig {
         return try {
             context.getString(R.string.server_host).trim()
         } catch (_: Exception) {
-            "10.20.30.63"
+            "10.20.30.97"
         }
     }
 

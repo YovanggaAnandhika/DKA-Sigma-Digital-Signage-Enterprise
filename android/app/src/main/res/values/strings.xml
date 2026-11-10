@@ -6,7 +6,7 @@
     <string name="syncing_manifest">Menyinkronkan Jadwal &amp; Konten…</string>
 
     <!-- Environment Server Configurations -->
-    <string name="server_host">10.20.30.63</string>
+    <string name="server_host">10.20.30.97</string>
     <string name="server_port">50051</string>
     <string name="server_use_tls">false</string>
 

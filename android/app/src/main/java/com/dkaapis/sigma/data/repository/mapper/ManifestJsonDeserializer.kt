@@ -88,6 +88,7 @@ class ManifestJsonDeserializer {
                 id = b.optString("id", "blk-$j"),
                 mediaItemId = b.optString("mediaItemId").ifBlank { null },
                 playlistId = b.optString("playlistId").ifBlank { null },
+                liveStreamId = b.optString("liveStreamId").ifBlank { b.optString("live_stream_id").ifBlank { null } },
                 widgetType = wType,
                 widgetDataJson = b.optString("widgetDataJson").ifBlank { b.optJSONObject("widgetData")?.toString() },
                 startTimeSeconds = b.optInt("startTimeSeconds", 0),

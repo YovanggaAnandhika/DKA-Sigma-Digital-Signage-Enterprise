@@ -236,10 +236,8 @@ class LiveStreamZoneRenderer(
             override fun onRemoveStream(stream: MediaStream) = Unit
             override fun onDataChannel(channel: org.webrtc.DataChannel) = Unit
             override fun onRenegotiationNeeded() = Unit
-            override fun onAddTrack(receiver: RtpReceiver, streams: Array<MediaStream>) = Unit
-
-            override fun onTrack(transceiver: RtpTransceiver) {
-                when (val track = transceiver.receiver.track()) {
+            private fun handleTrack(track: MediaStreamTrack?) {
+                when (track) {
                     is VideoTrack -> {
                         remoteVideoTrack = track
                         track.setEnabled(!playbackPaused)
@@ -252,6 +250,14 @@ class LiveStreamZoneRenderer(
                         updateRemoteAudioTrack()
                     }
                 }
+            }
+
+            override fun onAddTrack(receiver: RtpReceiver, streams: Array<MediaStream>) {
+                handleTrack(receiver.track())
+            }
+
+            override fun onTrack(transceiver: RtpTransceiver) {
+                handleTrack(transceiver.receiver.track())
             }
         }
 
@@ -402,6 +408,7 @@ class LiveStreamZoneRenderer(
                 this.player = player
             }
             container.addView(playerView)
+            glassOverlay?.bringToFront()
         } catch (error: Exception) {
             Log.e(TAG, "Failed to initialize ExoPlayer for stream=${payload.streamId}: ${error.message}", error)
         }

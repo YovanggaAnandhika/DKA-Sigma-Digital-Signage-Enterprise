@@ -60,8 +60,12 @@ class SignageCanvasLayout @JvmOverloads constructor(
             if (child.visibility != GONE && child is ZoneContainerView) {
                 child.scaleFactorX = scaleFactorX
                 child.scaleFactorY = scaleFactorY
-                val childW = (child.zoneWidth * scaleFactorX).toInt()
-                val childH = (child.zoneHeight * scaleFactorY).toInt()
+                val left = offsetX + kotlin.math.round(child.zoneX * scaleFactorX).toInt()
+                val right = offsetX + kotlin.math.round((child.zoneX + child.zoneWidth) * scaleFactorX).toInt()
+                val top = offsetY + kotlin.math.round(child.zoneY * scaleFactorY).toInt()
+                val bottom = offsetY + kotlin.math.round((child.zoneY + child.zoneHeight) * scaleFactorY).toInt()
+                val childW = (right - left).coerceAtLeast(0)
+                val childH = (bottom - top).coerceAtLeast(0)
                 child.measure(
                     MeasureSpec.makeMeasureSpec(childW, MeasureSpec.EXACTLY),
                     MeasureSpec.makeMeasureSpec(childH, MeasureSpec.EXACTLY)
@@ -76,10 +80,10 @@ class SignageCanvasLayout @JvmOverloads constructor(
         for (i in 0 until childCount) {
             val child = getChildAt(i)
             if (child.visibility != GONE && child is ZoneContainerView) {
-                val left = offsetX + (child.zoneX * scaleFactorX).toInt()
-                val top = offsetY + (child.zoneY * scaleFactorY).toInt()
-                val right = left + child.measuredWidth
-                val bottom = top + child.measuredHeight
+                val left = offsetX + kotlin.math.round(child.zoneX * scaleFactorX).toInt()
+                val right = offsetX + kotlin.math.round((child.zoneX + child.zoneWidth) * scaleFactorX).toInt()
+                val top = offsetY + kotlin.math.round(child.zoneY * scaleFactorY).toInt()
+                val bottom = offsetY + kotlin.math.round((child.zoneY + child.zoneHeight) * scaleFactorY).toInt()
                 child.layout(left, top, right, bottom)
             }
         }
