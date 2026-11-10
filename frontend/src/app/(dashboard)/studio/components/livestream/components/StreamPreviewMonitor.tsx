@@ -54,6 +54,10 @@ export default function StreamPreviewMonitor({
   const [isMuted, setIsMuted] = useState<boolean>(initialMuted);
   const [playbackStatus, setPlaybackStatus] = useState<StreamPlaybackStatus>('OFFLINE');
 
+  React.useEffect(() => {
+    setIsMuted(initialMuted);
+  }, [initialMuted]);
+
   const handleMuteToggle = (muted: boolean) => {
     setIsMuted(muted);
     onToggleMute?.(muted);

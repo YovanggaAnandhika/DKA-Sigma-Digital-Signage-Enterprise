@@ -59,6 +59,7 @@ function LiveStreamEditorContent() {
     setIsRelayActive,
     setAutoReconnect,
     setLowLatencyMode,
+    setIsMuted,
     setPosterImageUrl,
     isDirty,
     saving,
@@ -355,6 +356,8 @@ function LiveStreamEditorContent() {
             onToggleLowLatency={setLowLatencyMode}
             autoReconnect={draft.autoReconnect}
             onToggleAutoReconnect={setAutoReconnect}
+            isMuted={draft.isMuted}
+            onToggleMute={setIsMuted}
           />
         </div>
 
@@ -368,6 +371,7 @@ function LiveStreamEditorContent() {
           lowLatencyMode={draft.lowLatencyMode}
           autoReconnect={draft.autoReconnect}
           isMuted={draft.isMuted}
+          onToggleMute={setIsMuted}
           posterImageUrl={draft.posterImageUrl}
         />
       </div>

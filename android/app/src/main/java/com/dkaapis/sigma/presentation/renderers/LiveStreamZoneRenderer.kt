@@ -95,9 +95,12 @@ class LiveStreamZoneRenderer(
             payload.streamId.isNotBlank() ||
             rawTarget.startsWith("/streams/")
 
-        // Direct zero-transcode RTSP stream from OBS ingest (`live/<streamId>`)
+        // Invariant:
+        // - WHIP publishes WebRTC Opus audio. Raw RTSP cannot negotiate dynamic Opus, so we read `hd/live` (normalized H.264 + AAC).
+        // - RTMP publishes standard H.264 + AAC directly, so we read raw `live` with zero transcode delay.
+        val pathPrefix = if (payload.sourceType.equals("WHIP", ignoreCase = true)) "hd/live" else "live"
         val playbackUrl = if (isServerHosted && payload.streamId.isNotBlank()) {
-            "rtsp://${ServerConfig.getHost(context)}:$RTSP_PORT/live/${payload.streamId}"
+            "rtsp://${ServerConfig.getHost(context)}:$RTSP_PORT/$pathPrefix/${payload.streamId}"
         } else {
             targetUrl
         }
