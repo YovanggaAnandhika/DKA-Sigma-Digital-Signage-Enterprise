@@ -124,7 +124,9 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
   const router = useRouter();
   const [streamId, setStreamId] = useState<string>(initialStreamId || '');
   const [generatedKey, setGeneratedKey] = useState<string>('');
-  const [serverHost, setServerHost] = useState<string>('sigma.dkaapis.test');
+  const [serverHost, setServerHost] = useState<string>(() =>
+    typeof window !== 'undefined' ? window.location.host : 'sigma.dkaapis.test'
+  );
 
   const [savedState, setSavedState] = useState<LiveStreamFormState>(DEFAULT_STATE);
   const [draft, setDraft] = useState<LiveStreamFormState>(DEFAULT_STATE);
@@ -258,11 +260,13 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
     let ingestPassword = '';
 
     if (draft.sourceType === 'WHIP') {
-      effectiveSourceUrl = `http://${serverHost}/streams/${streamKey}/whip`;
+      // Invariant: Save relative URL to database. Domain is resolved by runtime clients.
+      effectiveSourceUrl = `/streams/${streamKey}/whip`;
       requiresAuth = draft.protocols.WHIP.requiresAuth;
       ingestPassword = draft.protocols.WHIP.token.trim();
     } else if (draft.sourceType === 'RTMP') {
-      effectiveSourceUrl = `rtmp://${serverHost}:1935/live/${streamKey}`;
+      // Invariant: Save relative stream path to database.
+      effectiveSourceUrl = `/live/${streamKey}`;
       requiresAuth = draft.protocols.RTMP.requiresAuth;
       ingestUsername = draft.protocols.RTMP.username.trim();
       ingestPassword = draft.protocols.RTMP.password.trim();

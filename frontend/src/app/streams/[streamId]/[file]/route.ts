@@ -27,30 +27,48 @@ export async function GET(
   return new Promise<Response>((resolve) => {
     client.getStreamSegment(grpcReq, async (err, response) => {
       if (err || !response || !response.getSuccess()) {
-        // Direct fallback to streamer engine if gRPC bridge is unavailable
+        // Direct stateless fallback to streamer engine if gRPC bridge is unavailable
         try {
-          const streamerHlsBase = (process.env.HND_STREAMER_INTERNAL_URL || 'http://dka-product-sigma-streamer:8889')
-            .replace(':8889', ':8888');
-          const targetFile = file === 'live.m3u8' ? 'index.m3u8?cookieCheck=1' : fileWithQuery;
-          const fallbackRes = await fetch(`${streamerHlsBase}/live/${streamId}/${targetFile}`, {
-            cache: 'no-store',
-          });
-          if (fallbackRes.ok) {
-            const raw = await fallbackRes.arrayBuffer();
-            const isPlaylist = file.endsWith('.m3u8');
-            const ct = fallbackRes.headers.get('content-type') || (isPlaylist ? 'application/vnd.apple.mpegurl' : 'video/MP2T');
-            return resolve(
-              new Response(raw, {
-                status: 200,
-                headers: {
-                  'Content-Type': ct,
-                  'Content-Length': String(raw.byteLength),
-                  'Cache-Control': isPlaylist ? 'no-cache, no-store, must-revalidate' : 'public, max-age=60, immutable',
-                  'Access-Control-Allow-Origin': '*',
-                  'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-                },
-              })
-            );
+          const streamerHlsBase = (
+            process.env.HND_STREAMER_INTERNAL_URL || 'http://dka-product-sigma-streamer:8889'
+          ).replace(':8889', ':8888');
+
+          const prefixes = ['hd/live', 'webrtc/live', 'live'];
+          for (const prefix of prefixes) {
+            const targetFile = file === 'live.m3u8' ? 'index.m3u8?cookieCheck=1' : fileWithQuery;
+            const fallbackRes = await fetch(`${streamerHlsBase}/${prefix}/${streamId}/${targetFile}`, {
+              headers: {
+                Cookie: 'cookieCheck=1',
+                'User-Agent': 'HNDSigma-Player-Gateway/1.0',
+              },
+              cache: 'no-store',
+            });
+            if (fallbackRes.ok) {
+              let raw = await fallbackRes.arrayBuffer();
+              const isPlaylist = file.endsWith('.m3u8');
+              if (isPlaylist) {
+                const text = new TextDecoder().decode(raw);
+                const cleanText = text.replace(/\?session=[a-zA-Z0-9_-]+/g, '');
+                raw = new TextEncoder().encode(cleanText).buffer as ArrayBuffer;
+              }
+              const ct =
+                fallbackRes.headers.get('content-type') ||
+                (isPlaylist ? 'application/vnd.apple.mpegurl' : 'video/MP2T');
+              return resolve(
+                new Response(raw, {
+                  status: 200,
+                  headers: {
+                    'Content-Type': ct,
+                    'Content-Length': String(raw.byteLength),
+                    'Cache-Control': isPlaylist
+                      ? 'no-cache, no-store, must-revalidate'
+                      : 'public, max-age=60, immutable',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+                  },
+                })
+              );
+            }
           }
         } catch {}
         return resolve(new NextResponse(null, { status: 404 }));

@@ -377,7 +377,12 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
                     target_file,
                     query_str
                 );
-                let mut resp_res = self.relay_manager.http_client().get(&url).send().await;
+                let mut resp_res = self.relay_manager
+                    .http_client()
+                    .get(&url)
+                    .header(reqwest::header::COOKIE, "cookieCheck=1")
+                    .send()
+                    .await;
                 if let Ok(ref resp) = resp_res {
                     if resp.status().is_redirection() {
                         if let Some(loc) = resp.headers().get(reqwest::header::LOCATION).and_then(|h| h.to_str().ok()) {
@@ -386,14 +391,44 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
                             } else {
                                 format!("{}{}", self.relay_manager.streamer_hls_url().trim_end_matches('/'), loc)
                             };
-                            resp_res = self.relay_manager.http_client().get(&next_url).send().await;
+                            resp_res = self.relay_manager
+                                .http_client()
+                                .get(&next_url)
+                                .header(reqwest::header::COOKIE, "cookieCheck=1")
+                                .send()
+                                .await;
                         }
                     }
                 }
                 match resp_res {
                     Ok(resp) if resp.status().is_success() => {
                         match resp.bytes().await {
-                            Ok(b) => b.to_vec(),
+                            Ok(b) => {
+                                let mut raw = b.to_vec();
+                                if file_name.ends_with(".m3u8") {
+                                    if let Ok(text) = String::from_utf8(raw.clone()) {
+                                        let clean_lines: Vec<String> = text
+                                            .lines()
+                                            .map(|line| {
+                                                if let Some(idx) = line.find("?session=") {
+                                                    let before = &line[..idx];
+                                                    if let Some(rest_idx) = line[idx..]
+                                                        .find(|c: char| c == '&' || c.is_whitespace() || c == '"')
+                                                    {
+                                                        format!("{}{}", before, &line[idx + rest_idx..])
+                                                    } else {
+                                                        before.to_string()
+                                                    }
+                                                } else {
+                                                    line.to_string()
+                                                }
+                                            })
+                                            .collect();
+                                        raw = clean_lines.join("\n").into_bytes();
+                                    }
+                                }
+                                raw
+                            }
                             Err(_) => {
                                 return Ok(Response::new(GetStreamSegmentResponse {
                                     success: false,

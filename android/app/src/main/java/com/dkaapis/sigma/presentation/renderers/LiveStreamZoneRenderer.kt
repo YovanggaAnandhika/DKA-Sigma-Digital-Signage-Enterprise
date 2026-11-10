@@ -82,6 +82,15 @@ class LiveStreamZoneRenderer(
     private var isDucked = false
     private var isMuted = true
     private var playbackPaused = false
+    @Volatile private var isStreamOffline = true
+
+    init {
+        if (java.net.CookieHandler.getDefault() == null) {
+            java.net.CookieHandler.setDefault(
+                java.net.CookieManager(null, java.net.CookiePolicy.ACCEPT_ALL)
+            )
+        }
+    }
 
     @SuppressLint("UnsafeOptInUsageError")
     fun createView(parent: ViewGroup, payload: LiveStreamConfigPayload): View {
@@ -123,7 +132,7 @@ class LiveStreamZoneRenderer(
             return container
         }
 
-        overlay.setBuffering(payload.name)
+        overlay.setOffline(payload.name, "Menghubungkan...")
 
         if (payload.streamMode == "SERVER_HOSTED_HLS" && payload.streamId.isNotBlank()) {
             startWhepPlayback(container, targetUrl, payload)
@@ -156,6 +165,7 @@ class LiveStreamZoneRenderer(
                     override fun onFirstFrameRendered() {
                         mainHandler.post {
                             if (!released) {
+                                isStreamOffline = false
                                 fallbackRunnable?.let(mainHandler::removeCallbacks)
                                 posterView?.animate()?.alpha(0f)?.setDuration(250)?.start()
                                 glassOverlay?.setLive(isLowLatency = true)
@@ -310,7 +320,6 @@ class LiveStreamZoneRenderer(
     ) {
         if (released || exoPlayer != null || hlsUrl.isBlank()) return
         Log.w(TAG, "$reason; falling back to HLS for stream=${payload.streamId}")
-        glassOverlay?.setBuffering(payload.name)
         fallbackRunnable?.let(mainHandler::removeCallbacks)
         connectionJob?.cancel()
         closePeerConnection()
@@ -357,6 +366,7 @@ class LiveStreamZoneRenderer(
                     addListener(object : Player.Listener {
                         override fun onRenderedFirstFrame() {
                             if (!released) {
+                                isStreamOffline = false
                                 posterView?.animate()?.alpha(0f)?.setDuration(250)?.start()
                                 glassOverlay?.setLive(isLowLatency = false)
                             }
@@ -365,17 +375,30 @@ class LiveStreamZoneRenderer(
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             if (released) return
                             when (playbackState) {
-                                Player.STATE_BUFFERING -> glassOverlay?.setBuffering(payload.name)
-                                Player.STATE_READY -> if (isPlaying) glassOverlay?.setLive(isLowLatency = false)
-                                Player.STATE_ENDED, Player.STATE_IDLE -> glassOverlay?.setOffline(payload.name)
+                                Player.STATE_BUFFERING -> {
+                                    if (!isStreamOffline) {
+                                        glassOverlay?.setBuffering(payload.name)
+                                    }
+                                }
+                                Player.STATE_READY -> {
+                                    if (isPlaying) {
+                                        isStreamOffline = false
+                                        glassOverlay?.setLive(isLowLatency = false)
+                                    }
+                                }
+                                Player.STATE_ENDED, Player.STATE_IDLE -> {
+                                    isStreamOffline = true
+                                    glassOverlay?.setOffline(payload.name)
+                                }
                             }
                         }
 
                         override fun onPlayerError(error: PlaybackException) {
                             Log.w(TAG, "HLS/RTSP playback error stream=${payload.streamId}: ${error.message} (code: ${error.errorCode})")
                             if (released) return
+                            isStreamOffline = true
                             posterView?.animate()?.alpha(1f)?.setDuration(200)?.start()
-                            glassOverlay?.setOffline(payload.name, "Menghubungkan ulang...")
+                            glassOverlay?.setOffline(payload.name, "Siaran Offline")
 
                             if (payload.autoReconnect) {
                                 reconnectRunnable?.let(mainHandler::removeCallbacks)
@@ -388,7 +411,7 @@ class LiveStreamZoneRenderer(
                                     }
                                 }
                                 reconnectRunnable = runnable
-                                mainHandler.postDelayed(runnable, 2_000L)
+                                mainHandler.postDelayed(runnable, 4_000L)
                             }
                         }
                     })
