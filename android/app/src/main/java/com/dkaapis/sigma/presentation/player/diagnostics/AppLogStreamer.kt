@@ -3,6 +3,7 @@ package com.dkaapis.sigma.presentation.player.diagnostics
 import android.util.Log
 import android.os.Process
 import android.os.SystemClock
+import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -42,15 +43,19 @@ class AppLogStreamer(
             ?: return@coroutineScope
         val pending = ArrayList<StreamCommon.LogLine>()
         val reader = launch(Dispatchers.IO) {
-            proc.inputStream.bufferedReader().use { r ->
-                while (isActive) {
-                    val line = r.readLine() ?: break
-                    parse(line)?.let {
-                        synchronized(pending) {
-                            if (pending.size < MAX_BATCH_LINES) pending.add(it)
+            try {
+                proc.inputStream.bufferedReader().use { r ->
+                    while (isActive) {
+                        val line = r.readLine() ?: break
+                        parse(line)?.let {
+                            synchronized(pending) {
+                                if (pending.size < MAX_BATCH_LINES) pending.add(it)
+                            }
                         }
                     }
                 }
+            } catch (error: IOException) {
+                if (isActive) Log.w(TAG, "Gagal membaca logcat proses player", error)
             }
         }
         try {
@@ -60,8 +65,8 @@ class AppLogStreamer(
                 if (lines.isNotEmpty()) send(StreamCommon.LogBatch.newBuilder().addAllLines(lines).build())
             }
         } finally {
-            proc.destroy()
             reader.cancel()
+            proc.destroy()
         }
     }
 

@@ -15,6 +15,44 @@ import { getMediaStreamUrl } from '@/lib/services/studio/media.service';
 import { useDisplayDetail } from '../context/DisplayDetailContext';
 import { formatIndonesianDateTime } from './formatIndonesianDateTime';
 
+function ResourceGauge({
+  label,
+  value,
+  detail,
+  color,
+}: {
+  label: string;
+  value?: number;
+  detail?: string;
+  color: string;
+}) {
+  const percentage = value == null ? 0 : Math.min(100, Math.max(0, value));
+
+  return (
+    <div style={{ minWidth: 0, padding: '12px 10px 8px', borderRadius: 8, background: 'var(--bg-surface-elevated)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+        <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 600 }}>{label}</span>
+        <strong style={{ color, fontSize: '0.95rem', fontVariantNumeric: 'tabular-nums' }}>
+          {value == null ? '--' : `${percentage.toFixed(1)}%`}
+        </strong>
+      </div>
+      <svg viewBox="0 0 180 116" role="img" aria-label={`${label}: ${value == null ? 'belum tersedia' : `${percentage.toFixed(1)} persen`}`} style={{ display: 'block', width: '100%', maxWidth: 220, height: 116, margin: '4px auto -4px' }}>
+        <path d="M 18 98 A 72 72 0 0 1 162 98" fill="none" stroke="var(--border-strong)" strokeWidth="12" strokeLinecap="round" />
+        <path d="M 18 98 A 72 72 0 0 1 162 98" fill="none" stroke={color} strokeWidth="12" strokeLinecap="round" pathLength="100" strokeDasharray={`${percentage} 100`} style={{ filter: `drop-shadow(0 0 4px ${color})`, transition: 'stroke-dasharray 500ms ease' }} />
+        {[0, 50, 100].map((tick) => {
+          const angle = Math.PI - (Math.PI * tick) / 100;
+          return (
+            <text key={tick} x={90 + Math.cos(angle) * 83} y={102 - Math.sin(angle) * 83 + 3} fill="var(--text-muted)" fontSize="9" textAnchor="middle">
+              {tick}
+            </text>
+          );
+        })}
+      </svg>
+      <div style={{ minHeight: 16, textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.68rem' }}>{detail || (value == null ? 'Menunggu data perangkat' : '')}</div>
+    </div>
+  );
+}
+
 export default function DisplayTelemetryCard() {
   const {
     device,
@@ -27,6 +65,15 @@ export default function DisplayTelemetryCard() {
   } = useDisplayDetail();
 
   if (!device) return null;
+
+  const cpuPercent = realtimeMetrics?.io?.cpu_percent ?? realtimeMetrics?.io?.cpuPercent;
+  const cpuCores = realtimeMetrics?.io?.cpu_cores ?? realtimeMetrics?.io?.cpuCores;
+  const ramPercent = realtimeMetrics?.io?.ram_percent ?? realtimeMetrics?.io?.ramPercent ?? telemetry?.memoryPercent;
+  const ramUsedBytes = realtimeMetrics?.io?.ram_used_bytes;
+  const ramTotalBytes = realtimeMetrics?.io?.ram_total_bytes;
+  const storageFreeBytes = realtimeMetrics?.io?.storage_free_bytes ?? telemetry?.storageFreeBytes ?? device.storageFreeBytes;
+  const batteryTemperature = realtimeMetrics?.io?.battery_temp_celsius ?? realtimeMetrics?.io?.batteryTempCelsius;
+  const networkType = realtimeMetrics?.io?.network_type ?? realtimeMetrics?.io?.networkType;
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
@@ -56,64 +103,19 @@ export default function DisplayTelemetryCard() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {/* CPU Bar */}
-          <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--bg-surface-elevated)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
-                <Activity size={14} />
-                <span style={{ fontWeight: 500, fontSize: '0.75rem' }}>CPU</span>
-              </div>
-              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                {realtimeMetrics?.io?.cpu_percent ?? realtimeMetrics?.io?.cpuPercent ?? 24.5}%
-                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginLeft: '4px', fontWeight: 400 }}>
-                  ({realtimeMetrics?.io?.cpu_cores ?? realtimeMetrics?.io?.cpuCores ?? 8} Cores)
-                </span>
-              </span>
-            </div>
-            <div style={{ width: '100%', height: '6px', borderRadius: '3px', backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-              <div
-                style={{
-                  width: `${Math.min(100, Math.max(5, realtimeMetrics?.io?.cpu_percent ?? realtimeMetrics?.io?.cpuPercent ?? 24.5))}%`,
-                  height: '100%',
-                  backgroundColor:
-                    (realtimeMetrics?.io?.cpu_percent ?? realtimeMetrics?.io?.cpuPercent ?? 24.5) > 80
-                      ? 'var(--accent-rose)'
-                      : 'var(--primary-500)',
-                  transition: 'width 0.4s ease',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* RAM Bar */}
-          <div style={{ padding: '10px 12px', borderRadius: '8px', backgroundColor: 'var(--bg-surface-elevated)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
-                <Cpu size={14} />
-                <span style={{ fontWeight: 500, fontSize: '0.75rem' }}>RAM</span>
-              </div>
-              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                {realtimeMetrics?.io?.ram_percent ?? realtimeMetrics?.io?.ramPercent ?? telemetry?.memoryPercent ?? 30}%
-                {realtimeMetrics?.io?.ram_used_bytes && realtimeMetrics?.io?.ram_total_bytes ? (
-                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginLeft: '4px', fontWeight: 400 }}>
-                    ({(realtimeMetrics.io.ram_used_bytes / (1024 * 1024 * 1024)).toFixed(1)} / {(realtimeMetrics.io.ram_total_bytes / (1024 * 1024 * 1024)).toFixed(1)} GB)
-                  </span>
-                ) : null}
-              </span>
-            </div>
-            <div style={{ width: '100%', height: '6px', borderRadius: '3px', backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-              <div
-                style={{
-                  width: `${Math.min(100, Math.max(5, realtimeMetrics?.io?.ram_percent ?? realtimeMetrics?.io?.ramPercent ?? telemetry?.memoryPercent ?? 30))}%`,
-                  height: '100%',
-                  backgroundColor:
-                    (realtimeMetrics?.io?.ram_percent ?? realtimeMetrics?.io?.ramPercent ?? telemetry?.memoryPercent ?? 30) > 85
-                      ? 'var(--accent-rose)'
-                      : 'var(--primary-500)',
-                  transition: 'width 0.4s ease',
-                }}
-              />
-            </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+            <ResourceGauge
+              label="CPU perangkat"
+              value={cpuPercent}
+              detail={cpuCores == null ? undefined : `${cpuCores} core`}
+              color="var(--accent-cyan)"
+            />
+            <ResourceGauge
+              label="Memori perangkat"
+              value={ramPercent}
+              detail={ramUsedBytes && ramTotalBytes ? `${(ramUsedBytes / (1024 ** 3)).toFixed(1)} / ${(ramTotalBytes / (1024 ** 3)).toFixed(1)} GB` : undefined}
+              color="var(--accent-emerald)"
+            />
           </div>
 
           {/* Storage & Suhu Tiles */}
@@ -124,13 +126,7 @@ export default function DisplayTelemetryCard() {
                 <span style={{ fontSize: '0.6875rem', fontWeight: 500 }}>Penyimpanan</span>
               </div>
               <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                {realtimeMetrics?.io?.storage_free_bytes
-                  ? `${(realtimeMetrics.io.storage_free_bytes / (1024 * 1024 * 1024)).toFixed(1)} GB Free`
-                  : telemetry?.storageFreeBytes
-                  ? `${(telemetry.storageFreeBytes / (1024 * 1024 * 1024)).toFixed(1)} GB Free`
-                  : device.storageFreeBytes > 0
-                  ? `${(device.storageFreeBytes / (1024 * 1024 * 1024)).toFixed(1)} GB Free`
-                  : '53.4 GB Free'}
+                {storageFreeBytes > 0 ? `${(storageFreeBytes / (1024 ** 3)).toFixed(1)} GB tersedia` : 'Belum tersedia'}
               </div>
             </div>
 
@@ -140,10 +136,8 @@ export default function DisplayTelemetryCard() {
                 <span style={{ fontSize: '0.6875rem', fontWeight: 500 }}>Suhu & Jaringan</span>
               </div>
               <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                {realtimeMetrics?.io?.battery_temp_celsius ?? realtimeMetrics?.io?.batteryTempCelsius ?? 34.2}°C
-                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginLeft: '6px', fontWeight: 400 }}>
-                  {realtimeMetrics?.io?.network_type ?? realtimeMetrics?.io?.networkType ?? 'WIFI'}
-                </span>
+                {batteryTemperature == null ? 'Suhu belum tersedia' : `${batteryTemperature}°C`}
+                {networkType ? <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginLeft: '6px', fontWeight: 400 }}>{networkType}</span> : null}
               </div>
             </div>
           </div>

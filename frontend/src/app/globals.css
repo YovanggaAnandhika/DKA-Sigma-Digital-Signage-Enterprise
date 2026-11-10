@@ -70,16 +70,16 @@
   color-scheme: light;
 
   /* Surfaces & Canvas */
-  --bg-primary: #f1f5f9;           /* Clean Slate-100 canvas contrasting white panels */
-  --bg-secondary: #ffffff;         /* Pure white navigation & headers */
-  --bg-surface: #ffffff;           /* Pure white workspace cards & panels */
-  --bg-surface-elevated: #f8fafc;  /* Clean elevated control surfaces & chips */
-  --bg-base: #e2e8f0;              /* Soft base */
-  --bg-glass: #ffffff;             /* Clean solid white */
+  --bg-primary: #e9eef5;           /* Soft neutral canvas */
+  --bg-secondary: #f1f4f8;         /* Muted navigation & headers */
+  --bg-surface: #f5f7fa;           /* Softer panels instead of pure white */
+  --bg-surface-elevated: #e9eef4;  /* Clear but subdued raised surfaces */
+  --bg-base: #dce4ee;              /* Soft base */
+  --bg-glass: #f5f7fa;             /* Subdued solid panel */
 
   /* Crisp Defined Hairlines & Borders */
-  --border-subtle: #e2e8f0;        /* Distinct, cleanly visible separation border (Slate-200) */
-  --border-strong: #cbd5e1;        /* Clearly defined interactive border (Slate-300) */
+  --border-subtle: #d5dee9;        /* Distinct separation on muted surfaces */
+  --border-strong: #bdc9d8;        /* Clearly defined interactive border */
   --border-focus: #2563eb;
 
   /* Atmospheric Soft Shadows & Micro-Depth */
@@ -90,8 +90,8 @@
   --focus-ring-glow: rgba(37, 99, 235, 0.2);
 
   /* Inputs - Crisp Visible Border */
-  --input-bg: #ffffff;
-  --input-border: #cbd5e1;
+  --input-bg: #f5f7fa;
+  --input-border: #bdc9d8;
 
   /* Rich Smooth Primary Palette */
   --primary-50: #eff6ff;
@@ -109,10 +109,17 @@
 
   /* Typography: Rich Crisp Charcoal & High Legibility (WCAG AAA compliant) */
   --text-primary: #0f172a;         /* High-contrast Slate-900 */
-  --text-secondary: #334155;       /* Sharp Slate-700 */
-  --text-muted: #64748b;           /* Highly legible Slate-500 */
+  --text-secondary: #29384b;       /* Stronger secondary text */
+  --text-muted: #526175;           /* Readable supporting text */
 
   --hover-surface: #f1f5f9;
+}
+
+[data-theme="light"] body {
+  letter-spacing: 0;
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: auto;
 }
 
 /* ==========================================================================
@@ -1031,4 +1038,3 @@ main table td:last-child .btn:focus-visible {
 [data-theme="light"] .sidebar-active-indicator {
   background-color: var(--primary-600);
 }
-

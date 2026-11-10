@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Activity, Clipboard, Pause, Play, Radio, Terminal } from 'lucide-react';
+import { cleanMediaTitle } from '../context/DisplayDetailContext';
 import { formatIndonesianDateTime } from './formatIndonesianDateTime';
 
 type Zone = {
@@ -10,10 +11,7 @@ type Zone = {
   mediaId?: string;
   mediaName?: string;
   state?: string;
-  transport?: string;
-  codec?: string;
   resolution?: string;
-  bitrateKbps?: number;
   droppedFrames?: number;
   lastError?: string;
   bufferedDurationMs?: number;
@@ -30,11 +28,8 @@ type LogLine = {
 type DiagnosticsEvent = {
   diagnostics?: {
     timestampMs?: number;
-    cpuPercent?: number;
-    memoryPercent?: number;
     heapUsedMb?: number;
     heapMaxMb?: number;
-    temperatureC?: number;
     lastCrashTimestampMs?: number;
     lastCrashSummary?: string;
     zonesList?: Zone[];
@@ -42,102 +37,34 @@ type DiagnosticsEvent = {
   logs?: { linesList?: LogLine[] };
 };
 
-type Sample = { timestampMs: number; cpu: number; memory: number };
-
-function Speedometer({ label, value, color }: { label: string; value?: number; color: string }) {
-  const percentage = value == null ? 0 : Math.min(100, Math.max(0, value));
-  return (
-    <div style={{ minWidth: 0, padding: '14px 16px 10px', borderRadius: 10, background: 'var(--bg-surface-elevated)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>
-        <span>{label}</span>
-        <span aria-label={value == null ? `${label} belum tersedia` : `${label} ${percentage.toFixed(1)} persen`} style={{ color, fontSize: '1.1rem', fontVariantNumeric: 'tabular-nums' }}>
-          {value == null ? '--' : `${percentage.toFixed(1)}%`}
-        </span>
-      </div>
-      <svg viewBox="0 0 180 122" role="img" aria-label={`${label}: ${percentage.toFixed(1)} persen`} style={{ display: 'block', width: '100%', maxWidth: 280, height: 146, margin: '4px auto -4px' }}>
-        <path d="M 18 102 A 72 72 0 0 1 162 102" fill="none" stroke="var(--border-strong)" strokeWidth="13" strokeLinecap="round" />
-        <path
-          d="M 18 102 A 72 72 0 0 1 162 102"
-          fill="none"
-          stroke={color}
-          strokeWidth="13"
-          strokeLinecap="round"
-          pathLength="100"
-          strokeDasharray={`${percentage} 100`}
-          style={{ filter: `drop-shadow(0 0 5px ${color})`, transition: 'stroke-dasharray 500ms ease' }}
-        />
-        {[0, 50, 100].map((tick) => {
-          const angle = Math.PI - (Math.PI * tick) / 100;
-          const x1 = 90 + Math.cos(angle) * 55;
-          const y1 = 102 - Math.sin(angle) * 55;
-          const x2 = 90 + Math.cos(angle) * 63;
-          const y2 = 102 - Math.sin(angle) * 63;
-          const tx = 90 + Math.cos(angle) * 83;
-          const ty = 102 - Math.sin(angle) * 83 + 4;
-          return (
-            <g key={tick}>
-              <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--text-muted)" strokeWidth="1.5" />
-              <text x={tx} y={ty} fill="var(--text-muted)" fontSize="9" textAnchor="middle">{tick}</text>
-            </g>
-          );
-        })}
-      </svg>
-      <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.68rem', marginTop: -4 }}>0–100%</div>
-    </div>
-  );
+function zoneKindLabel(kind?: string): string {
+  switch (kind?.toUpperCase()) {
+    case 'VIDEO': return 'Video';
+    case 'LIVE': return 'Siaran langsung';
+    case 'IMAGE': return 'Gambar';
+    case 'QUEUE': return 'Antrean';
+    default: return kind || 'Konten';
+  }
 }
 
-function PerformanceChart({ samples }: { samples: Sample[] }) {
-  const left = 42;
-  const right = 624;
-  const top = 14;
-  const bottom = 164;
-  const x = (index: number) => samples.length < 2 ? (left + right) / 2 : left + (index * (right - left)) / (samples.length - 1);
-  const y = (value: number) => bottom - (Math.min(100, Math.max(0, value)) / 100) * (bottom - top);
-  const path = (key: 'cpu' | 'memory') => samples.map((sample, index) =>
-    `${index === 0 ? 'M' : 'L'} ${x(index)} ${y(sample[key])}`
-  ).join(' ');
-  const latest = samples[samples.length - 1];
+function zoneTitle(zone: Zone): string {
+  if (!zone.mediaName) return zoneKindLabel(zone.kind);
+  return cleanMediaTitle(zone.mediaName).replace(/[_-]+/g, ' ').replace(/\.[^.]+$/, '') || zoneKindLabel(zone.kind);
+}
 
-  return (
-    <div style={{ padding: '12px 12px 10px', borderRadius: 10, background: 'var(--bg-surface-elevated)' }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, margin: '0 0 8px 34px', color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
-        <span><i style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 3, background: 'var(--accent-cyan)', marginRight: 6 }} />CPU</span>
-        <span><i style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 3, background: 'var(--accent-emerald)', marginRight: 6 }} />RAM</span>
-      </div>
-      <svg viewBox="0 0 640 180" role="img" aria-label="Grafik tren CPU dan RAM 60 sampel terakhir" style={{ display: 'block', width: '100%', height: 'auto', minHeight: 150 }}>
-        {[0, 25, 50, 75, 100].map((tick) => (
-          <g key={tick}>
-            <line x1={left} y1={y(tick)} x2={right} y2={y(tick)} stroke="var(--border-subtle)" strokeDasharray="4 5" />
-            <text x={left - 8} y={y(tick) + 4} fill="var(--text-muted)" fontSize="10" textAnchor="end">{tick}%</text>
-          </g>
-        ))}
-        {samples.length > 1 && [0, Math.floor((samples.length - 1) / 2), samples.length - 1].map((index) => (
-          <line key={`v-${index}`} x1={x(index)} y1={top} x2={x(index)} y2={bottom} stroke="var(--border-subtle)" strokeDasharray="2 6" />
-        ))}
-        {samples.length > 1 ? (
-          <>
-            <path d={path('memory')} fill="none" stroke="var(--accent-emerald)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-            <path d={path('cpu')} fill="none" stroke="var(--accent-cyan)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-            {latest && (['memory', 'cpu'] as const).map((key) => (
-              <circle key={key} cx={x(samples.length - 1)} cy={y(latest[key])} r="4" fill={`var(--accent-${key === 'cpu' ? 'cyan' : 'emerald'})`} stroke="var(--bg-surface-elevated)" strokeWidth="2">
-                <title>{`${key === 'cpu' ? 'CPU' : 'RAM'} ${latest[key].toFixed(1)}% · ${formatIndonesianDateTime(latest.timestampMs)}`}</title>
-              </circle>
-            ))}
-          </>
-        ) : (
-          <text x="333" y="95" textAnchor="middle" fill="var(--text-muted)" fontSize="12">Menunggu sampel berikutnya…</text>
-        )}
-      </svg>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', padding: '2px 4px 0 34px', color: 'var(--text-muted)', fontSize: '0.68rem', fontVariantNumeric: 'tabular-nums' }}>
-        <span>{samples[0] ? formatIndonesianDateTime(samples[0].timestampMs) : '--'}</span>
-        <span>{latest ? formatIndonesianDateTime(latest.timestampMs) : '--'}</span>
-      </div>
-      <p style={{ margin: '8px 0 0 34px', color: 'var(--text-muted)', fontSize: '0.68rem' }}>
-        {samples.length} sampel · pembaruan setiap 2 detik
-      </p>
-    </div>
-  );
+function zoneStatus(zone: Zone): { label: string; color: string } {
+  if (zone.lastError) return { label: 'Perlu diperiksa', color: 'var(--accent-rose)' };
+  switch ((zone.state || zone.playbackState || '').toUpperCase()) {
+    case 'PLAYING': return { label: 'Sedang diputar', color: 'var(--accent-emerald)' };
+    case 'BUFFERING': return { label: 'Sedang memuat', color: 'var(--accent-amber)' };
+    case 'READY': return { label: 'Siap diputar', color: 'var(--accent-cyan)' };
+    case 'PAUSED': return { label: 'Dijeda', color: 'var(--text-secondary)' };
+    case 'OFFLINE': return { label: 'Siaran offline', color: 'var(--accent-amber)' };
+    case 'ERROR': return { label: 'Ada kendala', color: 'var(--accent-rose)' };
+    case 'ENDED': return { label: 'Selesai', color: 'var(--text-muted)' };
+    case 'IDLE': return { label: 'Menunggu konten', color: 'var(--text-muted)' };
+    default: return { label: 'Status belum diketahui', color: 'var(--text-muted)' };
+  }
 }
 
 function sessionToken(): string {
@@ -152,7 +79,6 @@ export default function LiveDeviceMonitor({ deviceId }: { deviceId: string }) {
   const [diagnostics, setDiagnostics] = useState<DiagnosticsEvent['diagnostics']>();
   const [lastDiagnosticsReceivedAt, setLastDiagnosticsReceivedAt] = useState(0);
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const [samples, setSamples] = useState<Sample[]>([]);
   const [logs, setLogs] = useState<LogLine[]>([]);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState('');
@@ -207,14 +133,6 @@ export default function LiveDeviceMonitor({ deviceId }: { deviceId: string }) {
                 if (event.diagnostics) {
                   setDiagnostics(event.diagnostics);
                   setLastDiagnosticsReceivedAt(Date.now());
-                  setSamples((previous) => [
-                    ...previous,
-                    {
-                      timestampMs: event.diagnostics?.timestampMs || Date.now(),
-                      cpu: event.diagnostics?.cpuPercent || 0,
-                      memory: event.diagnostics?.memoryPercent || 0,
-                    },
-                  ].slice(-60));
                 }
                 const newLogs = event.logs?.linesList || [];
                 if (!pausedRef.current && newLogs.length) {
@@ -266,8 +184,8 @@ export default function LiveDeviceMonitor({ deviceId }: { deviceId: string }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Activity size={17} style={{ color: 'var(--primary-500)' }} />
           <div>
-            <h2 style={{ color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 700 }}>Monitor Perangkat Realtime</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>CPU, memori, status zona, dan log proses aplikasi</p>
+            <h2 style={{ color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 700 }}>Diagnostik Player Realtime</h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>Status pemutaran, memori aplikasi, dan log</p>
           </div>
         </div>
         <span style={{ color: playerStale ? 'var(--accent-amber)' : connected ? 'var(--accent-emerald)' : 'var(--text-muted)', fontSize: '0.75rem' }}>
@@ -285,8 +203,8 @@ export default function LiveDeviceMonitor({ deviceId }: { deviceId: string }) {
       ) : null}
 
       {diagnostics?.lastCrashTimestampMs ? (
-        <div role="alert" style={{ padding: '12px 14px', marginBottom: 14, borderRadius: 8, background: 'var(--bg-surface-elevated)', border: '1px solid var(--accent-rose)', color: 'var(--accent-rose)' }}>
-          <strong style={{ display: 'block', fontSize: '0.8rem' }}>Crash aplikasi terdeteksi</strong>
+        <div role="status" style={{ padding: '12px 14px', marginBottom: 14, borderRadius: 8, background: 'var(--bg-surface-elevated)', border: '1px solid var(--accent-rose)', color: 'var(--accent-rose)' }}>
+          <strong style={{ display: 'block', fontSize: '0.8rem' }}>Crash terakhir tercatat</strong>
           <span style={{ display: 'block', marginTop: 4, fontSize: '0.75rem' }}>{diagnostics.lastCrashSummary || 'Player mengalami crash.'}</span>
           <time style={{ display: 'block', marginTop: 4, fontSize: '0.7rem', fontVariantNumeric: 'tabular-nums' }} dateTime={new Date(diagnostics.lastCrashTimestampMs).toISOString()}>
             {formatIndonesianDateTime(diagnostics.lastCrashTimestampMs)}
@@ -294,46 +212,48 @@ export default function LiveDeviceMonitor({ deviceId }: { deviceId: string }) {
         </div>
       ) : null}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 16 }}>
-        <Speedometer label="CPU proses" value={diagnostics?.cpuPercent} color="var(--accent-cyan)" />
-        <Speedometer label="RAM perangkat" value={diagnostics?.memoryPercent} color="var(--accent-emerald)" />
-        <div style={{ padding: 12, borderRadius: 8, background: 'var(--bg-surface-elevated)', color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
-          <div>Heap aplikasi</div>
-          <strong style={{ color: 'var(--text-primary)' }}>
-            {diagnostics ? `${diagnostics.heapUsedMb || 0} / ${diagnostics.heapMaxMb || 0} MB` : '--'}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+        <div style={{ padding: '8px 12px', borderRadius: 8, background: 'var(--bg-surface-elevated)', color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+          Memori aplikasi: <strong style={{ color: 'var(--text-primary)' }}>
+            {diagnostics?.heapUsedMb != null && diagnostics.heapMaxMb != null
+              ? `${diagnostics.heapUsedMb} dari ${diagnostics.heapMaxMb} MB`
+              : diagnostics ? 'Belum tersedia' : 'Menunggu data'}
           </strong>
-          <div style={{ marginTop: 6 }}>Suhu baterai: {diagnostics?.temperatureC ? `${diagnostics.temperatureC.toFixed(1)}°C` : '--'}</div>
         </div>
       </div>
 
       <div style={{ marginBottom: 16 }}>
-        <h3 style={{ color: 'var(--text-primary)', fontSize: '0.82rem', fontWeight: 700, marginBottom: 8 }}>Tren Performa</h3>
-        <PerformanceChart samples={samples} />
-      </div>
-
-      <div style={{ marginBottom: 16 }}>
-        <h3 style={{ color: 'var(--text-primary)', fontSize: '0.82rem', fontWeight: 700, marginBottom: 8 }}>Konten & Status Zona</h3>
+        <h3 style={{ color: 'var(--text-primary)', fontSize: '0.82rem', fontWeight: 700, marginBottom: 8 }}>Yang sedang tampil</h3>
         {(diagnostics?.zonesList || []).length === 0 ? (
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Menunggu data zona dari player.</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Belum ada informasi konten yang sedang tampil.</p>
         ) : (
           <div style={{ display: 'grid', gap: 8 }}>
-            {diagnostics?.zonesList?.map((zone, index) => (
-              <div key={`${zone.zoneId || zone.mediaId || index}`} style={{ padding: 10, borderRadius: 8, background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                  <strong style={{ color: 'var(--text-primary)', fontSize: '0.8rem' }}>{zone.mediaName || zone.kind || 'Zona'}</strong>
-                  <span style={{ color: zone.lastError ? 'var(--accent-rose)' : 'var(--accent-emerald)', fontSize: '0.72rem' }}>
-                    {zone.state || 'UNKNOWN'}
-                  </span>
+            {diagnostics?.zonesList?.map((zone, index) => {
+              const status = zoneStatus(zone);
+              return (
+                <div key={`${zone.zoneId || zone.mediaId || index}`} style={{ padding: '12px 14px', borderRadius: 8, background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.68rem', marginBottom: 3 }}>
+                        {zoneKindLabel(zone.kind)} · Zona {index + 1}
+                      </span>
+                      <strong style={{ color: 'var(--text-primary)', fontSize: '0.82rem', overflowWrap: 'anywhere' }}>
+                        {zoneTitle(zone)}
+                      </strong>
+                    </div>
+                    <span style={{ flexShrink: 0, color: status.color, fontSize: '0.72rem', fontWeight: 600 }}>
+                      {status.label}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', color: 'var(--text-muted)', fontSize: '0.7rem', marginTop: 8 }}>
+                    {zone.bufferedDurationMs != null ? <span>Buffer: {(zone.bufferedDurationMs / 1000).toFixed(1)} dtk</span> : null}
+                    {zone.droppedFrames ? <span>Frame terlewat: {zone.droppedFrames}</span> : null}
+                    {zone.resolution ? <span>Resolusi: {zone.resolution.replace('x', ' × ')}</span> : null}
+                  </div>
+                  {zone.lastError ? <p style={{ color: 'var(--accent-rose)', fontSize: '0.72rem', marginTop: 8 }}>{zone.lastError}</p> : null}
                 </div>
-                <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: 4, lineHeight: 1.6 }}>
-                  {[zone.kind, zone.transport, zone.resolution, zone.codec, zone.bitrateKbps ? `${zone.bitrateKbps} Kbps` : ''].filter(Boolean).join(' · ')}
-                  {zone.droppedFrames ? ` · ${zone.droppedFrames} frame drop` : ''}
-                  {zone.bufferedDurationMs != null ? ` · Buffer ${(zone.bufferedDurationMs / 1000).toFixed(2)} dtk` : ''}
-                  {zone.playbackState ? ` · ExoPlayer ${zone.playbackState}` : ''}
-                </div>
-                {zone.lastError && <p style={{ color: 'var(--accent-rose)', fontSize: '0.72rem', marginTop: 4 }}>{zone.lastError}</p>}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
