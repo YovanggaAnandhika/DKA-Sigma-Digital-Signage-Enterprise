@@ -96,11 +96,11 @@ class LiveStreamZoneRenderer(
             rawTarget.startsWith("/streams/")
 
         // Invariant:
-        // - WHIP publishes WebRTC Opus audio. Raw RTSP cannot negotiate dynamic Opus, so we read `hd/live` (normalized H.264 + AAC).
-        // - RTMP publishes standard H.264 + AAC directly, so we read raw `live` with zero transcode delay.
-        val pathPrefix = if (payload.sourceType.equals("WHIP", ignoreCase = true)) "hd/live" else "live"
+        // All server-hosted streams (both WHIP and RTMP) are normalized by MediaMTX into `hd/live/<streamId>`
+        // with Constrained Baseline H.264 (zero B-frames) and AAC audio (48kHz stereo).
+        // Reading `hd/live/<streamId>` ensures 100% stable RTSP playback on Android hardware decoders without frame drops.
         val playbackUrl = if (isServerHosted && payload.streamId.isNotBlank()) {
-            "rtsp://${ServerConfig.getHost(context)}:$RTSP_PORT/$pathPrefix/${payload.streamId}"
+            "rtsp://${ServerConfig.getHost(context)}:$RTSP_PORT/hd/live/${payload.streamId}"
         } else {
             targetUrl
         }
@@ -132,10 +132,10 @@ class LiveStreamZoneRenderer(
             val isRtsp = targetUri.scheme.equals("rtsp", ignoreCase = true)
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(
-                    /* minBufferMs = */ if (isRtsp) 80 else 1_500,
-                    /* maxBufferMs = */ if (isRtsp) 200 else 4_000,
-                    /* bufferForPlaybackMs = */ if (isRtsp) 30 else 300,
-                    /* bufferForPlaybackAfterRebufferMs = */ if (isRtsp) 50 else 600
+                    /* minBufferMs = */ if (isRtsp) 1_000 else 1_500,
+                    /* maxBufferMs = */ if (isRtsp) 3_000 else 4_000,
+                    /* bufferForPlaybackMs = */ if (isRtsp) 250 else 300,
+                    /* bufferForPlaybackAfterRebufferMs = */ if (isRtsp) 500 else 600
                 )
                 .setBackBuffer(0, false)
                 .setPrioritizeTimeOverSizeThresholds(true)
@@ -147,13 +147,17 @@ class LiveStreamZoneRenderer(
                 .apply {
                     val mediaItem = MediaItem.Builder()
                         .setUri(targetUri)
-                        .setLiveConfiguration(
-                            MediaItem.LiveConfiguration.Builder()
-                                .setTargetOffsetMs(if (isRtsp) 50L else 1_500L)
-                                .setMinPlaybackSpeed(1.0f)
-                                .setMaxPlaybackSpeed(if (isRtsp) 1.25f else 1.15f)
-                                .build()
-                        )
+                        .apply {
+                            if (!isRtsp) {
+                                setLiveConfiguration(
+                                    MediaItem.LiveConfiguration.Builder()
+                                        .setTargetOffsetMs(1_500L)
+                                        .setMinPlaybackSpeed(1.0f)
+                                        .setMaxPlaybackSpeed(1.15f)
+                                        .build()
+                                )
+                            }
+                        }
                         .build()
 
                     if (isRtsp) {
@@ -161,7 +165,7 @@ class LiveStreamZoneRenderer(
                         setMediaSource(
                             RtspMediaSource.Factory()
                                 .setForceUseRtpTcp(true)
-                                .setTimeoutMs(3_000L)
+                                .setTimeoutMs(10_000L)
                                 .createMediaSource(mediaItem)
                         )
                     } else {
@@ -261,22 +265,27 @@ class LiveStreamZoneRenderer(
                 Log.i(TAG, "Attempting reconnect for stream=${payload.streamId} on $activePlaybackUrl")
                 try {
                     val targetUri = Uri.parse(activePlaybackUrl)
+                    val isRtsp = targetUri.scheme.equals("rtsp", ignoreCase = true)
                     val mediaItem = MediaItem.Builder()
                         .setUri(targetUri)
-                        .setLiveConfiguration(
-                            MediaItem.LiveConfiguration.Builder()
-                                .setTargetOffsetMs(50L)
-                                .setMinPlaybackSpeed(1.0f)
-                                .setMaxPlaybackSpeed(1.25f)
-                                .build()
-                        )
+                        .apply {
+                            if (!isRtsp) {
+                                setLiveConfiguration(
+                                    MediaItem.LiveConfiguration.Builder()
+                                        .setTargetOffsetMs(1_500L)
+                                        .setMinPlaybackSpeed(1.0f)
+                                        .setMaxPlaybackSpeed(1.15f)
+                                        .build()
+                                )
+                            }
+                        }
                         .build()
-                    if (targetUri.scheme.equals("rtsp", ignoreCase = true)) {
+                    if (isRtsp) {
                         // Re-create RtspMediaSource with clean socket state
                         exoPlayer?.setMediaSource(
                             RtspMediaSource.Factory()
                                 .setForceUseRtpTcp(true)
-                                .setTimeoutMs(3_000L)
+                                .setTimeoutMs(10_000L)
                                 .createMediaSource(mediaItem)
                         )
                     } else {

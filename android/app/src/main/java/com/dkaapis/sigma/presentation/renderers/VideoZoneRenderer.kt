@@ -163,6 +163,7 @@ class VideoZoneRenderer(
         val view = (inflater.inflate(com.dkaapis.sigma.R.layout.item_video_player, parent, false) as PlayerView).apply {
             this.player = player
             keepScreenOn = true
+            resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
         }
 
         val bufferingCard = android.widget.LinearLayout(context).apply {
