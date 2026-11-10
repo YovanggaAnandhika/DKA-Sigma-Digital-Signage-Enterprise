@@ -189,7 +189,7 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
         }
 
         liveBadgeText = TextView(context).apply {
-            text = "LIVE • RTSP"
+            text = "SIARAN LANGSUNG"
             setTextColor(0xFFECFDF5.toInt())
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
             typeface = Typeface.DEFAULT_BOLD
