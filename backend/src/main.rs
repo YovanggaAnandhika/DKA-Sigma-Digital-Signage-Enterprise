@@ -7,12 +7,14 @@ mod db;
 mod grpc;
 mod modules;
 mod seeders;
+mod streamer_auth;
 mod workers;
 
 use crate::modules::distribution::stream::services::StreamConnectionManager;
 use config::Config;
 use std::{env, fmt, time::Duration};
 use std::net::SocketAddr;
+use tokio::sync::watch;
 use tonic::transport::Server;
 use tower_http::classify::{
     ClassifiedResponse, ClassifyEos, ClassifyResponse, GrpcErrorsAsFailures,
@@ -156,13 +158,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Starting Pure gRPC Digital Signage Platform Backend...");
     info!(
-        "Configuration loaded. Host: {}, gRPC Port: {}",
-        config.host, config.grpc_port
+        "Configuration loaded. Host: {}, gRPC Port: {}, Streamer Auth Port: {}",
+        config.host, config.grpc_port, 50052
     );
 
     workers::upload_cleanup::start(&config.upload_dir).await?;
 
     let grpc_addr: SocketAddr = format!("{}:{}", config.host, config.grpc_port).parse()?;
+    let auth_addr: SocketAddr = format!("{}:50052", config.host).parse()?;
     info!("Pure gRPC Server listening on {}", grpc_addr);
 
     let stream_manager = StreamConnectionManager::new();
@@ -180,6 +183,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
     let relay_manager_shutdown = relay_manager.clone();
 
+    let auth_pool = pool.clone();
     let mut router = Server::builder().layer(
         tower_http::trace::TraceLayer::new(GrpcEndpointClassifier).on_failure(
             |failure: GrpcEndpointFailure, latency: Duration, _span: &tracing::Span| {
@@ -194,19 +198,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let router = crate::register_grpc_services!(router, pool, config, stream_manager, relay_manager);
 
-    router
-        .serve_with_shutdown(grpc_addr, async move {
-            let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-                .expect("failed to install SIGTERM handler");
-            tokio::select! {
-                _ = tokio::signal::ctrl_c() => {},
-                _ = sigterm.recv() => {},
-            }
-            info!("Shutdown signal received, terminating active RTMP/HLS relays so encoders disconnect cleanly...");
-            relay_manager_shutdown.stop_all().await;
-        })
-        .await?;
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
+    tokio::spawn(async move {
+        let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install SIGTERM handler");
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {},
+            _ = sigterm.recv() => {},
+        }
+        let _ = shutdown_tx.send(true);
+        info!("Shutdown signal received, terminating active RTMP/HLS relays so encoders disconnect cleanly...");
+        relay_manager_shutdown.stop_all().await;
+    });
+
+    let grpc_server = router.serve_with_shutdown(grpc_addr, wait_for_shutdown(shutdown_rx.clone()));
+    let auth_server = axum::Server::try_bind(&auth_addr)?
+        .serve(streamer_auth::router(auth_pool).into_make_service())
+        .with_graceful_shutdown(wait_for_shutdown(shutdown_rx));
+    info!("Streamer auth callback listening on {}", auth_addr);
+
+    tokio::select! {
+        result = grpc_server => result?,
+        result = auth_server => result?,
+    }
     Ok(())
+}
+
+async fn wait_for_shutdown(mut shutdown: watch::Receiver<bool>) {
+    if !*shutdown.borrow() {
+        let _ = shutdown.changed().await;
+    }
 }
 
 #[cfg(test)]

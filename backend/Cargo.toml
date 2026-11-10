@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 # Async Runtime
+axum = "0.6.20"
 tokio = { version = "1.38", features = ["full"] }
 tokio-stream = "0.1"
 async-stream = "0.3"

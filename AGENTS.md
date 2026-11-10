@@ -239,4 +239,4 @@ This project is an enterprise-grade digital signage management and streaming pla
 ### 8. Android Live Stream = RTSP Murni (Bukan HLS / gRPC Chunk)
 - Android player memutar siaran server-hosted via `rtsp://<ServerConfig.getHost>:8554/hd/live/<stream_id>` memakai `RtspMediaSource` (`setForceUseRtpTcp(true)`), bukan HLS dan bukan proxy segmen gRPC (RPC `GetStreamSegment` sudah dihapus). Latensi ~300 ms, tanpa kedip buffering akibat chunk.
 - `hd/live/` = H.264 baseline 0 B-frame + **AAC** (ExoPlayer RTSP tidak mendukung Opus). `webrtc/live/` tetap Opus untuk WHEP browser.
-- Callback auth MediaMTX (`/api/streamer/auth`) bergantung pada Next dev server; bila frontend hang (CPU 100%) OBS/RTSP/WHEP timeout. Restart `dka-product-sigma-frontend` bila itu terjadi.
+- Callback auth MediaMTX dilayani backend internal di port `50052`, terpisah dari Next.js; bila callback gagal, publish stream ditolak dan log backend mencatat kegagalan query autentikasi.

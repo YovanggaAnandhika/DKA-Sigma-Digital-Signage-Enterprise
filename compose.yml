@@ -77,7 +77,7 @@ services:
       MTX_API: "yes"
       MTX_APIADDRESS: ":9997"
       MTX_AUTHMETHOD: "http"
-      MTX_AUTHHTTPADDRESS: "http://dka-product-sigma-frontend:80/api/streamer/auth"
+      MTX_AUTHHTTPADDRESS: "http://dka-product-sigma-backend:50052/api/streamer/auth"
       MTX_AUTHHTTPEXCLUDE: '[{"action":"read"}]'
       MTX_RTMP: "yes"
       MTX_RTMPADDRESS: ":1935"
