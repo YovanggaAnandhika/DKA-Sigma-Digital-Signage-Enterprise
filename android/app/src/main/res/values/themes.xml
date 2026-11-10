@@ -15,14 +15,14 @@
         <item name="android:windowBackground">#000000</item>
     </style>
 
-    <!-- Pairing screen theme (DayNight adaptive) -->
-    <style name="Theme.HNDSigmaPlayer.Light" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <!-- Pairing screen theme — always Light regardless of system dark mode -->
+    <style name="Theme.HNDSigmaPlayer.Light" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">@color/primary_500</item>
         <item name="colorOnPrimary">#ffffff</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
-        <item name="android:windowBackground">@color/screen_bg</item>
-        <item name="android:statusBarColor">@color/screen_bg</item>
-        <item name="android:navigationBarColor">@color/screen_bg</item>
+        <item name="android:windowBackground">#FFF5F3FF</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 </resources>

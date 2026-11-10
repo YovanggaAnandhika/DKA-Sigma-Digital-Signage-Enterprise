@@ -6,47 +6,48 @@
     <color name="black">#000000</color>
     <color name="white">#ffffff</color>
 
-    <!-- Bottom Sheet & Dialog Colors (Dark) -->
-    <color name="sheet_bg">#18181b</color>
-    <color name="sheet_card_bg">#27272a</color>
-    <color name="sheet_card_border">#3f3f46</color>
-    <color name="sheet_drag_handle">#52525b</color>
+    <!-- Glass Panel Colors (Dark) — frosted dark glass morphism -->
+    <color name="sheet_bg">#CC1a1a2e</color>
+    <color name="sheet_card_bg">#B3ffffff</color>
+    <color name="sheet_card_border">#33ffffff</color>
+    <color name="sheet_drag_handle">#66ffffff</color>
     <color name="sheet_text_primary">#f4f4f5</color>
     <color name="sheet_text_secondary">#a1a1aa</color>
     <color name="sheet_text_muted">#71717a</color>
-    <color name="sheet_btn_secondary_bg">#27272a</color>
-    <color name="sheet_btn_secondary_text">#e4e4e7</color>
-    <color name="sheet_btn_secondary_border">#3f3f46</color>
+    <color name="sheet_btn_secondary_bg">#33ffffff</color>
+    <color name="sheet_btn_secondary_text">#f4f4f5</color>
+    <color name="sheet_btn_secondary_border">#33ffffff</color>
     <color name="sheet_btn_danger_bg">#dc2626</color>
     <color name="sheet_btn_danger_ripple">#b91c1c</color>
 
-    <!-- Pairing Screen Colors (Dark) -->
-    <color name="screen_bg">#09090b</color>
-    <color name="console_card_bg">#18181b</color>
-    <color name="console_card_border">#27272a</color>
+    <!-- Pairing Screen Colors (Dark) — transparent aurora bg -->
+    <color name="screen_bg">#00000000</color>
+    <color name="pairing_aurora_bg">#FF0a0f1a</color>
+    <color name="console_card_bg">#CC1a1a2e</color>
+    <color name="console_card_border">#33ffffff</color>
     <color name="tag_text">#a1a1aa</color>
     <color name="text_headline">#f4f4f5</color>
     <color name="text_sub">#a1a1aa</color>
-    <color name="pairing_code_bg">#27272a</color>
-    <color name="pairing_code_border">#3f3f46</color>
+    <color name="pairing_code_bg">#33ffffff</color>
+    <color name="pairing_code_border">#4Dffffff</color>
     <color name="btn_reconnect_bg">#f4f4f5</color>
     <color name="btn_reconnect_ripple">#e4e4e7</color>
     <color name="btn_reconnect_text">#18181b</color>
-    <color name="btn_server_bg">#27272a</color>
-    <color name="btn_server_border">#3f3f46</color>
+    <color name="btn_server_bg">#33ffffff</color>
+    <color name="btn_server_border">#4Dffffff</color>
     <color name="btn_server_text">#e4e4e7</color>
 
-    <!-- Status Pill Colors (Dark) -->
-    <color name="status_offline_bg">#450a0a</color>
-    <color name="status_offline_border">#7f1d1d</color>
+    <!-- Status Pill Colors (Dark) — glass tinted -->
+    <color name="status_offline_bg">#33f87171</color>
+    <color name="status_offline_border">#66f87171</color>
     <color name="status_offline_text">#f87171</color>
-    <color name="status_connecting_bg">#451a03</color>
-    <color name="status_connecting_border">#78350f</color>
+    <color name="status_connecting_bg">#33fbbf24</color>
+    <color name="status_connecting_border">#66fbbf24</color>
     <color name="status_connecting_text">#fbbf24</color>
-    <color name="status_waiting_bg">#082f49</color>
-    <color name="status_waiting_border">#075985</color>
+    <color name="status_waiting_bg">#3338bdf8</color>
+    <color name="status_waiting_border">#6638bdf8</color>
     <color name="status_waiting_text">#38bdf8</color>
-    <color name="status_success_bg">#052e16</color>
-    <color name="status_success_border">#14532d</color>
+    <color name="status_success_bg">#334ade80</color>
+    <color name="status_success_border">#664ade80</color>
     <color name="status_success_text">#4ade80</color>
 </resources>

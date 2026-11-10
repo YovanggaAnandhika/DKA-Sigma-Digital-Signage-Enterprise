@@ -15,11 +15,11 @@ import kotlin.math.sin
 
 /**
  * Spektakuler Modern Mesh Aurora & Particle Field:
- * Animasi dinamis 3-blob organic plasma mesh (Electric Sky, Cyber Indigo, Radiant Emerald)
- * yang melayang halus dan berfusi lembut di seluruh layar, dilengkapi floating stardust light particles.
+ * Animasi dinamis 3-blob organic plasma mesh yang melayang halus di seluruh layar.
+ * [isLightMode] = true → pastel soft blobs di atas latar putih (PairingActivity).
  * Hardware-accelerated, zero-allocation di onDraw.
  */
-class SpektakulerAuroraBackgroundView(context: Context) : View(context) {
+class SpektakulerAuroraBackgroundView(context: Context, val isLightMode: Boolean = false) : View(context) {
 
     private val density = context.resources.displayMetrics.density
     private var timeSec = 0f
@@ -82,54 +82,95 @@ class SpektakulerAuroraBackgroundView(context: Context) : View(context) {
 
         val t = timeSec * 0.75f
 
-        // 1. Blob A: Primary Electric Sky Blue (Mengambang melingkar kiri-atas ke tengah)
+        // 1. Blob A — Sky/Lavender
         val ax = w * (0.35f + 0.18f * sin(t * 0.8).toFloat())
         val ay = h * (0.35f + 0.14f * cos(t * 0.6).toFloat())
         val ar = (minOf(w, h) * (0.65f + 0.08f * sin(t * 0.9).toFloat()))
-        blobPaint.shader = RadialGradient(
-            ax, ay, ar,
-            intArrayOf(
-                Color.argb(85, 14, 165, 233),   // Sky 500
-                Color.argb(45, 56, 189, 248),   // Sky 400
-                Color.argb(12, 125, 211, 252),  // Sky 300
-                Color.TRANSPARENT
-            ),
-            floatArrayOf(0f, 0.35f, 0.65f, 1f),
-            Shader.TileMode.CLAMP
-        )
+        if (isLightMode) {
+            blobPaint.shader = RadialGradient(
+                ax, ay, ar,
+                intArrayOf(
+                    Color.argb(130, 99, 102, 241),  // Indigo-500
+                    Color.argb(70, 139, 92, 246),   // Violet-500
+                    Color.argb(20, 196, 181, 253),  // Violet-300
+                    Color.TRANSPARENT
+                ),
+                floatArrayOf(0f, 0.35f, 0.65f, 1f),
+                Shader.TileMode.CLAMP
+            )
+        } else {
+            blobPaint.shader = RadialGradient(
+                ax, ay, ar,
+                intArrayOf(
+                    Color.argb(85, 14, 165, 233),
+                    Color.argb(45, 56, 189, 248),
+                    Color.argb(12, 125, 211, 252),
+                    Color.TRANSPARENT
+                ),
+                floatArrayOf(0f, 0.35f, 0.65f, 1f),
+                Shader.TileMode.CLAMP
+            )
+        }
         canvas.drawCircle(ax, ay, ar, blobPaint)
 
-        // 2. Blob B: Cyber Indigo / Deep Violet (Mengambang kanan-bawah berlawanan)
+        // 2. Blob B — Pink/Rose
         val bx = w * (0.68f + 0.16f * cos(t * 0.7 + 1.5).toFloat())
         val by = h * (0.62f + 0.15f * sin(t * 0.5 + 2.0).toFloat())
         val br = (minOf(w, h) * (0.70f + 0.10f * cos(t * 0.8).toFloat()))
-        blobPaint.shader = RadialGradient(
-            bx, by, br,
-            intArrayOf(
-                Color.argb(75, 79, 70, 229),    // Indigo 600
-                Color.argb(40, 129, 140, 248),  // Indigo 400
-                Color.argb(10, 192, 132, 252),  // Purple 400
-                Color.TRANSPARENT
-            ),
-            floatArrayOf(0f, 0.38f, 0.70f, 1f),
-            Shader.TileMode.CLAMP
-        )
+        if (isLightMode) {
+            blobPaint.shader = RadialGradient(
+                bx, by, br,
+                intArrayOf(
+                    Color.argb(100, 236, 72, 153),  // Pink-500
+                    Color.argb(50, 251, 113, 133),  // Rose-400
+                    Color.argb(12, 253, 164, 175),  // Rose-300
+                    Color.TRANSPARENT
+                ),
+                floatArrayOf(0f, 0.38f, 0.70f, 1f),
+                Shader.TileMode.CLAMP
+            )
+        } else {
+            blobPaint.shader = RadialGradient(
+                bx, by, br,
+                intArrayOf(
+                    Color.argb(75, 79, 70, 229),
+                    Color.argb(40, 129, 140, 248),
+                    Color.argb(10, 192, 132, 252),
+                    Color.TRANSPARENT
+                ),
+                floatArrayOf(0f, 0.38f, 0.70f, 1f),
+                Shader.TileMode.CLAMP
+            )
+        }
         canvas.drawCircle(bx, by, br, blobPaint)
 
-        // 3. Blob C: Radiant Emerald / Cyan Accent (Aksen segar di pojok bawah-kiri)
+        // 3. Blob C — Sky/Cyan accent
         val cx = w * (0.22f + 0.12f * cos(t * 0.9 + 3.0).toFloat())
         val cy = h * (0.75f + 0.12f * sin(t * 0.7 + 1.0).toFloat())
         val cr = (minOf(w, h) * (0.50f + 0.06f * sin(t * 1.1).toFloat()))
-        blobPaint.shader = RadialGradient(
-            cx, cy, cr,
-            intArrayOf(
-                Color.argb(55, 16, 185, 129),   // Emerald 500
-                Color.argb(25, 45, 212, 191),   // Teal 400
-                Color.TRANSPARENT
-            ),
-            floatArrayOf(0f, 0.45f, 1f),
-            Shader.TileMode.CLAMP
-        )
+        if (isLightMode) {
+            blobPaint.shader = RadialGradient(
+                cx, cy, cr,
+                intArrayOf(
+                    Color.argb(90, 6, 182, 212),    // Cyan-500
+                    Color.argb(40, 34, 211, 238),   // Cyan-400
+                    Color.TRANSPARENT
+                ),
+                floatArrayOf(0f, 0.45f, 1f),
+                Shader.TileMode.CLAMP
+            )
+        } else {
+            blobPaint.shader = RadialGradient(
+                cx, cy, cr,
+                intArrayOf(
+                    Color.argb(55, 16, 185, 129),
+                    Color.argb(25, 45, 212, 191),
+                    Color.TRANSPARENT
+                ),
+                floatArrayOf(0f, 0.45f, 1f),
+                Shader.TileMode.CLAMP
+            )
+        }
         canvas.drawCircle(cx, cy, cr, blobPaint)
         blobPaint.shader = null
 
@@ -145,7 +186,12 @@ class SpektakulerAuroraBackgroundView(context: Context) : View(context) {
             val curY = h * pyNorm + (15f * density) * cos(t * speed * 0.8 + phase).toFloat()
             val alphaWave = 0.4f + 0.6f * ((sin(t * speed * 2f + phase).toFloat() + 1f) / 2f)
 
-            starPaint.color = Color.argb((alphaWave * 180).toInt(), 255, 255, 255)
+            // Light mode: dark subtle dots; dark mode: white dots
+            val particleColor = if (isLightMode)
+                Color.argb((alphaWave * 60).toInt(), 99, 102, 241)
+            else
+                Color.argb((alphaWave * 180).toInt(), 255, 255, 255)
+            starPaint.color = particleColor
             canvas.drawCircle(curX, curY, rBase * (0.8f + 0.2f * alphaWave), starPaint)
         }
     }

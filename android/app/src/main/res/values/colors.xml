@@ -6,47 +6,48 @@
     <color name="black">#000000</color>
     <color name="white">#ffffff</color>
 
-    <!-- Bottom Sheet & Dialog Colors (Light) -->
-    <color name="sheet_bg">#ffffff</color>
-    <color name="sheet_card_bg">#f8fafc</color>
-    <color name="sheet_card_border">#e2e8f0</color>
-    <color name="sheet_drag_handle">#cbd5e1</color>
+    <!-- Glass Panel — frosted white, border visible di atas aurora -->
+    <color name="sheet_bg">#D0FFFFFF</color>
+    <color name="sheet_card_bg">#B0FFFFFF</color>
+    <color name="sheet_card_border">#30000000</color>
+    <color name="sheet_drag_handle">#50000000</color>
     <color name="sheet_text_primary">#0f172a</color>
-    <color name="sheet_text_secondary">#64748b</color>
-    <color name="sheet_text_muted">#94a3b8</color>
-    <color name="sheet_btn_secondary_bg">#f1f5f9</color>
-    <color name="sheet_btn_secondary_text">#334155</color>
-    <color name="sheet_btn_secondary_border">#cbd5e1</color>
+    <color name="sheet_text_secondary">#334155</color>
+    <color name="sheet_text_muted">#64748b</color>
+    <color name="sheet_btn_secondary_bg">#A0FFFFFF</color>
+    <color name="sheet_btn_secondary_text">#1e293b</color>
+    <color name="sheet_btn_secondary_border">#30000000</color>
     <color name="sheet_btn_danger_bg">#dc2626</color>
     <color name="sheet_btn_danger_ripple">#b91c1c</color>
 
-    <!-- Pairing Screen Colors (Light) -->
-    <color name="screen_bg">#f7f5f0</color>
-    <color name="console_card_bg">#ffffff</color>
-    <color name="console_card_border">#e7e3da</color>
-    <color name="tag_text">#78716c</color>
-    <color name="text_headline">#1c1917</color>
-    <color name="text_sub">#78716c</color>
-    <color name="pairing_code_bg">#fafaf9</color>
-    <color name="pairing_code_border">#d6d3cd</color>
-    <color name="btn_reconnect_bg">#1c1917</color>
-    <color name="btn_reconnect_ripple">#44403c</color>
+    <!-- Pairing Screen -->
+    <color name="screen_bg">#00000000</color>
+    <color name="pairing_aurora_bg">#FFF0EEFF</color>
+    <color name="console_card_bg">#B0FFFFFF</color>
+    <color name="console_card_border">#30000000</color>
+    <color name="tag_text">#6366f1</color>
+    <color name="text_headline">#0f172a</color>
+    <color name="text_sub">#475569</color>
+    <color name="pairing_code_bg">#C0FFFFFF</color>
+    <color name="pairing_code_border">#40000000</color>
+    <color name="btn_reconnect_bg">#1e293b</color>
+    <color name="btn_reconnect_ripple">#334155</color>
     <color name="btn_reconnect_text">#ffffff</color>
-    <color name="btn_server_bg">#fafaf9</color>
-    <color name="btn_server_border">#d6d3cd</color>
-    <color name="btn_server_text">#44403c</color>
+    <color name="btn_server_bg">#A0FFFFFF</color>
+    <color name="btn_server_border">#30000000</color>
+    <color name="btn_server_text">#1e293b</color>
 
-    <!-- Status Pill Colors (Light) -->
-    <color name="status_offline_bg">#fef2f2</color>
-    <color name="status_offline_border">#fecaca</color>
+    <!-- Status Pills — glass tinted, border visible di latar putih -->
+    <color name="status_offline_bg">#22ef4444</color>
+    <color name="status_offline_border">#99ef4444</color>
     <color name="status_offline_text">#b91c1c</color>
-    <color name="status_connecting_bg">#fffbeb</color>
-    <color name="status_connecting_border">#fde68a</color>
-    <color name="status_connecting_text">#b45309</color>
-    <color name="status_waiting_bg">#f0f9ff</color>
-    <color name="status_waiting_border">#bae6fd</color>
+    <color name="status_connecting_bg">#22f59e0b</color>
+    <color name="status_connecting_border">#99f59e0b</color>
+    <color name="status_connecting_text">#92400e</color>
+    <color name="status_waiting_bg">#220ea5e9</color>
+    <color name="status_waiting_border">#990ea5e9</color>
     <color name="status_waiting_text">#0369a1</color>
-    <color name="status_success_bg">#ecfdf5</color>
-    <color name="status_success_border">#a7f3d0</color>
+    <color name="status_success_bg">#2210b981</color>
+    <color name="status_success_border">#9910b981</color>
     <color name="status_success_text">#047857</color>
 </resources>
