@@ -16,8 +16,6 @@ class QueueCanvasView(
     private val canvasHeight: Int = 1080
 ) : ViewGroup(context) {
 
-    private val density: Float = context.resources.displayMetrics.density
-
     init {
         clipChildren = false
         clipToPadding = false
@@ -49,16 +47,7 @@ class QueueCanvasView(
             }
 
             val widthSpec = MeasureSpec.makeMeasureSpec(childW, MeasureSpec.EXACTLY)
-            val heightSpec = if (child is TextView && meta.itemType != "marquee") {
-                child.measure(widthSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
-                val paddingBuffer = (4 * density).toInt()
-                val neededH = maxOf(childH, child.measuredHeight + paddingBuffer)
-                MeasureSpec.makeMeasureSpec(neededH, MeasureSpec.EXACTLY)
-            } else {
-                MeasureSpec.makeMeasureSpec(childH, MeasureSpec.EXACTLY)
-            }
-
-            child.measure(widthSpec, heightSpec)
+            child.measure(widthSpec, MeasureSpec.makeMeasureSpec(childH, MeasureSpec.EXACTLY))
         }
     }
 
@@ -77,11 +66,7 @@ class QueueCanvasView(
             val childX = (meta.x * scaleX).toInt()
             val childY = (meta.y * scaleY).toInt()
             val childW = (meta.width * scaleX).toInt().coerceAtLeast(1)
-            val childH = if (child is TextView && meta.itemType != "marquee") {
-                maxOf((meta.height * scaleY).toInt(), child.measuredHeight)
-            } else {
-                (meta.height * scaleY).toInt().coerceAtLeast(1)
-            }
+            val childH = (meta.height * scaleY).toInt().coerceAtLeast(1)
 
             child.layout(childX, childY, childX + childW, childY + childH)
         }

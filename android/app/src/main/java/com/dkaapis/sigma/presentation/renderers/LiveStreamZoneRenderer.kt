@@ -304,7 +304,7 @@ class LiveStreamZoneRenderer(
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
                 useController = false
-                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                 (videoSurfaceView as? android.view.SurfaceView)?.setZOrderMediaOverlay(true)
                 this.player = player
             }
