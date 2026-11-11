@@ -1,7 +1,7 @@
-# Naskah & Storyboard Video Ilustrasi: HNDSigma Digital Signage Enterprise
+# Naskah & Storyboard Video Ilustrasi: HNDSignage Digital Signage Enterprise
 ### Panduan Produksi Video Promo Modular (Spesifik Tampilan UI, Fitur Aplikasi & Desain Audio Jernih)
 
-Dokumen ini berisi panduan produksi video animasi / demonstrasi visual produk **HNDSigma**. Setiap scene dirancang berdurasi **~20 detik** dengan pendekatan **non-teknis, realistis, dan membedah antarmuka (UI) aplikasi HNDSigma secara nyata**, mulai dari Dashboard Web Next.js, Android Player (Media3), hingga tombol fisik antrean IoT.
+Dokumen ini berisi panduan produksi video animasi / demonstrasi visual produk **HNDSignage**. Setiap scene dirancang berdurasi **~20 detik** dengan pendekatan **non-teknis, realistis, dan membedah antarmuka (UI) aplikasi HNDSignage secara nyata**, mulai dari Dashboard Web Next.js, Android Player (Media3), hingga tombol fisik antrean IoT.
 
 ---
 
@@ -66,10 +66,10 @@ Dokumen ini berisi panduan produksi video animasi / demonstrasi visual produk **
 
 ---
 
-### Scene 02: Solusi Modern — Dashboard Ringkasan HNDSigma
+### Scene 02: Solusi Modern — Dashboard Ringkasan HNDSignage
 - **Durasi**: 20 Detik
 - **Latar & Aset Visual**:
-  - *Setting*: Layar laptop modern menampilkan Dashboard HNDSigma (`/`).
+  - *Setting*: Layar laptop modern menampilkan Dashboard HNDSignage (`/`).
   - *Elemen UI Aplikasi*:
     - Sidebar menu sebelah kiri dengan ikon gradien warna-warni (*Ringkasan, Rundown, Player, Chip IoT, Tata Letak, Pustaka, Identitas*).
     - Kartu metrik di bagian atas: `Total Layar Terpasang: 120`, `Layar Online: 118` (lampu hijau menyala stabil), `Penyimpanan: 45%`.
@@ -77,11 +77,11 @@ Dokumen ini berisi panduan produksi video animasi / demonstrasi visual produk **
 - **Instruksi Suara Narator (Perempuan)**:
   - *Tone*: Antusias, ceria, memperkenalkan solusi dengan ramah dan percaya diri.
 - **Voice Over (VO)**:
-  > *"Inilah HNDSigma. Pusat kendali digital signage modern yang menyatukan seluruh display toko Anda dalam satu tampilan cerdas, rapi, dan sangat mudah dioperasikan siapa saja."*
+  > *"Inilah HNDSignage. Pusat kendali digital signage modern yang menyatukan seluruh display toko Anda dalam satu tampilan cerdas, rapi, dan sangat mudah dioperasikan siapa saja."*
 - **Desain Audio & SFX**:
   - Transisi desir halus (*whoosh*), musik beralih seketika menjadi melodi instrumen modern bernada mayor yang cerah dan menyejukkan.
 - **Teks On-Screen**:
-  - `HNDSigma Enterprise CMS`
+  - `HNDSignage Enterprise CMS`
   - `Pantau Ratusan Layar dalam Satu Dashboard`
 
 ---
@@ -199,7 +199,7 @@ Dokumen ini berisi panduan produksi video animasi / demonstrasi visual produk **
 - **Instruksi Suara Narator (Perempuan)**:
   - *Tone*: Berwibawa, profesional, mewakili ketertiban skala korporasi besar.
 - **Voice Over (VO)**:
-  > *"Kelola aneka merek dan cabang kini terasa sangat rapi. HNDSigma mengisolasi materi promosi tiap cabang dengan aman, namun tetap memberikan pantauan penuh dari satu akun kantor pusat."*
+  > *"Kelola aneka merek dan cabang kini terasa sangat rapi. HNDSignage mengisolasi materi promosi tiap cabang dengan aman, namun tetap memberikan pantauan penuh dari satu akun kantor pusat."*
 - **Desain Audio & SFX**:
   - Denting ritmis instrumen korporat bernada presisi dan teratur, mempertegas stabilitas sistem.
 - **Teks On-Screen**:
@@ -256,7 +256,7 @@ Dokumen ini berisi panduan produksi video animasi / demonstrasi visual produk **
 - **Instruksi Suara Narator (Perempuan)**:
   - *Tone*: Santai, solutif, menonjolkan efisiensi operasional tanpa beban biaya tambahan.
 - **Voice Over (VO)**:
-  > *"Perbarui aplikasi display ke seluruh kota tanpa perlu kirim teknisi ke lapangan. Di malam hari, HNDSigma mengupdate sistem secara otomatis, siap menyambut pelanggan esok pagi dengan performa terbaik."*
+  > *"Perbarui aplikasi display ke seluruh kota tanpa perlu kirim teknisi ke lapangan. Di malam hari, HNDSignage mengupdate sistem secara otomatis, siap menyambut pelanggan esok pagi dengan performa terbaik."*
 - **Desain Audio & SFX**:
   - Efek transisi digital lembut berirama santai (*smooth digital progression chime*).
 - **Teks On-Screen**:
@@ -269,19 +269,19 @@ Dokumen ini berisi panduan produksi video animasi / demonstrasi visual produk **
 - **Durasi**: 20 Detik
 - **Latar & Aset Visual**:
   - *Komposisi Sinematik*:
-    - Di tengah: Layar laptop menampilkan Dashboard HNDSigma PRO (mode gelap HDR+ elegan).
+    - Di tengah: Layar laptop menampilkan Dashboard HNDSignage PRO (mode gelap HDR+ elegan).
     - Di kiri: TV Android komersial menayangkan video ritel memukau dengan running text dan widget antrean aktif.
     - Di kanan: Tombol antrean fisik nirkabel yang ramping di meja kayu kasir.
   - Teks promosi menonjol: *Tanpa Biaya Lisensi Bulanan per Layar*.
-  - Logo resmi **HNDSigma PRO** menyala indah dengan kilau aksen biru-cyan (*HDR glow*).
+  - Logo resmi **HNDSignage PRO** menyala indah dengan kilau aksen biru-cyan (*HDR glow*).
 - **Instruksi Suara Narator (Perempuan)**:
   - *Tone*: Hangat, persuasif, mengundang kerjasama dengan nada percaya diri tinggi.
 - **Voice Over (VO)**:
   > *"Satu solusi terpadu untuk promosi visual memukau dan antrean toko yang tertib rapi. Tanpa biaya langganan per layar, manfaatkan TV yang sudah Anda miliki. Hubungi kami sekarang dan jadwalkan demo gratis untuk bisnis Anda!"*
 - **Desain Audio & SFX**:
-  - Musik latar mencapai klimaks orkestra modern megah, diakhiri dengan *brand audio signature* HNDSigma yang bersih dan berkesan mendalam.
+  - Musik latar mencapai klimaks orkestra modern megah, diakhiri dengan *brand audio signature* HNDSignage yang bersih dan berkesan mendalam.
 - **Teks On-Screen**:
-  - `HNDSigma Enterprise Digital Signage`
+  - `HNDSignage Enterprise Digital Signage`
   - `Satu Platform: Media Promosi + Antrean IoT`
   - `Hemat Anggaran • Tanpa Royalti Bulanan per Layar`
   - `Hubungi Kami Sekarang • Jadwalkan Demo Gratis`
