@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Activity, Clipboard, Pause, Play, Radio, Terminal } from 'lucide-react';
+import SearchSelect from '@/components/ui/SearchSelect';
 import { cleanMediaTitle } from '../context/DisplayDetailContext';
 import { formatIndonesianDateTime } from './formatIndonesianDateTime';
 
@@ -36,6 +37,16 @@ type DiagnosticsEvent = {
   };
   logs?: { linesList?: LogLine[] };
 };
+
+const LOG_LEVEL_OPTIONS = [
+  { value: 'ALL', label: 'Semua tingkat' },
+  { value: 'V', label: 'Rinci' },
+  { value: 'D', label: 'Debug' },
+  { value: 'I', label: 'Informasi' },
+  { value: 'W', label: 'Peringatan' },
+  { value: 'E', label: 'Kesalahan' },
+  { value: 'F', label: 'Fatal' },
+];
 
 function zoneKindLabel(kind?: string): string {
   switch (kind?.toUpperCase()) {
@@ -264,17 +275,14 @@ export default function LiveDeviceMonitor({ deviceId }: { deviceId: string }) {
             <Terminal size={15} /> Logcat aplikasi
           </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <select aria-label="Pilih tingkat log" value={level} onChange={(event) => setLevel(event.target.value)} style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: '4px 6px' }}>
-              {[
-                ['ALL', 'Semua tingkat'],
-                ['V', 'Rinci'],
-                ['D', 'Debug'],
-                ['I', 'Informasi'],
-                ['W', 'Peringatan'],
-                ['E', 'Kesalahan'],
-                ['F', 'Fatal'],
-              ].map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
+            <div style={{ width: 180, flexShrink: 0 }}>
+              <SearchSelect
+                value={level}
+                onChange={setLevel}
+                options={LOG_LEVEL_OPTIONS}
+                placeholder="Cari tingkat log..."
+              />
+            </div>
             <button type="button" onClick={() => setPaused(!paused)} aria-label={paused ? 'Lanjutkan log' : 'Jeda log'} title={paused ? 'Lanjutkan' : 'Jeda'} style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: 5 }}>
               {paused ? <Play size={14} /> : <Pause size={14} />}
             </button>
