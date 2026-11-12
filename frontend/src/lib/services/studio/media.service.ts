@@ -164,31 +164,31 @@ export async function cancelUpload(uploadId: string): Promise<boolean> {
   return result.success;
 }
 
-export async function uploadFileViaGrpc(
+export interface StagedFileUpload {
+  uploadId: string;
+  originalFilename: string;
+  totalChunks: number;
+}
+
+export async function uploadFileChunksViaGrpc(
   file: File,
   onProgress?: (percent: number) => void,
   signal?: AbortSignal
-): Promise<{ publicUrl: string; sha256Hash: string; filePath: string; fileSizeBytes: number }> {
+): Promise<StagedFileUpload> {
   const CHUNK_SIZE = 512 * 1024; // 512 KB per chunk
   const totalBytes = file.size;
   const totalChunks = Math.max(1, Math.ceil(totalBytes / CHUNK_SIZE));
   const uploadId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `up_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
   if (signal?.aborted) {
-    await cancelUpload(uploadId);
     throw new Error('Upload dibatalkan oleh pengguna');
   }
 
   let completedChunks = 0;
   const MAX_CONCURRENCY = 2;
-  
-  // Create an array of chunk indices
   const chunkIndices = Array.from({ length: totalChunks }, (_, i) => i);
-  
-  // Helper to process a single chunk
   const processChunk = async (chunkIndex: number) => {
     if (signal?.aborted) {
-      await cancelUpload(uploadId);
       throw new Error('Upload dibatalkan oleh pengguna');
     }
 
@@ -220,27 +220,42 @@ export async function uploadFileViaGrpc(
     }
   };
 
-  // Process chunks with concurrency limit
   const executing = new Set<Promise<void>>();
-  for (const index of chunkIndices) {
-    const p = processChunk(index);
-    executing.add(p);
-    p.finally(() => executing.delete(p));
-    
-    if (executing.size >= MAX_CONCURRENCY) {
-      await Promise.race(executing);
+  try {
+    for (const index of chunkIndices) {
+      const p = processChunk(index);
+      executing.add(p);
+      p.then(() => executing.delete(p), () => executing.delete(p));
+
+      if (executing.size >= MAX_CONCURRENCY) {
+        await Promise.race(executing);
+      }
     }
+    await Promise.all(executing);
+    onProgress?.(100);
+    return { uploadId, originalFilename: file.name, totalChunks };
+  } catch (error) {
+    await Promise.allSettled(executing);
+    try {
+      await cancelUpload(uploadId);
+    } catch (cleanupError) {
+      console.error('Gagal membersihkan unggahan APK sementara:', cleanupError);
+    }
+    throw error;
   }
-  
-  // Wait for any remaining chunks
-  await Promise.all(executing);
+}
 
-  // Set progress to 100% to indicate finalization step
-  if (onProgress) onProgress(100);
-
-  // All chunks uploaded, now finalize
-  const finalResult = await finalizeUpload(uploadId, file.name, totalChunks);
-  
+export async function uploadFileViaGrpc(
+  file: File,
+  onProgress?: (percent: number) => void,
+  signal?: AbortSignal
+): Promise<{ publicUrl: string; sha256Hash: string; filePath: string; fileSizeBytes: number }> {
+  const stagedUpload = await uploadFileChunksViaGrpc(file, onProgress, signal);
+  const finalResult = await finalizeUpload(
+    stagedUpload.uploadId,
+    stagedUpload.originalFilename,
+    stagedUpload.totalChunks
+  );
   if (!finalResult || !finalResult.is_completed) {
     throw new Error('Upload gagal diselesaikan (Finalize) oleh backend gRPC');
   }

@@ -139,6 +139,7 @@ export const api = {
   deleteMedia: studioModule.deleteMedia,
   uploadMediaChunk: studioModule.uploadMediaChunk,
   uploadFileViaGrpc: studioModule.uploadFileViaGrpc,
+  uploadFileChunksViaGrpc: studioModule.uploadFileChunksViaGrpc,
   finalizeUpload: studioModule.finalizeUpload,
   cancelUpload: studioModule.cancelUpload,
   getMediaFile: studioModule.getMediaFile,

@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Upload, FileCode, CheckCircle2, AlertTriangle, Smartphone, ShieldAlert } from 'lucide-react';
 import { api, system } from '@/lib/services';
 import { readApkMetadata } from '@/lib/core/apkMetadata';
+import type { StagedFileUpload } from '@/lib/services/studio/media.service';
 
 export default function CreateApkReleasePage() {
   const router = useRouter();
@@ -17,6 +18,8 @@ export default function CreateApkReleasePage() {
   const [readingApkMetadata, setReadingApkMetadata] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [stagedUpload, setStagedUpload] = useState<StagedFileUpload | null>(null);
+  const [finalizedUpload, setFinalizedUpload] = useState<Awaited<ReturnType<typeof api.finalizeUpload>> | null>(null);
 
   const [formData, setFormData] = useState({
     versionName: '',
@@ -26,15 +29,42 @@ export default function CreateApkReleasePage() {
     releaseNotes: '',
   });
 
+  useEffect(() => {
+    if (!stagedUpload) return;
+    return () => {
+      void api.cancelUpload(stagedUpload.uploadId).catch((error) => {
+        console.error('Gagal membersihkan unggahan APK sementara:', error);
+      });
+    };
+  }, [stagedUpload]);
+
   const handleFile = async (file: File) => {
     if (!file.name.toLowerCase().endsWith('.apk')) {
       alert('Format berkas tidak valid. Harap pilih berkas berekstensi .apk');
       return;
     }
+    if (finalizedUpload) {
+      setError('APK sudah difinalisasi. Terbitkan rilis ini sebelum mengganti berkas.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    if (stagedUpload) {
+      try {
+        if (!(await api.cancelUpload(stagedUpload.uploadId))) {
+          throw new Error('Unggahan sementara tidak dapat dibatalkan.');
+        }
+        setStagedUpload(null);
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Gagal membatalkan unggahan sementara.');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+      }
+    }
 
     const selectionId = ++fileSelectionId.current;
     setSelectedFile(file);
     setError(null);
+    setUploadProgress(null);
     setReadingApkMetadata(true);
     setFormData((prev) => ({ ...prev, versionName: '', versionCode: 0 }));
 
@@ -99,15 +129,34 @@ export default function CreateApkReleasePage() {
     try {
       setLoading(true);
       setError(null);
-      setUploadProgress(0);
+      if (!stagedUpload && !finalizedUpload) {
+        setUploadProgress(0);
+        const upload = await api.uploadFileChunksViaGrpc(
+          selectedFile,
+          (percent) => setUploadProgress(percent)
+        );
+        setStagedUpload(upload);
+        return;
+      }
 
-      // 1. Upload binary APK in chunks via gRPC
-      const uploadRes = await api.uploadFileViaGrpc(
-        selectedFile,
-        (percent) => setUploadProgress(percent)
-      );
+      let uploadRes = finalizedUpload;
+      if (!uploadRes) {
+        if (!stagedUpload) throw new Error('Unggahan APK sementara tidak ditemukan.');
+        uploadRes = await api.finalizeUpload(
+          stagedUpload.uploadId,
+          stagedUpload.originalFilename,
+          stagedUpload.totalChunks
+        );
+        if (!uploadRes.success || !uploadRes.is_completed || !uploadRes.publicUrl) {
+          throw new Error('Upload APK gagal difinalisasi.');
+        }
+        setFinalizedUpload(uploadRes);
+        setStagedUpload(null);
+      }
+      if (!uploadRes.success || !uploadRes.is_completed || !uploadRes.publicUrl) {
+        throw new Error('Upload APK gagal difinalisasi.');
+      }
 
-      // 2. Create release record
       await system.createAppRelease({
         versionCode: Number(formData.versionCode),
         versionName: formData.versionName.trim(),
@@ -119,6 +168,7 @@ export default function CreateApkReleasePage() {
         minSupportedVersionCode: Number(formData.minSupportedVersionCode),
       });
 
+      setFinalizedUpload(null);
       router.push('/system/apk');
     } catch (err: any) {
       console.error('Failed to create APK release:', err);
@@ -126,6 +176,39 @@ export default function CreateApkReleasePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const leaveForm = async () => {
+    if (loading || readingApkMetadata) return;
+    try {
+      if (stagedUpload && !(await api.cancelUpload(stagedUpload.uploadId))) {
+        throw new Error('Unggahan sementara tidak dapat dibatalkan.');
+      }
+      router.push('/system/apk');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Gagal membatalkan unggahan sementara.');
+    }
+  };
+
+  const removeSelectedFile = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    if (stagedUpload) {
+      try {
+        if (!(await api.cancelUpload(stagedUpload.uploadId))) {
+          throw new Error('Unggahan sementara tidak dapat dibatalkan.');
+        }
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Gagal membatalkan unggahan sementara.');
+        return;
+      }
+    }
+    fileSelectionId.current += 1;
+    setStagedUpload(null);
+    setSelectedFile(null);
+    setReadingApkMetadata(false);
+    setUploadProgress(null);
+    setFormData((prev) => ({ ...prev, versionName: '', versionCode: 0 }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const formatBytes = (bytes: number) => {
@@ -142,6 +225,10 @@ export default function CreateApkReleasePage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         <Link
           href="/system/apk"
+          onClick={(event) => {
+            event.preventDefault();
+            void leaveForm();
+          }}
           className="btn btn-outline"
           style={{
             width: '42px',
@@ -208,7 +295,7 @@ export default function CreateApkReleasePage() {
           />
 
           <div
-            onClick={() => !loading && !readingApkMetadata && fileInputRef.current?.click()}
+            onClick={() => !loading && !readingApkMetadata && !finalizedUpload && fileInputRef.current?.click()}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -250,19 +337,15 @@ export default function CreateApkReleasePage() {
                   <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     {readingApkMetadata
                       ? 'Membaca metadata APK...'
-                      : `Ukuran: ${formatBytes(selectedFile.size)} • Metadata APK terbaca`}
+                      : stagedUpload || finalizedUpload
+                        ? `Ukuran: ${formatBytes(selectedFile.size)} • APK diunggah, belum diterbitkan`
+                        : `Ukuran: ${formatBytes(selectedFile.size)} • Metadata APK terbaca`}
                   </p>
                 </div>
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    fileSelectionId.current += 1;
-                    setSelectedFile(null);
-                    setReadingApkMetadata(false);
-                    setFormData((prev) => ({ ...prev, versionName: '', versionCode: 0 }));
-                    if (fileInputRef.current) fileInputRef.current.value = '';
-                  }}
+                  onClick={(event) => void removeSelectedFile(event)}
+                  disabled={loading || readingApkMetadata || Boolean(finalizedUpload)}
                   className="btn btn-outline"
                   style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: '6px' }}
                 >
@@ -300,7 +383,11 @@ export default function CreateApkReleasePage() {
           {uploadProgress !== null && (
             <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                <span>Mengunggah berkas APK ke backend...</span>
+                <span>
+                  {stagedUpload || finalizedUpload
+                    ? 'APK siap ditinjau; rilis belum diterbitkan.'
+                    : 'Mengunggah APK sementara ke backend...'}
+                </span>
                 <span style={{ fontWeight: 700, color: 'var(--primary-400)' }}>{uploadProgress}%</span>
               </div>
               <div style={{ width: '100%', height: '6px', borderRadius: '3px', backgroundColor: 'var(--border-subtle)', overflow: 'hidden' }}>
@@ -454,13 +541,15 @@ export default function CreateApkReleasePage() {
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
-          <Link
-            href="/system/apk"
+          <button
+            type="button"
+            onClick={() => void leaveForm()}
+            disabled={loading || readingApkMetadata}
             className="btn btn-outline"
-            style={{ padding: '10px 18px', borderRadius: '10px', textDecoration: 'none' }}
+            style={{ padding: '10px 18px', borderRadius: '10px' }}
           >
             Batal
-          </Link>
+          </button>
           <button
             type="submit"
             disabled={loading || readingApkMetadata || !selectedFile}
@@ -480,8 +569,12 @@ export default function CreateApkReleasePage() {
               {readingApkMetadata
                 ? 'Membaca metadata APK...'
                 : loading
-                  ? 'Mengunggah & Merilis...'
-                  : 'Unggah & Terbitkan Rilis'}
+                  ? stagedUpload || finalizedUpload
+                    ? 'Menerbitkan rilis...'
+                    : 'Mengunggah APK...'
+                  : stagedUpload || finalizedUpload
+                    ? 'Terbitkan Rilis'
+                    : 'Unggah APK untuk Ditinjau'}
             </span>
           </button>
         </div>
