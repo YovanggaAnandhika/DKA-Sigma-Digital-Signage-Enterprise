@@ -33,7 +33,7 @@ services:
         max-size: 2m
         max-file: "3"
     networks:
-      - dka-internal
+      - sigma-internal
 
   dka-product-sigma-backend:
     image: yovanggaanandhika/dka-sigma:core
@@ -42,15 +42,15 @@ services:
     environment:
       TZ: Asia/Makassar
       HOST: 0.0.0.0
-      DB_HOST: ${DB_HOST:?Set DB_HOST in the production environment}
-      DB_PORT: ${DB_PORT:-5432}
+      DB_HOST: dka-product-sigma-postgres
+      DB_PORT: 5432
       DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME in the production environment}
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in the production environment}
       DB_DATABASE: ${DB_DATABASE:?Set DB_DATABASE in the production environment}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the production environment}
       RUST_LOG: ${RUST_LOG:-info}
-      MQTT_HOST: ${MQTT_HOST:?Set MQTT_HOST in the production environment}
-      MQTT_PORT: ${MQTT_PORT:-1883}
+      MQTT_HOST: dka-product-sigma-mqtt
+      MQTT_PORT: 1883
       MQTT_USERNAME: ${MQTT_USERNAME:-}
       MQTT_PASSWORD: ${MQTT_PASSWORD:-}
       UPLOAD_DIR: /home/app/uploads
@@ -59,16 +59,61 @@ services:
       STREAMER_RTMP_HOST: dka-product-sigma-streamer
       STREAMER_RTMP_PORT: 8554
     volumes:
-      - sigma_uploads:/home/app/uploads
+      - type: volume
+        source: sigma_uploads
+        target: /home/app/uploads
     depends_on:
       - dka-product-sigma-streamer
+      - dka-product-sigma-postgres
+      - dka-product-sigma-mqtt
     logging:
       driver: json-file
       options:
         max-size: 2m
         max-file: "3"
     networks:
-      - dka-internal
+      - sigma-internal
+
+  dka-product-sigma-postgres:
+    image: yovanggaanandhika/postgresql:17.2
+    restart: always
+    pull_policy: always
+    environment:
+      TZ: Asia/Makassar
+      DKA_ROOT_PASSWORD: ${POSTGRES_ROOT_PASSWORD:?Set POSTGRES_ROOT_PASSWORD for internal testing}
+      DKA_DB_NAME: ${DB_DATABASE:?Set DB_DATABASE for internal testing}
+      DKA_DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME for internal testing}
+      DKA_DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD for internal testing}
+    volumes:
+      - sigma_postgres:/var/lib/postgresql/data
+    logging:
+      driver: json-file
+      options:
+        max-size: 2m
+        max-file: "3"
+    networks:
+      - sigma-internal
+
+  dka-product-sigma-mqtt:
+    image: emqx/emqx:5.8.0
+    restart: always
+    pull_policy: always
+    environment:
+      TZ: Asia/Makassar
+    volumes:
+      - type: volume
+        source: sigma_mqtt_data
+        target: /opt/emqx/data
+      - type: volume
+        source: sigma_mqtt_log
+        target: /opt/emqx/log
+    logging:
+      driver: json-file
+      options:
+        max-size: 2m
+        max-file: "3"
+    networks:
+      - sigma-internal
 
   dka-product-sigma-streamer:
     image: bluenviron/mediamtx:latest-ffmpeg
@@ -109,13 +154,62 @@ services:
         max-size: 2m
         max-file: "3"
     networks:
-      - dka-internal
+      - sigma-internal
+
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    restart: always
+    pull_policy: always
+    environment:
+      TZ: Asia/Makassar
+      DISABLE_IPV6: "true"
+    ports:
+      - target: 80
+        published: 18080
+        protocol: tcp
+        host_ip: 127.0.0.1
+      - target: 443
+        published: 18443
+        protocol: tcp
+        host_ip: 127.0.0.1
+      - target: 81
+        published: 18081
+        protocol: tcp
+        host_ip: 127.0.0.1
+    volumes:
+      - type: volume
+        source: sigma_nginx_data
+        target: /data
+      - type: volume
+        source: sigma_nginx_ssl
+        target: /etc/letsencrypt
+    logging:
+      driver: json-file
+      options:
+        max-size: 2m
+        max-file: "3"
+    networks:
+      - sigma-public
+      - sigma-internal
 
 volumes:
   sigma_uploads:
-    name: dka-product-sigma-production_uploads
+    name: dka-product-sigma-internal_uploads
+  sigma_postgres:
+    name: dka-product-sigma-internal_postgres
+  sigma_mqtt_data:
+    name: dka-product-sigma-internal_mqtt_data
+  sigma_mqtt_log:
+    name: dka-product-sigma-internal_mqtt_log
+  sigma_nginx_data:
+    name: dka-product-sigma-internal_nginx_data
+  sigma_nginx_ssl:
+    name: dka-product-sigma-internal_nginx_ssl
 
 networks:
-  dka-internal:
-    name: dka-internal
-    external: true
+  sigma-public:
+    name: dka-product-sigma-internal_public
+    driver: bridge
+  sigma-internal:
+    name: dka-product-sigma-internal_internal
+    driver: bridge
