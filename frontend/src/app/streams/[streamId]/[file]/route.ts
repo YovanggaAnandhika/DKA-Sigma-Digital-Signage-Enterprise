@@ -3,9 +3,9 @@ import { LiveStreamServiceClient } from '@/lib/api/components/v1/live_stream/liv
 import { GetLiveStreamRequest } from '@/lib/api/components/v1/live_stream/live_stream.common_pb';
 import { getGrpcClient } from '@/lib/core/grpcClient';
 
-const streamerHost = process.env.HND_STREAMER_INTERNAL_HOST || 'dka-product-sigma-streamer';
-const streamerPort = process.env.HND_STREAMER_INTERNAL_PORT || '8889';
-const streamerHlsPort = process.env.HND_STREAMER_HLS_PORT || '8888';
+const streamerHost = process.env.STREAMER_INTERNAL_HOST || 'dka-product-sigma-streamer';
+const streamerPort = process.env.STREAMER_INTERNAL_PORT || '8889';
+const streamerHlsPort = process.env.STREAMER_HLS_PORT || '8888';
 const getStreamerBase = (port: string) => `http://${streamerHost}:${port}`;
 
 export async function GET(

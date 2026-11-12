@@ -9,12 +9,12 @@ services:
       TZ: Asia/Makassar
       NODE_ENV: production
       PORT: 80
-      HND_GRPC_SERVER_HOST: dka-product-sigma-backend
-      HND_GRPC_SERVER_PORT: 50051
-      HND_GRPC_SERVER_SECURE: "false"
-      HND_STREAMER_INTERNAL_HOST: dka-product-sigma-streamer
-      HND_STREAMER_INTERNAL_PORT: 8889
-      HND_STREAMER_HLS_PORT: 8888
+      GRPC_SERVER_HOST: dka-product-sigma-backend
+      GRPC_SERVER_PORT: 50051
+      GRPC_SERVER_SECURE: "false"
+      STREAMER_INTERNAL_HOST: dka-product-sigma-streamer
+      STREAMER_INTERNAL_PORT: 8889
+      STREAMER_HLS_PORT: 8888
     healthcheck:
       test:
         - CMD

@@ -134,7 +134,7 @@ This project is an enterprise-grade digital signage management and streaming pla
     - `STREAMER_RTMP_URL: "rtsp://dka-product-sigma-streamer:8554"` (Internal RTSP/RTMP relay bus)
     - `STREAMER_WEBRTC_URL: "http://dka-product-sigma-streamer:8889"` (Internal WebRTC WHEP/WHIP endpoint)
     - `STREAMER_HLS_URL: "http://dka-product-sigma-streamer:8888"` (Internal HLS fallback muxer)
-  - `dka-product-sigma-frontend` communicates with `dka-product-sigma-streamer` via `HND_STREAMER_INTERNAL_URL: "http://dka-product-sigma-streamer:8889"` and with `dka-product-sigma-backend` via `HND_GRPC_SERVER_HOST: "dka-product-sigma-backend:50051"`.
+  - `dka-product-sigma-frontend` communicates with `dka-product-sigma-streamer` via `STREAMER_INTERNAL_HOST` + `STREAMER_INTERNAL_PORT` and with `dka-product-sigma-backend` via `GRPC_SERVER_HOST` + `GRPC_SERVER_PORT`.
 
 ### 2. Zero-B-Frame & Opus Auto-Normalization Pipeline
 - **Browser WebRTC Specification Constraint**: WebRTC (RFC 7742) strictly rejects H.264 streams containing B-frames (`WebRTC doesn't support H264 streams with B-frames`) and requires **Opus** audio (`48 kHz`), whereas OBS Studio defaults to H.264 High/Main profile with `B-frames = 2` and `AAC` audio.

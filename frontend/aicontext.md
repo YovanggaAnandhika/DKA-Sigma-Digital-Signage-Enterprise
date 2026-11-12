@@ -60,7 +60,7 @@ frontend/
 
 ## gRPC Route Handler Pattern
 
-`getGrpcHost()` reads `HND_GRPC_SERVER_HOST` (default `localhost:50051`); `getGrpcCredentials()` uses TLS only when `HND_GRPC_SERVER_SECURE=true`. Auth is enforced client-side by `AuthGuard` reading `localStorage.dkasigma_session`, not by `middleware.ts` (which only logs API traffic).
+`getGrpcHost()` reads `GRPC_SERVER_HOST` and `GRPC_SERVER_PORT` (defaults `localhost` and `50051`); `getGrpcCredentials()` uses TLS only when `GRPC_SERVER_SECURE=true`. Auth is enforced client-side by `AuthGuard` reading `localStorage.dkasigma_session`, not by `middleware.ts` (which only logs API traffic).
 
 Every API route handler under `src/app/(api)/api/grpc/` follows this standard pattern:
 
@@ -123,4 +123,3 @@ bun dev                  # Local dev server (dijalankan via Docker Compose dev)
 bun run generate:grpc    # Compile proto files from backend/proto into src/lib/api/
 bun run lint             # ESLint checks
 ```
-

@@ -1,8 +1,8 @@
 import * as grpc from '@grpc/grpc-js';
 
 export function getGrpcHost(): string {
-  const host = process.env.HND_GRPC_SERVER_HOST || 'localhost';
-  const port = process.env.HND_GRPC_SERVER_PORT || '50051';
+  const host = process.env.GRPC_SERVER_HOST || 'localhost';
+  const port = process.env.GRPC_SERVER_PORT || '50051';
   return `${host}:${port}`;
 }
 
@@ -10,7 +10,7 @@ let cachedCredentials: grpc.ChannelCredentials | null = null;
 
 export function getGrpcCredentials(): grpc.ChannelCredentials {
   if (!cachedCredentials) {
-    const isSecure = process.env.HND_GRPC_SERVER_SECURE === 'true';
+    const isSecure = process.env.GRPC_SERVER_SECURE === 'true';
     cachedCredentials = isSecure ? grpc.credentials.createSsl() : grpc.credentials.createInsecure();
   }
   return cachedCredentials;
@@ -78,4 +78,3 @@ export function getCorporationIdFromRequest(req: Request): string | undefined {
 export function getGrpcMetadataFromRequest(req: Request): grpc.Metadata {
   return getGrpcMetadata(getTokenFromRequest(req), getCorporationIdFromRequest(req));
 }
-
