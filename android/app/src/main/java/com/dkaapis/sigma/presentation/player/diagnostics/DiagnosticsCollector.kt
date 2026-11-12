@@ -17,7 +17,8 @@ import signage.distribution.v1.stream.StreamCommon
 /** Snapshot CPU (proses app), RAM, heap, dan status tiap zona video/live untuk panel realtime CMS. */
 class DiagnosticsCollector(
     private val context: Context,
-    private val zones: PlayerZoneManager
+    private val zones: PlayerZoneManager,
+    private val isScreenSleeping: () -> Boolean
 ) {
     private val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
     private val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
@@ -46,6 +47,7 @@ class DiagnosticsCollector(
             .setMemoryPercent(if (mem.totalMem > 0) (100 - mem.availMem * 100 / mem.totalMem).toInt() else 0)
             .setHeapUsedMb(((rt.totalMemory() - rt.freeMemory()) shr 20).toInt())
             .setHeapMaxMb((rt.maxMemory() shr 20).toInt())
+            .setScreenSleeping(isScreenSleeping())
         lastCrash?.let {
             b.setLastCrashTimestampMs(it.timestampMs)
                 .setLastCrashSummary(it.summary)

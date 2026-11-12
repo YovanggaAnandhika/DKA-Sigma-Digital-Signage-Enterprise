@@ -258,7 +258,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             tokenStorage = tokenStorage,
             listener = this
         )
-        val collector = DiagnosticsCollector(this, zoneManager)
+        val collector = DiagnosticsCollector(this, zoneManager) { sleep.isSleeping }
         streamManager.diagnosticsProvider = collector::snapshot
     }
 

@@ -58,7 +58,7 @@ interface DisplayDetailContextType {
   fetchAnalytics: (range: string) => Promise<void>;
   handleApprovePairing: (codeToPair?: string) => Promise<void>;
   handleExportCSV: () => void;
-  handleSendCommand: (cmdType: ServerCommandType, label: string, payloadJson?: string) => Promise<void>;
+  handleSendCommand: (cmdType: ServerCommandType, label: string, payloadJson?: string) => Promise<boolean>;
   sortedHistory: DeviceAnalyticsRecord[];
   activeAssetsList: AssetStats[];
   currentCpu: number;
@@ -313,7 +313,7 @@ export function DisplayDetailProvider({
     URL.revokeObjectURL(url);
   };
 
-  const handleSendCommand = async (cmdType: ServerCommandType, label: string, payloadJson?: string) => {
+  const handleSendCommand = async (cmdType: ServerCommandType, label: string, payloadJson?: string): Promise<boolean> => {
     try {
       setSendingCmd(label);
       setCmdFeedback(null);
@@ -325,8 +325,10 @@ export function DisplayDetailProvider({
       setTimeout(() => pollLiveData(), 1200);
       setTimeout(() => pollLiveData(), 3000);
       setTimeout(() => pollLiveData(), 6000);
+      return true;
     } catch (err: any) {
       alert(`Gagal mengirim perintah: ${err.message}`);
+      return false;
     } finally {
       setSendingCmd(null);
     }
