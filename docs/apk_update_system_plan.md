@@ -106,19 +106,17 @@ graph TD
 
 3. **Mekanisme Eksekusi Hybrid (Smart Auto-Detection)**:
    ```kotlin
-   val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-   if (dpm.isDeviceOwnerApp(context.packageName)) {
-       // Kiosk produksi: PackageInstaller tanpa konfirmasi pengguna
-       executePackageInstallerSession(apkFile)
+   if (devicePolicyManager.isDeviceOwnerApp(context.packageName)) {
+       devicePolicyManager.installPackage(admin, apkUri, callback)
    } else {
-       // Non-Device Owner: konfirmasi pemasangan sistem Android
-       executePackageInstallerSession(apkFile)
+       packageInstallerSession.commit(callback)
    }
    ```
 
 4. **Komponen Kiosk Mode (Silent Background Update)**:
    - **Receiver**: `SignageDeviceAdminReceiver` terdaftar di `AndroidManifest.xml` dengan hak `BIND_DEVICE_ADMIN`.
-   - **Installer Session**: Menggunakan `PackageInstaller.Session` untuk men-stream data binary APK langsung ke internal package installer Android.
+   - **Device Owner**: Memasang dengan `DevicePolicyManager.installPackage` tanpa prompt konfirmasi Android.
+   - **Perangkat biasa**: Menggunakan `PackageInstaller.Session`; Android meminta konfirmasi pemasangan.
    - **Commit & Broadcast Receiver**: Menangani callback status instalasi (`STATUS_SUCCESS`).
    - **Auto-Restart**: Saat instalasi selesai, sistem secara otomatis meluncurkan kembali `PlayerActivity` versi terbaru.
 
@@ -144,7 +142,7 @@ Untuk mengaktifkan kemampuan instalasi senyap (*silent update*) pada perangkat p
 |---|---|---|
 | **CMS Studio** | Upload APK (30MB+) | Berkas tersimpan di `UPLOAD_DIR`, hash SHA-256 terhitung, entri tampil di tabel. |
 | **Backend gRPC** | Query `CheckDeviceAppUpdate` | Mengembalikan `update_available=true` jika `version_code` perangkat lebih rendah. |
-| **Android - Kiosk Mode** | Silent Background Update | APK terunduh, terinstall tanpa popup Android sama sekali, aplikasi restart otomatis ke versi baru. |
+| **Android - Kiosk Mode** | Silent Background Update | Pada perangkat Device Owner, APK terunduh dan dipasang tanpa prompt konfirmasi Android, lalu aplikasi dijalankan kembali. |
 | **Android - Standard Mode** | Fallback non-Device Owner | Muncul prompt sistem konfirmasi pembaruan bawaan Android. |
 | **Android - Force Mode** | Rilis wajib | Layar memblokir interaksi, download otomatis, lalu langsung dieksekusi. |
 | **Integritas & Security** | Berkas APK rusak/tampered | Verifikasi SHA-256 mendeteksi ketidaksesuaian, berkas dihapus, instalasi digagalkan. |

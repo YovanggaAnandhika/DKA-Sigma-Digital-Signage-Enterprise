@@ -3,7 +3,9 @@ package com.dkaapis.sigma.receiver
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.PackageInstaller
+import android.app.admin.DevicePolicyManager
 import android.os.Build
 import android.util.Log
 import android.widget.Toast
@@ -12,6 +14,19 @@ import java.io.File
 
 class AppUpdateInstallReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.hasExtra(DevicePolicyManager.EXTRA_INSTALL_RESULT)) {
+            val result = intent.getIntExtra(
+                DevicePolicyManager.EXTRA_INSTALL_RESULT,
+                PackageManager.INSTALL_FAILED_INVALID_APK
+            )
+            if (result == PackageManager.INSTALL_SUCCEEDED) {
+                onInstallSuccess(context, intent)
+            } else {
+                onInstallFailure(context, intent, result, "DevicePolicyManager")
+            }
+            return
+        }
+
         val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
         when (status) {
             PackageInstaller.STATUS_PENDING_USER_ACTION -> {
@@ -25,20 +40,28 @@ class AppUpdateInstallReceiver : BroadcastReceiver() {
                 if (confirmationIntent != null) context.startActivity(confirmationIntent)
             }
             PackageInstaller.STATUS_SUCCESS -> {
-                Log.i(TAG, "OTA APK berhasil dipasang")
-                intent.getStringExtra(EXTRA_APK_PATH)?.let { File(it).delete() }
-                context.startActivity(
-                    Intent(context, PlayerActivity::class.java)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                )
+                onInstallSuccess(context, intent)
             }
             else -> {
                 val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE).orEmpty()
-                Log.e(TAG, "Pemasangan OTA gagal (status=$status): $message")
-                intent.getStringExtra(EXTRA_APK_PATH)?.let { File(it).delete() }
-                Toast.makeText(context, "Pembaruan aplikasi gagal dipasang: $message", Toast.LENGTH_LONG).show()
+                onInstallFailure(context, intent, status, message)
             }
         }
+    }
+
+    private fun onInstallSuccess(context: Context, intent: Intent) {
+        Log.i(TAG, "OTA APK berhasil dipasang")
+        intent.getStringExtra(EXTRA_APK_PATH)?.let { File(it).delete() }
+        context.startActivity(
+            Intent(context, PlayerActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        )
+    }
+
+    private fun onInstallFailure(context: Context, intent: Intent, status: Int, message: String) {
+        Log.e(TAG, "Pemasangan OTA gagal (status=$status): $message")
+        intent.getStringExtra(EXTRA_APK_PATH)?.let { File(it).delete() }
+        Toast.makeText(context, "Pembaruan aplikasi gagal dipasang: $message", Toast.LENGTH_LONG).show()
     }
 
     companion object {
