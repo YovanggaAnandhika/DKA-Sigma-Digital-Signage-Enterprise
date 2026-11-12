@@ -10,6 +10,7 @@ services:
       TZ: Asia/Makassar
       NODE_ENV: development
       PORT: 80
+      ALLOWED_DEV_ORIGINS: "*.dkaapis.test,**.dkaapis.test"
       GRPC_SERVER_HOST: dka-product-sigma-backend
       GRPC_SERVER_PORT: 50051
       GRPC_SERVER_SECURE: "false"
