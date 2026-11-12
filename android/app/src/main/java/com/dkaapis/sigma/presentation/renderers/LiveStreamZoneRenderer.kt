@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import signage.distribution.v1.stream.StreamCommon
 import android.graphics.Color
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -23,6 +22,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.rtsp.RtspMediaSource
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import androidx.core.net.toUri
 import coil.load
 import com.dkaapis.sigma.data.local.ServerConfig
 import com.dkaapis.sigma.presentation.renderers.glass.LiveStreamGlassOverlay
@@ -193,7 +193,7 @@ class LiveStreamZoneRenderer(
         }
         this.activePlaybackUrl = targetUrl
         try {
-            val targetUri = Uri.parse(targetUrl)
+            val targetUri = targetUrl.toUri()
             val isRtsp = targetUri.scheme.equals("rtsp", ignoreCase = true)
             val isLowSpec = DeviceCapabilityHelper.isLowSpecDevice(context)
             val targetBufferBytes = if (isLowSpec) 6 * 1024 * 1024 else 24 * 1024 * 1024
@@ -341,6 +341,7 @@ class LiveStreamZoneRenderer(
         }
     }
 
+    @SuppressLint("UnsafeOptInUsageError")
     private fun scheduleReconnect(payload: LiveStreamConfigPayload, delayMs: Long = 3_000L) {
         if (released || !payload.autoReconnect) return
         reconnectRunnable?.let(mainHandler::removeCallbacks)
@@ -348,7 +349,7 @@ class LiveStreamZoneRenderer(
             if (!released && exoPlayer != null && isStreamOffline) {
                 Log.i(TAG, "Attempting reconnect for stream=${payload.streamId} on $activePlaybackUrl")
                 try {
-                    val targetUri = Uri.parse(activePlaybackUrl)
+                    val targetUri = activePlaybackUrl.toUri()
                     val isRtsp = targetUri.scheme.equals("rtsp", ignoreCase = true)
                     val isLowSpec = DeviceCapabilityHelper.isLowSpecDevice(context)
                     val mediaItem = MediaItem.Builder()
@@ -383,10 +384,11 @@ class LiveStreamZoneRenderer(
         resetQualityWindow()
     }
 
+    @SuppressLint("UnsafeOptInUsageError")
     private fun switchQualityProfile(profile: LiveStreamProfile, payload: LiveStreamConfigPayload) {
         selectQualityProfile(profile)
         val player = exoPlayer ?: return
-        val targetUri = Uri.parse(activePlaybackUrl)
+        val targetUri = activePlaybackUrl.toUri()
         val mediaItem = MediaItem.Builder()
             .setUri(targetUri)
             .setLiveConfiguration(
@@ -489,6 +491,7 @@ class LiveStreamZoneRenderer(
         bufferingEvents = 0
     }
 
+    @SuppressLint("UnsafeOptInUsageError")
     private fun createRtspMediaSource(mediaItem: MediaItem) =
         RtspMediaSource.Factory()
             .setForceUseRtpTcp(useRtpTcp)
