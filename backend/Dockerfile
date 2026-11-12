@@ -16,11 +16,13 @@ ENV HOST=0.0.0.0
 ENV UPLOAD_DIR=/home/app/uploads
 
 RUN apk add --no-cache ca-certificates tzdata
+RUN addgroup -S -g 10001 app
+RUN adduser -S -D -H -u 10001 -G app -s /bin/sh app
 RUN mkdir -p /home/app/uploads
 RUN chown 10001:10001 /home/app/uploads
 
 WORKDIR /home/app
-COPY --from=builder --chown=10001:10001 /out/app /usr/local/bin/app
+COPY --from=builder --chown=10001:10001 /out/app /home/app/app
 
 USER 10001:10001
-ENTRYPOINT ["app"]
+ENTRYPOINT ["./app"]

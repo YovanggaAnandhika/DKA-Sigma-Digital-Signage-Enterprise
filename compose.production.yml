@@ -86,6 +86,7 @@ services:
       TZ: Asia/Makassar
       NODE_ENV: production
       PORT: 80
+      ALLOWED_DEV_ORIGINS: signage.hndtech.id
       GRPC_SERVER_HOST: dka-product-sigma-backend
       GRPC_SERVER_PORT: 50051
       GRPC_SERVER_SECURE: "false"
@@ -214,7 +215,7 @@ services:
       MTX_WEBRTCALLOWORIGINS: '["*"]'
       MTX_WEBRTCLOCALUDPADDRESS: ":8189"
       MTX_WEBRTCLOCALTCPADDRESS: ":8189"
-      MTX_WEBRTCADDITIONALHOSTS: "10.20.30.97,sigma.dkaapis.test"
+      MTX_WEBRTCADDITIONALHOSTS: "signage.hndtech.id"
       MTX_HLS: "yes"
       MTX_HLSADDRESS: ":8888"
       MTX_HLSVARIANT: mpegts
