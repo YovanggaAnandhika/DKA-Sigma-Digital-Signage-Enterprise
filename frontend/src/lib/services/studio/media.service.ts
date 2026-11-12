@@ -180,7 +180,7 @@ export async function uploadFileViaGrpc(
   }
 
   let completedChunks = 0;
-  const MAX_CONCURRENCY = 5; // IDM-like parallel connections
+  const MAX_CONCURRENCY = 2;
   
   // Create an array of chunk indices
   const chunkIndices = Array.from({ length: totalChunks }, (_, i) => i);

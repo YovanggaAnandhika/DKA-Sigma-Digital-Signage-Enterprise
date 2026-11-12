@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MediaServiceClient } from '@/lib/api/studio/v1/media/media_grpc_pb';
 import { UploadMediaChunkRequest } from '@/lib/api/studio/v1/media/media.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
+    if (!body || typeof body.chunkData !== 'string') {
+      return NextResponse.json({ error: 'Invalid upload chunk' }, { status: 400 });
+    }
     const token = getTokenFromRequest(req);
-    const client = new MediaServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = getGrpcClient(MediaServiceClient);
     
     const request = new UploadMediaChunkRequest();
     if (body.uploadId) request.setUploadId(body.uploadId);
