@@ -1,6 +1,6 @@
 # Perbandingan Komprehensif: HNDSigma vs Kompetitor Digital Signage Enterprise
 
-Dokumen ini menyajikan analisis objektif mengenai **kelebihan (kekuatan kompetitif)** dan **kekurangan (kesenjangan fitur)** platform **HNDSigma Digital Signage Enterprise** dibandingkan dengan para pemain utama di industri digital signage global dan pasar enterprise.
+Dokumen ini membandingkan kapabilitas **HNDSigma Digital Signage Enterprise** dengan pemain utama digital signage. Status HNDSigma di bawah ini disesuaikan dengan implementasi repository saat ini; perbandingan bukan hasil benchmark independen. Harga dan fitur kompetitor dapat berbeda menurut paket, wilayah, dan waktu.
 
 ---
 
@@ -8,87 +8,85 @@ Dokumen ini menyajikan analisis objektif mengenai **kelebihan (kekuatan kompetit
 
 | Kompetitor | Tipe / Target Pasar | Arsitektur Utama | Model Bisnis / Lisensi |
 |---|---|---|---|
-| **Samsung MagicINFO** | Enterprise Hardware Incumbent | Java/Tomcat Backend + Tizen OS Player | Lisensi per layar sangat mahal (~$15–$30/layar/bulan) + Lock-in Display Samsung |
-| **BrightSign (BSN.cloud)** | Commercial & Enterprise Appliance | Cloud SaaS + BrightSign OS (Proprietary Box) | Pembelian hardware khusus mahal ($300–$900/box) + Lisensi cloud tahunan |
-| **Yodeck** | SMB & Mid-Market Cloud Signage | Python/Django + Raspberry Pi / Web Player | Subscription SaaS per layar ($8–$15/layar/bulan) |
-| **ScreenCloud** | Modern Cloud Signage SaaS | Node.js + Multi-platform Web/Android Player | SaaS per layar ($24–$35/layar/bulan) |
-| **Xibo Signage** | Open Source / Traditional Signage | PHP + MySQL + Android/Windows Player | Open-source core, lisensi player Android berbayar |
-| **Raydiant / NoviSign** | Retail Experience & Interactive QSR | Cloud SaaS + Android/ChromeOS Player | Subscription SaaS ($29–$59/layar/bulan) |
-| **HNDSigma (Proyek Ini)** | Enterprise Retail Signage + IoT Hardware | **Rust Tonic gRPC + Next.js HDR + Android Media3 + ESP32** | **Self-hosted / Private Cloud, Zero Per-Screen Royalties, Hardware Fleksibel** |
+| **Samsung MagicINFO** | Enterprise Hardware Incumbent | Ekosistem Samsung dengan player Tizen pada display yang didukung | Lisensi dan layanan bergantung pada produk/paket |
+| **BrightSign (BSN.cloud)** | Commercial & Enterprise Appliance | Cloud management + BrightSign OS pada perangkat BrightSign | Hardware dan layanan berlisensi |
+| **Yodeck** | SMB & Mid-Market Cloud Signage | Layanan cloud + beragam pilihan player | Subscription berdasarkan paket |
+| **ScreenCloud** | Modern Cloud Signage SaaS | Layanan cloud + player multi-platform | Subscription berdasarkan paket |
+| **Xibo Signage** | Open Source / Traditional Signage | CMS self-hosted/cloud + player beragam platform | Opsi open-source dan layanan komersial |
+| **Raydiant / NoviSign** | Retail Experience & Interactive QSR | Layanan cloud + player yang didukung vendor | Subscription berdasarkan paket |
+| **HNDSigma (Proyek Ini)** | Enterprise Retail Signage + IoT Hardware | **Rust/Tonic gRPC + Next.js 16 + Android Media3 + ESP32/Arduino** | **CMS self-hosted; biaya infrastruktur dan perangkat ditentukan deployment** |
 
 ---
 
 ## 2. Kelebihan & Keunggulan Kompetitif HNDSigma
 
-### 1. Arsitektur Backend Berperforma Ekstrem (Rust + Tonic gRPC)
-- **Zero Garbage-Collection Pauses**: Mayoritas kompetitor dibangun di atas Java/Tomcat (MagicINFO), Python/Django (Yodeck), atau PHP (Xibo). HNDSigma menggunakan **Rust** dengan konkurensi native `tokio`. Server dapat melayani ribuan display player secara simultan dengan penggunaan memori RAM sangat rendah (< 150MB) dan latensi respon gRPC dalam hitungan sub-milidetik.
-- **Efisiensi Sumber Daya Server**: Biaya operasional cloud (AWS/GCP/VPS) untuk backend HNDSigma jauh lebih hemat dibanding kompetitor enterprise yang membutuhkan VM spesifikasi tinggi.
+### 1. Backend Rust dan API gRPC
+- **Backend Rust dan Tonic gRPC**: Backend memakai Rust dan Tokio; frontend CMS memakai Next.js 16.4.6. Arsitektur ini menghindari garbage collection pada proses Rust, tetapi kapasitas, penggunaan memori, dan latensi aktual tetap bergantung pada beban serta konfigurasi deployment.
+- **Belum ada benchmark head-to-head yang dipublikasikan**. Batas resource pada Compose adalah konfigurasi deployment, bukan hasil pengukuran performa atau jaminan kapasitas.
 
 ### 2. Single Source of Truth Melalui Protobuf (`backend/proto/`)
 - Seluruh kontrak komunikasi antara Backend Rust, Web Next.js Bridge, dan Android Native Player diatur oleh satu skema Protobuf murni.
-- Tidak ada divergensi tipe data (*type drift*) atau ketidakkonsistenan payload API yang sering melanda platform dengan arsitektur REST/JSON longgar.
+- Client yang dihasilkan dari skema ini mengurangi kebutuhan menjaga kontrak API terpisah secara manual.
 
-### 3. Keandalan Offline-First Murni dengan Integritas Kriptografis (SHA-256)
-- **Atomic Manifest Switch**: Android Player HNDSigma (berbasis Media3/ExoPlayer) tidak akan pernah berpindah ke jadwal/tata letak baru sebelum seluruh video, gambar, dan aset telah selesai diunduh dan **lolos validasi checksum SHA-256**.
-- **Anti Blank-Screen**: Jika koneksi internet di toko/lokasi putus total selama berhari-hari, display tetap berjalan 24/7 tanpa buffering, tanpa layar hitam, dan tanpa tampilan logo loading (masalah umum pada signage berbasis WebView seperti Yodeck/ScreenCloud).
+### 3. Playback Offline-First dan Verifikasi Integritas (SHA-256)
+- **Atomic Manifest Switch**: Player Android (Media3/ExoPlayer) mengaktifkan manifest baru setelah aset wajib tersedia dan lolos validasi SHA-256; jika pengunduhan aset gagal, playback aktif yang lama dipertahankan.
+- **Pemutaran offline berbasis cache**: Saat sinkronisasi server gagal, player dapat menggunakan manifest lokal dan aset yang sudah tersimpan. Konten WebView dan siaran live tetap bergantung pada sumber/jaringan masing-masing.
+- **Profil Android low-spec**: Player mendeteksi perangkat low-RAM dari `isLowRamDevice` atau RAM terpasang maksimal 1,5 GB. Untuk video tersimpan, buffer disetel 2,5–5 detik dengan `targetBufferBytes` 10 MB dan extension renderer/software decoder dimatikan agar mengutamakan decoder hardware. Untuk siaran RTSP server-hosted, profil low-spec memilih endpoint `hd/live`, target buffer 6 MB, dan buffer 1,2–3,5 detik. Angka buffer ini bukan total konsumsi RAM aplikasi. Implementasi: `android/app/src/main/java/com/dkaapis/sigma/presentation/util/DeviceCapabilityHelper.kt`, `.../renderers/VideoZoneRenderer.kt`, dan `.../renderers/LiveStreamZoneRenderer.kt`.
+- Profil tersebut memungkinkan player berjalan pada perangkat Android berspesifikasi rendah yang kompatibel, tetapi bukan sertifikasi untuk semua TV box. Hasil tetap bergantung pada dukungan codec/decoder hardware, storage, resolusi konten, dan kondisi jaringan.
 
-### 4. Integrasi Hardware IoT & Sektor Antrean Fisik Native
-- **Fitur Unik yang Tidak Dimiliki Kompetitor Signage Umum**: Kompetitor seperti Yodeck, BrightSign, atau ScreenCloud murni merupakan platform display pasif. Mereka tidak memiliki sistem tombol panggilan antrean retail fisik.
-- HNDSigma mengintegrasikan **firmware ESP32 (Wi-Fi + Cloud MQTT)** dan **Arduino Nano (USB-Serial)** langsung ke dalam backend dan player.
-- Ketika kasir/teller menekan tombol fisik:
-  - Event diproses dalam < 100ms.
-  - Display Android membunyikan chime audio instan dan memicu Text-to-Speech (TTS) suara Bahasa Indonesia.
-  - Nomor antrean di layar ter-update otomatis pada layer yang sedang berjalan tanpa menghentikan pemutaran video iklan utama.
+### 4. Integrasi Hardware IoT & Antrean Fisik
+- HNDSigma mengintegrasikan input tombol ESP32 dan Arduino Nano dengan alur antrean digital signage; kemampuan serupa pada platform lain perlu dinilai berdasarkan produk dan integrasi yang ditawarkan.
+- HNDSigma mengintegrasikan **firmware ESP32 (Wi-Fi + MQTT)** dan **Arduino Nano (USB-Serial)** langsung ke dalam backend dan player.
+- Event tombol dikirim melalui MQTT (ESP32) atau USB-serial (Arduino Nano), diteruskan ke player untuk aksi antrean, chime, dan TTS. Tidak ada angka latensi end-to-end terukur yang dipakai sebagai klaim di dokumen ini.
 
-### 5. Komunikasi Bidirectional Real-Time Instan (`DisplayStream`)
+### 5. Komunikasi Player Bidirectional (`DisplayStream`)
 - Menggunakan HTTP/2 stream persisten (gRPC bidirectional stream).
-- **Siaran Darurat (Emergency Broadcast)**: Administrator dapat menginterupsi seluruh layar toko dalam hitungan milidetik secara serentak.
-- **Live Screenshot Telemetry**: Operator dapat melihat tangkapan layar langsung (*live capture*) dari player Android untuk memastikan tampilan di lapangan tidak rusak.
-- **Power Scheduling**: Kontrol sleep/wake layar TV komersial secara terjadwal untuk menghemat konsumsi listrik ritel.
+- **Siaran Darurat**: Perintah administratif dapat dikirim melalui kanal stream player; kecepatan penerimaan bergantung pada jaringan dan kondisi perangkat.
+- **Screenshot Telemetry**: CMS dapat menampilkan screenshot yang dikirim player; ini bukan remote desktop atau kontrol sentuh interaktif.
+- **Power Scheduling**: Manifest player memuat jadwal daya; kemampuan mematikan/menyalakan panel bergantung pada perangkat Android dan integrasi display.
 
 ### 6. Desain UI/UX Modern & Bebas Bloatware CSS
-- Frontend dibangun menggunakan **Next.js 14** dengan sistem desain **HDR+ Vanilla CSS** murni (desain tokens native dark & light mode).
-- Tampilan sangat bersih, minimalis, responsif, dan tidak terbebani library utilitas berat seperti TailwindCSS atau Bootstrap yang memperlambat rendering studio canvas.
+- Frontend menggunakan **Next.js 16.4.6** dan sistem desain **HDR+ Vanilla CSS** dengan dukungan tema gelap dan terang.
+- UI tidak memakai TailwindCSS atau Bootstrap; klaim perbandingan kecepatan rendering tetap memerlukan benchmark.
 
-### 7. Total Cost of Ownership (TCO) Jauh Lebih Rendah
-- Kompetitor mengenakan biaya langganan bulanan per layar ($10–$30/layar/bulan). Untuk ritel dengan 500 layar, biaya software kompetitor mencapai **Rp 75.000.000 – Rp 225.000.000 per bulan**.
-- HNDSigma beroperasi di atas hardware Android TV Box komoditas (misal: Amlogic/Rockchip $25–$40 per box) dan server internal/cloud mandiri tanpa lisensi royalti per layar.
+### 7. Deployment Mandiri dan Model Biaya
+- HNDSigma dapat di-deploy secara self-hosted; total biaya tidak dapat disimpulkan dari kode saja. Biaya deployment mencakup server, jaringan, pemeliharaan, dan perangkat player, sehingga perbandingan TCO perlu memakai skenario yang sama.
 
 ---
 
 ## 3. Kekurangan & Kesenjangan Dibanding Kompetitor
 
-Meskipun unggul dalam performa dan integrasi hardware, HNDSigma memiliki beberapa area yang masih tertinggal dibanding ekosistem kompetitor global:
+HNDSigma masih memiliki beberapa area yang belum tersedia atau perlu diverifikasi terhadap paket kompetitor:
 
-### 1. Ketiadaan Ekosistem App Store / Pre-built Widgets [BELUM — Rencana Fase 2 & 3]
-- **Kondisi Kompetitor**: ScreenCloud dan Yodeck memiliki ratusan integrasi widget instan siap pakai: Google Slides, Canva, Microsoft PowerBI, Social Media Wall (Instagram, Twitter), Live Weather radar, Zoom Rooms, Menu Board POS auto-sync, dan RSS News Feed terverifikasi.
-- **Kondisi HNDSigma**: Baru mendukung komponen dasar: Video, Jam & Tanggal, Cuaca, Webview, Running Text (Ticker), Album Foto, dan Antrean Ritel. Konten dinamis dari pihak ketiga harus di-embed manual melalui komponen Webview. *(Direncanakan pada Fase 2 & 3: Live Streaming HLS/CCTV Host & Embed, RSS News Feed, Advanced Widgets)*.
+### 1. Ketiadaan Ekosistem App Store / Integrasi Pihak Ketiga [BELUM]
+- **Kondisi Kompetitor**: Vendor signage menawarkan integrasi dan widget yang berbeda-beda menurut produk dan paket; jumlah serta ketersediaannya perlu diverifikasi dari dokumentasi vendor terbaru.
+- **Kondisi HNDSigma**: Sudah memiliki komponen konten seperti video, jam, cuaca, WebView, ticker, album, antrean, dan live stream. Player Android memutar live stream server-hosted melalui RTSP/TCP; player web mendukung WebRTC dan HLS. Katalog aplikasi pihak ketiga, RSS, Google Sheets, dan integrasi siap pakai sejenis masih menjadi kesenjangan.
 
 ### 2. Keterbatasan Ekosistem Platform Player (Baru Mendukung Android) [BELUM]
 - **Kondisi Kompetitor**:
-  - BrightSign memiliki hardware appliance kelas militer yang tahan panas dan debu ekstrim (fanless SoC).
+  - BrightSign menawarkan hardware appliance khusus signage.
   - Samsung MagicINFO berjalan langsung di SoC bawaan TV Samsung (Tizen OS) tanpa memerlukan kabel HDMI atau media player eksternal tambahan.
   - ScreenCloud mendukung Android, iOS/iPad, Windows, macOS, ChromeOS, dan Amazon Fire TV.
-- **Kondisi HNDSigma**: Player native saat ini eksklusif untuk **Android TV / Android Tablet**. Belum ada player native untuk Tizen OS (Samsung), webOS (LG), atau Windows Player untuk PC industri.
+- **Kondisi HNDSigma**: APK player native menargetkan Android (minSdk 24 / Android 7.0); belum ada player native untuk Tizen OS, webOS, atau Windows. Kesesuaian perangkat tetap bergantung pada decoder, RAM, dan kemampuan hardware perangkat tersebut.
 
 ### 3. Belum Tersedia Remote Desktop / Web VNC Interaktif [BELUM — Baru Screenshot Telemetri]
-- **Kondisi Kompetitor**: MagicINFO dan Raydiant memiliki fitur remote control interaktif di CMS (operator bisa mengklik mouse atau menekan tombol D-Pad virtual di browser untuk mengontrol menu Android player di lokasi terpencil).
+- **Kondisi Kompetitor**: Dukungan remote control berbeda menurut vendor, player, dan paket.
 - **Kondisi HNDSigma**: Baru mendukung *screenshot capture* satu arah. Fitur interaktif remote touch/VNC masih berstatus rencana dan belum diimplementasikan.
 
-### 4. Sistem Pembaruan Firmware/APK OTA Terpusat [SUDAH SELESAI ✅]
-- **Kondisi Kompetitor**: BSN.cloud dan MagicINFO dapat memperbarui sistem operasi firmware display dan APK secara massal di latar belakang (*silent zero-touch OTA upgrade*).
+### 4. Distribusi dan Pembaruan APK Terpusat [SUDAH DIIMPLEMENTASIKAN]
+- Dukungan update firmware/APK pada platform lain bervariasi menurut perangkat, vendor, dan paket.
 - **Status HNDSigma (SUDAH IMPLEMENTASI)**:
   - **Database Migration**: `0049_create_system_apk_releases.up.sql` menyimpan metadata versi, hash SHA-256, ukuran file, URL unduhan APK, changelog, dan kebijakan *force update*.
   - **Backend gRPC (`AppUpdateService`)**: Menyediakan endpoint `GetLatestAppRelease`, `GetAppRelease` (agregasi sebaran layar ter-update vs belum), `ListAppReleases`, `CreateAppRelease`, `DeleteAppRelease`, `ToggleAppReleaseActive`, dan `CheckDeviceAppUpdate` dengan auto-sync versi perangkat di `hardware_devices`.
   - **Frontend CMS (`/system/apk`)**: Dashboard terpusat untuk unggah rilis APK (`/system/apk/create`), daftar versi, serta halaman rincian rilis (`/system/apk/[id]`) untuk memantau layar mana yang sudah update dan layar yang masih tertinggal.
-  - **Android Player Contract**: Mendukung silent background APK download, checksum validation, dan eksekusi Android PackageInstaller API.
+  - **Android Player**: Mengunduh APK di latar belakang, memeriksa ukuran, package/version, dan SHA-256, lalu menyerahkan instalasi ke Android PackageInstaller. Instalasi tanpa interaksi pengguna bergantung pada hak Device Owner/kebijakan perangkat; bukan jaminan pada semua Android TV Box.
 
 ### 5. Analitik Audiens Cerdas Berbasis AI (AI Proof-of-Play & Computer Vision) [BELUM]
-- **Kondisi Kompetitor Enterprise**: MagicINFO AI Analytics dan Raydiant mendukung integrasi kamera sensor untuk mendeteksi demografi penonton (gender, rentang usia, lama tatapan mata / *dwell time*) serta analitik heat-map ritel.
+- **Kondisi Kompetitor Enterprise**: Sejumlah platform menawarkan analitik audiens atau integrasi sensor; cakupan fitur bergantung pada produk dan perangkat.
 - **Kondisi HNDSigma**: Pelaporan baru berfokus pada telemetri teknis: log riwayat pemutaran (Proof of Play), status online/offline, utilisasi memori/storage, dan log error player.
 
 ### 6. Integrasi Point-of-Sale (POS) & ERP Langsung [BELUM]
-- **Kondisi Kompetitor**: Platform digital signage ritel modern memiliki plugin dua arah dengan sistem POS restoran (Toast, Square, Clover, Moka POS) untuk otomatis mencoret menu yang *sold out* atau memperbarui harga diskon secara real-time.
+- **Kondisi Kompetitor**: Integrasi POS/ERP tersedia pada sebagian ekosistem digital signage, dengan cakupan berbeda menurut vendor dan integrator.
 - **Kondisi HNDSigma**: Manajemen harga menu board masih harus diubah manual melalui Layout Designer atau halaman Webview.
 
 ---
@@ -97,27 +95,28 @@ Meskipun unggul dalam performa dan integrasi hardware, HNDSigma memiliki beberap
 
 | Fitur / Parameter | HND Signage | Samsung MagicINFO | Yodeck | ScreenCloud | Xibo Signage |
 |---|:---:|:---:|:---:|:---:|:---:|
-| **Teknologi Backend** | **Rust + Tonic gRPC** | Java + Tomcat | Python + Django | Node.js + Serverless | PHP + MySQL |
-| **Throughput & Efisiensi Server** | 🟢 **Sangat Tinggi** | 🟡 Sedang | 🟡 Sedang | 🟢 Tinggi | 🔴 Rendah |
-| **Offline-First Playback (Media3)** | 🟢 **Penuh (SHA-256)** | 🟢 Penuh | 🟡 Cache Sebagian | 🟡 Cache Sebagian | 🟢 Penuh |
-| **Player TV Komersial Bawaan** | 🔴 Belum (Butuh Android Box) | 🟢 Tizen OS Native | 🔴 Butuh Pi/Box | 🟡 Sebagian TV | 🔴 Butuh Box/PC |
-| **Integrasi Tombol Antrean IoT** | 🟢 **Native (ESP32/Nano)** | 🔴 Tidak Ada | 🔴 Tidak Ada | 🔴 Tidak Ada | 🔴 Tidak Ada |
-| **Panggilan Suara TTS Ritel** | 🟢 **Otomatis (Cloud & Native)** | 🔴 Manual Audio File | 🔴 Manual Audio File | 🔴 Manual Audio File | 🔴 Tidak Ada |
-| **Pembaruan APK OTA Silent Update** | 🟢 **Penuh (Zero-Touch Dashboard)** | 🟢 Ada | 🟢 Ada | 🟢 Ada | 🟡 Sebagian |
-| **Siaran Darurat Real-time** | 🟢 **< 100ms (HTTP/2 Stream)** | 🟢 Mendukung | 🟡 Polling Interval | 🟢 WebSockets | 🟡 Long-polling |
-| **Katalog App/Widget Eksternal** | 🟡 Sedang Dikembangkan (Live & RSS) | 🟢 Banyak | 🟢 Sangat Lengkap | 🟢 Sangat Lengkap | 🟡 Komunitas |
-| **Remote Screen Mirroring / VNC** | 🔴 Belum Ada (Baru Screenshot) | 🟢 Ada | 🟢 Ada | 🟢 Ada | 🟡 VNC Eksternal |
-| **Lisensi & Biaya Berlangganan** | 🟢 **Gratis / Zero Royalty** | 🔴 Sangat Mahal | 🔴 Subscription | 🔴 Subscription | 🟡 Open-source Core |
+| **Teknologi Backend** | **Rust + Tonic gRPC; Next.js 16 CMS** | Java + Tomcat | Platform proprietary/cloud | Platform proprietary/cloud | PHP + MySQL |
+| **Throughput & Efisiensi Server** | ⚪ Belum ada benchmark komparatif | ⚪ Bergantung deployment | ⚪ Bergantung paket | ⚪ Bergantung paket | ⚪ Bergantung deployment |
+| **Offline-First Playback** | 🟢 Manifest lokal + verifikasi SHA-256 untuk aset yang disimpan | Berdasarkan produk/paket | Berdasarkan produk/paket | Berdasarkan produk/paket | Berdasarkan produk/paket |
+| **Profil Player Android Low-Spec** | 🟢 Buffer dan decoder disesuaikan otomatis; tetap perlu decoder hardware kompatibel | — | — | — | — |
+| **Player TV Komersial Bawaan** | 🔴 Belum ada untuk Tizen/webOS (perlu perangkat Android) | 🟢 Tizen pada display yang didukung | — | — | — |
+| **Integrasi Tombol Antrean IoT** | 🟢 **ESP32/Nano terintegrasi** | Bergantung produk/integrasi | Bergantung produk/integrasi | Bergantung produk/integrasi | Bergantung produk/integrasi |
+| **Panggilan Suara TTS Ritel** | 🟢 TTS dan audio antrean tersedia | Bergantung produk | Bergantung produk | Bergantung produk | Bergantung produk |
+| **Distribusi Update APK** | 🟡 Dashboard, unduh dan verifikasi tersedia; silent install bergantung Device Owner | Bergantung produk/perangkat | Bergantung produk/perangkat | Bergantung produk/perangkat | Bergantung produk/perangkat |
+| **Siaran Darurat** | 🟢 Kanal player bidirectional; latensi belum diukur | Bergantung produk | Bergantung produk | Bergantung produk | Bergantung produk |
+| **Katalog App/Widget Eksternal** | 🔴 Belum ada katalog; live stream sudah tersedia | Berdasarkan produk | Berdasarkan produk | Berdasarkan produk | Berdasarkan produk |
+| **Remote Screen Mirroring / VNC** | 🔴 Belum Ada (Baru Screenshot) | Bergantung produk/paket | Bergantung produk/paket | Bergantung produk/paket | Bergantung produk/paket |
+| **Lisensi & Biaya Berlangganan** | Self-hosted; total biaya bergantung deployment | Bergantung produk/paket | Subscription/paket | Subscription/paket | Opsi open-source dan komersial |
 | **Kustomisasi Layout Multi-Zone** | 🟢 **Canvas Bebas + Rollback** | 🟢 Bebas | 🟢 Grid & Free | 🟢 Grid & Free | 🟢 Freeform Regions |
 
 ---
 
 ## 5. Ringkasan Strategis & Rekomendasi Pengembangan
 
-HNDSigma memiliki posisi nilai (*unique value proposition*) yang sangat kuat di segmen **Ritel, Perbankan, Klinik, dan Pelayanan Publik**:
-1. **Diferensiasi Terbesar**: Penggabungan platform **Media Promosi Multi-Zona** dengan **Sistem Panggilan Antrean Fisik IoT** dalam satu sistem terpadu berlatensi ultra-rendah. Di platform lain, pelanggan harus membeli 2 sistem terpisah (signage player + queue machine terpisah).
+HNDSigma memiliki diferensiasi yang relevan untuk **Ritel, Perbankan, Klinik, dan Pelayanan Publik**:
+1. **Diferensiasi Utama**: Penggabungan **Media Promosi Multi-Zona**, **Sistem Panggilan Antrean Fisik IoT**, dan **player Android adaptif** dalam satu platform. Kecocokan di lapangan tetap perlu diuji pada model perangkat dan kondisi jaringan yang digunakan.
 2. **Prioritas Pengembangan untuk Mengejar Kompetitor**:
-   - [x] **Prioritas 1 (SUDAH SELESAI)**: Menyelesaikan implementasi **APK OTA Silent Update** (`backend/migrations/0049_*`, backend gRPC `AppUpdateService`, Next.js `/system/apk`, dan Android PackageInstaller contract) sehingga pembaruan player ribuan layar dapat dipantau dan didistribusikan dari dashboard.
-   - [ ] **Prioritas 2 (SELANJUTNYA)**: Memperluas katalog komponen dinamis: Modul Live Streaming Advance (Host HLS Server & Embed CCTV/RTSP), Komponen RSS News Feed, dan integrasi Google Sheets.
+   - [x] **Prioritas 1 (SUDAH DIIMPLEMENTASIKAN)**: Menyediakan distribusi APK melalui dashboard, pemeriksaan hash, dan pemantauan status versi perangkat. Instalasi otomatis tanpa interaksi tetap memerlukan hak Device Owner/kebijakan perangkat.
+   - [x] **Live Streaming (SUDAH TERSEDIA)**: Live stream server-hosted untuk Android via RTSP/TCP dan untuk web via WebRTC/HLS.
+   - [ ] **Prioritas 2 (SELANJUTNYA)**: Memperluas katalog komponen/integrasi pihak ketiga seperti RSS News Feed dan Google Sheets.
    - [ ] **Prioritas 3**: Eksplorasi player multi-platform (misal: Web Player berbasis PWA/Tauri untuk hardware PC atau display non-Android) dan Remote VNC interaktif.
-
