@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, X } from 'lucide-react';
 
 export interface SearchSelectOption {
@@ -21,18 +22,51 @@ interface SearchSelectProps {
 export default function SearchSelect({ value, options, onChange, placeholder = 'Pilih...', clearable }: SearchSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; width: number; maxHeight: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const selected = options.find((o) => o.value === value);
+  const filtered = options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()));
 
   useEffect(() => {
     const close = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (!ref.current?.contains(e.target as Node) && !menuRef.current?.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, []);
 
-  const filtered = options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()));
+  useEffect(() => {
+    if (!open) return;
+
+    const positionMenu = () => {
+      const bounds = ref.current?.getBoundingClientRect();
+      if (!bounds) return;
+
+      const spaceBelow = window.innerHeight - bounds.bottom - 8;
+      const spaceAbove = bounds.top - 8;
+      const desiredHeight = Math.min(220, filtered.length * 34 + 12);
+      const openAbove = spaceBelow < desiredHeight && spaceAbove > spaceBelow;
+      const maxHeight = Math.max(0, Math.min(220, openAbove ? spaceAbove : spaceBelow));
+      const width = Math.min(bounds.width, window.innerWidth - 16);
+      const left = Math.min(Math.max(8, bounds.left), window.innerWidth - width - 8);
+
+      setMenuPosition({
+        top: openAbove ? bounds.top - maxHeight - 4 : bounds.bottom + 4,
+        left,
+        width,
+        maxHeight,
+      });
+    };
+
+    positionMenu();
+    window.addEventListener('resize', positionMenu);
+    window.addEventListener('scroll', positionMenu, true);
+    return () => {
+      window.removeEventListener('resize', positionMenu);
+      window.removeEventListener('scroll', positionMenu, true);
+    };
+  }, [open, filtered.length]);
 
   const pick = (v: string) => {
     onChange(v);
@@ -64,8 +98,8 @@ export default function SearchSelect({ value, options, onChange, placeholder = '
         <ChevronDown size={13} color="var(--text-muted)" />
       </div>
 
-      {open && (
-        <div role="listbox" style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 50, maxHeight: 220, overflowY: 'auto', padding: 4, borderRadius: 8, backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', boxShadow: '0 10px 24px -8px rgba(0,0,0,0.25)' }}>
+      {open && menuPosition && createPortal(
+        <div ref={menuRef} role="listbox" style={{ position: 'fixed', top: menuPosition.top, left: menuPosition.left, width: menuPosition.width, zIndex: 1000, maxHeight: menuPosition.maxHeight, overflowY: 'auto', padding: 4, borderRadius: 8, backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', boxShadow: '0 10px 24px -8px rgba(0,0,0,0.25)' }}>
           {filtered.length === 0 && <div style={{ padding: '8px 10px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tidak ada hasil</div>}
           {filtered.map((o) => (
             <button
@@ -81,7 +115,8 @@ export default function SearchSelect({ value, options, onChange, placeholder = '
               {o.hint && <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{o.hint}</span>}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
