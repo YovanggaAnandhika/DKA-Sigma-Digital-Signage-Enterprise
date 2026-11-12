@@ -80,7 +80,7 @@
             android:paddingTop="12dp"
             android:paddingBottom="12dp"
             android:text="---"
-            android:textColor="#0f08083b"
+            android:textColor="@color/pairing_code_text"
             android:textSize="28sp"
             android:textStyle="bold"
             android:visibility="gone" />

@@ -30,6 +30,7 @@
     <color name="text_sub">#a1a1aa</color>
     <color name="pairing_code_bg">#33ffffff</color>
     <color name="pairing_code_border">#4Dffffff</color>
+    <color name="pairing_code_text">#f4f4f5</color>
     <color name="btn_reconnect_bg">#f4f4f5</color>
     <color name="btn_reconnect_ripple">#e4e4e7</color>
     <color name="btn_reconnect_text">#18181b</color>
