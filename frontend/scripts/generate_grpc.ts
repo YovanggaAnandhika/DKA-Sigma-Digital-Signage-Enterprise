@@ -31,9 +31,10 @@ const protoFiles = getAllFiles(protoDir).map((file) => path.relative(projectRoot
 try {
   console.log('Generating gRPC clients from backend protos...');
   execFileSync(
-    path.join(projectRoot, 'node_modules/.bin/grpc_tools_node_protoc'),
+    path.join(projectRoot, 'node_modules/grpc-tools/bin/protoc'),
     [
-      '--plugin=protoc-gen-ts=./node_modules/.bin/protoc-gen-ts',
+      `--plugin=protoc-gen-grpc=${path.join(projectRoot, 'node_modules/grpc-tools/bin/grpc_node_plugin')}`,
+      `--plugin=protoc-gen-ts=${path.join(projectRoot, 'node_modules/.bin/protoc-gen-ts')}`,
       '--js_out=import_style=commonjs,binary:./src/lib/api',
       '--grpc_out=grpc_js:./src/lib/api',
       '--ts_out=grpc_js:./src/lib/api',

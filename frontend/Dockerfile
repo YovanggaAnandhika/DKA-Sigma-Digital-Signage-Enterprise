@@ -7,6 +7,9 @@ RUN bun install --frozen-lockfile --ignore-scripts
 FROM oven/bun:latest AS builder
 
 WORKDIR /home/app
+RUN apt-get update
+RUN apt-get install -y --no-install-recommends nodejs
+RUN rm -rf /var/lib/apt/lists/*
 COPY --from=deps /home/app/node_modules ./node_modules
 COPY frontend/ ./
 COPY backend/proto/ /home/backend/proto/
