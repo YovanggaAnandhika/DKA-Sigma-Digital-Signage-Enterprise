@@ -74,6 +74,11 @@ services:
       options:
         max-size: 2m
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.10"
+          memory: 96M
     networks:
       - sigma-public
       - sigma-internal
@@ -110,6 +115,11 @@ services:
       options:
         max-size: 2m
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
     networks:
       - sigma-internal
 
@@ -149,6 +159,11 @@ services:
       options:
         max-size: 2m
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.15"
+          memory: 192M
     networks:
       - sigma-internal
 
@@ -169,6 +184,11 @@ services:
       options:
         max-size: 2m
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.20"
+          memory: 224M
     networks:
       - sigma-internal
 
@@ -190,6 +210,11 @@ services:
       options:
         max-size: 2m
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.10"
+          memory: 128M
     networks:
       - sigma-internal
 
@@ -231,6 +256,11 @@ services:
       options:
         max-size: 2m
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.20"
+          memory: 640M
     networks:
       - sigma-internal
 
