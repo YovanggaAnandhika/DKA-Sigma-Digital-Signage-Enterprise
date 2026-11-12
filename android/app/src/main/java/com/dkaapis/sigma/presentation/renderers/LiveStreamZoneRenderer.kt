@@ -136,7 +136,7 @@ class LiveStreamZoneRenderer(
         // Invariant:
         // Hardware adaptation matrix:
         // - Low-spec devices (Xiaomi TV, Polytron TV, 1GB RAM) with 720p displays:
-        //   Use `hd/live/<streamId>` (scaled <= 720p, Constrained Baseline H.264, 0 B-frames, separate AAC audio).
+        //   Use `hd/live/<streamId>` (30 fps, scaled <= 720p, Constrained Baseline H.264, 0 B-frames, separate AAC audio).
         // - High-end devices (Poco X5, Android Smartboard):
         //   Use direct raw `live/<streamId>` (native 1080p, ultra-low latency).
         val isLowSpec = DeviceCapabilityHelper.isLowSpecDevice(context)
@@ -176,10 +176,10 @@ class LiveStreamZoneRenderer(
             val targetBufferBytes = if (isLowSpec) 6 * 1024 * 1024 else 24 * 1024 * 1024
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(
-                    /* minBufferMs = */ if (isRtsp) (if (isLowSpec) 1_200 else 800) else 1_500,
-                    /* maxBufferMs = */ if (isRtsp) (if (isLowSpec) 3_500 else 2_500) else 4_000,
-                    /* bufferForPlaybackMs = */ if (isRtsp) (if (isLowSpec) 350 else 200) else 300,
-                    /* bufferForPlaybackAfterRebufferMs = */ if (isRtsp) (if (isLowSpec) 600 else 350) else 600
+                    /* minBufferMs = */ if (isRtsp) (if (isLowSpec) 2_000 else 800) else 1_500,
+                    /* maxBufferMs = */ if (isRtsp) (if (isLowSpec) 6_000 else 2_500) else 4_000,
+                    /* bufferForPlaybackMs = */ if (isRtsp) (if (isLowSpec) 500 else 200) else 300,
+                    /* bufferForPlaybackAfterRebufferMs = */ if (isRtsp) (if (isLowSpec) 1_000 else 350) else 600
                 )
                 .setTargetBufferBytes(targetBufferBytes)
                 .setBackBuffer(0, false)
@@ -202,13 +202,7 @@ class LiveStreamZoneRenderer(
                     videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
                     val mediaItem = MediaItem.Builder()
                         .setUri(targetUri)
-                        .setLiveConfiguration(
-                            MediaItem.LiveConfiguration.Builder()
-                                .setTargetOffsetMs(if (isRtsp) 50L else 1_500L)
-                                .setMinPlaybackSpeed(1.0f)
-                                .setMaxPlaybackSpeed(if (isRtsp) 1.25f else 1.15f)
-                                .build()
-                        )
+                        .setLiveConfiguration(liveConfiguration(isRtsp, isLowSpec))
                         .build()
 
                     if (isRtsp) {
@@ -324,17 +318,13 @@ class LiveStreamZoneRenderer(
                 Log.i(TAG, "Attempting reconnect for stream=${payload.streamId} on $activePlaybackUrl")
                 try {
                     val targetUri = Uri.parse(activePlaybackUrl)
+                    val isRtsp = targetUri.scheme.equals("rtsp", ignoreCase = true)
+                    val isLowSpec = DeviceCapabilityHelper.isLowSpecDevice(context)
                     val mediaItem = MediaItem.Builder()
                         .setUri(targetUri)
-                        .setLiveConfiguration(
-                            MediaItem.LiveConfiguration.Builder()
-                                .setTargetOffsetMs(50L)
-                                .setMinPlaybackSpeed(1.0f)
-                                .setMaxPlaybackSpeed(1.25f)
-                                .build()
-                        )
+                        .setLiveConfiguration(liveConfiguration(isRtsp, isLowSpec))
                         .build()
-                    if (targetUri.scheme.equals("rtsp", ignoreCase = true)) {
+                    if (isRtsp) {
                         // Re-create RtspMediaSource with clean socket state
                         exoPlayer?.setMediaSource(
                             RtspMediaSource.Factory()
@@ -357,6 +347,13 @@ class LiveStreamZoneRenderer(
         reconnectRunnable = runnable
         mainHandler.postDelayed(runnable, delayMs)
     }
+
+    private fun liveConfiguration(isRtsp: Boolean, isLowSpec: Boolean) =
+        MediaItem.LiveConfiguration.Builder()
+            .setTargetOffsetMs(if (isRtsp) (if (isLowSpec) 500L else 50L) else 1_500L)
+            .setMinPlaybackSpeed(1.0f)
+            .setMaxPlaybackSpeed(if (isRtsp) (if (isLowSpec) 1.05f else 1.25f) else 1.15f)
+            .build()
 
     private fun currentAudioVolume(): Float =
         if (isMuted) 0f else if (isDucked) 0.15f else 1f
