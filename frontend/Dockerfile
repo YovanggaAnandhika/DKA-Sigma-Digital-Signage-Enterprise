@@ -24,6 +24,7 @@ ENV NODE_ENV=production \
 COPY --from=builder --chown=10001:10001 /home/app/public ./public
 COPY --from=builder --chown=10001:10001 /home/app/.next/standalone ./
 COPY --from=builder --chown=10001:10001 /home/app/.next/static ./.next/static
+COPY --chown=10001:10001 frontend/package.json ./package.json
 
 USER 10001:10001
-CMD ["bun", "server.js"]
+CMD ["bun", "."]
