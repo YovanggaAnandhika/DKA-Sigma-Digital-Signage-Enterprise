@@ -1,10 +1,13 @@
 FROM yovanggaanandhika/rust:latest AS builder
 
+ARG TARGETARCH
+ENV CARGO_TARGET_DIR=/tmp/cargo-target-${TARGETARCH}
+
 WORKDIR /home/app
 COPY . .
 RUN cargo build --release --locked
 RUN mkdir -p /out
-RUN cp target/release/app /out/app
+RUN cp ${CARGO_TARGET_DIR}/release/app /out/app
 
 FROM alpine:latest AS runner
 

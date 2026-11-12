@@ -3,7 +3,7 @@
 DOCKER_USER=yovanggaanandhika
 BACKEND_IMAGE=$(DOCKER_USER)/dka-sigma:core
 FRONTEND_IMAGE=$(DOCKER_USER)/dka-sigma:ui
-PLATFORMS=linux/amd64
+PLATFORMS=linux/amd64,linux/arm64
 
 build:
 	@echo "Building local backend image..."
