@@ -5,40 +5,57 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Upload, FileCode, CheckCircle2, AlertTriangle, Smartphone, ShieldAlert } from 'lucide-react';
 import { api, system } from '@/lib/services';
+import { readApkMetadata } from '@/lib/core/apkMetadata';
 
 export default function CreateApkReleasePage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileSelectionId = useRef(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [readingApkMetadata, setReadingApkMetadata] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     versionName: '',
-    versionCode: 1,
+    versionCode: 0,
     minSupportedVersionCode: 1,
     isForceUpdate: false,
     releaseNotes: '',
   });
 
-  const handleFile = (file: File) => {
+  const handleFile = async (file: File) => {
     if (!file.name.toLowerCase().endsWith('.apk')) {
       alert('Format berkas tidak valid. Harap pilih berkas berekstensi .apk');
       return;
     }
 
+    const selectionId = ++fileSelectionId.current;
     setSelectedFile(file);
     setError(null);
+    setReadingApkMetadata(true);
+    setFormData((prev) => ({ ...prev, versionName: '', versionCode: 0 }));
 
-    // Auto-detect version name if formatted like "app-v1.2.0.apk" or "sigma_1.2.0.apk"
-    const match = file.name.match(/v?(\d+\.\d+(\.\d+)?)/i);
-    if (match && match[1] && !formData.versionName) {
+    try {
+      const metadata = await readApkMetadata(file);
+      if (metadata.packageName !== 'com.dkaapis.sigma') {
+        throw new Error('APK bukan aplikasi HNDSigma Player.');
+      }
+      if (selectionId !== fileSelectionId.current) return;
       setFormData((prev) => ({
         ...prev,
-        versionName: match[1],
+        versionName: metadata.versionName,
+        versionCode: metadata.versionCode,
       }));
+    } catch (error) {
+      if (selectionId !== fileSelectionId.current) return;
+      setSelectedFile(null);
+      setError(error instanceof Error ? error.message : 'Gagal membaca metadata APK.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } finally {
+      if (selectionId === fileSelectionId.current) setReadingApkMetadata(false);
     }
   };
 
@@ -47,7 +64,7 @@ export default function CreateApkReleasePage() {
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFile(e.dataTransfer.files[0]);
+      void handleFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -69,6 +86,7 @@ export default function CreateApkReleasePage() {
       setError('Silakan pilih berkas APK terlebih dahulu.');
       return;
     }
+    if (readingApkMetadata) return;
     if (!formData.versionName.trim()) {
       setError('Nama versi wajib diisi (misal: 1.2.0).');
       return;
@@ -184,13 +202,13 @@ export default function CreateApkReleasePage() {
             style={{ display: 'none' }}
             onChange={(e) => {
               if (e.target.files && e.target.files[0]) {
-                handleFile(e.target.files[0]);
+                void handleFile(e.target.files[0]);
               }
             }}
           />
 
           <div
-            onClick={() => !loading && fileInputRef.current?.click()}
+            onClick={() => !loading && !readingApkMetadata && fileInputRef.current?.click()}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -200,7 +218,7 @@ export default function CreateApkReleasePage() {
               padding: '32px 20px',
               textAlign: 'center',
               backgroundColor: dragActive ? 'rgba(37, 99, 235, 0.05)' : selectedFile ? 'rgba(16, 185, 129, 0.04)' : 'var(--hover-surface)',
-              cursor: loading ? 'not-allowed' : 'pointer',
+              cursor: loading || readingApkMetadata ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s ease',
               display: 'flex',
               flexDirection: 'column',
@@ -230,14 +248,19 @@ export default function CreateApkReleasePage() {
                     {selectedFile.name}
                   </p>
                   <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    Ukuran: {formatBytes(selectedFile.size)} • Siap diunggah
+                    {readingApkMetadata
+                      ? 'Membaca metadata APK...'
+                      : `Ukuran: ${formatBytes(selectedFile.size)} • Metadata APK terbaca`}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
+                    fileSelectionId.current += 1;
                     setSelectedFile(null);
+                    setReadingApkMetadata(false);
+                    setFormData((prev) => ({ ...prev, versionName: '', versionCode: 0 }));
                     if (fileInputRef.current) fileInputRef.current.value = '';
                   }}
                   className="btn btn-outline"
@@ -305,7 +328,7 @@ export default function CreateApkReleasePage() {
               required
               placeholder="Contoh: 1.2.0"
               value={formData.versionName}
-              onChange={(e) => setFormData({ ...formData, versionName: e.target.value })}
+              readOnly
               className="input-field"
               style={{
                 padding: '10px 14px',
@@ -318,7 +341,7 @@ export default function CreateApkReleasePage() {
               }}
             />
             <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>
-              Label versi yang terlihat oleh pengguna di layar pengaturan.
+              Dibaca otomatis dari manifest APK.
             </span>
           </div>
 
@@ -332,7 +355,7 @@ export default function CreateApkReleasePage() {
               min={1}
               placeholder="Contoh: 42"
               value={formData.versionCode}
-              onChange={(e) => setFormData({ ...formData, versionCode: parseInt(e.target.value) || 1 })}
+              readOnly
               className="input-field"
               style={{
                 padding: '10px 14px',
@@ -345,7 +368,7 @@ export default function CreateApkReleasePage() {
               }}
             />
             <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>
-              Integer urutan build APK (harus lebih besar dari rilis sebelumnya).
+              Dibaca otomatis dari APK; harus lebih besar dari versi yang terpasang.
             </span>
           </div>
 
@@ -440,7 +463,7 @@ export default function CreateApkReleasePage() {
           </Link>
           <button
             type="submit"
-            disabled={loading || !selectedFile}
+            disabled={loading || readingApkMetadata || !selectedFile}
             className="btn btn-primary"
             style={{
               padding: '10px 22px',
@@ -448,12 +471,18 @@ export default function CreateApkReleasePage() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              opacity: loading || !selectedFile ? 0.6 : 1,
-              cursor: loading || !selectedFile ? 'not-allowed' : 'pointer',
+              opacity: loading || readingApkMetadata || !selectedFile ? 0.6 : 1,
+              cursor: loading || readingApkMetadata || !selectedFile ? 'not-allowed' : 'pointer',
             }}
           >
             <Upload size={16} />
-            <span>{loading ? 'Mengunggah & Merilis...' : 'Unggah & Terbitkan Rilis'}</span>
+            <span>
+              {readingApkMetadata
+                ? 'Membaca metadata APK...'
+                : loading
+                  ? 'Mengunggah & Merilis...'
+                  : 'Unggah & Terbitkan Rilis'}
+            </span>
           </button>
         </div>
       </form>

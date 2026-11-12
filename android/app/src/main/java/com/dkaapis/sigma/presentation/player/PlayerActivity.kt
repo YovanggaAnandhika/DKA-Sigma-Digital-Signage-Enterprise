@@ -67,6 +67,7 @@ import com.dkaapis.sigma.service.PlayerForegroundService
 import com.dkaapis.sigma.service.WatchdogService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
@@ -117,13 +118,14 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private var hasActivePlayback: Boolean = false
     private var isQueueCallInProgress: Boolean = false
     private var isAppUpdateInProgress: Boolean = false
+    private var appUpdateCheckJob: Job? = null
     private var activeAppUpdateId: String? = null
     private var lastOfferedAppUpdateId: String? = null
     private var pendingInstallPermissionUpdate: AppUpdate? = null
 
     private companion object {
         const val TAG = "PlayerActivity"
-        const val APP_UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000L
+        const val APP_UPDATE_CHECK_INTERVAL_MS = 60 * 1000L
         const val SKY = 0x38BDF8
         const val GREEN = 0x10B981
         const val RED = 0xEF4444
@@ -237,6 +239,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                     val s = viewModel.uiState.value
                     if (s !is PlayerUiState.DownloadingAssets && s !is PlayerUiState.SyncingManifest) {
                         viewModel.syncManifest()
+                        requestAppUpdateCheck()
                     }
                 },
                 onPendingCommand = { cmd -> dispatchRemoteCommand(cmd) },
@@ -453,20 +456,27 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private fun startAppUpdateChecks() {
         lifecycleScope.launch {
             while (isActive) {
-                if (deviceRepo.isPaired()) {
-                    try {
-                        val deviceId = deviceRepo.getSavedDeviceId().orEmpty()
-                        val update = appUpdateRepository.checkForUpdate(deviceId)
-                        if (update != null && update.id != lastOfferedAppUpdateId) {
-                            offerAppUpdate(update)
-                        }
-                    } catch (error: CancellationException) {
-                        throw error
-                    } catch (error: Exception) {
-                        Log.w(TAG, "Gagal memeriksa pembaruan aplikasi: ${error.message}")
-                    }
-                }
+                requestAppUpdateCheck()
                 delay(APP_UPDATE_CHECK_INTERVAL_MS)
+            }
+        }
+    }
+
+    private fun requestAppUpdateCheck() {
+        if (appUpdateCheckJob?.isActive == true) return
+
+        appUpdateCheckJob = lifecycleScope.launch {
+            try {
+                if (!deviceRepo.isPaired()) return@launch
+                val deviceId = deviceRepo.getSavedDeviceId().orEmpty()
+                val update = appUpdateRepository.checkForUpdate(deviceId)
+                if (update != null && update.id != lastOfferedAppUpdateId) {
+                    offerAppUpdate(update)
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.w(TAG, "Gagal memeriksa pembaruan aplikasi: ${error.message}")
             }
         }
     }
@@ -624,7 +634,10 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     }
 
     override fun onReloadManifest() {
-        runOnUiThread { viewModel.syncManifest(force = true) }
+        runOnUiThread {
+            viewModel.syncManifest(force = true)
+            requestAppUpdateCheck()
+        }
     }
 
     override fun onClearCache() {
@@ -642,7 +655,10 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                     viewModel.resetActiveManifest()
                 },
                 onSyncRequested = {
-                    statusOverlay.postDelayed(1000) { viewModel.syncManifest(force = true) }
+                    statusOverlay.postDelayed(1000) {
+                        viewModel.syncManifest(force = true)
+                        requestAppUpdateCheck()
+                    }
                 }
             )
         }
