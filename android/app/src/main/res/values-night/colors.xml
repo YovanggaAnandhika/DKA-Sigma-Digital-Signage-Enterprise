@@ -27,10 +27,10 @@
     <color name="console_card_border">#33ffffff</color>
     <color name="tag_text">#a1a1aa</color>
     <color name="text_headline">#f4f4f5</color>
-    <color name="text_sub">#a1a1aa</color>
-    <color name="pairing_code_bg">#33ffffff</color>
-    <color name="pairing_code_border">#4Dffffff</color>
-    <color name="pairing_code_text">#f4f4f5</color>
+    <color name="text_sub">#334155</color>
+    <color name="pairing_code_bg">#18181B</color>
+    <color name="pairing_code_border">#52525B</color>
+    <color name="pairing_code_text">#FFFFFF</color>
     <color name="btn_reconnect_bg">#f4f4f5</color>
     <color name="btn_reconnect_ripple">#e4e4e7</color>
     <color name="btn_reconnect_text">#18181b</color>

@@ -95,7 +95,8 @@
             android:maxLines="2"
             android:text="Tidak dapat terhubung."
             android:textColor="#10050655"
-            android:textSize="13sp" />
+            android:textSize="14sp"
+            android:textStyle="bold" />
 
         <!-- Action buttons -->
         <LinearLayout
