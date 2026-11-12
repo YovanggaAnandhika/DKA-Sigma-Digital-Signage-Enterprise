@@ -94,34 +94,6 @@ export function Navbar() {
           {collapsed ? <Menu size={18} /> : <X size={18} />}
         </button>
 
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '4px 10px',
-            borderRadius: '20px',
-            backgroundColor: 'rgba(16, 185, 129, 0.08)',
-            border: '1px solid rgba(16, 185, 129, 0.2)',
-          }}
-        >
-          <span
-            title="Status Sistem: Terhubung (Online)"
-            aria-label="Online"
-            style={{
-              width: '7px',
-              height: '7px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--accent-emerald)',
-              boxShadow: '0 0 8px rgba(16, 185, 129, 0.8)',
-              display: 'inline-block',
-            }}
-          />
-          <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--accent-emerald)', letterSpacing: '0.02em' }}>
-            ONLINE
-          </span>
-        </div>
-
         {impersonatedCorp && (
           <div
             style={{

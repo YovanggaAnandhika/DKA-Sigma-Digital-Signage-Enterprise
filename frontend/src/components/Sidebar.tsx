@@ -176,7 +176,7 @@ export function Sidebar() {
                 textOverflow: 'ellipsis',
               }}
             >
-              HNDSigma
+              HND Signage
             </span>
             <span
               style={{
