@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { api, Device } from '@/lib/services';
 import {
   pushDeviceCommand,
@@ -51,6 +50,7 @@ interface DisplayDetailContextType {
   selectedScreenshot: string | null;
   setSelectedScreenshot: (url: string | null) => void;
   loading: boolean;
+  deviceLoadError: boolean;
   sendingCmd: string | null;
   cmdFeedback: string | null;
   approving: boolean;
@@ -83,7 +83,6 @@ export function DisplayDetailProvider({
   deviceId: string;
   children: React.ReactNode;
 }) {
-  const router = useRouter();
   const [device, setDevice] = useState<Device | null>(null);
   const [playbackLogs, setPlaybackLogs] = useState<PlaybackRecord[]>([]);
   const [screenshots, setScreenshots] = useState<DeviceScreenshot[]>([]);
@@ -98,6 +97,7 @@ export function DisplayDetailProvider({
   const [hoveredPoint, setHoveredPoint] = useState<DeviceAnalyticsRecord | null>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deviceLoadError, setDeviceLoadError] = useState(false);
   const [sendingCmd, setSendingCmd] = useState<string | null>(null);
   const [cmdFeedback, setCmdFeedback] = useState<string | null>(null);
   const [approving, setApproving] = useState(false);
@@ -141,6 +141,7 @@ export function DisplayDetailProvider({
 
       if (updatedDevice) {
         setDevice(updatedDevice);
+        setDeviceLoadError(false);
         setIsLiveConnected(checkTrulyOnline(updatedDevice));
       }
       if (updatedTelemetry) {
@@ -155,6 +156,7 @@ export function DisplayDetailProvider({
   const fetchDevice = async () => {
     try {
       setLoading(true);
+      setDeviceLoadError(false);
       const data = await api.getDevice(deviceId);
       setDevice(data);
       setIsLiveConnected(checkTrulyOnline(data));
@@ -166,8 +168,8 @@ export function DisplayDetailProvider({
         fetchAnalytics(timeRange),
       ]);
     } catch (err: any) {
-      alert(err.message || 'Gagal memuat detail display');
-      router.push('/hardware/displays/player');
+      console.error('Failed to load display details:', err);
+      setDeviceLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -437,6 +439,7 @@ export function DisplayDetailProvider({
         selectedScreenshot,
         setSelectedScreenshot,
         loading,
+        deviceLoadError,
         sendingCmd,
         cmdFeedback,
         approving,

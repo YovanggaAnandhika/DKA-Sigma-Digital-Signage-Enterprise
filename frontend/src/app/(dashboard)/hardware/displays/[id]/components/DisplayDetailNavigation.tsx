@@ -15,7 +15,7 @@ const tabs = [
 
 export default function DisplayDetailNavigation() {
   const pathname = usePathname();
-  const { device, deviceId, isLiveConnected } = useDisplayDetail();
+  const { device, deviceId, deviceLoadError, isLiveConnected } = useDisplayDetail();
   const basePath = `/hardware/displays/${deviceId}`;
 
   return (
@@ -42,6 +42,23 @@ export default function DisplayDetailNavigation() {
           </p>
         </div>
       </div>
+      {deviceLoadError && !device && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            marginBottom: 12,
+            padding: '10px 12px',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-surface)',
+            color: 'var(--text-secondary)',
+            fontSize: '0.82rem',
+          }}
+        >
+          Gagal memuat detail layar. Mencoba kembali otomatis.
+        </div>
+      )}
       <nav aria-label="Navigasi detail layar" style={{ display: 'flex', gap: 4, overflowX: 'auto', borderBottom: '1px solid var(--border-subtle)' }}>
         {tabs.map((tab) => {
           const href = `${basePath}/${tab.path}`;
