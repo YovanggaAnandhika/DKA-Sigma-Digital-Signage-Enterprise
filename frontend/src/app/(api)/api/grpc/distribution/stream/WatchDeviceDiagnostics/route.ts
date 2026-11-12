@@ -44,7 +44,12 @@ export async function GET(req: NextRequest) {
         heartbeat = setInterval(() => send(':ping\n\n'), 15_000);
 
         grpcStream.on('data', (event) => {
-          send(`data: ${JSON.stringify(event.toObject())}\n\n`);
+          const eventObject = event.toObject();
+          const diagnostics = event.getDiagnostics();
+          if (diagnostics && !diagnostics.hasScreenSleeping()) {
+            delete eventObject.diagnostics?.screenSleeping;
+          }
+          send(`data: ${JSON.stringify(eventObject)}\n\n`);
         });
         grpcStream.on('error', () => {
           send(`event: error\ndata: ${JSON.stringify({ message: 'Diagnostics stream unavailable' })}\n\n`);

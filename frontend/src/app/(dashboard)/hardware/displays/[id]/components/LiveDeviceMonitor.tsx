@@ -31,6 +31,7 @@ type DiagnosticsEvent = {
     timestampMs?: number;
     heapUsedMb?: number;
     heapMaxMb?: number;
+    screenSleeping?: boolean;
     lastCrashTimestampMs?: number;
     lastCrashSummary?: string;
     zonesList?: Zone[];

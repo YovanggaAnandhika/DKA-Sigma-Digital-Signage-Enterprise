@@ -177,7 +177,7 @@ message LiveDiagnostics {
   float temperature_c = 7;
   int64 last_crash_timestamp_ms = 8;
   string last_crash_summary = 9;
-  bool screen_sleeping = 10;
+  optional bool screen_sleeping = 10;
 }
 
 message LogLine {
