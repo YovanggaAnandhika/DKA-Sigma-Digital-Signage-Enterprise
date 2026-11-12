@@ -86,13 +86,7 @@ class LiveStreamZoneRenderer(
         }
         return StreamCommon.ZoneDiagnostics.newBuilder()
             .setZoneId(streamId).setMediaId(streamId).setKind("LIVE").setMediaName(streamName)
-            .setState(state).setTransport(
-                if (activePlaybackUrl.startsWith("rtsp")) {
-                    if (useRtpTcp) "RTSP/TCP" else "RTSP/UDP"
-                } else {
-                    "HLS"
-                }
-            )
+            .setState(state).setTransport(activeTransport())
             .setCodec(format?.sampleMimeType.orEmpty())
             .setResolution(if (format != null && format.width > 0) "${format.width}x${format.height}" else "")
             .setBitrateKbps(if (format != null && format.bitrate > 0) format.bitrate / 1000 else 0)
@@ -253,7 +247,7 @@ class LiveStreamZoneRenderer(
                                 reconnectRunnable?.let(mainHandler::removeCallbacks)
                                 bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
                                 posterView?.animate()?.alpha(0f)?.setDuration(250)?.start()
-                                glassOverlay?.setLive(isLowLatency = false)
+                                glassOverlay?.setLive(isLowLatency = false, transport = activeTransport())
                             }
                         }
 
@@ -283,7 +277,7 @@ class LiveStreamZoneRenderer(
                                     if (isPlaying) {
                                         isStreamOffline = false
                                         reconnectRunnable?.let(mainHandler::removeCallbacks)
-                                        glassOverlay?.setLive(isLowLatency = false)
+                                        glassOverlay?.setLive(isLowLatency = false, transport = activeTransport())
                                     }
                                 }
                                 Player.STATE_ENDED, Player.STATE_IDLE -> {
@@ -377,6 +371,13 @@ class LiveStreamZoneRenderer(
 
     private fun serverPlaybackUrl(profile: LiveStreamProfile): String =
         "rtsp://${ServerConfig.getHost(context)}:$RTSP_PORT/${profile.path}/$streamId"
+
+    private fun activeTransport(): String =
+        if (activePlaybackUrl.startsWith("rtsp")) {
+            if (useRtpTcp) "RTSP/TCP" else "RTSP/UDP"
+        } else {
+            "HLS"
+        }
 
     private fun selectQualityProfile(profile: LiveStreamProfile) {
         currentQualityProfile = profile

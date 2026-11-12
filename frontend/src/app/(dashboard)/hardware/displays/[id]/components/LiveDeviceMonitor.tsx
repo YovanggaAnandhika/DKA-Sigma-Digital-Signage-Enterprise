@@ -12,6 +12,7 @@ type Zone = {
   mediaId?: string;
   mediaName?: string;
   state?: string;
+  transport?: string;
   resolution?: string;
   droppedFrames?: number;
   lastError?: string;
@@ -49,10 +50,16 @@ const LOG_LEVEL_OPTIONS = [
   { value: 'F', label: 'Fatal' },
 ];
 
-function zoneKindLabel(kind?: string): string {
+function zoneKindLabel(kind?: string, transport?: string): string {
   switch (kind?.toUpperCase()) {
     case 'VIDEO': return 'Video';
-    case 'LIVE': return 'Siaran langsung';
+    case 'LIVE':
+      switch (transport?.toUpperCase()) {
+        case 'RTSP/UDP': return 'Siaran Langsung (UDP)';
+        case 'RTSP/TCP': return 'Siaran Langsung (TCP)';
+        case 'HLS': return 'Siaran Langsung (HLS)';
+        default: return 'Siaran Langsung';
+      }
     case 'IMAGE': return 'Gambar';
     case 'QUEUE': return 'Antrean';
     default: return kind || 'Konten';
@@ -60,8 +67,8 @@ function zoneKindLabel(kind?: string): string {
 }
 
 function zoneTitle(zone: Zone): string {
-  if (!zone.mediaName) return zoneKindLabel(zone.kind);
-  return cleanMediaTitle(zone.mediaName).replace(/[_-]+/g, ' ').replace(/\.[^.]+$/, '') || zoneKindLabel(zone.kind);
+  if (!zone.mediaName) return zoneKindLabel(zone.kind, zone.transport);
+  return cleanMediaTitle(zone.mediaName).replace(/[_-]+/g, ' ').replace(/\.[^.]+$/, '') || zoneKindLabel(zone.kind, zone.transport);
 }
 
 function zoneStatus(zone: Zone): { label: string; color: string } {
@@ -247,7 +254,7 @@ export default function LiveDeviceMonitor({ deviceId }: { deviceId: string }) {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
                     <div style={{ minWidth: 0 }}>
                       <span style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '0.68rem', fontWeight: 600, marginBottom: 3 }}>
-                        {zoneKindLabel(zone.kind)} · Zona {index + 1}
+                        {zoneKindLabel(zone.kind, zone.transport)} · Zona {index + 1}
                       </span>
                       <strong style={{ display: 'block', color: 'var(--text-primary)', fontSize: '0.8rem', overflowWrap: 'anywhere' }}>
                         {zoneTitle(zone)}
