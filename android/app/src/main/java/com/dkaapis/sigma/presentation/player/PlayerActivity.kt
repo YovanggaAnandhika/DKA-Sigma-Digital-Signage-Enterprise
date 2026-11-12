@@ -571,7 +571,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                     AlertDialog.Builder(this@PlayerActivity)
                         .setTitle("Pembaruan wajib gagal")
                         .setMessage(error.message ?: "Periksa koneksi server lalu coba lagi.")
-                        .setPositiveButton("Coba lagi") { _, _ -> requestAppUpdate(update) }
+                        .setPositiveButton("Coba lagi") { _, _ -> retryLatestAppUpdate() }
                         .setCancelable(false)
                         .show()
                 } else {
@@ -587,6 +587,57 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                 statusOverlay.hide()
             }
         }
+    }
+
+    private fun retryLatestAppUpdate() {
+        appUpdateCheckJob?.cancel()
+        appUpdateCheckJob = lifecycleScope.launch {
+            try {
+                statusOverlay.show(
+                    "● PEMBARUAN APLIKASI",
+                    SKY,
+                    "Memeriksa rilis terbaru",
+                    "Menghubungi server..."
+                )
+                check(deviceRepo.isPaired()) { "Perangkat belum terhubung ke server." }
+                val deviceId = deviceRepo.getSavedDeviceId().orEmpty()
+                val latestUpdate = appUpdateRepository.checkForUpdate(deviceId)
+                statusOverlay.hide()
+
+                if (latestUpdate == null) {
+                    showLatestAppUpdateRetryDialog(
+                        "Tidak ada rilis lebih baru yang tersedia di server. Pastikan rilis terbaru sudah diterbitkan."
+                    )
+                    return@launch
+                }
+
+                lastOfferedAppUpdateId = null
+                if (latestUpdate.isForceUpdate) {
+                    requestAppUpdate(latestUpdate)
+                } else {
+                    offerAppUpdate(latestUpdate)
+                }
+            } catch (error: CancellationException) {
+                statusOverlay.hide()
+                throw error
+            } catch (error: Exception) {
+                statusOverlay.hide()
+                Log.w(TAG, "Gagal memeriksa ulang pembaruan aplikasi: ${error.message}", error)
+                showLatestAppUpdateRetryDialog(
+                    error.message ?: "Gagal memeriksa server. Periksa koneksi lalu coba lagi."
+                )
+            }
+        }
+    }
+
+    private fun showLatestAppUpdateRetryDialog(message: String) {
+        if (isFinishing || isDestroyed) return
+        AlertDialog.Builder(this)
+            .setTitle("Pembaruan wajib gagal")
+            .setMessage(message)
+            .setPositiveButton("Periksa lagi") { _, _ -> retryLatestAppUpdate() }
+            .setCancelable(false)
+            .show()
     }
 
     private fun formatUpdateBytes(bytes: Long): String =
