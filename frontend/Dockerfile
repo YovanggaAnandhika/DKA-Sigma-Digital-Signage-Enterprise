@@ -26,5 +26,4 @@ COPY --from=builder --chown=10001:10001 /home/app/.next/standalone ./
 COPY --from=builder --chown=10001:10001 /home/app/.next/static ./.next/static
 
 USER 10001:10001
-EXPOSE 80
 CMD ["bun", "server.js"]

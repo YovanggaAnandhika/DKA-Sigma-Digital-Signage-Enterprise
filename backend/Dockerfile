@@ -20,5 +20,4 @@ WORKDIR /home/app
 COPY --from=builder --chown=10001:10001 /out/app /usr/local/bin/app
 
 USER 10001:10001
-EXPOSE 50051 50052
 ENTRYPOINT ["app"]

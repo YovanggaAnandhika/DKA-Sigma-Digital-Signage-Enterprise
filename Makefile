@@ -1,8 +1,8 @@
 .PHONY: build push
 
 DOCKER_USER=yovanggaanandhika
-BACKEND_IMAGE=$(DOCKER_USER)/sigma-digital-signage:backend
-FRONTEND_IMAGE=$(DOCKER_USER)/sigma-digital-signage:frontend
+BACKEND_IMAGE=$(DOCKER_USER)/dka-sigma:core
+FRONTEND_IMAGE=$(DOCKER_USER)/dka-sigma:ui
 PLATFORMS=linux/amd64
 
 build:
