@@ -5,9 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api, Device } from '@/lib/services';
 import { Pagination } from '@/components/ui/Pagination';
-import { Tv, Search, RefreshCw, Edit, Trash2, CheckCircle2 } from 'lucide-react';
-import { TableDataValue, TableStatus } from '@/components/ui/TableDataValue';
-import { CircleCheck, CircleX, Clock3, Fingerprint, MonitorCheck, Network } from 'lucide-react';
+import { Search, RefreshCw, Edit, Trash2, CheckCircle2, CircleX, Clock3, Wifi, Monitor, Network, Fingerprint } from 'lucide-react';
 
 export default function DisplayListView() {
   const router = useRouter();
@@ -18,7 +16,6 @@ export default function DisplayListView() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [isSseConnected, setIsSseConnected] = useState(false);
-  const [pairingId, setPairingId] = useState<string | null>(null);
 
   // Pairing Verification Modal state
   const [pairingModalDevice, setPairingModalDevice] = useState<Device | null>(null);
@@ -148,25 +145,28 @@ export default function DisplayListView() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* Filter & Actions Bar */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* Modern Floating Toolbar */}
       <div
-        className="card-elevated"
         style={{
-          padding: '16px',
+          padding: '14px 20px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '12px',
+          gap: '16px',
           flexWrap: 'wrap',
+          backgroundColor: 'var(--bg-surface)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: '16px',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)',
         }}
       >
-        <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: '280px' }}>
           <Search
             size={16}
             style={{
               position: 'absolute',
-              left: '12px',
+              left: '14px',
               top: '50%',
               transform: 'translateY(-50%)',
               color: 'var(--text-muted)',
@@ -180,69 +180,105 @@ export default function DisplayListView() {
               setPage(1);
             }}
             placeholder="Cari berdasarkan nama perangkat atau ID..."
-            className="form-input"
-            style={{ paddingLeft: '36px' }}
+            style={{
+              width: '100%',
+              paddingLeft: '40px',
+              paddingRight: '14px',
+              height: '40px',
+              fontSize: '0.825rem',
+              borderRadius: '10px',
+              backgroundColor: 'var(--bg-surface-elevated)',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--text-primary)',
+              outline: 'none',
+              transition: 'all 0.2s ease',
+            }}
           />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Live Status Badge */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: '8px',
               padding: '6px 12px',
               borderRadius: '9999px',
-              backgroundColor: isSseConnected ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255, 255, 255, 0.05)',
-              border: isSseConnected ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
+              backgroundColor: isSseConnected ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-surface-elevated)',
+              border: isSseConnected ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid var(--border-subtle)',
               color: isSseConnected ? 'var(--accent-emerald)' : 'var(--text-muted)',
-              fontSize: '0.75rem',
+              fontSize: '0.72rem',
               fontWeight: 600,
             }}
-            title={isSseConnected ? 'Terhubung ke Real-time Stream' : 'Stream Terputus'}
           >
             <span
               style={{
-                width: '6px',
-                height: '6px',
+                width: '7px',
+                height: '7px',
                 borderRadius: '50%',
                 backgroundColor: isSseConnected ? 'var(--accent-emerald)' : 'var(--text-muted)',
                 boxShadow: isSseConnected ? '0 0 8px var(--accent-emerald)' : 'none',
               }}
             />
-            <span>{isSseConnected ? 'Live' : 'Offline'}</span>
+            <span>{isSseConnected ? 'Real-time Stream Live' : 'Stream Disconnected'}</span>
           </div>
 
-          <button onClick={loadData} className="btn btn-secondary" title="Segarkan data manual">
+          <button
+            onClick={loadData}
+            style={{
+              height: '40px',
+              padding: '0 14px',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              borderRadius: '10px',
+              backgroundColor: 'var(--bg-surface-elevated)',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--text-primary)',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s ease',
+            }}
+          >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             <span>Segarkan</span>
           </button>
         </div>
       </div>
 
-      {/* Main Table */}
-      <div className="card-elevated" style={{ overflow: 'hidden' }}>
+      {/* Modern Clean Data Table Card */}
+      <div
+        style={{
+          backgroundColor: 'var(--bg-surface)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: '16px',
+          overflow: 'hidden',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)',
+        }}
+      >
         <div style={{ overflowX: 'auto' }}>
-          <table className="data-table">
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
-              <tr>
-                <th>Nama Perangkat</th>
-                <th>ID / Kode</th>
-                <th>Status</th>
-                <th>Resolusi & Orientasi</th>
-                <th>Alamat IP</th>
-                <th style={{ textAlign: 'right' }}>Aksi</th>
+              <tr style={{ borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface-elevated)' }}>
+                <th style={{ padding: '14px 20px', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nama Perangkat</th>
+                <th style={{ padding: '14px 20px', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ID / Kode</th>
+                <th style={{ padding: '14px 20px', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
+                <th style={{ padding: '14px 20px', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Resolusi & Orientasi</th>
+                <th style={{ padding: '14px 20px', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alamat IP</th>
+                <th style={{ padding: '14px 20px', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>Aksi</th>
               </tr>
             </thead>
             <tbody>
               {devices.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)', fontSize: '0.825rem' }}>
                     {loading ? 'Memuat daftar layar...' : 'Tidak ada perangkat ditemukan.'}
                   </td>
                 </tr>
               ) : (
-                devices.map((d) => {
+                devices.map((d, index) => {
                   const orientationLabel =
                     String(d.orientation) === '2' || d.orientation === 'portrait' || (d.orientation as any) === 'ORIENTATION_PORTRAIT'
                       ? 'Portrait'
@@ -261,77 +297,153 @@ export default function DisplayListView() {
                         if (event.target instanceof Element && event.target.closest('a, button')) return;
                         router.push(`/hardware/displays/${d.id}`);
                       }}
-                      style={{ cursor: 'pointer' }}
+                      style={{
+                        cursor: 'pointer',
+                        borderBottom: index < devices.length - 1 ? '1px solid var(--border-subtle)' : 'none',
+                        transition: 'background-color 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
-                      <td>
-                        <TableDataValue icon={Tv} detail={d.isPaired ? 'Player terdaftar' : 'Menunggu aktivasi'}>
-                          <Link href={`/hardware/displays/${d.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      {/* Nama Perangkat */}
+                      <td style={{ padding: '16px 20px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <Link href={`/hardware/displays/${d.id}`} style={{ textDecoration: 'none', color: 'var(--text-primary)', fontSize: '0.875rem', fontWeight: 700 }}>
                             {d.name}
                           </Link>
-                        </TableDataValue>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                            {d.isPaired ? 'Player aktif terdaftar' : 'Menunggu aktivasi perangkat'}
+                          </span>
+                        </div>
                       </td>
-                      <td>
-                        <TableDataValue icon={Fingerprint} tone="violet">
-                          <span
+
+                      {/* ID / Kode */}
+                      <td style={{ padding: '16px 20px' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '6px', backgroundColor: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)' }}>
+                          <Fingerprint size={13} style={{ color: 'var(--primary-400)', opacity: 0.8 }} />
+                          <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 700, color: d.isPaired ? 'var(--text-secondary)' : 'var(--text-muted)', letterSpacing: '0.04em' }}>
+                            {!d.isPaired ? '••••••••' : d.id.substring(0, 8).toUpperCase()}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Status Online/Offline Pill Badge */}
+                      <td style={{ padding: '16px 20px' }}>
+                        {!d.isPaired ? (
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '999px', backgroundColor: 'rgba(234, 179, 8, 0.12)', color: 'var(--accent-amber)', fontSize: '0.72rem', fontWeight: 700 }}>
+                            <Clock3 size={12} />
+                            <span>Pending Pairing</span>
+                          </div>
+                        ) : (
+                          <div
                             style={{
-                              padding: '3px 8px',
-                              borderRadius: '4px',
-                              backgroundColor: 'var(--bg-surface-elevated)',
-                              border: '1px solid var(--border-subtle)',
-                              fontSize: '0.75rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '4px 10px',
+                              borderRadius: '999px',
+                              backgroundColor: isTrulyOnline ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.08)',
+                              color: isTrulyOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
+                              fontSize: '0.72rem',
                               fontWeight: 700,
-                              fontFamily: 'monospace',
-                              letterSpacing: '0.04em',
-                              whiteSpace: 'nowrap',
-                              color: !d.isPaired ? 'var(--text-muted)' : 'inherit',
                             }}
                           >
-                            {!d.isPaired ? '●●●●●●' : d.id.substring(0, 8).toUpperCase()}
-                          </span>
-                        </TableDataValue>
-                      </td>
-                      <td>
-                        {!d.isPaired ? (
-                          <TableStatus icon={Clock3} tone="amber">Menunggu persetujuan</TableStatus>
-                        ) : (
-                          <TableStatus
-                            icon={isTrulyOnline ? CircleCheck : CircleX}
-                            tone={isTrulyOnline ? 'emerald' : 'rose'}
-                          >
-                            {isTrulyOnline ? 'Online' : 'Offline'}
-                          </TableStatus>
+                            <span
+                              style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                backgroundColor: isTrulyOnline ? 'var(--accent-emerald)' : 'var(--accent-rose)',
+                                boxShadow: isTrulyOnline ? '0 0 6px var(--accent-emerald)' : 'none',
+                              }}
+                            />
+                            <span>{isTrulyOnline ? 'Online' : 'Offline'}</span>
+                          </div>
                         )}
                       </td>
-                      <td>
-                        <TableDataValue icon={MonitorCheck} tone="cyan" detail={orientationLabel}>
-                          {d.screenWidth || 1920} × {d.screenHeight || 1080}
-                        </TableDataValue>
+
+                      {/* Resolusi & Orientasi */}
+                      <td style={{ padding: '16px 20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ padding: '6px', borderRadius: '8px', backgroundColor: 'var(--bg-surface-elevated)', color: 'var(--primary-400)' }}>
+                            <Monitor size={15} />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-primary)', fontFamily: 'monospace', fontWeight: 700 }}>
+                              {d.screenWidth || 1920} × {d.screenHeight || 1080}
+                            </span>
+                            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                              {orientationLabel}
+                            </span>
+                          </div>
+                        </div>
                       </td>
-                      <td>
-                        <TableDataValue icon={Network} tone="cyan">
-                          {d.ipAddress || '127.0.0.1'}
-                        </TableDataValue>
+
+                      {/* Alamat IP */}
+                      <td style={{ padding: '16px 20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ padding: '6px', borderRadius: '8px', backgroundColor: 'var(--bg-surface-elevated)', color: 'var(--accent-cyan)' }}>
+                            <Network size={15} />
+                          </div>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontFamily: 'monospace', fontWeight: 600 }}>
+                            {d.ipAddress || '127.0.0.1'}
+                          </span>
+                        </div>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+
+                      {/* Aksi */}
+                      <td style={{ padding: '16px 20px', textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                           {!d.isPaired && (
                             <button
                               onClick={() => handleOpenPairingModal(d)}
-                              className="btn btn-primary"
+                              style={{
+                                padding: '6px 12px',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                borderRadius: '8px',
+                                backgroundColor: 'var(--accent-emerald)',
+                                color: '#fff',
+                                border: 'none',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
                               title="Setujui dan Verifikasi Kode Layar Android"
-                              aria-label={`Setujui dan aktifkan layar ${d.name}`}
                             >
                               <CheckCircle2 size={13} />
+                              <span>Setujui</span>
                             </button>
                           )}
-                          <Link href={`/hardware/displays/${d.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit">
+                          <Link
+                            href={`/hardware/displays/${d.id}/edit`}
+                            style={{
+                              padding: '6px 10px',
+                              borderRadius: '8px',
+                              backgroundColor: 'var(--bg-surface-elevated)',
+                              border: '1px solid var(--border-subtle)',
+                              color: 'var(--text-secondary)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                            }}
+                            title="Edit"
+                          >
                             <Edit size={14} />
                           </Link>
                           <button
                             onClick={() => handleDelete(d.id, d.name)}
-                            className="btn btn-danger"
-                            style={{ padding: '5px 8px' }}
-                            title="Hapus Perangkat"
+                            style={{
+                              padding: '6px 10px',
+                              borderRadius: '8px',
+                              backgroundColor: 'transparent',
+                              border: '1px solid transparent',
+                              color: 'var(--accent-rose)',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                            }}
+                            title="Hapus"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -345,19 +457,21 @@ export default function DisplayListView() {
           </table>
         </div>
 
-        <Pagination
-          page={page}
-          limit={limit}
-          total={total}
-          onPageChange={(newPage) => setPage(newPage)}
-          onLimitChange={(newLimit) => {
-            setLimit(newLimit);
-            setPage(1);
-          }}
-        />
+        <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface)' }}>
+          <Pagination
+            page={page}
+            limit={limit}
+            total={total}
+            onPageChange={(newPage) => setPage(newPage)}
+            onLimitChange={(newLimit) => {
+              setLimit(newLimit);
+              setPage(1);
+            }}
+          />
+        </div>
       </div>
 
-      {/* Modal Dialog Verifikasi Kode Pairing Fisik Layar */}
+      {/* Modal Pairing */}
       {pairingModalDevice && (
         <div
           role="dialog"
@@ -370,115 +484,89 @@ export default function DisplayListView() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '16px',
-            backgroundColor: 'rgba(0, 0, 0, 0.72)',
-            backdropFilter: 'blur(3px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(4px)',
           }}
           onClick={() => !pairingSubmitting && setPairingModalDevice(null)}
         >
           <div
-            className="card-elevated"
             style={{
               width: '100%',
-              maxWidth: '460px',
-              backgroundColor: 'var(--bg-surface-elevated)',
+              maxWidth: '420px',
+              backgroundColor: 'var(--bg-surface)',
               border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-lg)',
-              boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.7)',
+              borderRadius: '16px',
               padding: '24px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '20px',
+              gap: '16px',
+              boxShadow: '0 25px 50px rgba(0,0,0,0.4)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-              <div
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                  color: 'var(--primary-400)',
-                }}
-              >
-                <Tv size={22} />
-              </div>
-
-              <div style={{ flex: 1, minWidth: 0, paddingTop: '2px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <div>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
                   Verifikasi Kepemilikan Layar
                 </h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px', margin: 0 }}>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '4px 0 0' }}>
                   Layar: <b>{pairingModalDevice.name}</b>
                 </p>
               </div>
-
               <button
                 type="button"
                 onClick={() => !pairingSubmitting && setPairingModalDevice(null)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                  padding: '4px',
-                }}
-                aria-label="Tutup"
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}
               >
                 <CircleX size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleConfirmPairing} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                Masukkan <b>6-digit Kode Pairing</b> yang sedang tampil di layar TV fisik untuk mengikat layar ini ke korporasi Anda:
+            <form onSubmit={handleConfirmPairing} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                Masukkan <b>6-digit kode pairing</b> yang sedang tampil di layar TV fisik:
               </p>
-
-              <div>
-                <input
-                  type="text"
-                  autoFocus
-                  required
-                  value={inputPairingCode}
-                  onChange={(e) => setInputPairingCode(e.target.value.toUpperCase())}
-                  placeholder="CONTOH: K8F2N9"
-                  maxLength={10}
-                  className="form-input"
-                  style={{
-                    fontSize: '1.15rem',
-                    fontWeight: 800,
-                    fontFamily: 'monospace',
-                    letterSpacing: '0.2em',
-                    textAlign: 'center',
-                    textTransform: 'uppercase',
-                    padding: '12px',
-                  }}
-                  disabled={pairingSubmitting}
-                />
-              </div>
-
+              <input
+                type="text"
+                autoFocus
+                required
+                value={inputPairingCode}
+                onChange={(e) => setInputPairingCode(e.target.value.toUpperCase())}
+                placeholder="CONTOH: K8F2N9"
+                maxLength={10}
+                style={{
+                  fontSize: '1.2rem',
+                  fontWeight: 800,
+                  fontFamily: 'monospace',
+                  letterSpacing: '0.2em',
+                  textAlign: 'center',
+                  textTransform: 'uppercase',
+                  padding: '12px',
+                  borderRadius: '10px',
+                  backgroundColor: 'var(--bg-surface-elevated)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-primary)',
+                  outline: 'none',
+                }}
+                disabled={pairingSubmitting}
+              />
               {pairingError && (
-                <div style={{ color: 'var(--accent-rose)', fontSize: '0.8125rem', fontWeight: 600 }}>
+                <div style={{ color: 'var(--accent-rose)', fontSize: '0.78rem', fontWeight: 600 }}>
                   {pairingError}
                 </div>
               )}
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', paddingTop: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '6px' }}>
                 <button
                   type="button"
                   onClick={() => setPairingModalDevice(null)}
-                  className="btn btn-secondary"
+                  style={{ padding: '7px 14px', fontSize: '0.8rem', borderRadius: '8px', backgroundColor: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer' }}
                   disabled={pairingSubmitting}
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary"
+                  style={{ padding: '7px 16px', fontSize: '0.8rem', borderRadius: '8px', backgroundColor: 'var(--primary-600)', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer' }}
                   disabled={pairingSubmitting || !inputPairingCode.trim()}
                 >
                   {pairingSubmitting ? 'Memverifikasi...' : 'Verifikasi & Aktifkan'}
