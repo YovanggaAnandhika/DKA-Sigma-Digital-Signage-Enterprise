@@ -50,7 +50,7 @@ interface ScheduleDetailContextType {
   deviceDownloadProgress: Record<string, DeviceDownloadProgressItem>;
   syncingDevId: string | null;
   handlePushSyncToDevice: (deviceId: string, deviceName: string) => Promise<void>;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   selectedUploadFile: File | null;
   setSelectedUploadFile: (file: File | null) => void;
   uploading: boolean;

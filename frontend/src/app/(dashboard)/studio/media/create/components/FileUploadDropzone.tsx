@@ -4,7 +4,7 @@ import React from 'react';
 import { UploadCloud } from 'lucide-react';
 
 interface FileUploadDropzoneProps {
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleFile: (file: File) => void;
   dragActive: boolean;
   handleDragOver: (e: React.DragEvent) => void;
