@@ -54,7 +54,7 @@
 
 2. **[BELUM] Modul Advanced Live Streaming (Fase 2)** — Modul terdedikasi untuk live streaming: dukungan server signage sebagai origin host HLS / relay stream, serta opsi embed URL streaming eksternal (CCTV RTSP/HLS atau YouTube/HLS publik).
 3. **[BELUM] Komponen RSS News & Ticker Dinamis (Fase 3)** — Parser RSS feed berita nasional & bisnis dengan auto-refresh interval dan opsi integrasi Google Sheets.
-4. **[BELUM] Remote Screen Control / Web VNC Interaktif (Fase 4)** — Peningkatan dari screenshot capture pasif menjadi remote interaction web.
+4. **[BELUM] Remote Screen Control / Web VNC Interaktif (Fase 4)** — Rencana V1 untuk tab Remote Control (Home, Back, dan aktivitas player) ada di [`docs/remote_player_control_plan.md`](docs/remote_player_control_plan.md). Streaming layar dan interaksi touch tetap perluasan lanjutan.
 
 ### P2 — Architectural & Housekeeping
 
@@ -96,3 +96,4 @@
 11. [ ] Make Compose startup reproducible with explicit dependencies, healthchecks, and pinned image tags.
 12. [ ] Reconcile migration documentation and route/protobuf coverage.
 13. [ ] Complete the remaining security, Android, and firmware audit checklist.
+14. [ ] Implementasikan tab Remote Control Player sesuai `docs/remote_player_control_plan.md`; pastikan semantik Home/Back dan aktivitas internal player sesuai batas V1.
