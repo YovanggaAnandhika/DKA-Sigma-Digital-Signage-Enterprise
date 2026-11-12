@@ -13,7 +13,8 @@ use crate::grpc::proto::distribution::v1::stream::{
     ListDeviceScreenshotsRequest, ListDeviceScreenshotsResponse, DeviceScreenshotItem,
     GetLatestDeviceTelemetryRequest, GetLatestDeviceTelemetryResponse, LatestTelemetryData,
     UploadScreenshotRequest, UploadScreenshotResponse,
-    WatchDeviceDiagnosticsRequest, DeviceDiagnosticsEvent, LogBatch,
+    WatchDeviceDiagnosticsRequest, DeviceDiagnosticsEvent, WatchDeviceStatusRequest,
+    DeviceStatusEvent, LogBatch,
     device_diagnostics_event,
 };
 
@@ -29,11 +30,72 @@ impl StreamServiceImpl {
 }
 
 type DisplayStreamResponse = Pin<Box<dyn Stream<Item = Result<StreamServerMessage, Status>> + Send + 'static>>;
+type DeviceStatusStream = Pin<Box<dyn Stream<Item = Result<DeviceStatusEvent, Status>> + Send + 'static>>;
+
+async fn set_device_online_state(
+    pool: &DbPool,
+    manager: &StreamConnectionManager,
+    device_id: Uuid,
+    is_online: bool,
+) {
+    let result = sqlx::query(
+        "UPDATE hardware_devices
+         SET is_online = $2,
+             last_heartbeat_at = CASE WHEN $2 THEN NOW() ELSE last_heartbeat_at END
+         WHERE id = $1 AND is_online IS DISTINCT FROM $2",
+    )
+    .bind(device_id)
+    .bind(is_online)
+    .execute(pool)
+    .await;
+
+    match result {
+        Ok(result) if result.rows_affected() > 0 => {
+            manager.device_status.publish(
+                device_id,
+                DeviceStatusEvent {
+                    device_id: device_id.to_string(),
+                    is_online,
+                    timestamp_ms: chrono::Utc::now().timestamp_millis(),
+                    diagnostics: None,
+                },
+            );
+        }
+        Ok(_) => {}
+        Err(error) => tracing::warn!(
+            device_id = %device_id,
+            %error,
+            "Failed to update device online status"
+        ),
+    }
+}
 
 #[tonic::async_trait]
 impl StreamServiceTrait for StreamServiceImpl {
     type DisplayStreamStream = DisplayStreamResponse;
     type WatchDeviceDiagnosticsStream = Pin<Box<dyn Stream<Item = Result<DeviceDiagnosticsEvent, Status>> + Send + 'static>>;
+    type WatchDeviceStatusStream = DeviceStatusStream;
+
+    async fn watch_device_status(
+        &self,
+        request: Request<WatchDeviceStatusRequest>,
+    ) -> Result<Response<Self::WatchDeviceStatusStream>, Status> {
+        crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
+        let device_id = Uuid::parse_str(&request.get_ref().device_id)
+            .map_err(|_| Status::invalid_argument("ID Device tidak valid"))?;
+
+        let mut subscription = self.manager.subscribe_device_status(device_id);
+        let out = async_stream::stream! {
+            loop {
+                match subscription.recv().await {
+                    Ok(event) => yield Ok(event),
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                }
+            }
+        };
+        Ok(Response::new(Box::pin(out) as Self::WatchDeviceStatusStream))
+    }
 
     async fn watch_device_diagnostics(
         &self,
@@ -93,10 +155,7 @@ impl StreamServiceTrait for StreamServiceImpl {
                                         registered_device_id = Some(dev_id);
                                         manager.register_connection(dev_id, tx.clone()).await;
                                         if !dev_id.is_nil() {
-                                            let _ = sqlx::query("UPDATE hardware_devices SET is_online = TRUE, last_heartbeat_at = NOW() WHERE id = $1")
-                                                .bind(dev_id)
-                                                .execute(&pool)
-                                                .await;
+                                            set_device_online_state(&pool, &manager, dev_id, true).await;
                                         }
                                     }
 
@@ -145,6 +204,12 @@ impl StreamServiceTrait for StreamServiceImpl {
                                                     }
                                                 }
                                                 crate::grpc::proto::distribution::v1::stream::stream_client_message::Payload::Diagnostics(d) => {
+                                                    manager.device_status.publish(dev_id, DeviceStatusEvent {
+                                                        device_id: dev_id.to_string(),
+                                                        is_online: true,
+                                                        timestamp_ms: d.timestamp_ms,
+                                                        diagnostics: Some(d.clone()),
+                                                    });
                                                     manager.diagnostics.publish(dev_id, DeviceDiagnosticsEvent {
                                                         payload: Some(device_diagnostics_event::Payload::Diagnostics(d)),
                                                     });
@@ -178,10 +243,7 @@ impl StreamServiceTrait for StreamServiceImpl {
                             Ok(Ok(None)) | Ok(Err(_)) => {
                                 if let Some(id) = registered_device_id {
                                     manager.unregister_connection(&id).await;
-                                    let _ = sqlx::query("UPDATE hardware_devices SET is_online = FALSE WHERE id = $1")
-                                        .bind(id)
-                                        .execute(&pool)
-                                        .await;
+                                    set_device_online_state(&pool, &manager, id, false).await;
                                 }
                                 break;
                             }
@@ -190,10 +252,7 @@ impl StreamServiceTrait for StreamServiceImpl {
                                 tracing::warn!("Dead socket detected: device {:?} inactive for 45s, disconnecting", registered_device_id);
                                 if let Some(id) = registered_device_id {
                                     manager.unregister_connection(&id).await;
-                                    let _ = sqlx::query("UPDATE hardware_devices SET is_online = FALSE WHERE id = $1")
-                                        .bind(id)
-                                        .execute(&pool)
-                                        .await;
+                                    set_device_online_state(&pool, &manager, id, false).await;
                                 }
                                 break;
                             }
@@ -219,10 +278,7 @@ impl StreamServiceTrait for StreamServiceImpl {
                     else => {
                         if let Some(id) = registered_device_id {
                             manager.unregister_connection(&id).await;
-                            let _ = sqlx::query("UPDATE hardware_devices SET is_online = FALSE WHERE id = $1")
-                                .bind(id)
-                                .execute(&pool)
-                                .await;
+                            set_device_online_state(&pool, &manager, id, false).await;
                         }
                         break;
                     }

@@ -5,7 +5,7 @@ use super::repositories::StreamRepository;
 use crate::common::AppError;
 use crate::db::DbPool;
 use chrono::Utc;
-use crate::grpc::proto::distribution::v1::stream::{DeviceDiagnosticsEvent, LogLine};
+use crate::grpc::proto::distribution::v1::stream::{DeviceDiagnosticsEvent, DeviceStatusEvent, LogLine};
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc};
@@ -81,16 +81,87 @@ impl DiagnosticsHub {
     }
 }
 
+struct DeviceStatusFeed {
+    tx: broadcast::Sender<DeviceStatusEvent>,
+    watchers: usize,
+}
+
+#[derive(Clone, Default)]
+pub struct DeviceStatusHub {
+    feeds: Arc<std::sync::Mutex<HashMap<Uuid, DeviceStatusFeed>>>,
+}
+
+impl DeviceStatusHub {
+    fn new_feed() -> DeviceStatusFeed {
+        DeviceStatusFeed {
+            tx: broadcast::channel(64).0,
+            watchers: 0,
+        }
+    }
+
+    pub fn publish(&self, id: Uuid, event: DeviceStatusEvent) {
+        let map = self.feeds.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(feed) = map.get(&id) {
+            let _ = feed.tx.send(event);
+        }
+    }
+
+    fn subscribe(&self, id: Uuid) -> DeviceStatusSubscription {
+        let mut map = self.feeds.lock().unwrap_or_else(|e| e.into_inner());
+        let feed = map.entry(id).or_insert_with(Self::new_feed);
+        feed.watchers += 1;
+        DeviceStatusSubscription {
+            hub: self.clone(),
+            device_id: id,
+            receiver: feed.tx.subscribe(),
+        }
+    }
+
+    fn unsubscribe(&self, id: Uuid) {
+        let mut map = self.feeds.lock().unwrap_or_else(|e| e.into_inner());
+        let Some(feed) = map.get_mut(&id) else {
+            return;
+        };
+        feed.watchers = feed.watchers.saturating_sub(1);
+        if feed.watchers == 0 {
+            map.remove(&id);
+        }
+    }
+}
+
+pub struct DeviceStatusSubscription {
+    hub: DeviceStatusHub,
+    device_id: Uuid,
+    receiver: broadcast::Receiver<DeviceStatusEvent>,
+}
+
+impl DeviceStatusSubscription {
+    pub async fn recv(&mut self) -> Result<DeviceStatusEvent, broadcast::error::RecvError> {
+        self.receiver.recv().await
+    }
+}
+
+impl Drop for DeviceStatusSubscription {
+    fn drop(&mut self) {
+        self.hub.unsubscribe(self.device_id);
+    }
+}
+
 #[derive(Clone, Default)]
 pub struct StreamConnectionManager {
     // Map of device_id -> channel sender for live connected displays
     active_displays: Arc<std::sync::Mutex<HashMap<Uuid, CommandSender>>>,
     pub diagnostics: DiagnosticsHub,
+    pub device_status: DeviceStatusHub,
 }
 
 impl StreamConnectionManager {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn subscribe_device_status(&self, device_id: Uuid) -> DeviceStatusSubscription {
+        self.device_status.subscribe(device_id)
     }
 
     pub async fn register_connection(&self, device_id: Uuid, sender: CommandSender) {

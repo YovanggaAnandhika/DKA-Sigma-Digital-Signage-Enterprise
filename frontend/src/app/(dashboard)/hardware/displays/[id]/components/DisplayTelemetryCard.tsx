@@ -101,6 +101,7 @@ export default function DisplayTelemetryCard() {
   const {
     device,
     isLiveConnected,
+    diagnosticsFresh,
     realtimeMetrics,
     telemetry,
     screenshots,
@@ -110,9 +111,9 @@ export default function DisplayTelemetryCard() {
 
   if (!device) return null;
 
-  const cpuPercent = realtimeMetrics?.io?.cpu_percent ?? realtimeMetrics?.io?.cpuPercent;
+  const cpuPercent = diagnosticsFresh ? realtimeMetrics?.io?.cpu_percent ?? realtimeMetrics?.io?.cpuPercent : undefined;
   const cpuCores = realtimeMetrics?.io?.cpu_cores ?? realtimeMetrics?.io?.cpuCores;
-  const ramPercent = realtimeMetrics?.io?.ram_percent ?? realtimeMetrics?.io?.ramPercent ?? telemetry?.memoryPercent;
+  const ramPercent = diagnosticsFresh ? realtimeMetrics?.io?.ram_percent ?? realtimeMetrics?.io?.ramPercent : undefined;
   const ramUsedBytes = realtimeMetrics?.io?.ram_used_bytes;
   const ramTotalBytes = realtimeMetrics?.io?.ram_total_bytes;
   const storageFreeBytes = realtimeMetrics?.io?.storage_free_bytes ?? telemetry?.storageFreeBytes ?? device.storageFreeBytes;

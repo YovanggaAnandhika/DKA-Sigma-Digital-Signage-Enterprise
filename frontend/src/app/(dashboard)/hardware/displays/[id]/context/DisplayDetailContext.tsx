@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { api, Device } from '@/lib/services';
 import {
   pushDeviceCommand,
@@ -31,6 +31,29 @@ export interface AssetVerdict {
   desc: string;
 }
 
+export interface DeviceLiveDiagnostics {
+  timestampMs?: number;
+  cpuPercent?: number;
+  memoryPercent?: number;
+  heapUsedMb?: number;
+  heapMaxMb?: number;
+  screenSleeping?: boolean;
+  lastCrashTimestampMs?: number;
+  lastCrashSummary?: string;
+  zonesList?: Array<{
+    zoneId?: string;
+    kind?: string;
+    mediaId?: string;
+    mediaName?: string;
+    state?: string;
+    resolution?: string;
+    droppedFrames?: number;
+    lastError?: string;
+    bufferedDurationMs?: number;
+    playbackState?: string;
+  }>;
+}
+
 interface DisplayDetailContextType {
   deviceId: string;
   device: Device | null;
@@ -45,6 +68,9 @@ interface DisplayDetailContextType {
   timeRange: string;
   setTimeRange: (range: string) => void;
   isLiveConnected: boolean;
+  liveDiagnostics: DeviceLiveDiagnostics | null;
+  diagnosticsFresh: boolean;
+  diagnosticsError: string;
   hoveredPoint: DeviceAnalyticsRecord | null;
   setHoveredPoint: (pt: DeviceAnalyticsRecord | null) => void;
   selectedScreenshot: string | null;
@@ -94,6 +120,9 @@ export function DisplayDetailProvider({
   const [analyticsHistory, setAnalyticsHistory] = useState<DeviceAnalyticsRecord[]>([]);
   const [timeRange, setTimeRange] = useState<string>('1h');
   const [isLiveConnected, setIsLiveConnected] = useState(false);
+  const [liveDiagnostics, setLiveDiagnostics] = useState<DeviceLiveDiagnostics | null>(null);
+  const [diagnosticsFresh, setDiagnosticsFresh] = useState(false);
+  const [diagnosticsError, setDiagnosticsError] = useState('');
   const [hoveredPoint, setHoveredPoint] = useState<DeviceAnalyticsRecord | null>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,24 +130,12 @@ export function DisplayDetailProvider({
   const [sendingCmd, setSendingCmd] = useState<string | null>(null);
   const [cmdFeedback, setCmdFeedback] = useState<string | null>(null);
   const [approving, setApproving] = useState(false);
+  const isLiveConnectedRef = useRef(false);
 
   const fetchAnalytics = async (range: string) => {
     try {
       const records = await getDeviceAnalyticsHistory(deviceId, range, 60);
       setAnalyticsHistory(records);
-      if (records.length > 0) {
-        const last = records[records.length - 1];
-        const initialList =
-          last.assetsStatsList && last.assetsStatsList.length > 0
-            ? last.assetsStatsList
-            : last.assetsStats
-            ? [last.assetsStats]
-            : [];
-        setRealtimeMetrics({
-          io: last.inputOutput || {},
-          assetsList: initialList,
-        });
-      }
     } catch (_) {}
   };
 
@@ -129,43 +146,20 @@ export function DisplayDetailProvider({
     return elapsed >= 0 && elapsed <= 10000;
   };
 
-  const pollLiveData = async () => {
-    if (!deviceId) return;
-    try {
-      const [updatedDevice, updatedTelemetry, updatedScreenshots] = await Promise.all([
-        api.getDevice(deviceId).catch(() => null),
-        api.getLatestDeviceTelemetry(deviceId).catch(() => null),
-        api.listDeviceScreenshots(deviceId, 10).catch(() => null),
-        fetchAnalytics(timeRange),
-      ]);
-
-      if (updatedDevice) {
-        setDevice(updatedDevice);
-        setDeviceLoadError(false);
-        setIsLiveConnected(checkTrulyOnline(updatedDevice));
-      }
-      if (updatedTelemetry) {
-        setTelemetry(updatedTelemetry);
-      }
-      if (updatedScreenshots && updatedScreenshots.length > 0) {
-        setScreenshots(updatedScreenshots);
-      }
-    } catch (_) {}
-  };
-
   const fetchDevice = async () => {
     try {
       setLoading(true);
       setDeviceLoadError(false);
       const data = await api.getDevice(deviceId);
       setDevice(data);
-      setIsLiveConnected(checkTrulyOnline(data));
+      const online = checkTrulyOnline(data);
+      isLiveConnectedRef.current = online;
+      setIsLiveConnected(online);
 
       await Promise.allSettled([
         api.listPlaybackLogs({ deviceId, limit: 15 }).then((res) => setPlaybackLogs(res.items)),
         api.listDeviceScreenshots(deviceId, 10).then((res) => setScreenshots(res)),
         api.getLatestDeviceTelemetry(deviceId).then((res) => setTelemetry(res)),
-        fetchAnalytics(timeRange),
       ]);
     } catch (err: any) {
       console.error('Failed to load display details:', err);
@@ -186,80 +180,131 @@ export function DisplayDetailProvider({
   useEffect(() => {
     if (!deviceId) return;
 
-    let isPolling = false;
-    // Polling berkala setiap 3 detik dengan anti-overlap agar tidak menumpuk request gRPC
-    const pollTimer = setInterval(async () => {
-      if (isPolling) return;
-      isPolling = true;
-      try {
-        await pollLiveData();
-      } finally {
-        isPolling = false;
-      }
-    }, 3000);
+    let active = true;
+    const controller = new AbortController();
+    let staleTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryDelayMs = 1000;
+    setDiagnosticsFresh(false);
+    setDiagnosticsError('');
 
-    return () => clearInterval(pollTimer);
-  }, [deviceId, timeRange]);
-
-  useEffect(() => {
-    if (!deviceId) return;
-    const sse = new EventSource(`/api/stream/device?deviceId=${deviceId}`);
-
-    sse.onopen = () => setIsLiveConnected(true);
-    sse.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'ANALYTICS_UPDATE' && data.snapshot) {
-          setIsLiveConnected(true);
-          let io: HardwareInputOutput = {};
-          let assetsList: AssetStats[] = [];
-          try {
-            io =
-              typeof data.snapshot.inputOutputJson === 'string'
-                ? JSON.parse(data.snapshot.inputOutputJson)
-                : data.snapshot.inputOutputJson || {};
-          } catch (_) {}
-          try {
-            const raw =
-              typeof data.snapshot.assetsStatsJson === 'string'
-                ? JSON.parse(data.snapshot.assetsStatsJson)
-                : data.snapshot.assetsStatsJson || {};
-            if (Array.isArray(raw)) {
-              assetsList = raw;
-            } else if (raw && typeof raw === 'object') {
-              if (Array.isArray(raw.items)) assetsList = raw.items;
-              else if (Array.isArray(raw.activeAssets)) assetsList = raw.activeAssets;
-              else assetsList = [raw];
-            }
-          } catch (_) {}
-
-          setRealtimeMetrics({ io, assetsList });
-
-          const newRecord: DeviceAnalyticsRecord = {
-            id: data.snapshot.id || String(Date.now()),
-            deviceId,
-            inputOutputJson: JSON.stringify(io),
-            assetsStatsJson: JSON.stringify(assetsList),
-            recordedAt: data.snapshot.recordedAt || new Date().toISOString(),
-            inputOutput: io,
-            assetsStats: assetsList[0] || {},
-            assetsStatsList: assetsList,
-          };
-
-          setAnalyticsHistory((prev) => {
-            const next = [...prev, newRecord];
-            return next.slice(-60);
-          });
-        }
-      } catch (_) {}
-    };
-
-    sse.onerror = () => {
+    const markStale = () => {
+      setDiagnosticsFresh(false);
+      isLiveConnectedRef.current = false;
       setIsLiveConnected(false);
     };
+    const resetStaleTimer = () => {
+      if (staleTimer) clearTimeout(staleTimer);
+      staleTimer = setTimeout(markStale, 10_000);
+    };
+    const handleStatusEvent = (event: {
+      isOnline?: boolean;
+      timestampMs?: number;
+      diagnostics?: DeviceLiveDiagnostics;
+    }) => {
+      const wasOnline = isLiveConnectedRef.current;
+      const online = Boolean(event.isOnline || event.diagnostics);
+      isLiveConnectedRef.current = online;
+      setIsLiveConnected(online);
+      setDevice((current) =>
+        current
+          ? {
+              ...current,
+              isOnline: online,
+              lastHeartbeatAt: online
+                ? new Date(event.timestampMs || Date.now()).toISOString()
+                : current.lastHeartbeatAt,
+            }
+          : current,
+      );
 
+      if (!online) {
+        if (staleTimer) clearTimeout(staleTimer);
+        setDiagnosticsFresh(false);
+        return;
+      }
+
+      setDeviceLoadError(false);
+      resetStaleTimer();
+      if (!wasOnline) void fetchDevice();
+
+      if (event.diagnostics) {
+        const diagnostics = event.diagnostics;
+        setLiveDiagnostics(diagnostics);
+        setDiagnosticsFresh(true);
+        setRealtimeMetrics((current) => ({
+          io: {
+            ...current?.io,
+            cpu_percent: diagnostics.cpuPercent,
+            ram_percent: diagnostics.memoryPercent,
+          },
+          assetsList: diagnostics.zonesList?.map((zone) => ({
+            zone_name: zone.kind || zone.zoneId,
+            media_id: zone.mediaId,
+            media_name: zone.mediaName,
+            playback_status: zone.playbackState || zone.state,
+            resolution: zone.resolution,
+            dropped_frames: zone.droppedFrames,
+            diagnostic_note: zone.lastError,
+          })) || current?.assetsList || [],
+        }));
+      }
+    };
+
+    const readStatusStream = async () => {
+      while (active) {
+        try {
+          let token = '';
+          try {
+            token = JSON.parse(localStorage.getItem('dkasigma_session') || '{}').token || '';
+          } catch {
+            token = '';
+          }
+          const response = await fetch(
+            `/api/grpc/distribution/stream/WatchDeviceStatus?deviceId=${encodeURIComponent(deviceId)}`,
+            {
+              headers: token ? { authorization: `Bearer ${token}` } : {},
+              signal: controller.signal,
+            },
+          );
+          if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
+
+          setDiagnosticsError('');
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          while (active) {
+            const { done, value } = await reader.read();
+            buffer += decoder.decode(value, { stream: !done });
+            let boundary = buffer.indexOf('\n\n');
+            while (boundary >= 0) {
+              const record = buffer.slice(0, boundary);
+              buffer = buffer.slice(boundary + 2);
+              if (/^event:\s*error$/m.test(record)) throw new Error('Status player tidak tersedia');
+              const data = record.split(/\r?\n/).find((line) => line.startsWith('data:'))?.slice(5).trim();
+              if (data) {
+                retryDelayMs = 1000;
+                handleStatusEvent(JSON.parse(data));
+              }
+              boundary = buffer.indexOf('\n\n');
+            }
+            if (done) break;
+          }
+          if (active) throw new Error('Aliran status player terputus');
+        } catch (error) {
+          if (!active) break;
+          setDiagnosticsError(error instanceof Error ? error.message : 'Koneksi status gagal');
+          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+          retryDelayMs = Math.min(retryDelayMs * 2, 30_000);
+        }
+      }
+    };
+
+    resetStaleTimer();
+    void readStatusStream();
     return () => {
-      sse.close();
+      active = false;
+      controller.abort();
+      if (staleTimer) clearTimeout(staleTimer);
     };
   }, [deviceId]);
 
@@ -323,10 +368,7 @@ export function DisplayDetailProvider({
       setCmdFeedback(`Perintah "${label}" berhasil dikirim ke player.`);
       setTimeout(() => setCmdFeedback(null), 4000);
 
-      // Segera poll ulang beberapa kali untuk merefleksikan aksi secara instan
-      setTimeout(() => pollLiveData(), 1200);
-      setTimeout(() => pollLiveData(), 3000);
-      setTimeout(() => pollLiveData(), 6000);
+      setTimeout(() => void fetchDevice(), 3000);
       return true;
     } catch (err: any) {
       alert(`Gagal mengirim perintah: ${err.message}`);
@@ -434,6 +476,9 @@ export function DisplayDetailProvider({
         timeRange,
         setTimeRange,
         isLiveConnected,
+        liveDiagnostics,
+        diagnosticsFresh,
+        diagnosticsError,
         hoveredPoint,
         setHoveredPoint,
         selectedScreenshot,
@@ -455,7 +500,9 @@ export function DisplayDetailProvider({
         getAssetVerdict,
       }}
     >
-      {children}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {children}
+      </div>
     </DisplayDetailContext.Provider>
   );
 }

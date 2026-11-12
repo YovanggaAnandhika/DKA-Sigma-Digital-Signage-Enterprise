@@ -21,35 +21,31 @@ import { ServerCommandType, pushDeviceCommand } from '@/lib/services/hardware/de
 import { api } from '@/lib/services';
 import { useDisplayDetail } from '../context/DisplayDetailContext';
 
-type DeviceDiagnosticsEvent = {
-  diagnostics?: {
-    screenSleeping?: boolean;
-  };
-};
-
 export default function DisplayCommandToolbar() {
   const router = useRouter();
   const [unbinding, setUnbinding] = React.useState(false);
   const [showPairModal, setShowPairModal] = React.useState(false);
   const [pairingCodeInput, setPairingCodeInput] = React.useState('');
   const [pairingError, setPairingError] = React.useState('');
-  const [screenSleeping, setScreenSleeping] = React.useState<boolean | null>(null);
   const [pendingScreenTarget, setPendingScreenTarget] = React.useState<boolean | null>(null);
   const [screenCommandPending, setScreenCommandPending] = React.useState(false);
-  const [screenStatusUnavailable, setScreenStatusUnavailable] = React.useState(false);
-  const screenStateRef = React.useRef<boolean | null>(null);
   const pendingScreenTargetRef = React.useRef<boolean | null>(null);
   const pendingScreenTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const screenStateTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const {
-    deviceId,
     device,
+    liveDiagnostics,
+    diagnosticsFresh,
     sendingCmd,
     cmdFeedback,
     approving,
     handleSendCommand,
     handleApprovePairing,
   } = useDisplayDetail();
+  const screenSleeping = diagnosticsFresh && typeof liveDiagnostics?.screenSleeping === 'boolean'
+    ? liveDiagnostics.screenSleeping
+    : null;
+  const screenStatusUnavailable = !diagnosticsFresh || screenSleeping === null;
+  const screenStateRef = React.useRef<boolean | null>(screenSleeping);
 
   const clearPendingScreenTarget = React.useCallback(() => {
     if (pendingScreenTimerRef.current) clearTimeout(pendingScreenTimerRef.current);
@@ -60,87 +56,13 @@ export default function DisplayCommandToolbar() {
   }, []);
 
   React.useEffect(() => {
-    const controller = new AbortController();
-    let active = true;
-    screenStateRef.current = null;
-    setScreenSleeping(null);
-    setScreenStatusUnavailable(false);
-    clearPendingScreenTarget();
+    screenStateRef.current = screenSleeping;
+    if (pendingScreenTargetRef.current === screenSleeping) clearPendingScreenTarget();
+  }, [clearPendingScreenTarget, screenSleeping]);
 
-    const markStatusUnavailable = () => {
-      screenStateRef.current = null;
-      setScreenSleeping(null);
-      setScreenStatusUnavailable(true);
-    };
-    const resetScreenStateTimer = () => {
-      if (screenStateTimerRef.current) clearTimeout(screenStateTimerRef.current);
-      screenStateTimerRef.current = setTimeout(markStatusUnavailable, 10_000);
-    };
-    resetScreenStateTimer();
-
-    const readDiagnostics = async () => {
-      while (active) {
-        try {
-          let token = '';
-          try {
-            token = JSON.parse(localStorage.getItem('dkasigma_session') || '{}').token || '';
-          } catch {
-            token = '';
-          }
-          const response = await fetch(
-            `/api/grpc/distribution/stream/WatchDeviceDiagnostics?deviceId=${encodeURIComponent(deviceId)}`,
-            {
-              headers: token ? { authorization: `Bearer ${token}` } : {},
-              signal: controller.signal,
-            }
-          );
-          if (!response.ok || !response.body) throw new Error('Status player tidak tersedia');
-
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = '';
-          while (active) {
-            const { done, value } = await reader.read();
-            buffer += decoder.decode(value, { stream: !done });
-            let boundary = buffer.indexOf('\n\n');
-            while (boundary >= 0) {
-              const record = buffer.slice(0, boundary);
-              buffer = buffer.slice(boundary + 2);
-              if (/^event:\s*error$/m.test(record)) throw new Error('Status player tidak tersedia');
-              const data = record.split(/\r?\n/).find((line) => line.startsWith('data:'))?.slice(5).trim();
-              if (data) {
-                const event = JSON.parse(data) as DeviceDiagnosticsEvent;
-                const reportedState = event.diagnostics?.screenSleeping;
-                if (typeof reportedState === 'boolean') {
-                  screenStateRef.current = reportedState;
-                  setScreenSleeping(reportedState);
-                  setScreenStatusUnavailable(false);
-                  resetScreenStateTimer();
-                  if (pendingScreenTargetRef.current === reportedState) clearPendingScreenTarget();
-                }
-              }
-              boundary = buffer.indexOf('\n\n');
-            }
-            if (done) break;
-          }
-          if (active) throw new Error('Aliran status player terputus');
-        } catch {
-          if (!active) break;
-          if (screenStateTimerRef.current) clearTimeout(screenStateTimerRef.current);
-          markStatusUnavailable();
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-        }
-      }
-    };
-
-    void readDiagnostics();
-    return () => {
-      active = false;
-      controller.abort();
-      if (pendingScreenTimerRef.current) clearTimeout(pendingScreenTimerRef.current);
-      if (screenStateTimerRef.current) clearTimeout(screenStateTimerRef.current);
-    };
-  }, [clearPendingScreenTarget, deviceId]);
+  React.useEffect(() => () => {
+    if (pendingScreenTimerRef.current) clearTimeout(pendingScreenTimerRef.current);
+  }, []);
 
   if (!device) return null;
 

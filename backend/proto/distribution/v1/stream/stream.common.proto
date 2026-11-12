@@ -201,3 +201,14 @@ message DeviceDiagnosticsEvent {
     LogBatch logs = 2;
   }
 }
+
+message WatchDeviceStatusRequest {
+  string device_id = 1;
+}
+
+message DeviceStatusEvent {
+  string device_id = 1;
+  bool is_online = 2;
+  int64 timestamp_ms = 3;
+  LiveDiagnostics diagnostics = 4;
+}

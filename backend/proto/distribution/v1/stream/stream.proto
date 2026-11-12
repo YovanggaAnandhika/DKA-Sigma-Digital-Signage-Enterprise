@@ -24,4 +24,7 @@ service StreamService {
 
   // CMS watches realtime CPU/RAM/zones/log of one device (requires can_manage_distribution)
   rpc WatchDeviceDiagnostics(WatchDeviceDiagnosticsRequest) returns (stream DeviceDiagnosticsEvent);
+
+  // CMS watches device presence and Android diagnostics without polling (requires can_manage_devices)
+  rpc WatchDeviceStatus(WatchDeviceStatusRequest) returns (stream DeviceStatusEvent);
 }
