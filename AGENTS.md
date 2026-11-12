@@ -122,10 +122,12 @@ This project is an enterprise-grade digital signage management and streaming pla
   - `1935/tcp` → `dka-product-sigma-streamer:1935` (RTMP Ingest from OBS Studio / Hardware Encoders)
   - `8189/udp` & `8189/tcp` → `dka-product-sigma-streamer:8189` (WebRTC ICE Media Transport for sub-second `150–350 ms` playback)
   - `8890/udp` → `dka-product-sigma-streamer:8890` (SRT UDP Ingest)
-  - `8554/tcp` → `dka-product-sigma-streamer:8554` (RTSP read untuk Android player; WAJIB di-forward di gateway)
+  - `8554/tcp` → `dka-product-sigma-streamer:8554` (RTSP control untuk Android player; WAJIB di-forward di gateway)
+  - `8000/udp` → `dka-product-sigma-streamer:8000` (RTP untuk RTSP-over-UDP; WAJIB di-forward bila UDP dipakai)
+  - `8001/udp` → `dka-product-sigma-streamer:8001` (RTCP untuk RTSP-over-UDP; WAJIB di-forward bila UDP dipakai)
   - `50051/tcp+udp` → `dka-product-sigma-backend:50051` (Tonic gRPC Server)
   - `80/tcp` (`sigma.dkaapis.test`) → `dka-product-sigma-frontend:80` (Next.js App Router)
-  - *Catatan Port Privilege*: Port < 1024 (seperti port 80) merupakan privileged port pada OS Unix/Android yang rentan mengalami *Connection Reset* pada lingkungan virtualisasi Docker Desktop VPNKit atau firewall AP Wi-Fi kantor. Akses streaming Android player memakai RTSP murni (TCP interleaved) di port 8554, tanpa HTTP/cookie/session.
+  - *Catatan Port Privilege*: Port < 1024 (seperti port 80) merupakan privileged port pada OS Unix/Android yang rentan mengalami *Connection Reset* pada lingkungan virtualisasi Docker Desktop VPNKit atau firewall AP Wi-Fi kantor. RTSP control Android memakai TCP 8554; media memilih UDP RTP/RTCP, lalu retry TCP interleaved bila playback error. Jalur UDP hanya dapat dipakai bila port RTP/RTCP di gateway dan jaringan player tersedia.
 - **Host LAN Wi-Fi IP Invariant (`MTX_WEBRTCADDITIONALHOSTS`)**:
   - `MTX_WEBRTCADDITIONALHOSTS` di `compose.yml` WAJIB selalu menyertakan IP Wi-Fi lokal komputer pengembang (misalnya `192.168.1.52`) di samping domain lokal `sigma.dkaapis.test`, agar negosiasi ICE UDP WebRTC dari perangkat Android fisik di jaringan Wi-Fi lokal tidak mengalami kegagalan/timeout.
 - **Internal Docker Service URLs (`compose.yml`)**:
@@ -236,7 +238,9 @@ This project is an enterprise-grade digital signage management and streaming pla
   - Player WAJIB mempertahankan tampilan **"Siaran Offline"** yang elegan (menggunakan UI glassmorphism modern dengan indikator retry halus).
   - **DILARANG KERAS meloncat ke state "BUFFERING"** di setiap interval percobaan reconnecting (`reconnectRunnable`) ketika belum ada aliran paket/frame riil yang diterima. State buffering HANYA boleh aktif ketika media source telah terhubung dan sedang mengisi buffer playback frame pertama.
 
-### 8. Android Live Stream = RTSP Murni (Bukan HLS / gRPC Chunk)
-- Android player memutar siaran server-hosted via `rtsp://<ServerConfig.getHost>:8554/hd/live/<stream_id>` memakai `RtspMediaSource` (`setForceUseRtpTcp(true)`), bukan HLS dan bukan proxy segmen gRPC (RPC `GetStreamSegment` sudah dihapus). Latensi ~300 ms, tanpa kedip buffering akibat chunk.
-- `hd/live/` = H.264 baseline 0 B-frame + **AAC** (ExoPlayer RTSP tidak mendukung Opus). `webrtc/live/` tetap Opus untuk WHEP browser.
+### 8. Android Live Stream = RTSP (Bukan HLS / gRPC Chunk)
+- Android player memutar siaran server-hosted via RTSP/Media3; UDP diprioritaskan untuk RTP dan TCP interleaved menjadi fallback setelah playback error. RTSP control tetap melalui TCP 8554.
+- Profil awal low-spec memakai `hd/live/<stream_id>` (maksimal 720p, 30 fps, H.264 Baseline Level 3.1, 0 B-frame, bitrate 1.3 Mbps, AAC). `sd/live/<stream_id>` (maksimal 540p, 30 fps, bitrate 1.0 Mbps) dibuat saat diminta dan dipilih bila dropped frames/buffering berulang; player naik kembali setelah stabil.
+- Buffer RTSP low-spec 750-2000 ms, live offset 500 ms dan playback speed 0.97-1.03. Perubahan profil adaptif menukar RTSP source, sehingga dapat menimbulkan jeda singkat saat transisi.
+- `webrtc/live/` tetap memakai Opus untuk WHEP browser.
 - Callback auth MediaMTX dilayani backend internal di port `50052`, terpisah dari Next.js; bila callback gagal, publish stream ditolak dan log backend mencatat kegagalan query autentikasi.

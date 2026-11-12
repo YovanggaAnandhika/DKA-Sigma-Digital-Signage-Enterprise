@@ -17,6 +17,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultLivePlaybackSpeedControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.rtsp.RtspMediaSource
@@ -44,7 +45,9 @@ class LiveStreamZoneRenderer(
     private val mainHandler = Handler(Looper.getMainLooper())
     private var reconnectRunnable: Runnable? = null
     private var bufferingDebounceRunnable: Runnable? = null
+    private var qualityMonitorRunnable: Runnable? = null
     @Volatile private var released = false
+    @Volatile private var useRtpTcp = false
     private var isDucked = false
     private var isMuted = true
     private var playbackPaused = false
@@ -53,6 +56,15 @@ class LiveStreamZoneRenderer(
     private var activePlaybackUrl: String = ""
     private var streamId: String = ""
     private var streamName: String = ""
+    private var activePayload: LiveStreamConfigPayload? = null
+    private var isAdaptiveServerStream = false
+    private var currentQualityProfile = LiveStreamProfile.SOURCE
+    private var maximumQualityProfile = LiveStreamProfile.SOURCE
+    private var lastDroppedFrameCount = -1
+    private var lastRenderedFrameCount = -1
+    private var poorQualityWindows = 0
+    private var stableQualityWindows = 0
+    private var bufferingEvents = 0
     @Volatile private var lastError: String = ""
 
     /** Status untuk panel realtime CMS (dibaca dari thread lain; semua field @Volatile/immutable). */
@@ -74,7 +86,13 @@ class LiveStreamZoneRenderer(
         }
         return StreamCommon.ZoneDiagnostics.newBuilder()
             .setZoneId(streamId).setMediaId(streamId).setKind("LIVE").setMediaName(streamName)
-            .setState(state).setTransport(if (activePlaybackUrl.startsWith("rtsp")) "RTSP" else "HLS")
+            .setState(state).setTransport(
+                if (activePlaybackUrl.startsWith("rtsp")) {
+                    if (useRtpTcp) "RTSP/TCP" else "RTSP/UDP"
+                } else {
+                    "HLS"
+                }
+            )
             .setCodec(format?.sampleMimeType.orEmpty())
             .setResolution(if (format != null && format.width > 0) "${format.width}x${format.height}" else "")
             .setBitrateKbps(if (format != null && format.bitrate > 0) format.bitrate / 1000 else 0)
@@ -90,6 +108,8 @@ class LiveStreamZoneRenderer(
         this.isMuted = payload.isMuted
         this.streamId = payload.streamId
         this.streamName = payload.name
+        this.activePayload = payload
+        this.useRtpTcp = false
         val container = FrameLayout(context).apply {
             layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -140,9 +160,12 @@ class LiveStreamZoneRenderer(
         // - High-end devices (Poco X5, Android Smartboard):
         //   Use direct raw `live/<streamId>` (native 1080p, ultra-low latency).
         val isLowSpec = DeviceCapabilityHelper.isLowSpecDevice(context)
-        val initialPrefix = if (isLowSpec) "hd/live" else "live"
-        val playbackUrl = if (isServerHosted && payload.streamId.isNotBlank()) {
-            "rtsp://${ServerConfig.getHost(context)}:$RTSP_PORT/$initialPrefix/${payload.streamId}"
+        val initialProfile = if (isLowSpec) LiveStreamProfile.HD else LiveStreamProfile.SOURCE
+        isAdaptiveServerStream = isServerHosted && payload.streamId.isNotBlank()
+        currentQualityProfile = initialProfile
+        maximumQualityProfile = initialProfile
+        val playbackUrl = if (isAdaptiveServerStream) {
+            serverPlaybackUrl(initialProfile)
         } else {
             targetUrl
         }
@@ -176,10 +199,10 @@ class LiveStreamZoneRenderer(
             val targetBufferBytes = if (isLowSpec) 6 * 1024 * 1024 else 24 * 1024 * 1024
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(
-                    /* minBufferMs = */ if (isRtsp) (if (isLowSpec) 2_000 else 800) else 1_500,
-                    /* maxBufferMs = */ if (isRtsp) (if (isLowSpec) 6_000 else 2_500) else 4_000,
-                    /* bufferForPlaybackMs = */ if (isRtsp) (if (isLowSpec) 500 else 200) else 300,
-                    /* bufferForPlaybackAfterRebufferMs = */ if (isRtsp) (if (isLowSpec) 1_000 else 350) else 600
+                    /* minBufferMs = */ if (isRtsp) (if (isLowSpec) 750 else 800) else 1_500,
+                    /* maxBufferMs = */ if (isRtsp) (if (isLowSpec) 2_000 else 2_500) else 4_000,
+                    /* bufferForPlaybackMs = */ if (isRtsp) (if (isLowSpec) 350 else 200) else 300,
+                    /* bufferForPlaybackAfterRebufferMs = */ if (isRtsp) (if (isLowSpec) 500 else 350) else 600
                 )
                 .setTargetBufferBytes(targetBufferBytes)
                 .setBackBuffer(0, false)
@@ -196,6 +219,12 @@ class LiveStreamZoneRenderer(
 
             val player = ExoPlayer.Builder(context, renderersFactory)
                 .setLoadControl(loadControl)
+                .setLivePlaybackSpeedControl(
+                    DefaultLivePlaybackSpeedControl.Builder()
+                        .setFallbackMinPlaybackSpeed(0.97f)
+                        .setFallbackMaxPlaybackSpeed(1.03f)
+                        .build()
+                )
                 .setWakeMode(C.WAKE_MODE_NETWORK)
                 .build()
                 .apply {
@@ -206,13 +235,8 @@ class LiveStreamZoneRenderer(
                         .build()
 
                     if (isRtsp) {
-                        // TCP interleaved: only port 8554 is forwarded by the gateway (no UDP 8000/8001).
-                        setMediaSource(
-                            RtspMediaSource.Factory()
-                                .setForceUseRtpTcp(true)
-                                .setTimeoutMs(8_000L)
-                                .createMediaSource(mediaItem)
-                        )
+                        // Prefer UDP media; playback errors retry with TCP interleaved.
+                        setMediaSource(createRtspMediaSource(mediaItem))
                     } else {
                         setMediaItem(mediaItem)
                     }
@@ -225,6 +249,7 @@ class LiveStreamZoneRenderer(
                                 hasRenderedFirstFrame = true
                                 lastError = ""
                                 isStreamOffline = false
+                                startQualityMonitoring()
                                 reconnectRunnable?.let(mainHandler::removeCallbacks)
                                 bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
                                 posterView?.animate()?.alpha(0f)?.setDuration(250)?.start()
@@ -240,6 +265,7 @@ class LiveStreamZoneRenderer(
                                         if (!hasRenderedFirstFrame) {
                                             glassOverlay?.setBuffering(payload.name)
                                         } else {
+                                            if (isAdaptiveServerStream) bufferingEvents++
                                             // Anti-flicker debouncing: ignore transient segment fetches < 1200ms
                                             bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
                                             val debounceTask = Runnable {
@@ -276,8 +302,12 @@ class LiveStreamZoneRenderer(
                                 bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
                                 hasRenderedFirstFrame = false
                                 isStreamOffline = true
-                                // Auto-healing path toggle: if raw `live/` fails (e.g. 1080p profile / audio conflict), try `hd/live/`, and vice-versa
-                                if (activePlaybackUrl.contains("/live/") && !activePlaybackUrl.contains("/hd/live/")) {
+                                if (activePlaybackUrl.startsWith("rtsp://") && !useRtpTcp) {
+                                    useRtpTcp = true
+                                    Log.i(TAG, "UDP playback failed; retrying over RTSP/TCP for stream=${payload.streamId}")
+                                } else if (isAdaptiveServerStream) {
+                                    currentQualityProfile.lowerQuality()?.let(::selectQualityProfile)
+                                } else if (activePlaybackUrl.contains("/live/") && !activePlaybackUrl.contains("/hd/live/")) {
                                     activePlaybackUrl = activePlaybackUrl.replace("/live/", "/hd/live/")
                                 } else if (activePlaybackUrl.contains("/hd/live/")) {
                                     activePlaybackUrl = activePlaybackUrl.replace("/hd/live/", "/live/")
@@ -293,7 +323,8 @@ class LiveStreamZoneRenderer(
                 }
             exoPlayer = player
 
-            playerView = PlayerView(context).apply {
+            playerView = (android.view.LayoutInflater.from(context)
+                .inflate(com.dkaapis.sigma.R.layout.item_video_player, container, false) as PlayerView).apply {
                 layoutParams = FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
@@ -326,12 +357,7 @@ class LiveStreamZoneRenderer(
                         .build()
                     if (isRtsp) {
                         // Re-create RtspMediaSource with clean socket state
-                        exoPlayer?.setMediaSource(
-                            RtspMediaSource.Factory()
-                                .setForceUseRtpTcp(true)
-                                .setTimeoutMs(8_000L)
-                                .createMediaSource(mediaItem)
-                        )
+                        exoPlayer?.setMediaSource(createRtspMediaSource(mediaItem))
                     } else {
                         exoPlayer?.seekToDefaultPosition()
                     }
@@ -348,11 +374,132 @@ class LiveStreamZoneRenderer(
         mainHandler.postDelayed(runnable, delayMs)
     }
 
+    private fun serverPlaybackUrl(profile: LiveStreamProfile): String =
+        "rtsp://${ServerConfig.getHost(context)}:$RTSP_PORT/${profile.path}/$streamId"
+
+    private fun selectQualityProfile(profile: LiveStreamProfile) {
+        currentQualityProfile = profile
+        activePlaybackUrl = serverPlaybackUrl(profile)
+        resetQualityWindow()
+    }
+
+    private fun switchQualityProfile(profile: LiveStreamProfile, payload: LiveStreamConfigPayload) {
+        selectQualityProfile(profile)
+        val player = exoPlayer ?: return
+        val targetUri = Uri.parse(activePlaybackUrl)
+        val mediaItem = MediaItem.Builder()
+            .setUri(targetUri)
+            .setLiveConfiguration(
+                liveConfiguration(
+                    isRtsp = true,
+                    isLowSpec = DeviceCapabilityHelper.isLowSpecDevice(context)
+                )
+            )
+            .build()
+
+        Log.i(TAG, "Adaptive quality changed to ${profile.name} for stream=$streamId")
+        isStreamOffline = false
+        hasRenderedFirstFrame = false
+        glassOverlay?.setBuffering(payload.name)
+        reconnectRunnable?.let(mainHandler::removeCallbacks)
+        try {
+            player.setMediaSource(createRtspMediaSource(mediaItem))
+            player.prepare()
+            if (!playbackPaused) player.play()
+        } catch (error: Exception) {
+            Log.w(TAG, "Unable to switch stream quality: ${error.message}", error)
+            lastError = error.message.orEmpty()
+            isStreamOffline = true
+            scheduleReconnect(payload, delayMs = 2_000L)
+        }
+    }
+
+    @SuppressLint("UnsafeOptInUsageError")
+    private fun startQualityMonitoring() {
+        if (!isAdaptiveServerStream) return
+        samplePlaybackQuality()
+        if (qualityMonitorRunnable != null) return
+        val task = object : Runnable {
+            override fun run() {
+                if (released || !isAdaptiveServerStream) {
+                    qualityMonitorRunnable = null
+                    return
+                }
+                samplePlaybackQuality()
+                mainHandler.postDelayed(this, QUALITY_SAMPLE_INTERVAL_MS)
+            }
+        }
+        qualityMonitorRunnable = task
+        mainHandler.postDelayed(task, QUALITY_SAMPLE_INTERVAL_MS)
+    }
+
+    @SuppressLint("UnsafeOptInUsageError")
+    private fun samplePlaybackQuality() {
+        val player = exoPlayer ?: return
+        if (playbackPaused || isStreamOffline || !hasRenderedFirstFrame) {
+            resetQualityWindow()
+            return
+        }
+        val counters = player.videoDecoderCounters ?: return
+        counters.ensureUpdated()
+        val dropped = counters.droppedBufferCount
+        val rendered = counters.renderedOutputBufferCount
+        if (lastDroppedFrameCount < 0 || lastRenderedFrameCount < 0) {
+            lastDroppedFrameCount = dropped
+            lastRenderedFrameCount = rendered
+            bufferingEvents = 0
+            return
+        }
+
+        val window = LiveStreamQualityWindow(
+            droppedFrames = (dropped - lastDroppedFrameCount).coerceAtLeast(0),
+            renderedFrames = (rendered - lastRenderedFrameCount).coerceAtLeast(0),
+            bufferingEvents = bufferingEvents
+        )
+        lastDroppedFrameCount = dropped
+        lastRenderedFrameCount = rendered
+        bufferingEvents = 0
+
+        if (window.isPoor()) {
+            poorQualityWindows++
+            stableQualityWindows = 0
+            val nextProfile = currentQualityProfile.lowerQuality()
+            if (nextProfile != null && (window.isSevere() || poorQualityWindows >= POOR_WINDOWS_BEFORE_DOWNGRADE)) {
+                poorQualityWindows = 0
+                switchQualityProfile(nextProfile, activePayload ?: return)
+            }
+        } else if (window.isStable()) {
+            stableQualityWindows++
+            poorQualityWindows = 0
+            val nextProfile = currentQualityProfile.higherQuality(maximumQualityProfile)
+            if (nextProfile != null && stableQualityWindows >= STABLE_WINDOWS_BEFORE_UPGRADE) {
+                stableQualityWindows = 0
+                switchQualityProfile(nextProfile, activePayload ?: return)
+            }
+        } else {
+            resetQualityWindow()
+        }
+    }
+
+    private fun resetQualityWindow() {
+        lastDroppedFrameCount = -1
+        lastRenderedFrameCount = -1
+        poorQualityWindows = 0
+        stableQualityWindows = 0
+        bufferingEvents = 0
+    }
+
+    private fun createRtspMediaSource(mediaItem: MediaItem) =
+        RtspMediaSource.Factory()
+            .setForceUseRtpTcp(useRtpTcp)
+            .setTimeoutMs(8_000L)
+            .createMediaSource(mediaItem)
+
     private fun liveConfiguration(isRtsp: Boolean, isLowSpec: Boolean) =
         MediaItem.LiveConfiguration.Builder()
             .setTargetOffsetMs(if (isRtsp) (if (isLowSpec) 500L else 50L) else 1_500L)
-            .setMinPlaybackSpeed(1.0f)
-            .setMaxPlaybackSpeed(if (isRtsp) (if (isLowSpec) 1.05f else 1.25f) else 1.15f)
+            .setMinPlaybackSpeed(if (isRtsp && isLowSpec) 0.97f else 1.0f)
+            .setMaxPlaybackSpeed(if (isRtsp && isLowSpec) 1.03f else if (isRtsp) 1.25f else 1.15f)
             .build()
 
     private fun currentAudioVolume(): Float =
@@ -388,6 +535,8 @@ class LiveStreamZoneRenderer(
         released = true
         bufferingDebounceRunnable?.let(mainHandler::removeCallbacks)
         bufferingDebounceRunnable = null
+        qualityMonitorRunnable?.let(mainHandler::removeCallbacks)
+        qualityMonitorRunnable = null
         reconnectRunnable?.let(mainHandler::removeCallbacks)
         reconnectRunnable = null
         mainHandler.removeCallbacksAndMessages(null)
@@ -398,10 +547,14 @@ class LiveStreamZoneRenderer(
         posterView = null
         glassOverlay?.hideAll()
         glassOverlay = null
+        activePayload = null
     }
 
     companion object {
         private const val TAG = "LiveStreamZoneRenderer"
         private const val RTSP_PORT = 8554
+        private const val QUALITY_SAMPLE_INTERVAL_MS = 10_000L
+        private const val POOR_WINDOWS_BEFORE_DOWNGRADE = 2
+        private const val STABLE_WINDOWS_BEFORE_UPGRADE = 6
     }
 }
