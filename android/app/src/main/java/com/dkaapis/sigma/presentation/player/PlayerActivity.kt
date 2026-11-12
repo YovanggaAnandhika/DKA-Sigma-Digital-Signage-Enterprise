@@ -3,15 +3,18 @@ package com.dkaapis.sigma.presentation.player
 import android.content.ComponentCallbacks2
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.util.Log
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -28,9 +31,11 @@ import com.dkaapis.sigma.data.local.MediaDiskCache
 import com.dkaapis.sigma.data.local.PlayerSettingsStorage
 import com.dkaapis.sigma.data.local.ServerConfig
 import com.dkaapis.sigma.data.local.TokenStorage
+import com.dkaapis.sigma.data.repository.AppUpdateRepositoryImpl
 import com.dkaapis.sigma.data.repository.DeviceRepositoryImpl
 import com.dkaapis.sigma.data.repository.ManifestRepositoryImpl
 import com.dkaapis.sigma.data.repository.MediaStorageRepositoryImpl
+import com.dkaapis.sigma.domain.model.AppUpdate
 import com.dkaapis.sigma.domain.model.Manifest
 import com.dkaapis.sigma.domain.usecase.DownloadAndVerifyMediaUseCase
 import com.dkaapis.sigma.domain.usecase.RegisterAndPairUseCase
@@ -57,11 +62,14 @@ import com.dkaapis.sigma.presentation.player.stream.model.QueueCallEventModel
 import com.dkaapis.sigma.presentation.player.telemetry.PlayerTelemetryManager
 import com.dkaapis.sigma.presentation.player.telemetry.model.WatchdogCallbackPayload
 import com.dkaapis.sigma.presentation.renderers.QueueZoneRenderer
+import com.dkaapis.sigma.service.AppUpdateInstaller
 import com.dkaapis.sigma.service.PlayerForegroundService
 import com.dkaapis.sigma.service.WatchdogService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -77,6 +85,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private lateinit var playerSettingsStorage: PlayerSettingsStorage
     private lateinit var deviceRepo: DeviceRepositoryImpl
     private lateinit var storageRepo: MediaStorageRepositoryImpl
+    private lateinit var appUpdateRepository: AppUpdateRepositoryImpl
+    private lateinit var appUpdateInstaller: AppUpdateInstaller
 
     private lateinit var audioManager: PlayerAudioManager
     private lateinit var telemetryManager: PlayerTelemetryManager
@@ -106,9 +116,14 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private var lastDownloadProgressReportTime: Long = 0L
     private var hasActivePlayback: Boolean = false
     private var isQueueCallInProgress: Boolean = false
+    private var isAppUpdateInProgress: Boolean = false
+    private var activeAppUpdateId: String? = null
+    private var lastOfferedAppUpdateId: String? = null
+    private var pendingInstallPermissionUpdate: AppUpdate? = null
 
     private companion object {
         const val TAG = "PlayerActivity"
+        const val APP_UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000L
         const val SKY = 0x38BDF8
         const val GREEN = 0x10B981
         const val RED = 0xEF4444
@@ -127,6 +142,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
         viewModel.initializePlayer()
         startRealtimeStreams()
+        startAppUpdateChecks()
     }
 
     private fun setupWindowEnvironment() {
@@ -176,6 +192,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         }
 
         val channelFactory = GrpcChannelFactory(this)
+        appUpdateRepository = AppUpdateRepositoryImpl(this, channelFactory)
+        appUpdateInstaller = AppUpdateInstaller(this)
         deviceRepo = DeviceRepositoryImpl(this, tokenStorage, channelFactory)
         storageRepo = MediaStorageRepositoryImpl(MediaDiskCache(this), channelFactory)
 
@@ -255,6 +273,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private fun observeState() {
         lifecycleScope.launch {
             viewModel.uiState.collectLatest { state ->
+                if (isAppUpdateInProgress && state !is PlayerUiState.Playing) return@collectLatest
                 when (state) {
                     is PlayerUiState.NotPaired -> {
                         WatchdogService.setPlaybackActive(this@PlayerActivity, false)
@@ -293,7 +312,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                         hasActivePlayback = true
                         WatchdogService.setPlaybackActive(this@PlayerActivity, true)
 
-                        statusOverlay.hide()
+                        if (!isAppUpdateInProgress) statusOverlay.hide()
                         renderManifest(state.manifest)
 
                         val devId = deviceRepo.getSavedDeviceId()
@@ -430,6 +449,138 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             reconcileQueueState()
         }
     }
+
+    private fun startAppUpdateChecks() {
+        lifecycleScope.launch {
+            while (isActive) {
+                if (deviceRepo.isPaired()) {
+                    try {
+                        val deviceId = deviceRepo.getSavedDeviceId().orEmpty()
+                        val update = appUpdateRepository.checkForUpdate(deviceId)
+                        if (update != null && update.id != lastOfferedAppUpdateId) {
+                            offerAppUpdate(update)
+                        }
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        Log.w(TAG, "Gagal memeriksa pembaruan aplikasi: ${error.message}")
+                    }
+                }
+                delay(APP_UPDATE_CHECK_INTERVAL_MS)
+            }
+        }
+    }
+
+    private fun offerAppUpdate(update: AppUpdate) {
+        if (update.id == lastOfferedAppUpdateId) return
+        lastOfferedAppUpdateId = update.id
+
+        if (update.isForceUpdate) {
+            requestAppUpdate(update)
+            return
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Pembaruan tersedia: v${update.versionName}")
+            .setMessage(update.releaseNotes.ifBlank { "Versi baru aplikasi player tersedia." })
+            .setPositiveButton("Perbarui sekarang") { _, _ -> requestAppUpdate(update) }
+            .setNegativeButton("Nanti", null)
+            .show()
+    }
+
+    private fun requestAppUpdate(update: AppUpdate) {
+        if (!canInstallAppUpdate()) {
+            pendingInstallPermissionUpdate = update
+            val dialog = AlertDialog.Builder(this)
+                .setTitle("Izinkan pemasangan aplikasi")
+                .setMessage("Android perlu mengizinkan HNDSigma memasang pembaruan dari server.")
+                .setPositiveButton("Buka pengaturan") { _, _ ->
+                    startActivity(
+                        Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                            .setData(Uri.parse("package:$packageName"))
+                    )
+                }
+            if (!update.isForceUpdate) {
+                dialog.setNegativeButton("Nanti") { _, _ ->
+                    pendingInstallPermissionUpdate = null
+                }
+            }
+            dialog.setCancelable(!update.isForceUpdate).show()
+            return
+        }
+
+        downloadAndInstallAppUpdate(update)
+    }
+
+    private fun canInstallAppUpdate(): Boolean {
+        return appUpdateInstaller.isDeviceOwner() ||
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+            packageManager.canRequestPackageInstalls()
+    }
+
+    private fun downloadAndInstallAppUpdate(update: AppUpdate) {
+        if (activeAppUpdateId == update.id) return
+        activeAppUpdateId = update.id
+        isAppUpdateInProgress = true
+        statusOverlay.show(
+            "● PEMBARUAN APLIKASI",
+            SKY,
+            "Menyiapkan pembaruan v${update.versionName}",
+            "Memverifikasi rilis dan mengunduh APK..."
+        )
+
+        lifecycleScope.launch {
+            try {
+                val apk = appUpdateRepository.downloadAndVerify(update) { downloaded, total ->
+                    val progress = ((downloaded * 100) / total).toInt().coerceIn(0, 100)
+                    runOnUiThread {
+                        statusOverlay.show(
+                            "● PEMBARUAN APLIKASI",
+                            SKY,
+                            "Mengunduh pembaruan v${update.versionName} • $progress%",
+                            "${formatUpdateBytes(downloaded)} / ${formatUpdateBytes(total)}",
+                            progress
+                        )
+                    }
+                }
+
+                statusOverlay.show(
+                    "✓ APK TERVERIFIKASI",
+                    GREEN,
+                    "Memasang pembaruan v${update.versionName}",
+                    "Hash dan versi aplikasi valid.",
+                    100
+                )
+                appUpdateInstaller.install(apk)
+                Log.i(TAG, "PackageInstaller menerima pembaruan v${update.versionName}")
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.e(TAG, "Pembaruan aplikasi v${update.versionName} gagal", error)
+                if (update.isForceUpdate && !isFinishing) {
+                    AlertDialog.Builder(this@PlayerActivity)
+                        .setTitle("Pembaruan wajib gagal")
+                        .setMessage(error.message ?: "Periksa koneksi server lalu coba lagi.")
+                        .setPositiveButton("Coba lagi") { _, _ -> requestAppUpdate(update) }
+                        .setCancelable(false)
+                        .show()
+                } else {
+                    Toast.makeText(
+                        this@PlayerActivity,
+                        "Pembaruan gagal: ${error.message ?: "kesalahan tidak diketahui"}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            } finally {
+                isAppUpdateInProgress = false
+                activeAppUpdateId = null
+                statusOverlay.hide()
+            }
+        }
+    }
+
+    private fun formatUpdateBytes(bytes: Long): String =
+        String.format(Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0))
 
     // --- OnDeviceEventListener Callbacks ---
 
@@ -569,6 +720,14 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     override fun onResume() {
         super.onResume()
+        pendingInstallPermissionUpdate?.let { update ->
+            pendingInstallPermissionUpdate = null
+            if (canInstallAppUpdate()) {
+                requestAppUpdate(update)
+            } else {
+                lastOfferedAppUpdateId = null
+            }
+        }
         if (!sleep.isSleeping) {
             sleep.acquireScreenLock()
             if (hasActivePlayback) {

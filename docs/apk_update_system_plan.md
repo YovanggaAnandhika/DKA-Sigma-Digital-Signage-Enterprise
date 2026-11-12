@@ -1,6 +1,8 @@
 # Rencana Implementasi: Sistem Pembaruan APK OTA (Over-the-Air) & Kiosk Silent Update
 **HNDSigma Digital Signage Enterprise**
 
+> **Status Android:** OTA player sudah terhubung ke RPC `CheckDeviceAppUpdate`, mengunduh APK dari path relatif `/api/assets/<filename>`, memeriksa ukuran, SHA-256, package name, dan version code, lalu memasang melalui `PackageInstaller`. Pemeriksaan berjalan saat player aktif dan setiap 6 jam. Sebelum mengunggah rilis baru, naikkan `versionCode`/`versionName` Android dan tandatangani APK dengan sertifikat yang sama dengan aplikasi terpasang.
+
 ---
 
 ## 1. Ringkasan Eksekutif & Diagram Arsitektur
@@ -63,8 +65,8 @@ graph TD
 ### Fase 2: Backend Rust & Storage Engine
 
 1. **Penyimpanan Berkas APK**:
-   - Direktori penyimpanan: `/uploads/apks/`.
-   - Streaming upload dengan ekstraksi ukuran file dan kalkulasi hash SHA-256 secara langsung (*zero-copy hashing*).
+   - Gunakan upload gRPC media yang sudah ada; file disimpan di `UPLOAD_DIR` (production: `/home/app/uploads`) dan dirilis dengan URL relatif `/api/assets/<filename>`.
+   - Backend menghitung ukuran file dan SHA-256 saat finalisasi upload.
 2. **Implementasi Service gRPC**:
    - `backend/src/grpc/system/update/service.rs`: logika query rilis aktif terbaru, perbandingan `current_version_code` perangkat vs `latest_version_code`, dan penentuan flag `is_force_update`.
 3. **HTTP Binary Serving**:
@@ -106,11 +108,11 @@ graph TD
    ```kotlin
    val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
    if (dpm.isDeviceOwnerApp(context.packageName)) {
-       // Kiosk Production: Silent Install 100% otomatis tanpa sentuhan
-       executeSilentPackageInstaller(apkFile)
+       // Kiosk produksi: PackageInstaller tanpa konfirmasi pengguna
+       executePackageInstallerSession(apkFile)
    } else {
-       // Development / Non-Device Owner: Prompt standar OS Android
-       executeStandardPromptInstaller(apkFile)
+       // Non-Device Owner: konfirmasi pemasangan sistem Android
+       executePackageInstallerSession(apkFile)
    }
    ```
 
@@ -126,10 +128,11 @@ graph TD
 
 Untuk mengaktifkan kemampuan instalasi senyap (*silent update*) pada perangkat produksi signage:
 
-* **Metode 1: Perintah ADB (1x saat setup)**:
+* **Metode 1: Perintah ADB (perangkat baru/factory reset)**:
   ```bash
-  adb shell dpm set-device-owner com.dkaapis.sigma/.receiver.SignageDeviceAdminReceiver
+  adb shell dpm set-device-owner com.dkaapis.sigma/com.dkaapis.sigma.receiver.SignageDeviceAdminReceiver
   ```
+  Pemasangan senyap memerlukan aplikasi diprovision sebagai Device Owner dan APK pembaruan ditandatangani dengan sertifikat yang sama. Perangkat biasa akan meminta pengguna menyetujui pemasangan; Android 8+ juga meminta izin "Install unknown apps" untuk HNDSigma.
 * **Metode 2: QR Provisioning (Android Enterprise)**:
   - Pada perangkat yang baru di-factory reset, ketuk layar 6 kali di layar "Welcome" untuk memindai payload JSON konfigurasi kiosk.
 
@@ -139,9 +142,11 @@ Untuk mengaktifkan kemampuan instalasi senyap (*silent update*) pada perangkat p
 
 | Komponen | Pengujian | Kriteria Keberhasilan |
 |---|---|---|
-| **CMS Studio** | Upload APK (30MB+) | Berkas tersimpan di `/uploads/apks/`, hash SHA-256 terhitung, entri tampil di tabel. |
+| **CMS Studio** | Upload APK (30MB+) | Berkas tersimpan di `UPLOAD_DIR`, hash SHA-256 terhitung, entri tampil di tabel. |
 | **Backend gRPC** | Query `CheckDeviceAppUpdate` | Mengembalikan `update_available=true` jika `version_code` perangkat lebih rendah. |
 | **Android - Kiosk Mode** | Silent Background Update | APK terunduh, terinstall tanpa popup Android sama sekali, aplikasi restart otomatis ke versi baru. |
 | **Android - Standard Mode** | Fallback non-Device Owner | Muncul prompt sistem konfirmasi pembaruan bawaan Android. |
 | **Android - Force Mode** | Rilis wajib | Layar memblokir interaksi, download otomatis, lalu langsung dieksekusi. |
 | **Integritas & Security** | Berkas APK rusak/tampered | Verifikasi SHA-256 mendeteksi ketidaksesuaian, berkas dihapus, instalasi digagalkan. |
+
+Pembuatan dan pemasangan APK di perangkat fisik tetap perlu diuji manual; status Device Owner dan izin pemasangan bergantung pada proses provisioning perangkat.
