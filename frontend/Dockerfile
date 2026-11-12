@@ -5,8 +5,9 @@ RUN apt-get update
 RUN apt-get install -y --no-install-recommends nodejs
 RUN rm -rf /var/lib/apt/lists/*
 COPY frontend/package.json frontend/bun.lock ./
-RUN bun install --frozen-lockfile --ignore-scripts
-RUN cd node_modules/grpc-tools && ../.bin/node-pre-gyp install
+COPY frontend/scripts/generate_grpc.ts ./scripts/generate_grpc.ts
+COPY backend/proto/ /home/backend/proto/
+RUN bun install --frozen-lockfile
 
 FROM oven/bun:latest AS builder
 
