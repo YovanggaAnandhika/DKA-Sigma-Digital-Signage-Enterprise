@@ -126,6 +126,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private companion object {
         const val TAG = "PlayerActivity"
         const val APP_UPDATE_CHECK_INTERVAL_MS = 60 * 1000L
+        const val OPTIONAL_APP_UPDATE_DIALOG_TIMEOUT_MS = 5_000L
         const val SKY = 0x38BDF8
         const val GREEN = 0x10B981
         const val RED = 0xEF4444
@@ -490,12 +491,18 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             return
         }
 
-        AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(this)
             .setTitle("Pembaruan tersedia: v${update.versionName}")
             .setMessage(update.releaseNotes.ifBlank { "Versi baru aplikasi player tersedia." })
             .setPositiveButton("Perbarui sekarang") { _, _ -> requestAppUpdate(update) }
             .setNegativeButton("Nanti", null)
-            .show()
+            .create()
+        dialog.setOnShowListener {
+            dialog.window?.decorView?.postDelayed({
+                if (dialog.isShowing) dialog.dismiss()
+            }, OPTIONAL_APP_UPDATE_DIALOG_TIMEOUT_MS)
+        }
+        dialog.show()
     }
 
     private fun requestAppUpdate(update: AppUpdate) {
