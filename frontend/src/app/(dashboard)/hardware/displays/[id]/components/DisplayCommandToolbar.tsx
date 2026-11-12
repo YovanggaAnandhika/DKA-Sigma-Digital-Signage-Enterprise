@@ -58,6 +58,7 @@ export default function DisplayCommandToolbar() {
   const screenStateRef = React.useRef<boolean | null>(null);
   const pendingScreenTargetRef = React.useRef<boolean | null>(null);
   const pendingScreenTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const screenStateTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const {
     deviceId,
     device,
@@ -83,6 +84,17 @@ export default function DisplayCommandToolbar() {
     setScreenSleeping(null);
     setScreenStatusUnavailable(false);
     clearPendingScreenTarget();
+
+    const markStatusUnavailable = () => {
+      screenStateRef.current = null;
+      setScreenSleeping(null);
+      setScreenStatusUnavailable(true);
+    };
+    const resetScreenStateTimer = () => {
+      if (screenStateTimerRef.current) clearTimeout(screenStateTimerRef.current);
+      screenStateTimerRef.current = setTimeout(markStatusUnavailable, 10_000);
+    };
+    resetScreenStateTimer();
 
     const readDiagnostics = async () => {
       while (active) {
@@ -121,6 +133,7 @@ export default function DisplayCommandToolbar() {
                   screenStateRef.current = reportedState;
                   setScreenSleeping(reportedState);
                   setScreenStatusUnavailable(false);
+                  resetScreenStateTimer();
                   if (pendingScreenTargetRef.current === reportedState) clearPendingScreenTarget();
                 }
               }
@@ -131,9 +144,8 @@ export default function DisplayCommandToolbar() {
           if (active) throw new Error('Aliran status player terputus');
         } catch {
           if (!active) break;
-          screenStateRef.current = null;
-          setScreenSleeping(null);
-          setScreenStatusUnavailable(true);
+          if (screenStateTimerRef.current) clearTimeout(screenStateTimerRef.current);
+          markStatusUnavailable();
           await new Promise((resolve) => setTimeout(resolve, 3000));
         }
       }
@@ -144,6 +156,7 @@ export default function DisplayCommandToolbar() {
       active = false;
       controller.abort();
       if (pendingScreenTimerRef.current) clearTimeout(pendingScreenTimerRef.current);
+      if (screenStateTimerRef.current) clearTimeout(screenStateTimerRef.current);
     };
   }, [clearPendingScreenTarget, deviceId]);
 
