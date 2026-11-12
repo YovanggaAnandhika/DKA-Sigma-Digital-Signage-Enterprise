@@ -241,7 +241,7 @@ services:
       MTX_RTMPADDRESS: ":1935"
       MTX_RTSP: "yes"
       MTX_RTSPADDRESS: ":8554"
-      MTX_RTSPTRANSPORTS: '["udp","tcp"]'
+      MTX_RTSPTRANSPORTS: "udp,tcp"
       MTX_RTPADDRESS: ":8000"
       MTX_RTCPADDRESS: ":8001"
       MTX_SRT: "yes"
