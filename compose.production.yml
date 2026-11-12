@@ -121,15 +121,15 @@ services:
       HOST: 0.0.0.0
       DB_HOST: dka-product-sigma-postgres
       DB_PORT: 5432
-      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME in the production environment}
-      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in the production environment}
-      DB_DATABASE: ${DB_DATABASE:?Set DB_DATABASE in the production environment}
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the production environment}
-      RUST_LOG: ${RUST_LOG:-info}
+      DB_USERNAME: sigma_app
+      DB_PASSWORD: "108ba1fcae2ef08f783d973e2bc57deab08876eb7e6fa50877feccf327bda15d"
+      DB_DATABASE: dka_sigma
+      JWT_SECRET: "8aaf05e973d6161d07578534541fc222fd1ed877540d9655f6cf918f7aa87620"
+      RUST_LOG: info
       MQTT_HOST: dka-product-sigma-mqtt
       MQTT_PORT: 1883
-      MQTT_USERNAME: ${MQTT_USERNAME:-}
-      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      MQTT_USERNAME: ""
+      MQTT_PASSWORD: ""
       UPLOAD_DIR: /home/app/uploads
       STREAMER_API_HOST: dka-product-sigma-streamer
       STREAMER_API_PORT: 9997
@@ -157,10 +157,10 @@ services:
     pull_policy: always
     environment:
       TZ: Asia/Makassar
-      DKA_ROOT_PASSWORD: ${POSTGRES_ROOT_PASSWORD:?Set POSTGRES_ROOT_PASSWORD for internal testing}
-      DKA_DB_NAME: ${DB_DATABASE:?Set DB_DATABASE for internal testing}
-      DKA_DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME for internal testing}
-      DKA_DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD for internal testing}
+      DKA_ROOT_PASSWORD: "1bef0da0e5c68a0dbbc06e269c115368820b50727be5860a3221c8a42ef06be1"
+      DKA_DB_NAME: dka_sigma
+      DKA_DB_USERNAME: sigma_app
+      DKA_DB_PASSWORD: "108ba1fcae2ef08f783d973e2bc57deab08876eb7e6fa50877feccf327bda15d"
     volumes:
       - sigma_postgres:/var/lib/postgresql/data
     logging:
@@ -214,7 +214,7 @@ services:
       MTX_WEBRTCALLOWORIGINS: '["*"]'
       MTX_WEBRTCLOCALUDPADDRESS: ":8189"
       MTX_WEBRTCLOCALTCPADDRESS: ":8189"
-      MTX_WEBRTCADDITIONALHOSTS: ${MTX_WEBRTCADDITIONALHOSTS:?Set MTX_WEBRTCADDITIONALHOSTS in the production environment}
+      MTX_WEBRTCADDITIONALHOSTS: "10.20.30.97,sigma.dkaapis.test"
       MTX_HLS: "yes"
       MTX_HLSADDRESS: ":8888"
       MTX_HLSVARIANT: mpegts
@@ -222,7 +222,7 @@ services:
       MTX_HLSSEGMENTDURATION: 1s
       MTX_HLSALLOWORIGINS: '["*"]'
       MTX_HLSALWAYSREMUX: "yes"
-      MTX_HLSCDNSECRET: ${MTX_HLSCDNSECRET:?Set MTX_HLSCDNSECRET in the production environment}
+      MTX_HLSCDNSECRET: "bc13c6b35bd693b4b4fc02a5641eedcc4926412dcf9ab5a95453b71caab5a671"
       MTX_PATHDEFAULTS_RUNONREADY: "sh -c 'case \"$$MTX_PATH\" in live/*) ffmpeg -hide_banner -loglevel error -fflags +nobuffer+discardcorrupt+flush_packets -flags low_delay -rtsp_transport tcp -i rtsp://127.0.0.1:8554/$$MTX_PATH -map 0:v:0 -map 0:a:0? -c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -bf 0 -vf \"scale=min(1280\\,iw):-2,format=yuv420p\" -b:v 1800k -maxrate 2200k -bufsize 1100k -g 30 -keyint_min 30 -sc_threshold 0 -c:a libopus -b:a 96k -ar 48000 -ac 2 -f rtsp -rtsp_transport tcp rtsp://127.0.0.1:8554/webrtc/$$MTX_PATH & ffmpeg -hide_banner -loglevel error -fflags +nobuffer+discardcorrupt+flush_packets -flags low_delay -rtsp_transport tcp -i rtsp://127.0.0.1:8554/$$MTX_PATH -map 0:v:0 -map 0:a:0? -c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -bf 0 -vf \"scale=min(1280\\,iw):-2,format=yuv420p\" -b:v 2200k -maxrate 2600k -bufsize 1300k -g 30 -keyint_min 30 -sc_threshold 0 -c:a aac -b:a 128k -ar 48000 -ac 2 -f rtsp -rtsp_transport tcp rtsp://127.0.0.1:8554/hd/$$MTX_PATH & wait ;; *) sleep 86400 ;; esac'"
       MTX_PATHDEFAULTS_RUNONREADYRESTART: "yes"
     logging:
