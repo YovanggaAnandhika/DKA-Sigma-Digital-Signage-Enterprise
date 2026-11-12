@@ -295,7 +295,7 @@ impl MediaServiceTrait for MediaServiceImpl {
         }
         drop(file);
 
-        let sha256_hash = format!("{:x}", hasher.finalize());
+        let sha256_hash = hex::encode(hasher.finalize());
 
         let clean_name = req.original_filename.replace(|c: char| !c.is_alphanumeric() && c != '.' && c != '_' && c != '-', "_");
         let final_filename = format!("{}_{}", chrono::Utc::now().timestamp_millis(), clean_name);
@@ -496,4 +496,3 @@ impl MediaServiceTrait for MediaServiceImpl {
         Ok(Response::new(ReceiverStream::new(rx)))
     }
 }
-

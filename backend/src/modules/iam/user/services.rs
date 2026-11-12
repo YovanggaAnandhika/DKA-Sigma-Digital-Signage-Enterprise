@@ -5,7 +5,7 @@ use crate::config::Config;
 use crate::db::DbPool;
 use crate::modules::iam::permission::repositories::PermissionRepository;
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    password_hash::{phc::PasswordHash, PasswordHasher, PasswordVerifier},
     Argon2,
 };
 use chrono::{Duration, Utc};
@@ -23,10 +23,9 @@ impl UserService {
             )));
         }
 
-        let salt = SaltString::generate(&mut OsRng);
         let argon2 = Argon2::default();
         let password_hash = argon2
-            .hash_password(dto.password.as_bytes(), &salt)
+            .hash_password(dto.password.as_bytes())
             .map_err(|e| AppError::Internal(format!("Hashing failed: {}", e)))?
             .to_string();
 

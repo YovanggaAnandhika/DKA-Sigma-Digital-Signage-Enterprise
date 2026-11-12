@@ -523,7 +523,7 @@ impl ManifestService {
         let version_hash = if let Some(sh) = &scheduled_version_hash {
             sh.clone()
         } else {
-            format!("{:x}", hasher.finalize())
+            hex::encode(hasher.finalize())
         };
 
         if let Some(client_h) = client_hash {

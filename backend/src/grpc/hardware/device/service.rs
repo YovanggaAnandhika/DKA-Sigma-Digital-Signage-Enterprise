@@ -503,13 +503,13 @@ impl DeviceServiceTrait for DeviceServiceImpl {
 
         let limit = if req.limit <= 0 || req.limit > 500 { 100 } else { req.limit as i64 };
 
-        let interval_str = match req.time_range.as_str() {
-            "15m" => "15 minutes",
-            "1h" => "1 hour",
-            "6h" => "6 hours",
-            "24h" => "24 hours",
-            "7d" => "7 days",
-            _ => "1 hour",
+        let interval_minutes = match req.time_range.as_str() {
+            "15m" => 15,
+            "1h" => 60,
+            "6h" => 360,
+            "24h" => 1440,
+            "7d" => 10080,
+            _ => 60,
         };
 
         #[derive(sqlx::FromRow)]
@@ -521,20 +521,18 @@ impl DeviceServiceTrait for DeviceServiceImpl {
             recorded_at: chrono::DateTime<chrono::Utc>,
         }
 
-        let query = format!(
+        let rows = sqlx::query_as::<_, AnalyticsRow>(
             r#"
             SELECT id, device_id, input_output, assets_stats, recorded_at
             FROM hardware_device_analytics
             WHERE device_id = $1
-              AND recorded_at >= NOW() - INTERVAL '{}'
+              AND recorded_at >= NOW() - ($2 * INTERVAL '1 minute')
             ORDER BY recorded_at ASC
-            LIMIT $2
+            LIMIT $3
             "#,
-            interval_str
-        );
-
-        let rows = sqlx::query_as::<_, AnalyticsRow>(&query)
+        )
             .bind(device_id)
+            .bind(interval_minutes)
             .bind(limit)
             .fetch_all(&self.pool)
             .await

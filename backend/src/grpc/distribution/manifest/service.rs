@@ -550,7 +550,7 @@ impl ManifestServiceTrait for ManifestServiceImpl {
                 use sha2::{Digest, Sha256};
                 let mut hasher = Sha256::new();
                 hasher.update(req.device_token.as_bytes());
-                let computed_hash = format!("{:x}", hasher.finalize());
+                let computed_hash = hex::encode(hasher.finalize());
                 if &computed_hash != expected_hash {
                     return Err(Status::unauthenticated("Invalid device token"));
                 }

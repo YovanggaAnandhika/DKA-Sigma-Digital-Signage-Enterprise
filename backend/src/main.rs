@@ -212,8 +212,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let grpc_server = router.serve_with_shutdown(grpc_addr, wait_for_shutdown(shutdown_rx.clone()));
-    let auth_server = axum::Server::try_bind(&auth_addr)?
-        .serve(streamer_auth::router(auth_pool).into_make_service())
+    let auth_listener = tokio::net::TcpListener::bind(auth_addr).await?;
+    let auth_server = axum::serve(auth_listener, streamer_auth::router(auth_pool))
         .with_graceful_shutdown(wait_for_shutdown(shutdown_rx));
     info!("Streamer auth callback listening on {}", auth_addr);
 

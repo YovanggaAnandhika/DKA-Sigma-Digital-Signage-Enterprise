@@ -5,7 +5,7 @@ use super::model::{
 use super::repositories::DeviceRepository;
 use crate::common::AppError;
 use crate::db::DbPool;
-use rand::Rng;
+use rand::RngExt;
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
@@ -55,7 +55,7 @@ impl DeviceService {
         let raw_token = Uuid::new_v4().to_string();
         let mut hasher = Sha256::new();
         hasher.update(raw_token.as_bytes());
-        let token_hash = format!("{:x}", hasher.finalize());
+        let token_hash = hex::encode(hasher.finalize());
 
         let paired_device = DeviceRepository::pair_device(
             pool,
@@ -106,7 +106,7 @@ impl DeviceService {
 
         let mut hasher = Sha256::new();
         hasher.update(dto.device_token.as_bytes());
-        let computed_hash = format!("{:x}", hasher.finalize());
+        let computed_hash = hex::encode(hasher.finalize());
 
         if let Some(expected_hash) = &device.device_token_hash {
             if expected_hash != &computed_hash {
@@ -147,12 +147,12 @@ impl DeviceService {
 
     fn generate_pairing_code() -> String {
         let chars = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let part1: String = (0..3)
-            .map(|_| chars[rng.gen_range(0..chars.len())] as char)
+            .map(|_| chars[rng.random_range(0..chars.len())] as char)
             .collect();
         let part2: String = (0..3)
-            .map(|_| chars[rng.gen_range(0..chars.len())] as char)
+            .map(|_| chars[rng.random_range(0..chars.len())] as char)
             .collect();
         format!("{}-{}", part1, part2)
     }

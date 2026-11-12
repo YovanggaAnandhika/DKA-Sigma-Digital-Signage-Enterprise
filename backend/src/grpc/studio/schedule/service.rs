@@ -386,7 +386,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
                     use sha2::{Digest, Sha256};
                     let mut hasher = Sha256::new();
                     hasher.update(serde_json::to_string(&full_dto).unwrap_or_default().as_bytes());
-                    let vh = format!("{:x}", hasher.finalize());
+                    let vh = hex::encode(hasher.finalize());
                     if let Ok(snapshot_val) = serde_json::to_value(&full_dto) {
                         let _ = sqlx::query(
                             "INSERT INTO studio_layout_history (layout_id, version_hash, snapshot_json, description, corporation_id, created_by_user_id) VALUES ($1, $2, $3, $4, $5, $6)"

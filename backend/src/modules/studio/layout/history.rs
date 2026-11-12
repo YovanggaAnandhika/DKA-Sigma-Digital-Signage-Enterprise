@@ -271,7 +271,7 @@ impl LayoutHistoryRepository {
 
         let mut hasher = Sha256::new();
         hasher.update(serde_json::to_string(&snapshot).unwrap_or_default().as_bytes());
-        let new_hash = format!("{:x}", hasher.finalize());
+        let new_hash = hex::encode(hasher.finalize());
 
         sqlx::query(
             r#"

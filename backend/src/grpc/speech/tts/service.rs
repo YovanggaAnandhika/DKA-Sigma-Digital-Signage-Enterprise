@@ -54,7 +54,7 @@ impl TtsServiceTrait for TtsServiceImpl {
         })?;
         let mut hasher = Sha256::new();
         hasher.update(request.device_token.as_bytes());
-        let token_hash = format!("{:x}", hasher.finalize());
+        let token_hash = hex::encode(hasher.finalize());
         if expected_hash.as_deref() != Some(token_hash.as_str()) {
             return Err(Status::unauthenticated("Token device tidak valid"));
         }

@@ -1,46 +1,54 @@
 [package]
-name = "signage-backend"
+name = "app"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 # Async Runtime
-axum = "0.6.20"
-tokio = { version = "1.38", features = ["full"] }
-tokio-stream = "0.1"
-async-stream = "0.3"
-rumqttc = "0.24"
+axum = "0.8.9"
+tokio = { version = "1.54.1", features = ["full"] }
+tokio-stream = "0.1.19"
+async-stream = "0.3.6"
+rumqttc = "0.25.1"
 
 # gRPC & Protobuf
-tonic = { version = "0.11", features = ["transport"] }
-prost = "0.12"
-prost-types = "0.12"
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+tonic = { version = "0.14.9", features = ["transport"] }
+tonic-prost = "0.14.9"
+prost = "0.14.5"
+prost-types = "0.14.5"
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "json", "query"] }
 
 # Database & Migrations
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "migrate"] }
+sqlx = { version = "0.9.0", features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "json", "migrate"] }
 
 # Serialization & Formatting
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-thiserror = "1.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+thiserror = "2.0.21"
 
 # Security & Utilities
-jsonwebtoken = "9.3"
-argon2 = "0.5"
-uuid = { version = "1.8", features = ["serde", "v4"] }
-chrono = { version = "0.4", features = ["serde"] }
-sha2 = "0.10"
-rand = "0.8"
-dotenvy = "0.15"
+jsonwebtoken = "11.1.0"
+argon2 = "0.6.0"
+uuid = { version = "1.29.2", features = ["serde", "v4"] }
+chrono = { version = "0.4.45", features = ["serde"] }
+sha2 = "0.11.1"
+hex = "0.4.3"
+rand = "0.10.3"
+dotenvy = "0.15.7"
 
 # Logging & Telemetry
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-async-trait = "0.1"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+async-trait = "0.1.92"
 chrono-tz = "0.10.4"
-tower = { version = "0.4.13", features = ["util"] }
-tower-http = { version = "0.4.4", features = ["trace"] }
+tower = { version = "0.5.3", features = ["util"] }
+tower-http = { version = "0.7.1", features = ["trace"] }
 
 [build-dependencies]
-tonic-build = "0.11"
+tonic-prost-build = "0.14.9"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = "symbols"
