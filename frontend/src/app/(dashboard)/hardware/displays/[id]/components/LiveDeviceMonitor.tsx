@@ -264,8 +264,16 @@ export default function LiveDeviceMonitor({ deviceId }: { deviceId: string }) {
             <Terminal size={15} /> Logcat aplikasi
           </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <select aria-label="Filter level log" value={level} onChange={(event) => setLevel(event.target.value)} style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: '4px 6px' }}>
-              {['ALL', 'V', 'D', 'I', 'W', 'E', 'F'].map((option) => <option key={option}>{option}</option>)}
+            <select aria-label="Pilih tingkat log" value={level} onChange={(event) => setLevel(event.target.value)} style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: '4px 6px' }}>
+              {[
+                ['ALL', 'Semua tingkat'],
+                ['V', 'Rinci'],
+                ['D', 'Debug'],
+                ['I', 'Informasi'],
+                ['W', 'Peringatan'],
+                ['E', 'Kesalahan'],
+                ['F', 'Fatal'],
+              ].map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
             <button type="button" onClick={() => setPaused(!paused)} aria-label={paused ? 'Lanjutkan log' : 'Jeda log'} title={paused ? 'Lanjutkan' : 'Jeda'} style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 6, padding: 5 }}>
               {paused ? <Play size={14} /> : <Pause size={14} />}
