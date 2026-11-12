@@ -1,5 +1,6 @@
 import CounterFormPage from '../../../../components/counters/CounterFormPage';
 
-export default function Page({ params }: { params: { counterId: string } }) {
-  return <CounterFormPage counterId={params.counterId} />;
+export default async function Page({ params }: { params: Promise<{ counterId: string }> }) {
+  const { counterId } = await params;
+  return <CounterFormPage counterId={counterId} />;
 }

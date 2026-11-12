@@ -1,10 +1,11 @@
 import React from 'react';
 import QueueEditorShell from '../../components/QueueEditorShell';
 
-export default function QueueCreateTabPage({
+export default async function QueueCreateTabPage({
   params,
 }: {
-  params: { tabs: string };
+  params: Promise<{ tabs: string }>;
 }) {
-  return <QueueEditorShell activeTab={params.tabs || 'layout'} />;
+  const { tabs } = await params;
+  return <QueueEditorShell activeTab={tabs || 'layout'} />;
 }

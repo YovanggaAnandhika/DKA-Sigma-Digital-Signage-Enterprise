@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
-export default function GroupsEditRedirectPage({ params }: { params: { id: string } }) {
-  redirect(`/hardware/displays/groups/${params.id}/edit`);
+export default async function GroupsEditRedirectPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  redirect(`/hardware/displays/groups/${id}/edit`);
 }

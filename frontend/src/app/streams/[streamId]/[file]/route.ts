@@ -10,9 +10,9 @@ const getStreamerBase = (port: string) => `http://${streamerHost}:${port}`;
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { streamId: string; file: string } }
+  { params }: { params: Promise<{ streamId: string; file: string }> }
 ) {
-  const { streamId, file } = params;
+  const { streamId, file } = await params;
 
   if (!streamId || !file) {
     return new NextResponse('Stream ID and filename required', { status: 400 });
@@ -70,9 +70,9 @@ export async function OPTIONS() {
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: { streamId: string; file: string } }
+  { params }: { params: Promise<{ streamId: string; file: string }> }
 ) {
-  const { streamId, file } = params;
+  const { streamId, file } = await params;
   if (!streamId || (file !== 'whep' && file !== 'whip')) {
     return new NextResponse('Invalid endpoint', { status: 400 });
   }
@@ -227,9 +227,9 @@ export async function POST(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { streamId: string; file: string } }
+  { params }: { params: Promise<{ streamId: string; file: string }> }
 ) {
-  const { streamId, file } = params;
+  const { streamId, file } = await params;
   if (!streamId || (file !== 'whip' && file !== 'whep')) {
     return new NextResponse('Invalid endpoint', { status: 400 });
   }
@@ -252,9 +252,9 @@ export async function DELETE(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { streamId: string; file: string } }
+  { params }: { params: Promise<{ streamId: string; file: string }> }
 ) {
-  const { streamId, file } = params;
+  const { streamId, file } = await params;
   if (!streamId || (file !== 'whip' && file !== 'whep')) {
     return new NextResponse('Invalid endpoint', { status: 400 });
   }

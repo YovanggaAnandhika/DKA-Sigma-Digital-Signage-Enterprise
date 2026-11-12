@@ -20,9 +20,10 @@ import { getGrpcHost, getGrpcCredentials } from '@/lib/core/grpcClient';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { filename: string } }
+  { params }: { params: Promise<{ filename: string }> }
 ) {
-  const filename = decodeURIComponent(params.filename);
+  const { filename: paramFilename } = await params;
+  const filename = decodeURIComponent(paramFilename);
   const rangeHeader = req.headers.get('range');
 
   const client = new MediaServiceClient(getGrpcHost(), getGrpcCredentials());

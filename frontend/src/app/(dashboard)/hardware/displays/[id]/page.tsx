@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
-export default function DisplayDetailPage({ params }: { params: { id: string } }) {
-  redirect(`/hardware/displays/${params.id}/overview`);
+export default async function DisplayDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  redirect(`/hardware/displays/${id}/overview`);
 }
