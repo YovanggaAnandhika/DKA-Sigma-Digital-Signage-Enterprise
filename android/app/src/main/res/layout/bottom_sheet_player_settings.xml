@@ -90,6 +90,57 @@
                     android:textSize="12sp" />
             </LinearLayout>
 
+            <!-- Optional App Update Card -->
+            <LinearLayout
+                android:id="@+id/cardAppUpdate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="vertical"
+                android:background="@drawable/bg_input_field"
+                android:padding="14dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_app_update_label"
+                    android:textColor="@color/sheet_text_muted"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvSettingsAppUpdateVersion"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/sheet_text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvSettingsAppUpdateNotes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/sheet_text_secondary"
+                    android:textSize="11sp" />
+
+                <Button
+                    android:id="@+id/btnSettingsAppUpdate"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_btn_secondary"
+                    app:backgroundTint="@null"
+                    android:text="@string/settings_app_update_button"
+                    android:textAllCaps="false"
+                    android:textColor="@color/sheet_btn_secondary_text"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:focusable="true" />
+            </LinearLayout>
+
             <!-- Toggle Progress Upload Card -->
             <LinearLayout
                 android:layout_width="match_parent"

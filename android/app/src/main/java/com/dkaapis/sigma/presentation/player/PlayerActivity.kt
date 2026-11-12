@@ -121,6 +121,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     private var appUpdateCheckJob: Job? = null
     private var activeAppUpdateId: String? = null
     private var lastOfferedAppUpdateId: String? = null
+    private var availableAppUpdate: AppUpdate? = null
+    private var optionalAppUpdateDialog: AlertDialog? = null
     private var pendingInstallPermissionUpdate: AppUpdate? = null
 
     private companion object {
@@ -240,7 +242,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                     val s = viewModel.uiState.value
                     if (s !is PlayerUiState.DownloadingAssets && s !is PlayerUiState.SyncingManifest) {
                         viewModel.syncManifest()
-                        requestAppUpdateCheck()
+                        requestAppUpdateCheck(forcePrompt = true)
                     }
                 },
                 onPendingCommand = { cmd -> dispatchRemoteCommand(cmd) },
@@ -463,16 +465,26 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         }
     }
 
-    private fun requestAppUpdateCheck() {
-        if (appUpdateCheckJob?.isActive == true) return
+    private fun requestAppUpdateCheck(forcePrompt: Boolean = false) {
+        if (appUpdateCheckJob?.isActive == true) {
+            if (!forcePrompt) return
+            appUpdateCheckJob?.cancel()
+        }
 
         appUpdateCheckJob = lifecycleScope.launch {
             try {
                 if (!deviceRepo.isPaired()) return@launch
                 val deviceId = deviceRepo.getSavedDeviceId().orEmpty()
                 val update = appUpdateRepository.checkForUpdate(deviceId)
-                if (update != null && update.id != lastOfferedAppUpdateId) {
-                    offerAppUpdate(update)
+                availableAppUpdate = update
+                settingsDialog.updateAvailableAppUpdate(update)
+                if (
+                    update != null &&
+                    (update.isForceUpdate ||
+                        forcePrompt ||
+                        update.id != playerSettingsStorage.getDismissedAppUpdateId())
+                ) {
+                    offerAppUpdate(update, forcePrompt)
                 }
             } catch (error: CancellationException) {
                 throw error
@@ -482,14 +494,18 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         }
     }
 
-    private fun offerAppUpdate(update: AppUpdate) {
-        if (update.id == lastOfferedAppUpdateId) return
-        lastOfferedAppUpdateId = update.id
-
+    private fun offerAppUpdate(update: AppUpdate, forcePrompt: Boolean = false) {
         if (update.isForceUpdate) {
+            if (update.id == lastOfferedAppUpdateId) return
+            lastOfferedAppUpdateId = update.id
             requestAppUpdate(update)
             return
         }
+
+        if (isAppUpdateInProgress || optionalAppUpdateDialog?.isShowing == true) return
+        if (!forcePrompt && update.id == playerSettingsStorage.getDismissedAppUpdateId()) return
+        if (!forcePrompt && update.id == lastOfferedAppUpdateId) return
+        lastOfferedAppUpdateId = update.id
 
         val dialog = AlertDialog.Builder(this)
             .setTitle("Pembaruan tersedia: v${update.versionName}")
@@ -497,6 +513,11 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
             .setPositiveButton("Perbarui sekarang") { _, _ -> requestAppUpdate(update) }
             .setNegativeButton("Nanti", null)
             .create()
+        optionalAppUpdateDialog = dialog
+        dialog.setOnDismissListener {
+            playerSettingsStorage.setDismissedAppUpdateId(update.id)
+            if (optionalAppUpdateDialog === dialog) optionalAppUpdateDialog = null
+        }
         dialog.setOnShowListener {
             dialog.window?.decorView?.postDelayed({
                 if (dialog.isShowing) dialog.dismiss()
@@ -609,6 +630,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                 check(deviceRepo.isPaired()) { "Perangkat belum terhubung ke server." }
                 val deviceId = deviceRepo.getSavedDeviceId().orEmpty()
                 val latestUpdate = appUpdateRepository.checkForUpdate(deviceId)
+                availableAppUpdate = latestUpdate
+                settingsDialog.updateAvailableAppUpdate(latestUpdate)
                 statusOverlay.hide()
 
                 if (latestUpdate == null) {
@@ -622,7 +645,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                 if (latestUpdate.isForceUpdate) {
                     requestAppUpdate(latestUpdate)
                 } else {
-                    offerAppUpdate(latestUpdate)
+                    offerAppUpdate(latestUpdate, forcePrompt = true)
                 }
             } catch (error: CancellationException) {
                 statusOverlay.hide()
@@ -694,7 +717,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
     override fun onReloadManifest() {
         runOnUiThread {
             viewModel.syncManifest(force = true)
-            requestAppUpdateCheck()
+            requestAppUpdateCheck(forcePrompt = true)
         }
     }
 
@@ -715,7 +738,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                 onSyncRequested = {
                     statusOverlay.postDelayed(1000) {
                         viewModel.syncManifest(force = true)
-                        requestAppUpdateCheck()
+                        requestAppUpdateCheck(forcePrompt = true)
                     }
                 }
             )
@@ -894,6 +917,8 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                 deviceId = deviceRepo.getSavedDeviceId().orEmpty(),
                 serverHost = ServerConfig.getHost(this),
                 serverGrpcPort = ServerConfig.getGrpcPort(this),
+                availableAppUpdate = availableAppUpdate,
+                onAppUpdateRequested = ::requestAppUpdate,
                 isProgressUploadEnabled = playerSettingsStorage.isProgressUploadEnabled(),
                 onProgressUploadToggled = { enabled ->
                     playerSettingsStorage.setProgressUploadEnabled(enabled)
@@ -913,6 +938,7 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                 }
             )
         )
+        requestAppUpdateCheck()
     }
 
     private fun unbindDeviceAndExit() {

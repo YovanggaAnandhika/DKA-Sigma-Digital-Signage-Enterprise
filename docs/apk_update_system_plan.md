@@ -92,7 +92,7 @@ graph TD
 ### Fase 4: Android Player Updater Engine & Kiosk Execution
 
 1. **UpdateChecker UseCase**:
-   - Dijalankan saat aplikasi pertama kali boot dan terjadwal berkala (setiap 3–6 jam via watchdog ping).
+   - Dijalankan saat aplikasi dibuka dan diperiksa ulang setiap 1 menit, serta setelah sync manifest atau clear cache.
    - Membandingkan `BuildConfig.VERSION_CODE` dengan `latest_version_code` dari CMS.
 
 2. **Tampilan & Alur di Layar Player**:
@@ -101,8 +101,9 @@ graph TD
      - Progress bar pengunduhan real-time (persentase, byte terunduh, total byte).
      - Otomatis melanjutkan ke tahap instalasi setelah lolos verifikasi hash SHA-256.
    - **Mode Opsi Pembaruan (`is_force_update == false`)**:
-     - Menampilkan indikator / banner halus di layar atau tombol di dialog Pengaturan: *"Pembaruan vX.Y.Z Tersedia"*.
-     - Dialog pilihan: **[Perbarui Sekarang]** dan **[Nanti]**.
+     - Menampilkan dialog pilihan **[Perbarui Sekarang]** dan **[Nanti]** selama 5 detik.
+     - Dismissal disimpan per ID rilis agar dialog tidak muncul lagi setelah aplikasi dibuka ulang; pemeriksaan saat sync boleh menawarkannya kembali.
+     - Rilis tersedia juga ditampilkan di Pengaturan Layar, tepat di bawah identitas perangkat, sampai rilis tidak lagi tersedia atau aplikasi sudah diperbarui.
 
 3. **Mekanisme Eksekusi Hybrid (Smart Auto-Detection)**:
    ```kotlin

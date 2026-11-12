@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import androidx.core.content.edit
 import com.dkaapis.sigma.service.BootReceiver
 import com.dkaapis.sigma.service.KioskAccessibilityService
 
@@ -20,6 +21,13 @@ class PlayerSettingsStorage(private val context: Context) {
 
     fun setProgressUploadEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_PROGRESS_UPLOAD_ENABLED, enabled).apply()
+    }
+
+    fun getDismissedAppUpdateId(): String? =
+        prefs.getString(KEY_DISMISSED_APP_UPDATE_ID, null)
+
+    fun setDismissedAppUpdateId(updateId: String) {
+        prefs.edit { putString(KEY_DISMISSED_APP_UPDATE_ID, updateId) }
     }
 
     fun isKioskModeEnabled(): Boolean =
@@ -63,6 +71,7 @@ class PlayerSettingsStorage(private val context: Context) {
     companion object {
         private const val PREFS_NAME = "dka_player_settings"
         private const val KEY_PROGRESS_UPLOAD_ENABLED = "progress_upload_enabled"
+        private const val KEY_DISMISSED_APP_UPDATE_ID = "dismissed_app_update_id"
         private const val KEY_KIOSK_MODE_ENABLED = "kiosk_mode_enabled"
     }
 }

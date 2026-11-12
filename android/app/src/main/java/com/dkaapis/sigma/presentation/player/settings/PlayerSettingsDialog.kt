@@ -14,6 +14,7 @@ import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import com.dkaapis.sigma.R
+import com.dkaapis.sigma.domain.model.AppUpdate
 import com.dkaapis.sigma.presentation.common.createExpandedSheet
 import com.dkaapis.sigma.presentation.player.settings.model.PlayerSettingsPayload
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -27,6 +28,8 @@ class PlayerSettingsDialog(
     private val context: Context
 ) {
     private var activeDialog: BottomSheetDialog? = null
+    private var availableAppUpdate: AppUpdate? = null
+    private var onAppUpdateRequested: (AppUpdate) -> Unit = {}
 
     fun isShowing(): Boolean = activeDialog?.isShowing == true
 
@@ -38,6 +41,8 @@ class PlayerSettingsDialog(
     fun show(payload: PlayerSettingsPayload) {
         if (isShowing()) return
 
+        availableAppUpdate = payload.availableAppUpdate
+        onAppUpdateRequested = payload.onAppUpdateRequested
         val dialog = createExpandedSheet(
             context, R.layout.bottom_sheet_player_settings,
             landscapeMaxDp = 580, portraitMaxDp = 480, heightFraction = 0.92f to 0.85f
@@ -49,6 +54,8 @@ class PlayerSettingsDialog(
 
         dialog.findViewById<TextView>(R.id.tvSettingsServerUrl)?.text =
             "Server: ${payload.serverHost}:${payload.serverGrpcPort}"
+
+        bindAppUpdate(dialog)
 
         dialog.findViewById<SwitchCompat>(R.id.switchProgressUpload)?.apply {
             isChecked = payload.isProgressUploadEnabled
@@ -99,6 +106,35 @@ class PlayerSettingsDialog(
         }
 
         dialog.show()
+    }
+
+    fun updateAvailableAppUpdate(update: AppUpdate?) {
+        availableAppUpdate = update
+        activeDialog?.let(::bindAppUpdate)
+    }
+
+    private fun bindAppUpdate(dialog: BottomSheetDialog) {
+        val card = dialog.findViewById<View>(R.id.cardAppUpdate) ?: return
+        val update = availableAppUpdate
+        if (update == null || update.isForceUpdate) {
+            card.visibility = View.GONE
+            return
+        }
+
+        card.visibility = View.VISIBLE
+        dialog.findViewById<TextView>(R.id.tvSettingsAppUpdateVersion)?.text =
+            context.getString(
+                R.string.settings_app_update_version,
+                update.versionName,
+                update.versionCode
+            )
+        dialog.findViewById<TextView>(R.id.tvSettingsAppUpdateNotes)?.text =
+            update.releaseNotes.ifBlank { context.getString(R.string.settings_app_update_default_notes) }
+        dialog.findViewById<Button>(R.id.btnSettingsAppUpdate)?.setOnClickListener {
+            val selectedUpdate = availableAppUpdate ?: return@setOnClickListener
+            dialog.dismiss()
+            onAppUpdateRequested(selectedUpdate)
+        }
     }
 
     private fun showUnbindConfirmation(onConfirmed: () -> Unit) {
