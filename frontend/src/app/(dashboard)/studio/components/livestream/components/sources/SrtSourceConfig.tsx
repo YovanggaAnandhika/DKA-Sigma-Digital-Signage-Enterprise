@@ -29,9 +29,9 @@ export default function SrtSourceConfig({
   const [showUrl, setShowUrl] = useState(false);
 
   const streamId = requiresAuth
-    ? `#!::m=publish,r=live/${streamKey},u=${encodeURIComponent(username)},s=${encodeURIComponent(password)}`
+    ? `publish:live/${streamKey}:${username.trim()}:${password.trim()}`
     : `publish:live/${streamKey}`;
-  const srtUrl = `${serverUrl}?streamid=${encodeURIComponent(streamId)}&pkt_size=1316`;
+  const srtUrl = `${serverUrl}?streamid=${streamId}&pkt_size=1316`;
 
   const handleCopy = async () => {
     if (await copyToClipboard(srtUrl)) {
@@ -96,7 +96,7 @@ export default function SrtSourceConfig({
       </div>
 
       <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-        OBS harus mengirim melalui SRT caller. Pastikan UDP/8890 diteruskan ke <code>dka-product-sigma-streamer:8890</code> di Nginx Proxy Manager.
+        OBS harus mengirim melalui SRT caller. Pastikan UDP/8890 diteruskan ke <code>dka-product-sigma-streamer:8890</code> di Nginx Proxy Manager. Jika autentikasi aktif, kredensial hanya boleh berisi huruf, angka, titik, -, _, atau ~.
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '4px' }}>

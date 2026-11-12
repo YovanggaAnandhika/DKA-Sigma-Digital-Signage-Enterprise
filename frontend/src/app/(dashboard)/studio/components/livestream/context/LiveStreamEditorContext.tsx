@@ -319,6 +319,10 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
         setErrorMessage('Username dan password SRT wajib diisi saat autentikasi aktif.');
         return;
       }
+      if (requiresAuth && (!/^[A-Za-z0-9._~-]+$/.test(ingestUsername) || !/^[A-Za-z0-9._~-]+$/.test(ingestPassword))) {
+        setErrorMessage('Kredensial SRT hanya boleh berisi huruf, angka, titik, -, _, atau ~.');
+        return;
+      }
     }
 
     setSaving(true);
