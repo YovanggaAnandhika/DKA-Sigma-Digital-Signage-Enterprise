@@ -39,10 +39,18 @@ impl Config {
                 .parse()
                 .unwrap_or(24),
             upload_dir: env::var("UPLOAD_DIR").unwrap_or_else(|_| "./uploads".to_string()),
-            streamer_api_url: env::var("STREAMER_API_URL")
-                .unwrap_or_else(|_| "http://dka-product-sigma-streamer:9997".to_string()),
-            streamer_rtmp_url: env::var("STREAMER_RTMP_URL")
-                .unwrap_or_else(|_| "rtsp://dka-product-sigma-streamer:8554".to_string()),
+            streamer_api_url: format!(
+                "http://{}:{}",
+                env::var("STREAMER_API_HOST")
+                    .unwrap_or_else(|_| "dka-product-sigma-streamer".to_string()),
+                env::var("STREAMER_API_PORT").unwrap_or_else(|_| "9997".to_string())
+            ),
+            streamer_rtmp_url: format!(
+                "rtsp://{}:{}",
+                env::var("STREAMER_RTMP_HOST")
+                    .unwrap_or_else(|_| "dka-product-sigma-streamer".to_string()),
+                env::var("STREAMER_RTMP_PORT").unwrap_or_else(|_| "8554".to_string())
+            ),
         }
     }
 }

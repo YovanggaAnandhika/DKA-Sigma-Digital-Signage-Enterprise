@@ -61,7 +61,7 @@ impl LiveStreamRelayManager {
         mgr
     }
 
-    /// Background monitor that polls internal Docker MediaMTX API (`STREAMER_API_URL/v3/paths/list`)
+    /// Background monitor that polls the internal Docker MediaMTX API at `/v3/paths/list`.
     fn spawn_streamer_monitor(&self) {
         let api_url = format!("{}/v3/paths/list", self.streamer_api_url.trim_end_matches('/'));
         let client = self.http_client.clone();

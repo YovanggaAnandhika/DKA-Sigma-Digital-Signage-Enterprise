@@ -10,9 +10,12 @@ services:
       TZ: Asia/Makassar
       NODE_ENV: development
       PORT: 80
-      HND_GRPC_SERVER_HOST: "dka-product-sigma-backend:50051"
+      HND_GRPC_SERVER_HOST: dka-product-sigma-backend
+      HND_GRPC_SERVER_PORT: 50051
       HND_GRPC_SERVER_SECURE: "false"
-      HND_STREAMER_INTERNAL_URL: "http://dka-product-sigma-streamer:8889"
+      HND_STREAMER_INTERNAL_HOST: dka-product-sigma-streamer
+      HND_STREAMER_INTERNAL_PORT: 8889
+      HND_STREAMER_HLS_PORT: 8888
     volumes:
       - type: bind
         source: ./frontend
@@ -53,10 +56,10 @@ services:
       MQTT_PORT: ${MQTT_PORT:-1883}
       MQTT_USERNAME: ${MQTT_USERNAME:-}
       MQTT_PASSWORD: ${MQTT_PASSWORD:-}
-      STREAMER_API_URL: "http://dka-product-sigma-streamer:9997"
-      STREAMER_RTMP_URL: "rtsp://dka-product-sigma-streamer:8554"
-      STREAMER_WEBRTC_URL: "http://dka-product-sigma-streamer:8889"
-      STREAMER_HLS_URL: "http://dka-product-sigma-streamer:8888"
+      STREAMER_API_HOST: dka-product-sigma-streamer
+      STREAMER_API_PORT: 9997
+      STREAMER_RTMP_HOST: dka-product-sigma-streamer
+      STREAMER_RTMP_PORT: 8554
     volumes:
       - type: bind
         source: ./backend

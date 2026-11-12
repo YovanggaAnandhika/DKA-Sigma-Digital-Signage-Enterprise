@@ -1,0 +1,121 @@
+name: dka-product-sigma-production
+
+services:
+  dka-product-sigma-frontend:
+    image: yovanggaanandhika/dka-sigma:ui
+    restart: always
+    pull_policy: always
+    environment:
+      TZ: Asia/Makassar
+      NODE_ENV: production
+      PORT: 80
+      HND_GRPC_SERVER_HOST: dka-product-sigma-backend
+      HND_GRPC_SERVER_PORT: 50051
+      HND_GRPC_SERVER_SECURE: "false"
+      HND_STREAMER_INTERNAL_HOST: dka-product-sigma-streamer
+      HND_STREAMER_INTERNAL_PORT: 8889
+      HND_STREAMER_HLS_PORT: 8888
+    healthcheck:
+      test:
+        - CMD
+        - bun
+        - -e
+        - "fetch('http://127.0.0.1:80/up').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      - dka-product-sigma-backend
+    logging:
+      driver: json-file
+      options:
+        max-size: 2m
+        max-file: "3"
+    networks:
+      - dka-internal
+
+  dka-product-sigma-backend:
+    image: yovanggaanandhika/dka-sigma:core
+    restart: always
+    pull_policy: always
+    environment:
+      TZ: Asia/Makassar
+      HOST: 0.0.0.0
+      DB_HOST: ${DB_HOST:?Set DB_HOST in the production environment}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME in the production environment}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in the production environment}
+      DB_DATABASE: ${DB_DATABASE:?Set DB_DATABASE in the production environment}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the production environment}
+      RUST_LOG: ${RUST_LOG:-info}
+      MQTT_HOST: ${MQTT_HOST:?Set MQTT_HOST in the production environment}
+      MQTT_PORT: ${MQTT_PORT:-1883}
+      MQTT_USERNAME: ${MQTT_USERNAME:-}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      UPLOAD_DIR: /home/app/uploads
+      STREAMER_API_HOST: dka-product-sigma-streamer
+      STREAMER_API_PORT: 9997
+      STREAMER_RTMP_HOST: dka-product-sigma-streamer
+      STREAMER_RTMP_PORT: 8554
+    volumes:
+      - sigma_uploads:/home/app/uploads
+    depends_on:
+      - dka-product-sigma-streamer
+    logging:
+      driver: json-file
+      options:
+        max-size: 2m
+        max-file: "3"
+    networks:
+      - dka-internal
+
+  dka-product-sigma-streamer:
+    image: bluenviron/mediamtx:latest-ffmpeg
+    restart: always
+    pull_policy: always
+    environment:
+      TZ: Asia/Makassar
+      MTX_API: "yes"
+      MTX_APIADDRESS: ":9997"
+      MTX_AUTHMETHOD: http
+      MTX_AUTHHTTPADDRESS: http://dka-product-sigma-backend:50052/api/streamer/auth
+      MTX_AUTHHTTPEXCLUDE: '[{"action":"read"}]'
+      MTX_RTMP: "yes"
+      MTX_RTMPADDRESS: ":1935"
+      MTX_RTSP: "yes"
+      MTX_RTSPADDRESS: ":8554"
+      MTX_SRT: "yes"
+      MTX_SRTADDRESS: ":8890"
+      MTX_WEBRTC: "yes"
+      MTX_WEBRTCADDRESS: ":8889"
+      MTX_WEBRTCALLOWORIGINS: '["*"]'
+      MTX_WEBRTCLOCALUDPADDRESS: ":8189"
+      MTX_WEBRTCLOCALTCPADDRESS: ":8189"
+      MTX_WEBRTCADDITIONALHOSTS: ${MTX_WEBRTCADDITIONALHOSTS:?Set MTX_WEBRTCADDITIONALHOSTS in the production environment}
+      MTX_HLS: "yes"
+      MTX_HLSADDRESS: ":8888"
+      MTX_HLSVARIANT: mpegts
+      MTX_HLSSEGMENTCOUNT: "5"
+      MTX_HLSSEGMENTDURATION: 1s
+      MTX_HLSALLOWORIGINS: '["*"]'
+      MTX_HLSALWAYSREMUX: "yes"
+      MTX_HLSCDNSECRET: ${MTX_HLSCDNSECRET:?Set MTX_HLSCDNSECRET in the production environment}
+      MTX_PATHDEFAULTS_RUNONREADY: "sh -c 'case \"$$MTX_PATH\" in live/*) ffmpeg -hide_banner -loglevel error -fflags +nobuffer+discardcorrupt+flush_packets -flags low_delay -rtsp_transport tcp -i rtsp://127.0.0.1:8554/$$MTX_PATH -map 0:v:0 -map 0:a:0? -c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -bf 0 -vf \"scale=min(1280\\,iw):-2,format=yuv420p\" -b:v 1800k -maxrate 2200k -bufsize 1100k -g 30 -keyint_min 30 -sc_threshold 0 -c:a libopus -b:a 96k -ar 48000 -ac 2 -f rtsp -rtsp_transport tcp rtsp://127.0.0.1:8554/webrtc/$$MTX_PATH & ffmpeg -hide_banner -loglevel error -fflags +nobuffer+discardcorrupt+flush_packets -flags low_delay -rtsp_transport tcp -i rtsp://127.0.0.1:8554/$$MTX_PATH -map 0:v:0 -map 0:a:0? -c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -bf 0 -vf \"scale=min(1280\\,iw):-2,format=yuv420p\" -b:v 2200k -maxrate 2600k -bufsize 1300k -g 30 -keyint_min 30 -sc_threshold 0 -c:a aac -b:a 128k -ar 48000 -ac 2 -f rtsp -rtsp_transport tcp rtsp://127.0.0.1:8554/hd/$$MTX_PATH & wait ;; *) sleep 86400 ;; esac'"
+      MTX_PATHDEFAULTS_RUNONREADYRESTART: "yes"
+    logging:
+      driver: json-file
+      options:
+        max-size: 2m
+        max-file: "3"
+    networks:
+      - dka-internal
+
+volumes:
+  sigma_uploads:
+    name: dka-product-sigma-production_uploads
+
+networks:
+  dka-internal:
+    name: dka-internal
+    external: true

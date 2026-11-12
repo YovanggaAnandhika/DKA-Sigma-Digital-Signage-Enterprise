@@ -1,7 +1,9 @@
 import * as grpc from '@grpc/grpc-js';
 
 export function getGrpcHost(): string {
-  return process.env.HND_GRPC_SERVER_HOST || 'localhost:50051';
+  const host = process.env.HND_GRPC_SERVER_HOST || 'localhost';
+  const port = process.env.HND_GRPC_SERVER_PORT || '50051';
+  return `${host}:${port}`;
 }
 
 let cachedCredentials: grpc.ChannelCredentials | null = null;
@@ -76,5 +78,4 @@ export function getCorporationIdFromRequest(req: Request): string | undefined {
 export function getGrpcMetadataFromRequest(req: Request): grpc.Metadata {
   return getGrpcMetadata(getTokenFromRequest(req), getCorporationIdFromRequest(req));
 }
-
 

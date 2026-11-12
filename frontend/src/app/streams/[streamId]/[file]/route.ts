@@ -3,6 +3,11 @@ import { LiveStreamServiceClient } from '@/lib/api/components/v1/live_stream/liv
 import { GetLiveStreamRequest } from '@/lib/api/components/v1/live_stream/live_stream.common_pb';
 import { getGrpcClient } from '@/lib/core/grpcClient';
 
+const streamerHost = process.env.HND_STREAMER_INTERNAL_HOST || 'dka-product-sigma-streamer';
+const streamerPort = process.env.HND_STREAMER_INTERNAL_PORT || '8889';
+const streamerHlsPort = process.env.HND_STREAMER_HLS_PORT || '8888';
+const getStreamerBase = (port: string) => `http://${streamerHost}:${port}`;
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { streamId: string; file: string } }
@@ -18,9 +23,7 @@ export async function GET(
   const fileWithQuery = search ? `${file}${search}` : file;
 
   // Browser HLS fallback: fetch directly from the internal streamer (no gRPC hop).
-  const streamerHlsBase = (
-    process.env.HND_STREAMER_INTERNAL_URL || 'http://dka-product-sigma-streamer:8889'
-  ).replace(':8889', ':8888');
+  const streamerHlsBase = getStreamerBase(streamerHlsPort);
   const isPlaylist = file.endsWith('.m3u8');
   const targetFile = file === 'live.m3u8' ? 'index.m3u8' : fileWithQuery;
 
@@ -76,9 +79,7 @@ export async function POST(
 
   try {
     const sdpOffer = await req.text();
-    const streamerBase =
-      process.env.HND_STREAMER_INTERNAL_URL || 'http://dka-product-sigma-streamer:8889';
-    const base = streamerBase.replace(/\/$/, '');
+    const base = getStreamerBase(streamerPort);
 
     // WHIP Ingestion Proxy (OBS Studio / WebRTC Publishers via standard Port 80 HTTP)
     if (file === 'whip') {
@@ -232,9 +233,7 @@ export async function DELETE(
   if (!streamId || (file !== 'whip' && file !== 'whep')) {
     return new NextResponse('Invalid endpoint', { status: 400 });
   }
-  const streamerBase =
-    process.env.HND_STREAMER_INTERNAL_URL || 'http://dka-product-sigma-streamer:8889';
-  const base = streamerBase.replace(/\/$/, '');
+  const base = getStreamerBase(streamerPort);
   const authHeader = req.headers.get('authorization') || '';
   const headers: Record<string, string> = {};
   if (authHeader) headers['Authorization'] = authHeader;
@@ -259,9 +258,7 @@ export async function PATCH(
   if (!streamId || (file !== 'whip' && file !== 'whep')) {
     return new NextResponse('Invalid endpoint', { status: 400 });
   }
-  const streamerBase =
-    process.env.HND_STREAMER_INTERNAL_URL || 'http://dka-product-sigma-streamer:8889';
-  const base = streamerBase.replace(/\/$/, '');
+  const base = getStreamerBase(streamerPort);
   const body = await req.text();
   const upstream = await fetch(`${base}/live/${streamId}/${file}`, {
     method: 'PATCH',

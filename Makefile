@@ -1,4 +1,4 @@
-.PHONY: build push
+.PHONY: build push deploy
 
 DOCKER_USER=yovanggaanandhika
 BACKEND_IMAGE=$(DOCKER_USER)/dka-sigma:core
@@ -16,3 +16,7 @@ push:
 	docker buildx build --platform $(PLATFORMS) -t $(BACKEND_IMAGE) --push ./backend
 	@echo "Building and pushing frontend image..."
 	docker buildx build --platform $(PLATFORMS) -f frontend/Dockerfile -t $(FRONTEND_IMAGE) --push .
+
+deploy:
+	@echo "Deploying to production..."
+	docker compose -f compose.production.yml up -d
