@@ -74,7 +74,7 @@ export default function LoginLeftPanel() {
             <Monitor size={24} color="#fff" />
           </div>
           <div>
-            <div style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>HNDSigma</div>
+            <div style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>HND Signage</div>
             <div style={{ fontSize: '0.6875rem', color: '#64748b', marginTop: '3px', letterSpacing: '0.04em' }}>Enterprise Edition</div>
           </div>
         </div>
