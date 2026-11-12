@@ -1,5 +1,5 @@
 export type StreamMode = 'SERVER_HOSTED_HLS';
-export type StreamSourceType = 'WHIP' | 'RTMP' | 'RTSP';
+export type StreamSourceType = 'WHIP' | 'RTMP' | 'RTSP' | 'SRT';
 
 export interface LiveStreamConfig {
   id: string;

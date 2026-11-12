@@ -27,10 +27,17 @@ export interface RtspConfig {
   password: string;
 }
 
+export interface SrtConfig {
+  requiresAuth: boolean;
+  username: string;
+  password: string;
+}
+
 export interface LiveStreamProtocolsState {
   WHIP: WhipConfig;
   RTMP: RtmpConfig;
   RTSP: RtspConfig;
+  SRT: SrtConfig;
 }
 
 export interface LiveStreamFormState {
@@ -57,6 +64,11 @@ const DEFAULT_PROTOCOLS: LiveStreamProtocolsState = {
   },
   RTSP: {
     sourceUrl: '',
+    requiresAuth: false,
+    username: '',
+    password: '',
+  },
+  SRT: {
     requiresAuth: false,
     username: '',
     password: '',
@@ -95,6 +107,7 @@ interface LiveStreamEditorContextValue {
   updateWhip: (val: Partial<WhipConfig>) => void;
   updateRtmp: (val: Partial<RtmpConfig>) => void;
   updateRtsp: (val: Partial<RtspConfig>) => void;
+  updateSrt: (val: Partial<SrtConfig>) => void;
   // Status flags
   isDirty: boolean;
   saving: boolean;
@@ -174,6 +187,11 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
             username: type === 'RTSP' ? (item.ingestUsername || '') : '',
             password: type === 'RTSP' ? (item.ingestPassword || '') : '',
           },
+          SRT: {
+            requiresAuth: type === 'SRT' ? (item.requiresAuth ?? false) : false,
+            username: type === 'SRT' ? (item.ingestUsername || '') : '',
+            password: type === 'SRT' ? (item.ingestPassword || '') : '',
+          },
         };
 
         const loaded: LiveStreamFormState = {
@@ -241,6 +259,16 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
     }));
   }, []);
 
+  const updateSrt = useCallback((val: Partial<SrtConfig>) => {
+    setDraft((prev) => ({
+      ...prev,
+      protocols: {
+        ...prev.protocols,
+        SRT: { ...prev.protocols.SRT, ...val },
+      },
+    }));
+  }, []);
+
   // Revert draft changes back to last saved state
   const revert = useCallback(() => {
     setDraft(savedState);
@@ -278,6 +306,17 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
 
       if (!effectiveSourceUrl) {
         setErrorMessage('URL RTSP Kamera wajib diisi.');
+        return;
+      }
+    } else if (draft.sourceType === 'SRT') {
+      // SRT publishes directly to MediaMTX; only the relative path is stored.
+      effectiveSourceUrl = `/live/${streamKey}`;
+      requiresAuth = draft.protocols.SRT.requiresAuth;
+      ingestUsername = draft.protocols.SRT.username.trim();
+      ingestPassword = draft.protocols.SRT.password.trim();
+
+      if (requiresAuth && (!ingestUsername || !ingestPassword)) {
+        setErrorMessage('Username dan password SRT wajib diisi saat autentikasi aktif.');
         return;
       }
     }
@@ -355,6 +394,7 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
       updateWhip,
       updateRtmp,
       updateRtsp,
+      updateSrt,
       isDirty,
       saving,
       saveSuccess,
@@ -379,6 +419,7 @@ export function LiveStreamEditorProvider({ streamId: initialStreamId, children }
       updateWhip,
       updateRtmp,
       updateRtsp,
+      updateSrt,
       isDirty,
       saving,
       saveSuccess,

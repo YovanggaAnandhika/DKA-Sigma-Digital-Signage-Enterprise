@@ -9,10 +9,12 @@ import { useLiveStreamEditor } from '../../context/LiveStreamEditorContext';
 const WhipSourceConfig = dynamic(() => import('../sources/WhipSourceConfig'), { ssr: false });
 const RtmpSourceConfig = dynamic(() => import('../sources/RtmpSourceConfig'), { ssr: false });
 const RtspSourceConfig = dynamic(() => import('../sources/RtspSourceConfig'), { ssr: false });
+const SrtSourceConfig = dynamic(() => import('../sources/SrtSourceConfig'), { ssr: false });
 
 const PROTOCOL_OPTIONS = [
   { value: 'WHIP', label: 'WHIP' },
   { value: 'RTMP', label: 'RTMP' },
+  { value: 'SRT', label: 'SRT (UDP)' },
   { value: 'RTSP', label: 'RTSP CCTV' },
 ];
 
@@ -23,6 +25,7 @@ export default function ServerRelayModePanel() {
     updateWhip,
     updateRtmp,
     updateRtsp,
+    updateSrt,
     streamKey,
     serverHost,
   } = useLiveStreamEditor();
@@ -34,6 +37,7 @@ export default function ServerRelayModePanel() {
 
   const rtmpServerUrl = `rtmp://${host}:1935/live`;
   const fullRtmpIngestUrl = `${rtmpServerUrl}/${streamKey}`;
+  const srtServerUrl = `srt://${host}:8890`;
 
   const handleProtocolChange = (val: string) => {
     setSourceType(val as StreamSourceType);
@@ -74,6 +78,19 @@ export default function ServerRelayModePanel() {
           onChangeUsername={(val) => updateRtmp({ username: val })}
           password={draft.protocols.RTMP.password}
           onChangePassword={(val) => updateRtmp({ password: val })}
+        />
+      )}
+
+      {draft.sourceType === 'SRT' && (
+        <SrtSourceConfig
+          serverUrl={srtServerUrl}
+          streamKey={streamKey}
+          requiresAuth={draft.protocols.SRT.requiresAuth}
+          onToggleAuth={(val) => updateSrt({ requiresAuth: val })}
+          username={draft.protocols.SRT.username}
+          onChangeUsername={(val) => updateSrt({ username: val })}
+          password={draft.protocols.SRT.password}
+          onChangePassword={(val) => updateSrt({ password: val })}
         />
       )}
 
