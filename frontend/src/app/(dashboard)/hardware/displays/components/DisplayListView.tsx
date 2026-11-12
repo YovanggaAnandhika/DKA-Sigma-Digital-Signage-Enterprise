@@ -6,7 +6,7 @@ import { api, Device } from '@/lib/services';
 import { Pagination } from '@/components/ui/Pagination';
 import { Tv, Search, RefreshCw, Edit, Trash2, Eye, CheckCircle2 } from 'lucide-react';
 import { TableDataValue, TableStatus } from '@/components/ui/TableDataValue';
-import { CircleCheck, CircleX, Clock3, Fingerprint, Layers3, MonitorCheck, Network } from 'lucide-react';
+import { CircleCheck, CircleX, Clock3, Fingerprint, MonitorCheck, Network } from 'lucide-react';
 
 export default function DisplayListView() {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -226,7 +226,6 @@ export default function DisplayListView() {
               <tr>
                 <th>Nama Perangkat</th>
                 <th>ID / Kode</th>
-                <th>Grup Layar</th>
                 <th>Status</th>
                 <th>Resolusi & Orientasi</th>
                 <th>Alamat IP</th>
@@ -236,7 +235,7 @@ export default function DisplayListView() {
             <tbody>
               {devices.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                     {loading ? 'Memuat daftar layar...' : 'Tidak ada perangkat ditemukan.'}
                   </td>
                 </tr>
@@ -278,18 +277,9 @@ export default function DisplayListView() {
                               color: !d.isPaired ? 'var(--text-muted)' : 'inherit',
                             }}
                           >
-                            {!d.isPaired ? '●●●●●●' : (d.hardwareFingerprint?.substring(0, 10) || d.id.substring(0, 8).toUpperCase())}
+                            {!d.isPaired ? '●●●●●●' : d.id.substring(0, 8).toUpperCase()}
                           </span>
                         </TableDataValue>
-                      </td>
-                      <td>
-                        {d.displayGroupId ? (
-                          <TableDataValue icon={Layers3} tone="primary">
-                            Tergabung
-                          </TableDataValue>
-                        ) : (
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', paddingLeft: '4px' }}>-</span>
-                        )}
                       </td>
                       <td>
                         {!d.isPaired ? (
