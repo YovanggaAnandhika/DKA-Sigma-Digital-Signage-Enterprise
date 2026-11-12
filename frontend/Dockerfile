@@ -1,8 +1,12 @@
 FROM oven/bun:latest AS deps
 
 WORKDIR /home/app
+RUN apt-get update
+RUN apt-get install -y --no-install-recommends nodejs
+RUN rm -rf /var/lib/apt/lists/*
 COPY frontend/package.json frontend/bun.lock ./
 RUN bun install --frozen-lockfile --ignore-scripts
+RUN cd node_modules/grpc-tools && ../.bin/node-pre-gyp install
 
 FROM oven/bun:latest AS builder
 
