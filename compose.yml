@@ -78,6 +78,8 @@ services:
     restart: always
     environment:
       TZ: Asia/Makassar
+      # MediaMTX expands command variables before the shell executes.
+      SHELL_DOLLAR: "$"
       MTX_API: "yes"
       MTX_APIADDRESS: ":9997"
       MTX_AUTHMETHOD: "http"
@@ -106,7 +108,7 @@ services:
       MTX_HLSALLOWORIGINS: '["*"]'
       MTX_HLSALWAYSREMUX: "yes"
       MTX_HLSCDNSECRET: "dkasigma_pipe"
-      MTX_PATHDEFAULTS_RUNONDEMAND: "sh -c 'case \"$$MTX_PATH\" in sd/live/*) ffmpeg -hide_banner -loglevel error -fflags +nobuffer+discardcorrupt+flush_packets -flags low_delay -rtsp_transport tcp -i \"rtsp://127.0.0.1:8554/$${MTX_PATH#sd/}\" -map 0:v:0 -map 0:a:0? -c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -level:v 3.1 -bf 0 -vf \"fps=30,scale=min(960\\,iw):-2,format=yuv420p\" -b:v 1000k -maxrate 1200k -bufsize 600k -g 30 -keyint_min 30 -sc_threshold 0 -c:a aac -b:a 96k -ar 48000 -ac 2 -f rtsp -rtsp_transport tcp \"rtsp://127.0.0.1:8554/$$MTX_PATH\" ;; *) exit 0 ;; esac'"
+      MTX_PATHDEFAULTS_RUNONDEMAND: "sh -c 'case \"$$MTX_PATH\" in sd/live/*) ffmpeg -hide_banner -loglevel error -fflags +nobuffer+discardcorrupt+flush_packets -flags low_delay -rtsp_transport tcp -i \"rtsp://127.0.0.1:8554/$${SHELL_DOLLAR}{MTX_PATH#sd/}\" -map 0:v:0 -map 0:a:0? -c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -level:v 3.1 -bf 0 -vf \"fps=30,scale=min(960\\,iw):-2,format=yuv420p\" -b:v 1000k -maxrate 1200k -bufsize 600k -g 30 -keyint_min 30 -sc_threshold 0 -c:a aac -b:a 96k -ar 48000 -ac 2 -f rtsp -rtsp_transport tcp \"rtsp://127.0.0.1:8554/$$MTX_PATH\" ;; *) exit 0 ;; esac'"
       MTX_PATHDEFAULTS_RUNONDEMANDRESTART: "yes"
       MTX_PATHDEFAULTS_RUNONDEMANDSTARTTIMEOUT: "10s"
       MTX_PATHDEFAULTS_RUNONDEMANDCLOSEAFTER: "10s"
