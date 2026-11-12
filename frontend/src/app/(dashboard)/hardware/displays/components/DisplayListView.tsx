@@ -2,13 +2,15 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { api, Device } from '@/lib/services';
 import { Pagination } from '@/components/ui/Pagination';
-import { Tv, Search, RefreshCw, Edit, Trash2, Eye, CheckCircle2 } from 'lucide-react';
+import { Tv, Search, RefreshCw, Edit, Trash2, CheckCircle2 } from 'lucide-react';
 import { TableDataValue, TableStatus } from '@/components/ui/TableDataValue';
 import { CircleCheck, CircleX, Clock3, Fingerprint, MonitorCheck, Network } from 'lucide-react';
 
 export default function DisplayListView() {
+  const router = useRouter();
   const [devices, setDevices] = useState<Device[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -253,7 +255,14 @@ export default function DisplayListView() {
                   );
 
                   return (
-                    <tr key={d.id}>
+                    <tr
+                      key={d.id}
+                      onClick={(event) => {
+                        if (event.target instanceof Element && event.target.closest('a, button')) return;
+                        router.push(`/hardware/displays/${d.id}`);
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <td>
                         <TableDataValue icon={Tv} detail={d.isPaired ? 'Player terdaftar' : 'Menunggu aktivasi'}>
                           <Link href={`/hardware/displays/${d.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -315,9 +324,6 @@ export default function DisplayListView() {
                               <CheckCircle2 size={13} />
                             </button>
                           )}
-                          <Link href={`/hardware/displays/${d.id}`} className="btn btn-outline" style={{ padding: '5px 8px' }} title="Lihat Detail">
-                            <Eye size={14} />
-                          </Link>
                           <Link href={`/hardware/displays/${d.id}/edit`} className="btn btn-secondary" style={{ padding: '5px 8px' }} title="Edit">
                             <Edit size={14} />
                           </Link>
