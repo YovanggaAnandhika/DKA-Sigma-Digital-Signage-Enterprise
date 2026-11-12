@@ -558,7 +558,7 @@ class LiveStreamZoneRenderer(
         private const val TAG = "LiveStreamZoneRenderer"
         private const val RTSP_PORT = 8554
         private const val QUALITY_SAMPLE_INTERVAL_MS = 10_000L
-        private const val POOR_WINDOWS_BEFORE_DOWNGRADE = 2
+        private const val POOR_WINDOWS_BEFORE_DOWNGRADE = 1
         private const val STABLE_WINDOWS_BEFORE_UPGRADE = 6
     }
 }
