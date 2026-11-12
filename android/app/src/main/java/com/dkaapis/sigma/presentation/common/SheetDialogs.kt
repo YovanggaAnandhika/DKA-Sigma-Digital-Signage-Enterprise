@@ -4,8 +4,11 @@ import android.content.Context
 import android.graphics.Color
 import android.view.Gravity
 import android.view.WindowManager
+import android.view.View
 import android.widget.FrameLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 
@@ -28,6 +31,19 @@ fun createExpandedSheet(
     setOnShowListener {
         val sheet = findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet) ?: return@setOnShowListener
         sheet.setBackgroundColor(Color.TRANSPARENT)
+        val content = sheet.getChildAt(0) ?: return@setOnShowListener
+        val contentBottomPadding = content.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(content) { view, insets ->
+            val bottomInset = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
+            view.setPadding(
+                view.paddingLeft,
+                view.paddingTop,
+                view.paddingRight,
+                contentBottomPadding + bottomInset
+            )
+            insets
+        }
+        ViewCompat.requestApplyInsets(content)
         BottomSheetBehavior.from(sheet).apply { state = BottomSheetBehavior.STATE_EXPANDED; skipCollapsed = true }
         val dm = context.resources.displayMetrics
         val landscape = dm.widthPixels > dm.heightPixels
