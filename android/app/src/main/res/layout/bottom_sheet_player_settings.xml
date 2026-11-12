@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@drawable/bg_bottom_sheet"
     android:paddingStart="24dp"
@@ -37,12 +37,13 @@
         android:textSize="12sp" />
 
     <!-- Scrollable Cards Body -->
-    <ScrollView
+    <androidx.core.widget.NestedScrollView
         android:id="@+id/scrollSettingsContent"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:fillViewport="true"
+        android:clipToPadding="false"
         android:scrollbars="none">
 
         <LinearLayout
@@ -55,7 +56,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_input_field"
+                android:background="@drawable/bg_glass_card"
                 android:padding="14dp">
 
                 <TextView
@@ -97,7 +98,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:orientation="vertical"
-                android:background="@drawable/bg_input_field"
+                android:background="@drawable/bg_glass_card"
                 android:padding="14dp"
                 android:visibility="gone">
 
@@ -148,7 +149,7 @@
                 android:layout_marginTop="10dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="@drawable/bg_input_field"
+                android:background="@drawable/bg_glass_card"
                 android:padding="14dp">
 
                 <LinearLayout
@@ -189,7 +190,7 @@
                 android:layout_marginTop="10dp"
                 android:layout_marginBottom="4dp"
                 android:orientation="vertical"
-                android:background="@drawable/bg_input_field"
+                android:background="@drawable/bg_glass_card"
                 android:padding="14dp">
 
                 <LinearLayout
@@ -253,7 +254,7 @@
                 android:layout_marginBottom="4dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="@drawable/bg_input_field"
+                android:background="@drawable/bg_glass_card"
                 android:padding="14dp">
 
                 <LinearLayout
@@ -295,7 +296,7 @@
             </LinearLayout>
 
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 
     <!-- Sticky Footer Action Buttons: Always visible outside ScrollView -->
     <LinearLayout

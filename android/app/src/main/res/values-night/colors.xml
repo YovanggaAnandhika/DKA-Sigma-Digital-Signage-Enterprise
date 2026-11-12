@@ -6,17 +6,17 @@
     <color name="black">#000000</color>
     <color name="white">#ffffff</color>
 
-    <!-- Glass Panel Colors (Dark) — frosted dark glass morphism -->
-    <color name="sheet_bg">#CC1a1a2e</color>
-    <color name="sheet_card_bg">#B3ffffff</color>
-    <color name="sheet_card_border">#33ffffff</color>
-    <color name="sheet_drag_handle">#66ffffff</color>
-    <color name="sheet_text_primary">#f4f4f5</color>
-    <color name="sheet_text_secondary">#a1a1aa</color>
-    <color name="sheet_text_muted">#71717a</color>
-    <color name="sheet_btn_secondary_bg">#33ffffff</color>
-    <color name="sheet_btn_secondary_text">#f4f4f5</color>
-    <color name="sheet_btn_secondary_border">#33ffffff</color>
+    <!-- Settings sheets keep a light frosted-glass surface in system dark mode. -->
+    <color name="sheet_bg">#D0FFFFFF</color>
+    <color name="sheet_card_bg">#B0FFFFFF</color>
+    <color name="sheet_card_border">#30000000</color>
+    <color name="sheet_drag_handle">#50000000</color>
+    <color name="sheet_text_primary">#0f172a</color>
+    <color name="sheet_text_secondary">#334155</color>
+    <color name="sheet_text_muted">#64748b</color>
+    <color name="sheet_btn_secondary_bg">#A0FFFFFF</color>
+    <color name="sheet_btn_secondary_text">#1e293b</color>
+    <color name="sheet_btn_secondary_border">#30000000</color>
     <color name="sheet_btn_danger_bg">#dc2626</color>
     <color name="sheet_btn_danger_ripple">#b91c1c</color>
 
