@@ -58,6 +58,14 @@ services:
         published: 8554
         protocol: tcp
         host_ip: 0.0.0.0
+      - target: 8000
+        published: 8000
+        protocol: udp
+        host_ip: 0.0.0.0
+      - target: 8001
+        published: 8001
+        protocol: udp
+        host_ip: 0.0.0.0
       - target: 8889
         published: 8889
         protocol: tcp
