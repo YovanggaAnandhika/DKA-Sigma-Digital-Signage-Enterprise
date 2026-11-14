@@ -159,9 +159,68 @@ impl LayoutServiceTrait for LayoutServiceImpl {
     ) -> Result<Response<ListLayoutsResponse>, Status> {
         let claims = crate::grpc::middleware::require_permission(&request, "can_view_layouts")?;
         let corp_id = claims.active_corporation_id().and_then(|s| Uuid::from_str(s).ok());
-        let layouts = LayoutService::list_layouts(&self.pool, corp_id)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let _ = LayoutService::list_layouts(&self.pool, corp_id);
+        let req = request.into_inner();
+
+        let search_pattern = req
+            .search
+            .trim()
+            .is_empty()
+            .then_some(())
+            .map_or_else(|| Some(format!("%{}%", req.search.trim())), |_| None);
+
+        let orientation_filter = req
+            .orientation_id
+            .trim()
+            .is_empty()
+            .then_some(())
+            .map_or_else(|| Uuid::from_str(req.orientation_id.trim()).ok(), |_| None);
+
+        let page = req
+            .pagination
+            .as_ref()
+            .map(|p| p.page.max(1))
+            .unwrap_or(1);
+        let limit = req
+            .pagination
+            .as_ref()
+            .map(|p| p.limit.clamp(1, 200))
+            .unwrap_or(25);
+        let offset = (page - 1) * limit;
+
+        let total_items: i64 = sqlx::query_scalar(
+            r#"
+            SELECT COUNT(*) FROM studio_layouts
+            WHERE ($1::uuid IS NULL OR corporation_id = $1)
+              AND ($2::text IS NULL OR name ILIKE $2 OR COALESCE(description, '') ILIKE $2)
+              AND ($3::uuid IS NULL OR orientation_id = $3)
+            "#,
+        )
+        .bind(corp_id)
+        .bind(&search_pattern)
+        .bind(orientation_filter)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let layouts = sqlx::query_as::<_, crate::modules::studio::layout::model::LayoutEntity>(
+            r#"
+            SELECT * FROM studio_layouts
+            WHERE ($1::uuid IS NULL OR corporation_id = $1)
+              AND ($2::text IS NULL OR name ILIKE $2 OR COALESCE(description, '') ILIKE $2)
+              AND ($3::uuid IS NULL OR orientation_id = $3)
+            ORDER BY created_at DESC, name ASC
+            LIMIT $4 OFFSET $5
+            "#,
+        )
+        .bind(corp_id)
+        .bind(&search_pattern)
+        .bind(orientation_filter)
+        .bind(limit as i64)
+        .bind(offset as i64)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
 
         let mut items = Vec::new();
         for l in layouts {
@@ -198,9 +257,20 @@ impl LayoutServiceTrait for LayoutServiceImpl {
             items.push(proto_l);
         }
 
+        let total_pages = if total_items == 0 {
+            0
+        } else {
+            ((total_items as f64) / (limit as f64)).ceil() as i32
+        };
+
         Ok(Response::new(ListLayoutsResponse {
             items,
-            pagination: None,
+            pagination: Some(crate::grpc::proto::common::v1::PaginationResponse {
+                current_page: page,
+                limit,
+                total_items,
+                total_pages,
+            }),
         }))
     }
 

@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { LayoutServiceClient } from '@/lib/api/studio/v1/layout/layout_grpc_pb';
 import { ListLayoutsRequest } from '@/lib/api/studio/v1/layout/layout.common_pb';
-import { getGrpcClient, getGrpcMetadata, getGrpcMetadataFromRequest } from '@/lib/core/grpcClient';
+import { PaginationRequest } from '@/lib/api/common/v1/types_pb';
+import { getGrpcClient, getGrpcMetadataFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const client = getGrpcClient(LayoutServiceClient);
     
     const request = new ListLayoutsRequest();
-    if(body.search) request.setSearch(body.search);
+    if (body.search) request.setSearch(body.search);
+    if (body.orientationId || body.orientation_id) request.setOrientationId(body.orientationId || body.orientation_id);
+    if (body.pagination) {
+      const pag = new PaginationRequest();
+      pag.setPage(Number(body.pagination.page) || 1);
+      pag.setLimit(Number(body.pagination.limit) || 25);
+      request.setPagination(pag);
+    }
 
     return new Promise<NextResponse>((resolve) => {
       client.listLayouts(request, getGrpcMetadataFromRequest(req), (error: any, response: any) => {
