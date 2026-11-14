@@ -1,14 +1,24 @@
 import { invokeApi } from '../../core/invokeApi';
 import { Schedule } from './schedule.types';
 
-export async function getSchedules(params?: { search?: string; page?: number; limit?: number }): Promise<{ data: Schedule[]; total: number }> {
+export async function getSchedules(params?: {
+  search?: string;
+  page?: number;
+  limit?: number;
+  deviceId?: string;
+  displayGroupId?: string;
+  flattenEvents?: boolean;
+}): Promise<{ data: Schedule[]; total: number }> {
   const result = await invokeApi<any>('/api/grpc/studio/schedule/ListSchedules', {
     search: params?.search,
+    deviceId: params?.deviceId,
+    displayGroupId: params?.displayGroupId,
+    flattenEvents: params?.flattenEvents,
     pagination: { page: params?.page || 1, limit: params?.limit || 25 }
   });
   return {
     data: result.itemsList || [],
-    total: result.pagination?.totalItems || result.itemsList?.length || 0
+    total: result.pagination?.totalItems ?? result.itemsList?.length ?? 0
   };
 }
 

@@ -106,6 +106,86 @@ impl ScheduleServiceImpl {
         Self { pool, stream_manager }
     }
 
+    async fn has_active_targets(&self, schedule_id: Uuid) -> bool {
+        let has_device: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM hardware_devices WHERE schedule_id = $1)",
+        )
+        .bind(schedule_id)
+        .fetch_one(&self.pool)
+        .await
+        .unwrap_or(false);
+        if has_device {
+            return true;
+        }
+        sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM hardware_display_groups WHERE schedule_id = $1)",
+        )
+        .bind(schedule_id)
+        .fetch_one(&self.pool)
+        .await
+        .unwrap_or(false)
+    }
+
+    async fn resolve_schedule_timezone(&self, schedule_id: Uuid) -> chrono_tz::Tz {
+        let tz_str: Option<String> = sqlx::query_scalar(
+            r#"
+            SELECT timezone FROM hardware_devices
+            WHERE schedule_id = $1
+               OR display_group_id IN (SELECT id FROM hardware_display_groups WHERE schedule_id = $1)
+            ORDER BY updated_at DESC
+            LIMIT 1
+            "#,
+        )
+        .bind(schedule_id)
+        .fetch_optional(&self.pool)
+        .await
+        .ok()
+        .flatten();
+
+        tz_str
+            .as_deref()
+            .and_then(|s| s.parse::<chrono_tz::Tz>().ok())
+            .unwrap_or(chrono_tz::Asia::Jakarta)
+    }
+
+    fn pick_current_active_event_id(
+        rows: &[ScheduleEventWithLayoutRow],
+        tz: chrono_tz::Tz,
+    ) -> Option<Uuid> {
+        let now_local = chrono::Utc::now().with_timezone(&tz);
+        let now_date = now_local.date_naive();
+        let current_time = now_local.time();
+        let current_day = now_local.weekday().number_from_monday().to_string();
+
+        let mut best: Option<(i32, chrono::DateTime<chrono::Utc>, Uuid)> = None;
+        for r in rows {
+            let is_date_match = match (r.start_date, r.end_date) {
+                (Some(s), Some(e)) => now_date >= s && now_date <= e,
+                (Some(s), None) => now_date >= s,
+                (None, Some(e)) => now_date <= e,
+                (None, None) => true,
+            };
+            let is_time_match = if r.start_time <= r.end_time {
+                r.start_time <= current_time && r.end_time >= current_time
+            } else {
+                current_time >= r.start_time || current_time <= r.end_time
+            };
+            if is_date_match && is_time_match {
+                let days: Vec<&str> = r.days_of_week.split(',').map(str::trim).collect();
+                if days.contains(&current_day.as_str()) {
+                    let is_better = match best {
+                        None => true,
+                        Some((bp, bc, _)) => r.priority > bp || (r.priority == bp && r.created_at > bc),
+                    };
+                    if is_better {
+                        best = Some((r.priority, r.created_at, r.id));
+                    }
+                }
+            }
+        }
+        best.map(|(_, _, id)| id)
+    }
+
     async fn fetch_events(&self, schedule_id: Uuid) -> Vec<ScheduleEvent> {
         let rows = sqlx::query_as::<_, ScheduleEventWithLayoutRow>(
             r#"
@@ -116,7 +196,7 @@ impl ScheduleServiceImpl {
             FROM studio_schedule_events se
             LEFT JOIN studio_layouts l ON l.id = se.layout_id
             WHERE se.schedule_id = $1
-            ORDER BY se.priority DESC, se.start_time ASC
+            ORDER BY se.priority DESC, se.created_at DESC
             "#,
         )
         .bind(schedule_id)
@@ -124,19 +204,30 @@ impl ScheduleServiceImpl {
         .await
         .unwrap_or_default();
 
+        let active_event_id = if self.has_active_targets(schedule_id).await {
+            let tz = self.resolve_schedule_timezone(schedule_id).await;
+            Self::pick_current_active_event_id(&rows, tz)
+        } else {
+            None
+        };
+
         rows.into_iter()
-            .map(|r| ScheduleEvent {
-                id: r.id.to_string(),
-                schedule_id: r.schedule_id.to_string(),
-                layout_id: r.layout_id.to_string(),
-                layout_name: r.layout_name.unwrap_or_else(|| "Layout".to_string()),
-                start_time: r.start_time.format("%H:%M:%S").to_string(),
-                end_time: r.end_time.format("%H:%M:%S").to_string(),
-                days_of_week: r.days_of_week,
-                priority: r.priority,
-                created_at: r.created_at.to_rfc3339(),
-                start_date: r.start_date.map(|d| d.format("%Y-%m-%d").to_string()),
-                end_date: r.end_date.map(|d| d.format("%Y-%m-%d").to_string()),
+            .map(|r| {
+                let is_current_active = active_event_id == Some(r.id);
+                ScheduleEvent {
+                    id: r.id.to_string(),
+                    schedule_id: r.schedule_id.to_string(),
+                    layout_id: r.layout_id.to_string(),
+                    layout_name: r.layout_name.unwrap_or_else(|| "Layout".to_string()),
+                    start_time: r.start_time.format("%H:%M:%S").to_string(),
+                    end_time: r.end_time.format("%H:%M:%S").to_string(),
+                    days_of_week: r.days_of_week,
+                    priority: r.priority,
+                    created_at: r.created_at.to_rfc3339(),
+                    start_date: r.start_date.map(|d| d.format("%Y-%m-%d").to_string()),
+                    end_date: r.end_date.map(|d| d.format("%Y-%m-%d").to_string()),
+                    is_current_active,
+                }
             })
             .collect()
     }
@@ -165,6 +256,7 @@ impl ScheduleServiceImpl {
             created_at: entity.created_at.to_rfc3339(),
             start_date: entity.start_date.map(|d| d.format("%Y-%m-%d").to_string()),
             end_date: entity.end_date.map(|d| d.format("%Y-%m-%d").to_string()),
+            is_current_active: false,
         }
     }
 }
@@ -225,6 +317,207 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
     ) -> Result<Response<ListSchedulesResponse>, Status> {
         let claims = crate::grpc::middleware::require_permission(&request, "can_view_schedules")?;
         let corp_id = claims.active_corporation_id().and_then(|s| Uuid::parse_str(s).ok());
+        let req = request.into_inner();
+
+        let search_pattern = req
+            .search
+            .trim()
+            .is_empty()
+            .then_some(())
+            .map_or_else(|| Some(format!("%{}%", req.search.trim())), |_| None);
+
+        let device_id_filter = req
+            .device_id
+            .as_deref()
+            .filter(|s| !s.trim().is_empty())
+            .map(Uuid::parse_str)
+            .transpose()
+            .map_err(|_| Status::invalid_argument("Invalid device_id"))?;
+
+        let group_id_filter = req
+            .display_group_id
+            .as_deref()
+            .filter(|s| !s.trim().is_empty())
+            .map(Uuid::parse_str)
+            .transpose()
+            .map_err(|_| Status::invalid_argument("Invalid display_group_id"))?;
+
+        let flatten = req.flatten_events.unwrap_or(false);
+
+        if flatten {
+            let page = req
+                .pagination
+                .as_ref()
+                .map(|p| p.page.max(1))
+                .unwrap_or(1);
+            let limit = req
+                .pagination
+                .as_ref()
+                .map(|p| p.limit.clamp(1, 200))
+                .unwrap_or(25);
+            let offset = (page - 1) * limit;
+
+            let total_items: i64 = sqlx::query_scalar(
+                r#"
+                SELECT COUNT(*)
+                FROM studio_schedule_events se
+                INNER JOIN studio_schedules s ON s.id = se.schedule_id
+                LEFT JOIN studio_layouts l ON l.id = se.layout_id
+                WHERE ($1::uuid IS NULL OR s.corporation_id = $1)
+                  AND ($2::text IS NULL OR s.name ILIKE $2 OR COALESCE(s.description, '') ILIKE $2 OR COALESCE(l.name, '') ILIKE $2)
+                  AND ($3::uuid IS NULL OR EXISTS (
+                      SELECT 1 FROM hardware_devices d
+                      LEFT JOIN hardware_display_groups g ON g.id = d.display_group_id
+                      WHERE d.id = $3 AND (d.schedule_id = s.id OR g.schedule_id = s.id)
+                  ))
+                  AND ($4::uuid IS NULL OR EXISTS (
+                      SELECT 1 FROM hardware_display_groups g
+                      WHERE g.id = $4 AND g.schedule_id = s.id
+                  ) OR EXISTS (
+                      SELECT 1 FROM hardware_devices d
+                      WHERE d.display_group_id = $4 AND d.schedule_id = s.id
+                  ))
+                "#,
+            )
+            .bind(corp_id)
+            .bind(&search_pattern)
+            .bind(device_id_filter)
+            .bind(group_id_filter)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| Status::internal(format!("Database error counting schedules: {e}")))?;
+
+            #[derive(sqlx::FromRow)]
+            struct FlattenedScheduleEventRow {
+                schedule_id: Uuid,
+                schedule_name: String,
+                schedule_description: Option<String>,
+                schedule_created_at: chrono::DateTime<chrono::Utc>,
+                schedule_updated_at: chrono::DateTime<chrono::Utc>,
+                event_id: Uuid,
+                layout_id: Uuid,
+                layout_name: Option<String>,
+                start_time: chrono::NaiveTime,
+                end_time: chrono::NaiveTime,
+                days_of_week: String,
+                priority: i32,
+                start_date: Option<chrono::NaiveDate>,
+                end_date: Option<chrono::NaiveDate>,
+                event_created_at: chrono::DateTime<chrono::Utc>,
+            }
+
+            let rows = sqlx::query_as::<_, FlattenedScheduleEventRow>(
+                r#"
+                SELECT
+                    s.id AS schedule_id,
+                    s.name AS schedule_name,
+                    s.description AS schedule_description,
+                    s.created_at AS schedule_created_at,
+                    s.updated_at AS schedule_updated_at,
+                    se.id AS event_id,
+                    se.layout_id,
+                    l.name AS layout_name,
+                    se.start_time,
+                    se.end_time,
+                    se.days_of_week,
+                    se.priority,
+                    se.start_date,
+                    se.end_date,
+                    se.created_at AS event_created_at
+                FROM studio_schedule_events se
+                INNER JOIN studio_schedules s ON s.id = se.schedule_id
+                LEFT JOIN studio_layouts l ON l.id = se.layout_id
+                WHERE ($1::uuid IS NULL OR s.corporation_id = $1)
+                  AND ($2::text IS NULL OR s.name ILIKE $2 OR COALESCE(s.description, '') ILIKE $2 OR COALESCE(l.name, '') ILIKE $2)
+                  AND ($3::uuid IS NULL OR EXISTS (
+                      SELECT 1 FROM hardware_devices d
+                      LEFT JOIN hardware_display_groups g ON g.id = d.display_group_id
+                      WHERE d.id = $3 AND (d.schedule_id = s.id OR g.schedule_id = s.id)
+                  ))
+                  AND ($4::uuid IS NULL OR EXISTS (
+                      SELECT 1 FROM hardware_display_groups g
+                      WHERE g.id = $4 AND g.schedule_id = s.id
+                  ) OR EXISTS (
+                      SELECT 1 FROM hardware_devices d
+                      WHERE d.display_group_id = $4 AND d.schedule_id = s.id
+                  ))
+                ORDER BY se.created_at DESC, se.priority DESC
+                LIMIT $5 OFFSET $6
+                "#,
+            )
+                .bind(corp_id)
+                .bind(&search_pattern)
+                .bind(device_id_filter)
+                .bind(group_id_filter)
+                .bind(limit as i64)
+                .bind(offset as i64)
+                .fetch_all(&self.pool)
+                .await
+                .map_err(|e| Status::internal(format!("Database error listing schedules: {e}")))?;
+
+            // Cache active event ID per schedule_id so we evaluate each schedule container once
+            let mut active_event_by_schedule: std::collections::HashMap<Uuid, Option<Uuid>> =
+                std::collections::HashMap::new();
+            for row in &rows {
+                if !active_event_by_schedule.contains_key(&row.schedule_id) {
+                    let events = self.fetch_events(row.schedule_id).await;
+                    let active_id = events
+                        .into_iter()
+                        .find(|e| e.is_current_active)
+                        .and_then(|e| Uuid::parse_str(&e.id).ok());
+                    active_event_by_schedule.insert(row.schedule_id, active_id);
+                }
+            }
+
+            let items = rows
+                .into_iter()
+                .map(|r| {
+                    let is_current_active = active_event_by_schedule
+                        .get(&r.schedule_id)
+                        .and_then(|opt| *opt)
+                        == Some(r.event_id);
+
+                    Schedule {
+                        id: r.schedule_id.to_string(),
+                        name: r.schedule_name,
+                        description: r.schedule_description.unwrap_or_default(),
+                        created_at: r.schedule_created_at.to_rfc3339(),
+                        updated_at: r.schedule_updated_at.to_rfc3339(),
+                        events: vec![ScheduleEvent {
+                            id: r.event_id.to_string(),
+                            schedule_id: r.schedule_id.to_string(),
+                            layout_id: r.layout_id.to_string(),
+                            layout_name: r.layout_name.unwrap_or_else(|| "Layout".to_string()),
+                            start_time: r.start_time.format("%H:%M:%S").to_string(),
+                            end_time: r.end_time.format("%H:%M:%S").to_string(),
+                            days_of_week: r.days_of_week,
+                            priority: r.priority,
+                            created_at: r.event_created_at.to_rfc3339(),
+                            start_date: r.start_date.map(|d| d.format("%Y-%m-%d").to_string()),
+                            end_date: r.end_date.map(|d| d.format("%Y-%m-%d").to_string()),
+                            is_current_active,
+                        }],
+                    }
+                })
+                .collect();
+
+            let total_pages = if total_items == 0 {
+                0
+            } else {
+                ((total_items as f64) / (limit as f64)).ceil() as i32
+            };
+
+            return Ok(Response::new(ListSchedulesResponse {
+                items,
+                pagination: Some(crate::grpc::proto::common::v1::PaginationResponse {
+                    current_page: page,
+                    limit,
+                    total_items,
+                    total_pages,
+                }),
+            }));
+        }
+
         let schedules = ScheduleService::list_schedules(&self.pool, corp_id)
             .await
             .map_err(Status::from)?;

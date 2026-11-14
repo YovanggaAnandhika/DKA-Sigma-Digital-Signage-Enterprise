@@ -10,6 +10,7 @@ export interface ScheduleEvent {
   startDate?: string;
   endDate?: string;
   createdAt: string;
+  isCurrentActive?: boolean;
 }
 
 export interface Schedule {

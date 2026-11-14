@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api, Schedule, Device, DisplayGroup, MediaItem } from '@/lib/services';
 
 export interface ChunkErrorItem {
@@ -88,6 +88,8 @@ export function ScheduleDetailProvider({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedEventId = searchParams?.get('eventId') || '';
 
   const [activeTab, setActiveTab] = useState<'data' | 'rollout'>('data');
   const [schedule, setSchedule] = useState<Schedule | null>(null);
@@ -599,7 +601,8 @@ export function ScheduleDetailProvider({
   ];
 
   const primaryEvent =
-    schedule?.eventsList && schedule.eventsList.length > 0 ? schedule.eventsList[0] : null;
+    (requestedEventId ? schedule?.eventsList?.find((e) => e.id === requestedEventId) : null) ||
+    (schedule?.eventsList && schedule.eventsList.length > 0 ? schedule.eventsList[0] : null);
   const activeDays = primaryEvent?.daysOfWeek
     ? primaryEvent.daysOfWeek.split(',').map((d: string) => Number(d.trim()))
     : [1, 2, 3, 4, 5, 6, 7];

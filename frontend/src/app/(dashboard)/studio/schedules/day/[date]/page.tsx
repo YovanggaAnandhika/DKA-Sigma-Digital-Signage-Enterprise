@@ -391,12 +391,33 @@ export default function DailyRundownPage() {
                       </td>
                       <td>
                         <TableDataValue icon={CalendarDays} detail={schedule.description || 'Rundown aktif'}>
-                          <Link
-                            href={`/studio/schedules/${schedule.id}`}
-                            style={{ color: 'inherit', textDecoration: 'none' }}
-                          >
-                            {schedule.name}
-                          </Link>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <Link
+                              href={`/studio/schedules/${schedule.id}?eventId=${event.id}`}
+                              style={{ color: 'inherit', textDecoration: 'none' }}
+                            >
+                              {schedule.name}
+                            </Link>
+                            {event.isCurrentActive && (
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '2px 8px',
+                                  borderRadius: '999px',
+                                  backgroundColor: 'rgba(16, 185, 129, 0.14)',
+                                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                                  color: 'var(--accent-emerald)',
+                                  fontSize: '0.68rem',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--accent-emerald)' }} />
+                                Sedang Berfungsi
+                              </span>
+                            )}
+                          </div>
                         </TableDataValue>
                       </td>
                       <td>

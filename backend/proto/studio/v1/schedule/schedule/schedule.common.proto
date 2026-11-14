@@ -32,6 +32,9 @@ message GetScheduleRequest {
 message ListSchedulesRequest {
   signage.common.v1.PaginationRequest pagination = 1;
   string search = 2;
+  optional string device_id = 3;
+  optional string display_group_id = 4;
+  optional bool flatten_events = 5;
 }
 
 message ListSchedulesResponse {
