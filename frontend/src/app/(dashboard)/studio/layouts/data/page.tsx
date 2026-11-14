@@ -134,35 +134,38 @@ export default function LayoutsDataPage() {
                       }}
                     >
                       <td>
-                        <TableDataValue icon={LayoutTemplate} detail={l.isScheduleSynced ? 'Tersinkronisasi' : 'Belum dijadwalkan'}>
+                        <div>
                           <Link
                             href={`/studio/layouts/data/${l.id}/edit`}
-                            style={{ textDecoration: 'none', color: 'inherit' }}
+                            style={{ textDecoration: 'none', color: 'var(--text-primary)', fontWeight: 650, fontSize: '0.85rem' }}
                             onClick={(e) => e.stopPropagation()}
                           >
                             {l.name}
                           </Link>
-                        </TableDataValue>
+                          <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            {l.isScheduleSynced ? 'Tersinkronisasi' : 'Belum dijadwalkan'}
+                          </div>
+                        </div>
                       </td>
                       <td>
-                        <TableDataValue icon={Monitor} tone="cyan">
+                        <span style={{ color: 'var(--text-primary)', fontWeight: 500, fontSize: '0.82rem', fontFamily: 'monospace' }}>
                           {l.canvasWidth} × {l.canvasHeight} px
-                        </TableDataValue>
+                        </span>
                       </td>
                       <td>
-                        <TableDataValue icon={isPortrait ? Smartphone : MonitorCheck} tone="violet">
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
                           {isPortrait ? 'Portrait' : 'Landscape'}
-                        </TableDataValue>
+                        </span>
                       </td>
                       <td>
-                        <TableDataValue icon={Layers} tone="primary">
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
                           {layerCount} Layer
-                        </TableDataValue>
+                        </span>
                       </td>
                       <td style={{ whiteSpace: 'nowrap' }}>
-                        <TableDataValue icon={CalendarDays} tone="amber">
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
                           {l.createdAt ? new Date(l.createdAt).toLocaleDateString('id-ID', { dateStyle: 'medium' }) : '-'}
-                        </TableDataValue>
+                        </span>
                       </td>
                       <td
                         style={{ padding: '12px 16px', textAlign: 'right' }}
@@ -204,7 +207,7 @@ export default function LayoutsDataPage() {
           </table>
         </div>
 
-        {total > limit && (
+        {total > 0 && (
           <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-subtle)' }}>
             <Pagination
               page={page}
