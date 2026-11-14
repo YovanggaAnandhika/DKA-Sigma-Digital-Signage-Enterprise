@@ -75,12 +75,13 @@ class WatchdogPingHelper(
 
         val hb = res.getOrNull() ?: return
         val cmd = hb.pendingCommand
+        val isReloadCommand = !cmd.isNullOrBlank() && cmd.contains("reload", ignoreCase = true)
         if (!cmd.isNullOrBlank()) {
             Log.i(TAG, "Menerima pending command via Heartbeat: $cmd")
             callbacks.onPendingCommand(cmd)
         }
 
-        if (hb.needsManifestSync) {
+        if (hb.needsManifestSync && !isReloadCommand) {
             callbacks.onNeedsManifestSync()
         }
     }

@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.channelFlow
 class DownloadAndVerifyMediaUseCase(
     private val storageRepository: MediaStorageRepository
 ) {
-    fun execute(manifest: Manifest): Flow<DownloadState> = channelFlow {
+    fun execute(manifest: Manifest, silent: Boolean = false): Flow<DownloadState> = channelFlow {
         val allAssets = manifest.requiredAssets
         val total = allAssets.size
 
@@ -23,7 +23,9 @@ class DownloadAndVerifyMediaUseCase(
         // 1. Verifikasi integritas hash setiap chunk aset
         val uncachedAssets = mutableListOf<MediaAsset>()
         allAssets.forEachIndexed { index, asset ->
-            trySend(DownloadState.Verifying(index + 1, total, asset.localFilename))
+            if (!silent) {
+                trySend(DownloadState.Verifying(index + 1, total, asset.localFilename))
+            }
             if (!storageRepository.isAssetCachedAndValid(asset)) {
                 uncachedAssets.add(asset)
             }
@@ -31,17 +33,19 @@ class DownloadAndVerifyMediaUseCase(
 
         // 2. Jika seluruh aset sudah valid dan tersimpan di lokal
         if (uncachedAssets.isEmpty()) {
-            trySend(
-                DownloadState.Progress(
-                    assetIndex = total,
-                    totalAssets = total,
-                    percent = 100,
-                    downloadedBytes = manifest.totalDownloadSizeBytes,
-                    totalBytes = manifest.totalDownloadSizeBytes,
-                    currentFileName = "Integritas seluruh chunk valid (SHA-256)"
+            if (!silent) {
+                trySend(
+                    DownloadState.Progress(
+                        assetIndex = total,
+                        totalAssets = total,
+                        percent = 100,
+                        downloadedBytes = manifest.totalDownloadSizeBytes,
+                        totalBytes = manifest.totalDownloadSizeBytes,
+                        currentFileName = "Integritas seluruh chunk valid (SHA-256)"
+                    )
                 )
-            )
-            delay(500)
+                delay(500)
+            }
             trySend(DownloadState.AllComplete(manifest))
             return@channelFlow
         }
@@ -105,10 +109,7 @@ class DownloadAndVerifyMediaUseCase(
             }
         }
 
-        // Bersihkan file lama yang sudah tidak ada di manifest aktif
-        val activeIds = manifest.requiredAssets.map { it.mediaId }.toSet()
-        storageRepository.cleanOrphanAssets(activeIds)
-
+        // Selesai mengunduh seluruh aset manifest
         trySend(DownloadState.AllComplete(manifest))
     }
 }

@@ -13,11 +13,12 @@ use crate::grpc::proto::studio::v1::layer::{Layer, LayerPlaylist};
 
 pub struct ManifestServiceImpl {
     pub pool: DbPool,
+    pub stream_manager: crate::modules::distribution::stream::services::StreamConnectionManager,
 }
 
 impl ManifestServiceImpl {
-    pub fn new(pool: DbPool) -> Self {
-        Self { pool }
+    pub fn new(pool: DbPool, stream_manager: crate::modules::distribution::stream::services::StreamConnectionManager) -> Self {
+        Self { pool, stream_manager }
     }
 
     async fn fetch_widget_data_json(
@@ -624,6 +625,16 @@ impl ManifestServiceTrait for ManifestServiceImpl {
         } else {
             String::new()
         };
+
+        // Kirim sinyal ReloadManifest seketika ke device agar player langsung memunculkan loading progress overlay
+        let _ = self.stream_manager.send_command(
+            &self.pool,
+            crate::modules::distribution::stream::model::PushCommandDto {
+                device_id,
+                command_type: crate::modules::distribution::stream::model::LiveCommandType::ReloadManifest,
+                payload_json: None,
+            },
+        ).await;
 
         Ok(Response::new(AssignLayoutToDeviceResponse {
             success: true,

@@ -8,7 +8,7 @@ pub mod visual_filter;
 
 #[macro_export]
 macro_rules! register_studio_services {
-    ($router:expr, $pool:expr) => {
+    ($router:expr, $pool:expr, $stream_manager:expr) => {
         $router
             .add_service(crate::grpc::proto::studio::v1::media::media_service_server::MediaServiceServer::new(
                 crate::grpc::studio::media::service::MediaServiceImpl::new($pool.clone())
@@ -32,7 +32,7 @@ macro_rules! register_studio_services {
                 crate::grpc::studio::layer::item_override::service::LayerItemOverrideServiceImpl::new($pool.clone())
             ))
             .add_service(crate::grpc::proto::studio::v1::schedule::schedule::schedule_service_server::ScheduleServiceServer::new(
-                crate::grpc::studio::schedule::service::ScheduleServiceImpl::new($pool.clone())
+                crate::grpc::studio::schedule::service::ScheduleServiceImpl::new($pool.clone(), $stream_manager.clone())
             ))
             .add_service(crate::grpc::proto::studio::v1::schedule::event::schedule_event_service_server::ScheduleEventServiceServer::new(
                 crate::grpc::studio::schedule::service::ScheduleEventServiceImpl::new($pool.clone())

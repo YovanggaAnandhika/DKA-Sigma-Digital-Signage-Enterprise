@@ -1,3 +1,4 @@
+use chrono::Datelike;
 use crate::db::DbPool;
 use crate::grpc::proto::studio::v1::schedule::event::{
     schedule_event_service_server::ScheduleEventService as ScheduleEventServiceTrait,
@@ -94,11 +95,15 @@ impl ScheduleEventServiceImpl {
 #[derive(Clone)]
 pub struct ScheduleServiceImpl {
     pub pool: DbPool,
+    pub stream_manager: crate::modules::distribution::stream::services::StreamConnectionManager,
 }
 
 impl ScheduleServiceImpl {
-    pub fn new(pool: DbPool) -> Self {
-        Self { pool }
+    pub fn new(
+        pool: DbPool,
+        stream_manager: crate::modules::distribution::stream::services::StreamConnectionManager,
+    ) -> Self {
+        Self { pool, stream_manager }
     }
 
     async fn fetch_events(&self, schedule_id: Uuid) -> Vec<ScheduleEvent> {
@@ -441,7 +446,7 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         .bind(layout_id)
         .bind(start_time)
         .bind(end_time)
-        .bind(days_of_week)
+        .bind(&days_of_week)
         .bind(req.priority)
         .bind(start_date)
         .bind(end_date)
@@ -508,6 +513,65 @@ impl ScheduleServiceTrait for ScheduleServiceImpl {
         tx.commit()
             .await
             .map_err(|e| Status::internal(format!("Commit failed: {}", e)))?;
+
+        // Evaluasi apakah event yang baru di-push mencakup jam tayang saat ini pada masing-masing device
+        // Jika ya ("scheduler yang dipush seketika"), kirimkan sinyal ReloadManifest agar player seketika menampilkan progress dialog
+        let mut target_device_ids = Vec::new();
+        for dev_str in &req.device_ids {
+            if let Ok(did) = Uuid::parse_str(dev_str) {
+                target_device_ids.push(did);
+            }
+        }
+        for grp_str in &req.display_group_ids {
+            if let Ok(gid) = Uuid::parse_str(grp_str) {
+                if let Ok(group_devices) = sqlx::query_scalar::<_, Uuid>(
+                    "SELECT id FROM hardware_devices WHERE display_group_id = $1"
+                )
+                .bind(gid)
+                .fetch_all(&self.pool)
+                .await {
+                    target_device_ids.extend(group_devices);
+                }
+            }
+        }
+        target_device_ids.sort();
+        target_device_ids.dedup();
+
+        for dev_id in target_device_ids {
+            if let Ok(Some(dev)) = crate::modules::hardware::device::repositories::DeviceRepository::find_by_id(&self.pool, dev_id).await {
+                let tz: chrono_tz::Tz = dev.timezone.parse().unwrap_or(chrono_tz::UTC);
+                let now_local = chrono::Utc::now().with_timezone(&tz);
+                let now_date = now_local.date_naive();
+                let now_time = now_local.time();
+                let current_day = now_local.weekday().number_from_monday().to_string();
+
+                let is_date_active = match (start_date, end_date) {
+                    (Some(s), Some(e)) => now_date >= s && now_date <= e,
+                    (Some(s), None) => now_date >= s,
+                    (None, Some(e)) => now_date <= e,
+                    (None, None) => true,
+                };
+                let is_time_active = if start_time <= end_time {
+                    start_time <= now_time && end_time >= now_time
+                } else {
+                    now_time >= start_time || now_time <= end_time
+                };
+                let days_list: Vec<&str> = days_of_week.split(',').collect();
+                let is_day_active = days_list.contains(&current_day.as_str());
+
+                // Jika event aktif detik ini, kirimkan perintah ReloadManifest ke player
+                if is_date_active && is_time_active && is_day_active {
+                    let _ = self.stream_manager.send_command(
+                        &self.pool,
+                        crate::modules::distribution::stream::model::PushCommandDto {
+                            device_id: dev_id,
+                            command_type: crate::modules::distribution::stream::model::LiveCommandType::ReloadManifest,
+                            payload_json: None,
+                        },
+                    ).await;
+                }
+            }
+        }
 
         Ok(Response::new(PushLayoutToScheduleResponse {
             success: true,

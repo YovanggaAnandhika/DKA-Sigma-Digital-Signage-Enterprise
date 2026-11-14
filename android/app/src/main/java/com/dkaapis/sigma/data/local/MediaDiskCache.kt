@@ -26,11 +26,22 @@ class MediaDiskCache(context: Context) {
         return file.exists() && file.length() > 0
     }
 
+    private val verifiedHashCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
     fun verifyFileSha256(file: File, expectedHash: String): Boolean {
         if (!file.exists() || file.length() == 0L) return false
         if (expectedHash.isBlank()) return true
+        val cacheKey = "${file.absolutePath}:${file.length()}:${file.lastModified()}"
+        val cachedHash = verifiedHashCache[cacheKey]
+        if (cachedHash != null) {
+            return cachedHash.equals(expectedHash.trim(), ignoreCase = true)
+        }
         val computedHash = calculateSha256(file)
-        return computedHash.equals(expectedHash.trim(), ignoreCase = true)
+        val isValid = computedHash.equals(expectedHash.trim(), ignoreCase = true)
+        if (isValid) {
+            verifiedHashCache[cacheKey] = computedHash
+        }
+        return isValid
     }
 
     private fun calculateSha256(file: File): String {

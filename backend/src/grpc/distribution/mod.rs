@@ -7,7 +7,7 @@ macro_rules! register_distribution_services {
     ($router:expr, $pool:expr, $stream_manager:expr) => {
         $router
             .add_service(crate::grpc::proto::distribution::v1::manifest::manifest_service_server::ManifestServiceServer::new(
-                crate::grpc::distribution::manifest::service::ManifestServiceImpl::new($pool.clone())
+                crate::grpc::distribution::manifest::service::ManifestServiceImpl::new($pool.clone(), $stream_manager.clone())
             ))
             .add_service(crate::grpc::proto::distribution::v1::stream::stream_service_server::StreamServiceServer::new(
                 crate::grpc::distribution::stream::service::StreamServiceImpl::new($pool.clone(), $stream_manager)

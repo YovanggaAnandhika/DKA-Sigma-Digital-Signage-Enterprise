@@ -64,43 +64,67 @@ class PlayerViewModel(
         activeManifest = null
     }
 
-    fun syncManifest(force: Boolean = false) {
+    fun syncManifest(
+        force: Boolean = false,
+        showOverlay: Boolean = true,
+        onSilentProgress: ((DownloadState.Progress) -> Unit)? = null
+    ) {
         if (!force && syncJob?.isActive == true) {
             return
         }
 
+        val shouldShowOverlay = showOverlay || activeManifest == null
+
         syncJob?.cancel()
         syncJob = viewModelScope.launch {
             try {
-                _uiState.value = PlayerUiState.SyncingManifest("Mengambil jadwal manifest...")
+                if (shouldShowOverlay) {
+                    _uiState.value = PlayerUiState.SyncingManifest("Mengambil jadwal manifest...")
+                }
                 val result = syncManifestUseCase.execute()
                 if (result.isSuccess) {
                     val manifest = result.getOrNull()
                     if (manifest != null) {
-                        downloadUseCase.execute(manifest).collectLatest { downloadState ->
+                        downloadUseCase.execute(manifest, silent = !shouldShowOverlay).collectLatest { downloadState ->
                             when (downloadState) {
                                 is DownloadState.Verifying -> {
-                                    _uiState.value = PlayerUiState.SyncingManifest(
-                                        "Memeriksa chunk lokal (${downloadState.assetIndex}/${downloadState.totalAssets}): ${downloadState.filename}"
-                                    )
+                                    if (shouldShowOverlay) {
+                                        _uiState.value = PlayerUiState.SyncingManifest(
+                                            "Memeriksa chunk lokal (${downloadState.assetIndex}/${downloadState.totalAssets}): ${downloadState.filename}"
+                                        )
+                                    }
                                 }
                                 is DownloadState.Progress -> {
-                                    _uiState.value = PlayerUiState.DownloadingAssets(
-                                        progressPercent = downloadState.percent,
-                                        assetIndex = downloadState.assetIndex,
-                                        total = downloadState.totalAssets,
-                                        downloadedBytes = downloadState.downloadedBytes,
-                                        totalBytes = downloadState.totalBytes,
-                                        currentFileName = downloadState.currentFileName
-                                    )
+                                    if (shouldShowOverlay) {
+                                        _uiState.value = PlayerUiState.DownloadingAssets(
+                                            progressPercent = downloadState.percent,
+                                            assetIndex = downloadState.assetIndex,
+                                            total = downloadState.totalAssets,
+                                            downloadedBytes = downloadState.downloadedBytes,
+                                            totalBytes = downloadState.totalBytes,
+                                            currentFileName = downloadState.currentFileName
+                                        )
+                                    } else {
+                                        onSilentProgress?.invoke(downloadState)
+                                    }
                                 }
                                 is DownloadState.AssetComplete -> {
                                     // Aset selesai diunduh & lolos SHA-256
                                 }
                                 is DownloadState.AllComplete -> {
                                     // 100% Media terverifikasi -> Atomic Switch Layout
+                                    val isSameLayout = activeManifest != null &&
+                                        activeManifest?.layoutId == downloadState.manifest.layoutId &&
+                                        activeManifest?.powerSchedule == downloadState.manifest.powerSchedule &&
+                                        activeManifest?.zones == downloadState.manifest.zones
+
                                     activeManifest = downloadState.manifest
-                                    _uiState.value = PlayerUiState.Playing(downloadState.manifest)
+
+                                    // Jika hanya pre-download aset jadwal mendatang tanpa mengubah layout aktif saat ini,
+                                    // jangan render ulang canvas agar video tidak ter-restart
+                                    if (!isSameLayout || shouldShowOverlay) {
+                                        _uiState.value = PlayerUiState.Playing(downloadState.manifest)
+                                    }
                                 }
                                 is DownloadState.Error -> {
                                     if (activeManifest == null || force) {

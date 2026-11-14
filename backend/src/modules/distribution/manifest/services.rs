@@ -124,6 +124,120 @@ impl ManifestService {
         Ok(config.map(|value| value.to_string()))
     }
 
+    pub async fn collect_layout_assets(
+        pool: &DbPool,
+        layout_id: Uuid,
+        required_assets_map: &mut HashMap<Uuid, ManifestAssetDto>,
+    ) -> Result<(), AppError> {
+        let zones = LayoutRepository::get_layers_by_layout_id(pool, layout_id).await?;
+        for dto_zone in zones {
+            for block in dto_zone.blocks {
+                if let Some(pl_id) = block.block.playlist_id {
+                    if let Ok(pl) = PlaylistService::get_playlist_by_id(pool, pl_id).await {
+                        for item in &pl.items {
+                            if !required_assets_map.contains_key(&item.media_item_id) {
+                                let (sha256, size_bytes, orig_name) =
+                                    match MediaRepository::find_by_id(pool, item.media_item_id).await {
+                                        Ok(Some(media)) => (
+                                            media.sha256_hash,
+                                            media.file_size_bytes,
+                                            media.original_filename,
+                                        ),
+                                        _ => ("".to_string(), 0, item.media_name.clone()),
+                                    };
+                                required_assets_map.insert(
+                                    item.media_item_id,
+                                    ManifestAssetDto {
+                                        media_id: item.media_item_id,
+                                        name: item.media_name.clone(),
+                                        url: item.media_url.clone(),
+                                        sha256_hash: sha256,
+                                        file_size_bytes: size_bytes,
+                                        local_filename: format!("{}_{}", item.media_item_id, orig_name),
+                                        media_type: item.media_type.clone(),
+                                    },
+                                );
+                            }
+                        }
+                    }
+                } else if let Some(media_id) = block.block.media_item_id {
+                    if let Ok(Some(media)) = MediaRepository::find_by_id(pool, media_id).await {
+                        if !required_assets_map.contains_key(&media_id) {
+                            required_assets_map.insert(
+                                media_id,
+                                ManifestAssetDto {
+                                    media_id,
+                                    name: media.name.clone(),
+                                    url: media.public_url.clone(),
+                                    sha256_hash: media.sha256_hash.clone(),
+                                    file_size_bytes: media.file_size_bytes,
+                                    local_filename: format!("{}_{}", media.id, media.original_filename),
+                                    media_type: media.media_type.clone(),
+                                },
+                            );
+                        }
+                    }
+                } else if let Some(album_id) = block.block.album_id {
+                    if let Ok(photos) = sqlx::query_as::<_, (Uuid,)>(
+                        "SELECT media_item_id FROM components_album_photos WHERE album_id = $1 ORDER BY position ASC"
+                    )
+                    .bind(album_id)
+                    .fetch_all(pool)
+                    .await {
+                        for p in photos {
+                            let media_id = p.0;
+                            if !required_assets_map.contains_key(&media_id) {
+                                if let Ok(Some(media)) = MediaRepository::find_by_id(pool, media_id).await {
+                                    required_assets_map.insert(
+                                        media_id,
+                                        ManifestAssetDto {
+                                            media_id,
+                                            name: media.name.clone(),
+                                            url: media.public_url.clone(),
+                                            sha256_hash: media.sha256_hash.clone(),
+                                            file_size_bytes: media.file_size_bytes,
+                                            local_filename: format!("{}_{}", media.id, media.original_filename),
+                                            media_type: media.media_type.clone(),
+                                        },
+                                    );
+                                }
+                            }
+                        }
+                    }
+                } else if let Some(queue_id) = block.block.queue_id {
+                    if let Ok(audios) = sqlx::query_as::<_, (Option<Uuid>,)>(
+                        "SELECT media_item_id FROM components_queue_audios WHERE queue_display_id = $1 AND audio_type = 'media_item' AND is_active = true AND media_item_id IS NOT NULL"
+                    )
+                    .bind(queue_id)
+                    .fetch_all(pool)
+                    .await {
+                        for a in audios {
+                            if let Some(m_id) = a.0 {
+                                if !required_assets_map.contains_key(&m_id) {
+                                    if let Ok(Some(media)) = MediaRepository::find_by_id(pool, m_id).await {
+                                        required_assets_map.insert(
+                                            m_id,
+                                            ManifestAssetDto {
+                                                media_id: m_id,
+                                                name: media.name.clone(),
+                                                url: media.public_url.clone(),
+                                                sha256_hash: media.sha256_hash.clone(),
+                                                file_size_bytes: media.file_size_bytes,
+                                                local_filename: format!("{}_{}", media.id, media.original_filename),
+                                                media_type: media.media_type.clone(),
+                                            },
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub async fn get_manifest_for_device(
         pool: &DbPool,
         device_id: Uuid,
@@ -137,6 +251,7 @@ impl ManifestService {
         let mut active_layout_id = device.current_layout_id;
         let mut active_schedule_id = device.schedule_id;
         let mut scheduled_version_hash: Option<String> = None;
+        let mut upcoming_layout_ids: Vec<Uuid> = Vec::new();
 
         // Display Group Fallback
         if let Some(group_id) = device.display_group_id {
@@ -167,7 +282,7 @@ impl ManifestService {
                 let mut best_match: Option<(i32, chrono::DateTime<Utc>, Uuid, Option<String>)> =
                     None;
 
-                for event in schedule_with_events.events {
+                for event in &schedule_with_events.events {
                     let is_date_match = match (event.start_date, event.end_date) {
                         (Some(s), Some(e)) => now_date >= s && now_date <= e,
                         (Some(s), None) => now_date >= s,
@@ -198,7 +313,7 @@ impl ManifestService {
                                     event.priority,
                                     event.created_at,
                                     event.layout_id,
-                                    event.version_hash,
+                                    event.version_hash.clone(),
                                 ));
                             }
                         }
@@ -208,18 +323,34 @@ impl ManifestService {
                 // If a schedule is assigned, it strictly governs active content and version
                 active_layout_id = best_match.as_ref().map(|(_, _, layout_id, _)| *layout_id);
                 scheduled_version_hash = best_match.and_then(|(_, _, _, vh)| vh);
+
+                // Kumpulkan juga seluruh upcoming layouts dalam jadwal yang belum kedaluwarsa untuk pre-download
+                let mut schedule_upcoming_layouts = Vec::new();
+                for event in &schedule_with_events.events {
+                    let is_not_expired = match event.end_date {
+                        Some(e) => now_date <= e,
+                        None => true,
+                    };
+                    if is_not_expired {
+                        schedule_upcoming_layouts.push(event.layout_id);
+                    }
+                }
+                upcoming_layout_ids = schedule_upcoming_layouts;
             }
         }
 
         // If scheduled_version_hash is set and matches client_hash, the device is already playing
         // the pushed scheduled version. Draft saves in Studio Designer MUST NOT trigger a sync!
-        if let Some(sh) = &scheduled_version_hash {
-            if let Some(client_h) = &client_hash {
-                if client_h == sh {
-                    return Ok(ManifestSyncResponseDto {
-                        is_up_to_date: true,
-                        manifest: None,
-                    });
+        // Namun jika force_rebuild = true (misal saat pre-download jadwal atau refresh eksplisit), lanjutkan pembuatan manifest.
+        if !force_rebuild {
+            if let Some(sh) = &scheduled_version_hash {
+                if let Some(client_h) = &client_hash {
+                    if client_h == sh {
+                        return Ok(ManifestSyncResponseDto {
+                            is_up_to_date: true,
+                            manifest: None,
+                        });
+                    }
                 }
             }
         } else if !force_rebuild && active_schedule_id.is_none() {
@@ -433,6 +564,13 @@ impl ManifestService {
                 layer: dto_zone.layer.clone(),
                 blocks: mapped_blocks,
             });
+        }
+
+        // Pre-fetch aset untuk upcoming layout lain dalam rundown agar diunduh sebelum jam tayangnya tiba
+        for upcoming_id in upcoming_layout_ids {
+            if upcoming_id != effective_layout_id {
+                let _ = Self::collect_layout_assets(pool, upcoming_id, &mut required_assets_map).await;
+            }
         }
 
         let total_size: i64 = required_assets_map

@@ -243,8 +243,21 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                 onNeedsManifestSync = {
                     val s = viewModel.uiState.value
                     if (s !is PlayerUiState.DownloadingAssets && s !is PlayerUiState.SyncingManifest) {
-                        viewModel.syncManifest()
-                        requestAppUpdateCheck(forcePrompt = true)
+                        viewModel.syncManifest(
+                            force = false,
+                            showOverlay = false,
+                            onSilentProgress = { progress ->
+                                reportDownloadProgress(
+                                    assetIndex = progress.assetIndex,
+                                    total = progress.totalAssets,
+                                    progressPercent = progress.percent,
+                                    downloadedBytes = progress.downloadedBytes,
+                                    totalBytes = progress.totalBytes,
+                                    currentFileName = progress.currentFileName
+                                )
+                            }
+                        )
+                        requestAppUpdateCheck(forcePrompt = false)
                     }
                 },
                 onPendingCommand = { cmd -> dispatchRemoteCommand(cmd) },
@@ -306,15 +319,14 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
                             state.progressPercent, badgeTextRgb = 0x34D399
                         )
 
-                        val devId = deviceRepo.getSavedDeviceId()
-                        val now = System.currentTimeMillis()
-                        val canReportProgress = playerSettingsStorage.isProgressUploadEnabled()
-                        if (canReportProgress && !devId.isNullOrEmpty() && (now - lastDownloadProgressReportTime >= 1000L || state.progressPercent == 100)) {
-                            lastDownloadProgressReportTime = now
-                            streamManager.broadcastDownloadProgress(
-                                devId, state.assetIndex, state.total, state.progressPercent, state.downloadedBytes, state.totalBytes, state.currentFileName
-                            )
-                        }
+                        reportDownloadProgress(
+                            assetIndex = state.assetIndex,
+                            total = state.total,
+                            progressPercent = state.progressPercent,
+                            downloadedBytes = state.downloadedBytes,
+                            totalBytes = state.totalBytes,
+                            currentFileName = state.currentFileName
+                        )
                     }
                     is PlayerUiState.Playing -> {
                         hasActivePlayback = true
@@ -428,8 +440,28 @@ class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
         }
     }
 
+    private fun reportDownloadProgress(
+        assetIndex: Int,
+        total: Int,
+        progressPercent: Int,
+        downloadedBytes: Long,
+        totalBytes: Long,
+        currentFileName: String
+    ) {
+        val devId = deviceRepo.getSavedDeviceId()
+        val now = System.currentTimeMillis()
+        val canReportProgress = playerSettingsStorage.isProgressUploadEnabled()
+        if (canReportProgress && !devId.isNullOrEmpty() && (now - lastDownloadProgressReportTime >= 1000L || progressPercent == 100)) {
+            lastDownloadProgressReportTime = now
+            streamManager.broadcastDownloadProgress(
+                devId, assetIndex, total, progressPercent, downloadedBytes, totalBytes, currentFileName
+            )
+        }
+    }
+
     private fun dispatchRemoteCommand(command: String) {
         when {
+            command.contains("Reload", ignoreCase = true) -> onReloadManifest()
             command.contains("ClearCache", ignoreCase = true) -> onClearCache()
             command.contains("CaptureScreenshot", ignoreCase = true) || command.contains("Screenshot", ignoreCase = true) -> onCaptureScreenshot()
             command.contains("Reboot", ignoreCase = true) -> onReboot()
