@@ -3,15 +3,15 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ArrowLeft, Monitor, Wifi, Network, Clock, Radio } from 'lucide-react';
+import { ArrowLeft, Monitor, Network, Clock, LayoutDashboard, PlayCircle, Activity, History } from 'lucide-react';
 import { useDisplayDetail } from '../context/DisplayDetailContext';
 import { formatIndonesianDateTime } from './formatIndonesianDateTime';
 
 const tabs = [
-  { path: 'overview', label: 'Ringkasan' },
-  { path: 'playback', label: 'Pemutaran' },
-  { path: 'monitor', label: 'Monitor' },
-  { path: 'history', label: 'Riwayat' },
+  { path: 'overview', label: 'Ringkasan', icon: LayoutDashboard },
+  { path: 'playback', label: 'Pemutaran', icon: PlayCircle },
+  { path: 'monitor', label: 'Monitor', icon: Activity },
+  { path: 'history', label: 'Riwayat', icon: History },
 ];
 
 export default function DisplayDetailNavigation() {
@@ -19,23 +19,27 @@ export default function DisplayDetailNavigation() {
   const { device, deviceId, deviceLoadError, diagnosticsError, isLiveConnected } = useDisplayDetail();
   const basePath = `/hardware/displays/${deviceId}`;
 
+  if (pathname?.endsWith('/edit')) {
+    return null;
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 18 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 20 }}>
       {/* Header Info & Back Button */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
           <Link
             href="/hardware/displays/player"
             className="btn btn-outline"
             style={{
-              width: 38,
-              minWidth: 38,
-              height: 38,
+              width: 42,
+              minWidth: 42,
+              height: 42,
               padding: 0,
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: '12px',
+              borderRadius: '50%',
               backgroundColor: 'var(--bg-surface-elevated)',
               borderColor: 'var(--border-subtle)',
               color: 'var(--text-primary)',
@@ -43,22 +47,22 @@ export default function DisplayDetailNavigation() {
             aria-label="Kembali ke daftar layar"
             title="Kembali ke daftar layar"
           >
-            <ArrowLeft size={17} />
+            <ArrowLeft size={18} />
           </Link>
           <div style={{ minWidth: 0 }}>
-            <h1 style={{ color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: 700, margin: 0, overflowWrap: 'anywhere' }}>
+            <h1 style={{ color: 'var(--text-primary)', fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', margin: 0, overflowWrap: 'anywhere' }}>
               {device?.name || 'Detail Layar'}
             </h1>
             
             {/* Meta Info with Icons */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 5, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4, flexWrap: 'wrap' }}>
               {/* Badge Status Online/Offline */}
               <span
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 5,
-                  fontSize: '0.72rem',
+                  fontSize: '0.75rem',
                   fontWeight: 700,
                   color: isLiveConnected ? 'var(--accent-emerald)' : 'var(--text-muted)',
                 }}
@@ -76,21 +80,21 @@ export default function DisplayDetailNavigation() {
               </span>
 
               {device?.screenWidth && device.screenHeight && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-muted)', fontSize: '0.75rem' }}>
                   <Monitor size={13} style={{ opacity: 0.7 }} />
                   {device.screenWidth} × {device.screenHeight}
                 </span>
               )}
 
               {device?.ipAddress && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-muted)', fontSize: '0.72rem', fontFamily: 'monospace' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-muted)', fontSize: '0.75rem', fontFamily: 'monospace' }}>
                   <Network size={13} style={{ opacity: 0.7 }} />
                   {device.ipAddress}
                 </span>
               )}
 
               {device?.lastHeartbeatAt && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-muted)', fontSize: '0.7rem' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-muted)', fontSize: '0.75rem' }}>
                   <Clock size={12} style={{ opacity: 0.7 }} />
                   {formatIndonesianDateTime(device.lastHeartbeatAt)}
                 </span>
@@ -120,43 +124,21 @@ export default function DisplayDetailNavigation() {
         </div>
       )}
 
-      {/* Modern Pill / Segmented Tabs Navigation */}
-      <nav
-        aria-label="Navigasi detail layar"
-        style={{
-          display: 'flex',
-          gap: 6,
-          padding: 4,
-          backgroundColor: 'var(--bg-surface-elevated)',
-          border: '1px solid var(--border-subtle)',
-          borderRadius: '14px',
-          width: 'fit-content',
-          maxWidth: '100%',
-          overflowX: 'auto',
-        }}
-      >
+      {/* Module Tabs Navigation */}
+      <nav aria-label="Navigasi detail layar" className="dashboard-tabs">
         {tabs.map((tab) => {
           const href = `${basePath}/${tab.path}`;
           const active = pathname === href;
+          const Icon = tab.icon;
           return (
             <Link
               key={tab.path}
               href={href}
               aria-current={active ? 'page' : undefined}
-              style={{
-                flexShrink: 0,
-                padding: '7px 16px',
-                borderRadius: '10px',
-                color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
-                backgroundColor: active ? 'var(--bg-surface)' : 'transparent',
-                boxShadow: active ? '0 2px 8px rgba(0, 0, 0, 0.1)' : 'none',
-                fontSize: '0.78rem',
-                fontWeight: active ? 700 : 600,
-                textDecoration: 'none',
-                transition: 'all 0.2s ease',
-              }}
+              className="dashboard-tab"
             >
-              {tab.label}
+              <Icon size={19} strokeWidth={2.2} />
+              <span>{tab.label}</span>
             </Link>
           );
         })}

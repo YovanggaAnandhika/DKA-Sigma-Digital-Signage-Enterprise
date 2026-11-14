@@ -9,13 +9,14 @@ import {
   Camera,
   RotateCcw,
   Trash2,
-  Edit,
   CheckCircle2,
   Zap,
   Unlink2,
   Moon,
   Sun,
   CircleX,
+  SlidersHorizontal,
+  ArrowUpRight,
 } from 'lucide-react';
 import { ServerCommandType, pushDeviceCommand } from '@/lib/services/hardware/device.service';
 import { api } from '@/lib/services';
@@ -116,42 +117,55 @@ export default function DisplayCommandToolbar() {
 
   const commandActions = [
     {
-      label: 'Player',
+      label: 'Simulator Player',
+      subtitle: 'Buka pratinjau siaran',
+      badge: 'Web',
+      accent: 'var(--primary-500)',
       icon: <Play size={18} />,
       href: `/player/${device.id}`,
       target: '_blank',
     },
     {
-      label: 'Sinkron',
+      label: 'Sinkron Konten',
+      subtitle: sendingCmd === 'Sinkronkan Konten' ? 'Menyinkronkan...' : 'Tarik manifest terbaru',
+      badge: 'Jadwal',
+      accent: 'var(--accent-cyan)',
       icon: <RefreshCw size={18} className={sendingCmd === 'Sinkronkan Konten' ? 'animate-spin' : ''} />,
       onClick: () => { void handleSendCommand(ServerCommandType.COMMAND_RELOAD_MANIFEST, 'Sinkronkan Konten'); },
       disabled: !!sendingCmd,
     },
     {
-      label: 'Capture',
+      label: 'Tangkap Layar',
+      subtitle: sendingCmd === 'Ambil Screenshot' ? 'Memotret...' : 'Ambil visual saat ini',
+      badge: 'Visual',
+      accent: 'var(--accent-emerald)',
       icon: <Camera size={18} />,
       onClick: () => { void handleSendCommand(ServerCommandType.COMMAND_CAPTURE_SCREENSHOT, 'Ambil Screenshot'); },
       disabled: !!sendingCmd,
     },
     {
-      label: 'Restart',
+      label: 'Muat Ulang',
+      subtitle: sendingCmd === 'Mulai Ulang Player' ? 'Memulai ulang...' : 'Restart mesin player',
+      badge: 'Sistem',
+      accent: 'var(--accent-amber)',
       icon: <RotateCcw size={18} />,
       onClick: () => { void handleSendCommand(ServerCommandType.COMMAND_REBOOT_PLAYER, 'Mulai Ulang Player'); },
       disabled: !!sendingCmd,
     },
     {
-      label: 'Cache',
+      label: 'Bersihkan Cache',
+      subtitle: sendingCmd === 'Bersihkan Cache' ? 'Membersihkan...' : 'Kosongkan penyimpanan',
+      badge: 'Memori',
+      accent: 'var(--primary-400)',
       icon: <Trash2 size={18} />,
       onClick: () => { void handleSendCommand(ServerCommandType.COMMAND_CLEAR_CACHE, 'Bersihkan Cache'); },
       disabled: !!sendingCmd,
     },
     {
-      label: 'Atur',
-      icon: <Edit size={18} />,
-      href: `/hardware/displays/${device.id}/edit`,
-    },
-    {
-      label: unbinding ? 'Putus...' : 'Unbind',
+      label: unbinding ? 'Memutus...' : 'Putus Perangkat',
+      subtitle: 'Unbind & reset pairing',
+      badge: 'Bahaya',
+      accent: 'var(--accent-rose)',
       icon: <Unlink2 size={18} />,
       onClick: handleUnbind,
       disabled: unbinding,
@@ -159,80 +173,272 @@ export default function DisplayCommandToolbar() {
     },
   ];
 
+  const isDisplayAwake = currentScreenState === false;
+  const isDisplaySleeping = currentScreenState === true;
+
   return (
     <>
-      <div className="card-elevated" style={{ padding: 16, borderRadius: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '0.9rem', fontWeight: 700 }}>Kontrol Perangkat</h2>
+      <div className="card-elevated" style={{ padding: '20px', borderRadius: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span
+              style={{
+                width: '34px',
+                height: '34px',
+                borderRadius: '11px',
+                display: 'grid',
+                placeItems: 'center',
+                background: 'color-mix(in srgb, var(--primary-500) 14%, transparent)',
+                color: 'var(--primary-500)',
+                border: '1px solid color-mix(in srgb, var(--primary-500) 24%, transparent)',
+              }}
+            >
+              <SlidersHorizontal size={16} />
+            </span>
+            <div>
+              <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 750, letterSpacing: '-0.01em' }}>
+                Smart Control Hub
+              </h2>
+              <p style={{ margin: '1px 0 0', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
+                Panel kendali jarak jauh real-time & manajemen perangkat keras
+              </p>
+            </div>
           </div>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, background: 'var(--bg-surface-elevated)', color: screenTone, fontSize: '0.7rem', fontWeight: 700 }}>
-            <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: '50%', background: screenTone }} />
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 7,
+              padding: '5px 12px',
+              borderRadius: 999,
+              background: `color-mix(in srgb, ${screenTone} 12%, var(--bg-surface-elevated))`,
+              border: `1px solid color-mix(in srgb, ${screenTone} 28%, var(--border-subtle))`,
+              color: screenTone,
+              fontSize: '0.72rem',
+              fontWeight: 700,
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                background: screenTone,
+                boxShadow: isDisplayAwake ? `0 0 8px ${screenTone}` : 'none',
+              }}
+            />
             {screenStatusLabel}
           </span>
         </div>
 
-        {/* Smart Home Style Control Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(76px, 1fr))', gap: 8 }}>
-          {/* Power Toggle Button */}
+        {/* Smart Home Bento Grid */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+            gap: '12px',
+          }}
+        >
+          {/* Master Display Power Scene Tile */}
           <button
             type="button"
             role="switch"
-            aria-checked={currentScreenState === false}
+            aria-checked={isDisplayAwake}
             onClick={toggleScreenPower}
             disabled={currentScreenState === null || screenCommandPending || !!sendingCmd}
             style={{
+              position: 'relative',
+              overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-              height: 72,
-              padding: 6,
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 14,
-              backgroundColor: currentScreenState === false ? 'var(--bg-surface-elevated)' : 'rgba(255, 255, 255, 0.02)',
-              color: screenTone,
+              justifyContent: 'space-between',
+              gap: '16px',
+              minHeight: '116px',
+              padding: '16px',
+              borderRadius: '18px',
+              border: isDisplayAwake
+                ? '1px solid color-mix(in srgb, var(--accent-emerald) 45%, var(--border-subtle))'
+                : isDisplaySleeping
+                  ? '1px solid color-mix(in srgb, var(--accent-amber) 45%, var(--border-subtle))'
+                  : '1px solid var(--border-subtle)',
+              background: isDisplayAwake
+                ? 'linear-gradient(135deg, color-mix(in srgb, var(--accent-emerald) 18%, var(--bg-surface)) 0%, var(--bg-surface-elevated) 100%)'
+                : isDisplaySleeping
+                  ? 'linear-gradient(135deg, color-mix(in srgb, var(--accent-amber) 16%, var(--bg-surface)) 0%, var(--bg-surface-elevated) 100%)'
+                  : 'var(--bg-surface-elevated)',
+              boxShadow: isDisplayAwake
+                ? '0 10px 26px -10px color-mix(in srgb, var(--accent-emerald) 35%, transparent)'
+                : '0 2px 10px rgba(0, 0, 0, 0.04)',
+              color: 'var(--text-primary)',
+              textAlign: 'left',
               cursor: currentScreenState === null ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s ease',
+              opacity: currentScreenState === null ? 0.65 : 1,
+              transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           >
-            <span style={{ display: 'grid', placeItems: 'center', width: 32, height: 32, borderRadius: 10, background: screenTone, color: '#fff' }}>
-              {currentScreenState ? <Moon size={16} /> : <Sun size={16} />}
-            </span>
-            <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-              {currentScreenState ? 'Sleep' : 'Display'}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <span
+                style={{
+                  display: 'grid',
+                  placeItems: 'center',
+                  width: 40,
+                  height: 40,
+                  borderRadius: 13,
+                  background: isDisplayAwake
+                    ? 'var(--accent-emerald)'
+                    : isDisplaySleeping
+                      ? 'var(--accent-amber)'
+                      : 'var(--bg-surface)',
+                  color: currentScreenState === null ? 'var(--text-muted)' : '#fff',
+                  boxShadow: isDisplayAwake
+                    ? '0 4px 14px color-mix(in srgb, var(--accent-emerald) 45%, transparent)'
+                    : isDisplaySleeping
+                      ? '0 4px 14px color-mix(in srgb, var(--accent-amber) 40%, transparent)'
+                      : 'none',
+                  border: currentScreenState === null ? '1px solid var(--border-subtle)' : 'none',
+                }}
+              >
+                {isDisplaySleeping ? <Moon size={19} /> : <Sun size={19} />}
+              </span>
+
+              {/* Tactile Smart Home Pill Switch */}
+              <span
+                aria-hidden="true"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  width: 44,
+                  height: 24,
+                  padding: 3,
+                  borderRadius: 999,
+                  background: isDisplayAwake
+                    ? 'var(--accent-emerald)'
+                    : isDisplaySleeping
+                      ? 'color-mix(in srgb, var(--accent-amber) 35%, var(--bg-surface))'
+                      : 'var(--bg-surface)',
+                  border: '1px solid var(--border-subtle)',
+                  transition: 'background 0.2s ease',
+                }}
+              >
+                <span
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: '50%',
+                    background: '#fff',
+                    boxShadow: '0 1px 4px rgba(0, 0, 0, 0.25)',
+                    transform: isDisplayAwake ? 'translateX(20px)' : 'translateX(0)',
+                    transition: 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+                  }}
+                />
+              </span>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.88rem', fontWeight: 750, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                Daya Panel Layar
+              </div>
+              <div style={{ fontSize: '0.73rem', fontWeight: 600, color: screenTone, marginTop: 2 }}>
+                {screenCommandPending
+                  ? 'Mengirim sinyal daya...'
+                  : currentScreenState === null
+                    ? 'Menunggu telemetri perangkat'
+                    : isDisplaySleeping
+                      ? 'Mode Standby (Hemat Daya)'
+                      : 'Menyala · Siaran Aktif'}
+              </div>
+            </div>
           </button>
 
-          {/* Action Buttons */}
+          {/* Smart Home Action Tiles */}
           {commandActions.map((action) => {
             const tileStyle: React.CSSProperties = {
+              position: 'relative',
+              overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-              height: 72,
-              padding: 6,
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 14,
-              backgroundColor: 'var(--bg-surface-elevated)',
+              justifyContent: 'space-between',
+              gap: '16px',
+              minHeight: '116px',
+              padding: '16px',
+              border: action.danger
+                ? '1px solid color-mix(in srgb, var(--accent-rose) 28%, var(--border-subtle))'
+                : '1px solid var(--border-subtle)',
+              borderRadius: '18px',
+              background: action.danger
+                ? 'linear-gradient(135deg, color-mix(in srgb, var(--accent-rose) 8%, var(--bg-surface-elevated)) 0%, var(--bg-surface-elevated) 100%)'
+                : 'var(--bg-surface-elevated)',
               color: action.danger ? 'var(--accent-rose)' : 'var(--text-primary)',
               textDecoration: 'none',
+              textAlign: 'left',
               cursor: action.disabled ? 'not-allowed' : 'pointer',
-              opacity: action.disabled ? 0.5 : 1,
-              transition: 'all 0.2s ease',
+              opacity: action.disabled ? 0.55 : 1,
+              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.03)',
+              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
             };
 
             const contents = (
               <>
-                <span style={{ display: 'grid', placeItems: 'center', width: 32, height: 32, borderRadius: 10, background: 'var(--bg-primary)', color: action.danger ? 'var(--accent-rose)' : 'var(--primary-500)' }}>
-                  {action.icon}
-                </span>
-                <span style={{ fontSize: '0.7rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', textAlign: 'center' }}>
-                  {action.label}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <span
+                    style={{
+                      display: 'grid',
+                      placeItems: 'center',
+                      width: 40,
+                      height: 40,
+                      borderRadius: 13,
+                      background: `color-mix(in srgb, ${action.accent} 14%, var(--bg-surface))`,
+                      border: `1px solid color-mix(in srgb, ${action.accent} 26%, transparent)`,
+                      color: action.accent,
+                    }}
+                  >
+                    {action.icon}
+                  </span>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '3px 9px',
+                      borderRadius: 999,
+                      fontSize: '0.66rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.02em',
+                      background: `color-mix(in srgb, ${action.accent} 10%, var(--bg-surface))`,
+                      color: action.accent,
+                    }}
+                  >
+                    {action.badge}
+                    {action.href && <ArrowUpRight size={11} />}
+                  </span>
+                </div>
+
+                <div>
+                  <div
+                    style={{
+                      fontSize: '0.86rem',
+                      fontWeight: 750,
+                      color: action.danger ? 'var(--accent-rose)' : 'var(--text-primary)',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    {action.label}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 500,
+                      color: 'var(--text-muted)',
+                      marginTop: 2,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {action.subtitle}
+                  </div>
+                </div>
               </>
             );
 
