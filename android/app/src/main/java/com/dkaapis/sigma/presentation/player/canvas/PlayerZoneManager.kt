@@ -12,12 +12,14 @@ import com.dkaapis.sigma.presentation.renderers.VideoZoneRenderer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import signage.distribution.v1.stream.StreamCommon
+import androidx.media3.common.util.UnstableApi
 
 /**
  * Orkestrator Zona & Canvas Layout untuk Signage Player:
  * Mengkoordinasikan pembuatan view per zona, rendering media/widget,
  * linimasa playback, dan rilis sumber daya grafis.
  */
+@UnstableApi
 class PlayerZoneManager {
 
     private val mediaResolver = ZoneMediaResolver()

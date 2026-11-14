@@ -88,6 +88,18 @@ class PairingActivity : AppCompatActivity() {
         updateServerInfoText()
         observeState()
 
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (isPanelOpen) {
+                    closePanel()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                    isEnabled = true
+                }
+            }
+        })
+
         viewModel.startPairing()
     }
 
@@ -233,17 +245,7 @@ class PairingActivity : AppCompatActivity() {
         binding.tvServerInfo.text = "$host:$port"
     }
 
-    // ── Back key closes panel first ───────────────────────────────────────────
 
-    @Deprecated("Use OnBackPressedDispatcher", level = DeprecationLevel.WARNING)
-    override fun onBackPressed() {
-        if (isPanelOpen) {
-            closePanel()
-        } else {
-            @Suppress("DEPRECATION")
-            super.onBackPressed()
-        }
-    }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_SETTINGS) {

@@ -20,6 +20,3 @@ export interface LiveStreamConfig {
   createdAt?: string;
   updatedAt?: string;
 }
-
-export const LIVESTREAM_STORAGE_KEY = 'hndsigma_livestreams_v1';
-export const DEFAULT_LIVESTREAMS: LiveStreamConfig[] = [];

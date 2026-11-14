@@ -18,6 +18,7 @@ import com.dkaapis.sigma.presentation.util.DeviceCapabilityHelper
 import signage.distribution.v1.stream.StreamCommon
 import java.io.File
 
+@UnstableApi
 class VideoZoneRenderer(
     private val context: Context,
     val zoneName: String = ""

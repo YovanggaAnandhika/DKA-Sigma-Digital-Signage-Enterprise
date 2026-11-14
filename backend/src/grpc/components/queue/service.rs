@@ -962,7 +962,7 @@ impl QueueLayoutItemServiceTrait for QueueServiceImpl {
                 font_size: it.font_size,
                 font_weight: it.font_weight,
                 text_align: it.text_align,
-                template_content: it.template_content.unwrap_or_default(),
+                template_content: it.template_content,
                 config_json: it.config_json,
                 is_visible: it.is_visible,
                 created_at: chrono::Utc::now().to_rfc3339(),

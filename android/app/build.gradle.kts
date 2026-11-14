@@ -59,6 +59,10 @@ android {
             excludes += "META-INF/io.netty.versions.properties"
         }
     }
+
+    lint {
+        warning.add("UnsafeOptInUsageError")
+    }
 }
 
 protobuf {

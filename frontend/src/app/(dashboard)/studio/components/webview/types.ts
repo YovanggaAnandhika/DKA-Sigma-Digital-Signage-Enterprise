@@ -8,28 +8,3 @@ export interface WebViewConfig {
   orientation: 'landscape' | 'portrait';
   createdAt?: string;
 }
-
-export const WEBVIEW_STORAGE_KEY = 'dka_signage_webviews';
-
-export const DEFAULT_WEBVIEWS: WebViewConfig[] = [
-  {
-    id: 'b0000000-0000-0000-0000-000000000001',
-    name: 'Katalog Menu & Promo Kafe',
-    url: 'https://en.wikipedia.org/wiki/Digital_signage',
-    refreshIntervalSeconds: 60,
-    zoomScale: 100,
-    bypassCache: true,
-    orientation: 'landscape',
-    createdAt: '2026-10-08',
-  },
-  {
-    id: 'b0000000-0000-0000-0000-000000000002',
-    name: 'Live Dashboard Indikator Penjualan Toko',
-    url: 'https://worldtimeapi.org',
-    refreshIntervalSeconds: 30,
-    zoomScale: 110,
-    bypassCache: false,
-    orientation: 'landscape',
-    createdAt: '2026-10-08',
-  },
-];

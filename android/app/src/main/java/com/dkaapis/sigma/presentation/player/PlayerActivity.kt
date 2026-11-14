@@ -73,12 +73,14 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.Locale
+import androidx.media3.common.util.UnstableApi
 
 /**
  * Aktivitas Utama Pemutar Signage HNDSigma:
  * Mengorkestrasikan siklus hidup aplikasi, canvas rendering, telemetri,
  * aliran data realtime SSE, dan audio TTS.
  */
+@UnstableApi
 class PlayerActivity : AppCompatActivity(), OnDeviceEventListener {
 
     private lateinit var viewModel: PlayerViewModel

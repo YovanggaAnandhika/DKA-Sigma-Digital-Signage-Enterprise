@@ -202,7 +202,7 @@
                 android:contentDescription="Tutup"
                 android:padding="7dp"
                 android:layout_marginEnd="12dp"
-                android:tint="#CC1e293b" />
+                app:tint="#CC1e293b" />
 
             <LinearLayout
                 android:layout_width="0dp"

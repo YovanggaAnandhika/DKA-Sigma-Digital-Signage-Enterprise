@@ -202,20 +202,9 @@ Berikut adalah urutan terverifikasi **51 pasang migrasi** di `backend/migrations
 | **0047** | `0047_create_components_queue_iot_bindings` | `components_queue_iot_bindings` | `corporation_id`, `branch_id`, `created_by_user_id` |
 | **0048** | `0048_add_iot_device_telemetry` | `iot_devices` (ALTER) | Telemetri IoT ESP32/Arduino (Tanpa user reference) |
 | **0049** | `0049_create_system_apk_releases` | `system_apk_releases` | APK OTA Update Management (`apk_file_url`, `sha256_hash`, `version_code`) |
-| **0050** | `0050_create_components_live_streams` | `components_live_streams` | Live Stream Relay (`stream_mode`, `source_type`, `server_hls_endpoint`) |
+| **0050** | `0050_create_components_live_streams` | `components_live_streams` | Live Stream Relay (`stream_mode`, `source_type`, `server_hls_endpoint`, `requires_auth`) |
 | **0051** | `0051_add_live_stream_to_layer_blocks` | `studio_layer_blocks` (ALTER) | Menghubungkan blok layer canvas dengan Live Stream ID |
-
----
-
-## 4. Alur Verifikasi DDL & Migrasi
-
-Untuk menjalankan migrasi fresh dan seeder:
-```bash
-cargo run --bin signage-backend -- --migrate:fresh --seed
-```
-Atau langkah terpisah:
-1. `cargo run --bin signage-backend -- --migrate`
-2. `cargo run --bin signage-backend -- --seed`
+| **0052** | `0052_add_assigned_manifest_snapshot` | `hardware_devices` (ALTER) | Menambahkan `assigned_layout_manifest` (JSONB) dan `assigned_layout_version_hash` |
 
 ---
 

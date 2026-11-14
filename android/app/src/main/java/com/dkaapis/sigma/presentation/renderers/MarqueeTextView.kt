@@ -4,13 +4,13 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.util.AttributeSet
 import android.view.animation.LinearInterpolator
-import android.widget.TextView
+import androidx.appcompat.widget.AppCompatTextView
 
 class MarqueeTextView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : TextView(context, attrs, defStyleAttr) {
+) : AppCompatTextView(context, attrs, defStyleAttr) {
 
     private var animator: ValueAnimator? = null
     var speedPixelsPerSec: Float = 100f

@@ -47,6 +47,7 @@ class PlayerDeviceCommandHandler {
         }
     }
 
+    @android.annotation.SuppressLint("MissingPermission")
     private fun tryHardwareReboot(context: Context): Boolean {
         return try {
             val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return false
