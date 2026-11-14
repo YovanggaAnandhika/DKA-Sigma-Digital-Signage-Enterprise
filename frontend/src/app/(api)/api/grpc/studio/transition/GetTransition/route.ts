@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TransitionServiceClient } from '@/lib/api/studio/v1/transition/transition_grpc_pb';
 import { GetTransitionRequest } from '@/lib/api/studio/v1/transition/transition.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadata, getGrpcMetadataFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const token = getTokenFromRequest(req);
-    const client = new TransitionServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = getGrpcClient(TransitionServiceClient);
     
     const request = new GetTransitionRequest();
     if (body.id) request.setId(body.id);
     
     return new Promise<NextResponse>((resolve) => {
-      client.getTransition(request, getGrpcMetadata(token), (error: any, response: any) => {
+      client.getTransition(request, getGrpcMetadataFromRequest(req), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));
       });

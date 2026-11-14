@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AppUpdateServiceClient } from '@/lib/api/system/v1/update/update_grpc_pb';
 import { DeleteAppReleaseRequest } from '@/lib/api/system/v1/update/update.common_pb';
-import { getGrpcClient, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadata, getGrpcMetadataFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const token = getTokenFromRequest(req);
     const client = getGrpcClient(AppUpdateServiceClient);
 
     const request = new DeleteAppReleaseRequest();
     if (body.id) request.setId(body.id);
 
     return new Promise<NextResponse>((resolve) => {
-      client.deleteAppRelease(request, getGrpcMetadata(token), (error: any, response: any) => {
+      client.deleteAppRelease(request, getGrpcMetadataFromRequest(req), (error: any, response: any) => {
         if (error) {
           console.error('[DeleteAppRelease] gRPC error:', error);
           resolve(NextResponse.json({ error: error.message }, { status: 500 }));

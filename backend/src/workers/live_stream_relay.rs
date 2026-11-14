@@ -113,6 +113,9 @@ impl LiveStreamRelayManager {
         source_type: &str,
         source_url: &str,
         _low_latency: bool,
+        requires_auth: bool,
+        ingest_username: &str,
+        ingest_password: &str,
     ) {
         let upper_type = source_type.to_uppercase();
 
@@ -132,7 +135,14 @@ impl LiveStreamRelayManager {
             signals.insert(stream_id, stop_tx);
         }
 
-        let source_url_s = source_url.to_string();
+        let mut source_url_s = source_url.to_string();
+        if upper_type == "RTSP" && requires_auth && !ingest_username.trim().is_empty() {
+            if let Some(rest) = source_url_s.strip_prefix("rtsp://") {
+                if !rest.contains('@') {
+                    source_url_s = format!("rtsp://{}:{}@{}", ingest_username.trim(), ingest_password.trim(), rest);
+                }
+            }
+        }
         let target_rtsp = format!(
             "{}/live/{}",
             self.streamer_rtmp_url.trim_end_matches('/'),
@@ -335,10 +345,13 @@ impl LiveStreamRelayManager {
             source_type: String,
             source_url: String,
             low_latency_mode: bool,
+            requires_auth: bool,
+            ingest_username: String,
+            ingest_password: String,
         }
 
         let active_rows = match sqlx::query_as::<_, ActiveStreamRow>(
-            "SELECT id, source_type, source_url, low_latency_mode FROM components_live_streams WHERE stream_mode = 'SERVER_HOSTED_HLS' AND is_relay_active = true"
+            "SELECT id, source_type, source_url, low_latency_mode, requires_auth, ingest_username, ingest_password FROM components_live_streams WHERE stream_mode = 'SERVER_HOSTED_HLS' AND is_relay_active = true"
         )
         .fetch_all(pool).await {
             Ok(rows) => rows,
@@ -350,7 +363,15 @@ impl LiveStreamRelayManager {
 
         info!("Syncing {} active Live Stream relays with internal streamer engine...", active_rows.len());
         for row in active_rows {
-            self.start_relay(row.id, &row.source_type, &row.source_url, row.low_latency_mode).await;
+            self.start_relay(
+                row.id,
+                &row.source_type,
+                &row.source_url,
+                row.low_latency_mode,
+                row.requires_auth,
+                &row.ingest_username,
+                &row.ingest_password,
+            ).await;
         }
     }
 }

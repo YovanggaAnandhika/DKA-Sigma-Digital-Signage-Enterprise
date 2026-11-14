@@ -90,6 +90,13 @@ impl ClockServiceTrait for ClockServiceImpl {
         &self,
         request: Request<CreateClockRequest>,
     ) -> Result<Response<Clock>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_clocks")?;
+        let corp_id = claims.active_corporation_id()
+            .and_then(|c| Uuid::parse_str(c).ok())
+            .unwrap_or_else(|| Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
+        let branch_id = claims.branch_id.as_deref().and_then(|b| Uuid::parse_str(b).ok());
+        let user_id = Uuid::parse_str(&claims.sub).ok();
+
         let req = request.into_inner();
         let id = Uuid::new_v4();
         let city = if req.city.is_empty() { "Makassar".to_string() } else { req.city };
@@ -99,16 +106,16 @@ impl ClockServiceTrait for ClockServiceImpl {
         let row = sqlx::query_as::<_, ClockRow>(
             r#"
             INSERT INTO components_clocks (
-                id, corporation_id, name, timezone, clock_format, show_seconds, show_date, font_size,
+                id, corporation_id, branch_id, created_by_user_id,
+                name, timezone, clock_format, show_seconds, show_date, font_size,
                 background_color, text_color, weather_city
             )
             VALUES (
-                $1,
-                COALESCE((SELECT id FROM system_corporations LIMIT 1), '00000000-0000-0000-0000-000000000000'::uuid),
-                $2, 'Asia/Jakarta', $3, $4, true, $5,
-                COALESCE(NULLIF($6, ''), 'transparent'),
-                COALESCE(NULLIF($7, ''), '#ffffff'),
-                $8
+                $1, $2, $3, $4,
+                $5, 'Asia/Jakarta', $6, $7, true, $8,
+                COALESCE(NULLIF($9, ''), 'transparent'),
+                COALESCE(NULLIF($10, ''), '#ffffff'),
+                $11
             )
             RETURNING id, name, timezone, clock_format, show_seconds, show_date, font_size,
                       background_color, text_color, weather_city,
@@ -116,6 +123,9 @@ impl ClockServiceTrait for ClockServiceImpl {
             "#
         )
         .bind(id)
+        .bind(corp_id)
+        .bind(branch_id)
+        .bind(user_id)
         .bind(&req.name)
         .bind(&clock_format)
         .bind(req.show_seconds)
@@ -134,11 +144,15 @@ impl ClockServiceTrait for ClockServiceImpl {
         &self,
         request: Request<GetClockRequest>,
     ) -> Result<Response<Clock>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_view_clocks")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
         let row = sqlx::query_as::<_, ClockRow>(
-            "SELECT id, name, timezone, clock_format, show_seconds, show_date, font_size, background_color, text_color, weather_city, created_at, updated_at FROM components_clocks WHERE id = $1"
+            "SELECT id, name, timezone, clock_format, show_seconds, show_date, font_size, background_color, text_color, weather_city, created_at, updated_at FROM components_clocks WHERE id = $1 AND ($2::uuid IS NULL OR corporation_id = $2)"
         )
         .bind(id)
+        .bind(corp_id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?
@@ -151,6 +165,9 @@ impl ClockServiceTrait for ClockServiceImpl {
         &self,
         request: Request<ListClocksRequest>,
     ) -> Result<Response<ListClocksResponse>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_view_clocks")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+
         let req = request.into_inner();
         let search = format!("%{}%", req.search);
 
@@ -160,11 +177,13 @@ impl ClockServiceTrait for ClockServiceImpl {
                    background_color, text_color, weather_city,
                    created_at, updated_at
             FROM components_clocks
-            WHERE name ILIKE $1 OR weather_city ILIKE $1 OR timezone ILIKE $1
+            WHERE ($1::uuid IS NULL OR corporation_id = $1)
+              AND (name ILIKE $2 OR weather_city ILIKE $2 OR timezone ILIKE $2)
             ORDER BY created_at DESC
             LIMIT 50
             "#
         )
+        .bind(corp_id)
         .bind(&search)
         .fetch_all(&self.pool)
         .await
@@ -187,6 +206,9 @@ impl ClockServiceTrait for ClockServiceImpl {
         &self,
         request: Request<UpdateClockRequest>,
     ) -> Result<Response<Clock>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_clocks")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id).map_err(|_| Status::invalid_argument("Invalid id"))?;
         let clock_format = Some(if req.is_24_hour { "24h" } else { "12h" }.to_string());
@@ -203,7 +225,7 @@ impl ClockServiceTrait for ClockServiceImpl {
                 background_color = COALESCE(NULLIF($7, ''), background_color),
                 text_color = COALESCE(NULLIF($8, ''), text_color),
                 updated_at = NOW()
-            WHERE id = $1
+            WHERE id = $1 AND ($9::uuid IS NULL OR corporation_id = $9)
             RETURNING id, name, timezone, clock_format, show_seconds, show_date, font_size,
                       background_color, text_color, weather_city,
                       created_at, updated_at
@@ -217,9 +239,11 @@ impl ClockServiceTrait for ClockServiceImpl {
         .bind(font_size)
         .bind(&req.background_color)
         .bind(&req.text_color)
-        .fetch_one(&self.pool)
+        .bind(corp_id)
+        .fetch_optional(&self.pool)
         .await
-        .map_err(|e| Status::internal(e.to_string()))?;
+        .map_err(|e| Status::internal(e.to_string()))?
+        .ok_or_else(|| Status::not_found("Clock not found"))?;
 
         Ok(Response::new(row.into_proto()))
     }
@@ -228,12 +252,21 @@ impl ClockServiceTrait for ClockServiceImpl {
         &self,
         request: Request<DeleteClockRequest>,
     ) -> Result<Response<DeleteClockResponse>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_clocks")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        sqlx::query("DELETE FROM components_clocks WHERE id = $1")
+        let result = sqlx::query("DELETE FROM components_clocks WHERE id = $1 AND ($2::uuid IS NULL OR corporation_id = $2)")
             .bind(id)
+            .bind(corp_id)
             .execute(&self.pool)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
+
+        if result.rows_affected() == 0 {
+            return Err(Status::not_found("Clock not found or permission denied"));
+        }
+
         Ok(Response::new(DeleteClockResponse { success: true }))
     }
 }

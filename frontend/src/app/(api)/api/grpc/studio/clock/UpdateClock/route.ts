@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ClockServiceClient } from '@/lib/api/components/v1/clock/clock_grpc_pb';
 import { UpdateClockRequest } from '@/lib/api/components/v1/clock/clock.common_pb';
-import { getGrpcClient, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadata, getGrpcMetadataFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     const client = getGrpcClient(ClockServiceClient);
 
     return new Promise<NextResponse>((resolve) => {
-      client.updateClock(request, getGrpcMetadata(getTokenFromRequest(req)), (error, response) => {
+      client.updateClock(request, getGrpcMetadataFromRequest(req), (error, response) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));
       });

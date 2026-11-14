@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { LayoutServiceClient } from '@/lib/api/studio/v1/layout/layout_grpc_pb';
 import { ListLayoutHistoryRequest } from '@/lib/api/studio/v1/layout/layout.common_pb';
 import { PaginationRequest } from '@/lib/api/common/v1/types_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadata, getGrpcMetadataFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const token = getTokenFromRequest(req);
-    const client = new LayoutServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = getGrpcClient(LayoutServiceClient);
 
     const request = new ListLayoutHistoryRequest();
     if (body.layout_id || body.layoutId) {
@@ -24,7 +23,7 @@ export async function POST(req: NextRequest) {
     request.setPagination(pagination);
 
     return new Promise<NextResponse>((resolve) => {
-      client.listLayoutHistory(request, getGrpcMetadata(token), (error: any, response: any) => {
+      client.listLayoutHistory(request, getGrpcMetadataFromRequest(req), (error: any, response: any) => {
         if (error) {
           resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         } else {

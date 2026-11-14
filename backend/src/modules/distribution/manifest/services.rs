@@ -140,7 +140,7 @@ impl ManifestService {
 
         // Display Group Fallback
         if let Some(group_id) = device.display_group_id {
-            if let Ok(Some(group)) = DisplayGroupRepository::find_by_id(pool, group_id).await {
+            if let Ok(Some(group)) = DisplayGroupRepository::find_by_id(pool, group_id, device.corporation_id).await {
                 if active_layout_id.is_none() {
                     active_layout_id = group.default_layout_id;
                 }

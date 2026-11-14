@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { StreamServiceClient } from '@/lib/api/distribution/v1/stream/stream_grpc_pb';
 import { WatchDeviceDiagnosticsRequest } from '@/lib/api/distribution/v1/stream/stream.common_pb';
-import { getGrpcClient, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadata, getGrpcMetadataFromRequest } from '@/lib/core/grpcClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const client = getGrpcClient(StreamServiceClient);
     const grpcStream = client.watchDeviceDiagnostics(
       request,
-      getGrpcMetadata(getTokenFromRequest(req))
+      getGrpcMetadataFromRequest(req)
     );
 
     let cancelStream = () => {};

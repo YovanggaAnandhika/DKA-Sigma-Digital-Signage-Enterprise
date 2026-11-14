@@ -27,9 +27,9 @@ impl DisplayGroupServiceImpl {
             name: entity.name,
             description: entity.description.unwrap_or_default(),
             default_layout_id: entity.default_layout_id.map(|id| id.to_string()).unwrap_or_default(),
-            default_layout_name: "".to_string(), // will be populated via join if needed
+            default_layout_name: entity.default_layout_name.unwrap_or_default(),
             schedule_id: entity.schedule_id.map(|id| id.to_string()).unwrap_or_default(),
-            schedule_name: "".to_string(), // will be populated via join if needed
+            schedule_name: entity.schedule_name.unwrap_or_default(),
             created_at: entity.created_at.to_rfc3339(),
             updated_at: entity.updated_at.to_rfc3339(),
         }
@@ -42,7 +42,13 @@ impl DisplayGroupServiceTrait for DisplayGroupServiceImpl {
         &self,
         request: Request<CreateDisplayGroupRequest>,
     ) -> Result<Response<DisplayGroup>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
+        let corp_id = claims.active_corporation_id()
+            .and_then(|c| Uuid::parse_str(c).ok())
+            .unwrap_or_else(|| Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
+        let branch_id = claims.branch_id.as_deref().and_then(|b| Uuid::parse_str(b).ok());
+        let user_id = Uuid::parse_str(&claims.sub).ok();
+
         let req = request.into_inner();
 
         let default_layout_id = if req.default_layout_id.is_empty() {
@@ -58,6 +64,9 @@ impl DisplayGroupServiceTrait for DisplayGroupServiceImpl {
         };
 
         let dto = CreateDisplayGroupDto {
+            corporation_id: corp_id,
+            branch_id,
+            user_id,
             name: req.name,
             description: if req.description.is_empty() { None } else { Some(req.description) },
             default_layout_id,
@@ -75,12 +84,13 @@ impl DisplayGroupServiceTrait for DisplayGroupServiceImpl {
         &self,
         request: Request<GetDisplayGroupRequest>,
     ) -> Result<Response<DisplayGroup>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
         let req = request.into_inner();
         let group_id = Uuid::parse_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid group ID"))?;
 
-        let group = DisplayGroupService::get_display_group_by_id(&self.pool, group_id)
+        let group = DisplayGroupService::get_display_group_by_id(&self.pool, group_id, corp_id)
             .await
             .map_err(Status::from)?;
 
@@ -91,8 +101,9 @@ impl DisplayGroupServiceTrait for DisplayGroupServiceImpl {
         &self,
         request: Request<ListDisplayGroupsRequest>,
     ) -> Result<Response<ListDisplayGroupsResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
-        let groups = DisplayGroupService::list_display_groups(&self.pool)
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+        let groups = DisplayGroupService::list_display_groups(&self.pool, corp_id)
             .await
             .map_err(Status::from)?;
 
@@ -108,7 +119,8 @@ impl DisplayGroupServiceTrait for DisplayGroupServiceImpl {
         &self,
         request: Request<UpdateDisplayGroupRequest>,
     ) -> Result<Response<DisplayGroup>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
         let req = request.into_inner();
         let group_id = Uuid::parse_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid group ID"))?;
@@ -132,7 +144,7 @@ impl DisplayGroupServiceTrait for DisplayGroupServiceImpl {
             schedule_id,
         };
 
-        let group = DisplayGroupService::update_display_group(&self.pool, group_id, dto)
+        let group = DisplayGroupService::update_display_group(&self.pool, group_id, corp_id, dto)
             .await
             .map_err(Status::from)?;
 
@@ -143,12 +155,13 @@ impl DisplayGroupServiceTrait for DisplayGroupServiceImpl {
         &self,
         request: Request<DeleteDisplayGroupRequest>,
     ) -> Result<Response<DeleteDisplayGroupResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
         let req = request.into_inner();
         let group_id = Uuid::parse_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid group ID"))?;
 
-        let success = DisplayGroupService::delete_display_group(&self.pool, group_id)
+        let success = DisplayGroupService::delete_display_group(&self.pool, group_id, corp_id)
             .await
             .map_err(Status::from)?;
 

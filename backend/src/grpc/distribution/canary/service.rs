@@ -40,7 +40,13 @@ impl CanaryServiceTrait for CanaryServiceImpl {
         &self,
         request: Request<CreateCanaryGroupRequest>,
     ) -> Result<Response<CanaryGroup>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_distribution")?;
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_distribution")?;
+        let corp_id = claims.active_corporation_id()
+            .and_then(|c| Uuid::parse_str(c).ok())
+            .unwrap_or_else(|| Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
+        let branch_id = claims.branch_id.as_deref().and_then(|b| Uuid::parse_str(b).ok());
+        let user_id = Uuid::parse_str(&claims.sub).ok();
+
         let req = request.into_inner();
 
         let target_layout_id = if req.target_layout_id.is_empty() {
@@ -50,6 +56,9 @@ impl CanaryServiceTrait for CanaryServiceImpl {
         };
 
         let dto = CreateCanaryGroupDto {
+            corporation_id: corp_id,
+            branch_id,
+            user_id,
             name: req.name,
             description: if req.description.is_empty() { None } else { Some(req.description) },
             rollout_percentage: if req.rollout_percentage >= 0 { Some(req.rollout_percentage) } else { None },
@@ -68,12 +77,13 @@ impl CanaryServiceTrait for CanaryServiceImpl {
         &self,
         request: Request<GetCanaryGroupRequest>,
     ) -> Result<Response<CanaryGroup>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_distribution")?;
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_distribution")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
         let req = request.into_inner();
         let group_id = Uuid::parse_str(&req.id)
             .map_err(|_| Status::invalid_argument("ID Canary Group tidak valid"))?;
 
-        let group = CanaryService::get_canary_group_by_id(&self.pool, group_id)
+        let group = CanaryService::get_canary_group_by_id(&self.pool, group_id, corp_id)
             .await
             .map_err(Status::from)?;
 
@@ -84,8 +94,9 @@ impl CanaryServiceTrait for CanaryServiceImpl {
         &self,
         request: Request<ListCanaryGroupsRequest>,
     ) -> Result<Response<ListCanaryGroupsResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_distribution")?;
-        let groups = CanaryService::list_canary_groups(&self.pool)
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_distribution")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+        let groups = CanaryService::list_canary_groups(&self.pool, corp_id)
             .await
             .map_err(Status::from)?;
 
@@ -101,7 +112,8 @@ impl CanaryServiceTrait for CanaryServiceImpl {
         &self,
         request: Request<UpdateCanaryGroupRequest>,
     ) -> Result<Response<CanaryGroup>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_distribution")?;
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_distribution")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
         let req = request.into_inner();
         let group_id = Uuid::parse_str(&req.id)
             .map_err(|_| Status::invalid_argument("ID Canary Group tidak valid"))?;
@@ -120,7 +132,7 @@ impl CanaryServiceTrait for CanaryServiceImpl {
             target_layout_id,
         };
 
-        let group = CanaryService::update_canary_group(&self.pool, group_id, dto)
+        let group = CanaryService::update_canary_group(&self.pool, group_id, corp_id, dto)
             .await
             .map_err(Status::from)?;
 
@@ -131,12 +143,13 @@ impl CanaryServiceTrait for CanaryServiceImpl {
         &self,
         request: Request<DeleteCanaryGroupRequest>,
     ) -> Result<Response<DeleteCanaryGroupResponse>, Status> {
-        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_distribution")?;
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_distribution")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
         let req = request.into_inner();
         let group_id = Uuid::parse_str(&req.id)
             .map_err(|_| Status::invalid_argument("ID Canary Group tidak valid"))?;
 
-        let success = CanaryService::delete_canary_group(&self.pool, group_id)
+        let success = CanaryService::delete_canary_group(&self.pool, group_id, corp_id)
             .await
             .map_err(Status::from)?;
 
@@ -147,6 +160,7 @@ impl CanaryServiceTrait for CanaryServiceImpl {
         &self,
         request: Request<EvaluateCanaryRequest>,
     ) -> Result<Response<EvaluateCanaryResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_distribution")?;
         let req = request.into_inner();
         let device_id = Uuid::parse_str(&req.device_id)
             .map_err(|_| Status::invalid_argument("ID Device tidak valid"))?;

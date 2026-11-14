@@ -174,11 +174,17 @@ impl StreamConnectionManager {
         }
     }
 
-    pub async fn unregister_connection(&self, device_id: &Uuid) {
-        self.active_displays
+    pub async fn unregister_connection(&self, device_id: &Uuid, sender: &CommandSender) -> bool {
+        let mut map = self.active_displays
             .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .remove(device_id);
+            .unwrap_or_else(|e| e.into_inner());
+        if let Some(current) = map.get(device_id) {
+            if current.same_channel(sender) {
+                map.remove(device_id);
+                return true;
+            }
+        }
+        false
     }
 
     pub fn subscribe_diagnostics(&self, device_id: Uuid) -> DiagnosticsSubscription {

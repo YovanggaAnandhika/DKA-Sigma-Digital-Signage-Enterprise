@@ -85,6 +85,7 @@ impl TransitionService for MyTransitionService {
         &self,
         request: Request<CreateTransitionRequest>,
     ) -> Result<Response<Transition>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let transition = self
             .repository
@@ -106,6 +107,7 @@ impl TransitionService for MyTransitionService {
         &self,
         request: Request<UpdateTransitionRequest>,
     ) -> Result<Response<Transition>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let id = Uuid::parse_str(&req.id).map_err(|_| Status::invalid_argument("Invalid ID format"))?;
 
@@ -134,6 +136,7 @@ impl TransitionService for MyTransitionService {
         &self,
         request: Request<DeleteTransitionRequest>,
     ) -> Result<Response<DeleteTransitionResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let id = Uuid::parse_str(&req.id).map_err(|_| Status::invalid_argument("Invalid ID format"))?;
 

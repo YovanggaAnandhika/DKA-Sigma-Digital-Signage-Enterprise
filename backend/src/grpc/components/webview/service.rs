@@ -55,6 +55,13 @@ impl WebviewServiceTrait for WebviewServiceImpl {
         &self,
         request: Request<CreateWebviewRequest>,
     ) -> Result<Response<Webview>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_webviews")?;
+        let corp_id = claims.active_corporation_id()
+            .and_then(|c| Uuid::parse_str(c).ok())
+            .unwrap_or_else(|| Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
+        let branch_id = claims.branch_id.as_deref().and_then(|b| Uuid::parse_str(b).ok());
+        let user_id = Uuid::parse_str(&claims.sub).ok();
+
         let req = request.into_inner();
         let id = Uuid::new_v4();
         let orientation = if req.orientation.is_empty() { "landscape".to_string() } else { req.orientation };
@@ -63,12 +70,18 @@ impl WebviewServiceTrait for WebviewServiceImpl {
 
         let row = sqlx::query_as::<_, WebviewRow>(
             r#"
-            INSERT INTO components_webviews (id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO components_webviews (
+                id, corporation_id, branch_id, created_by_user_id,
+                name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation, created_at, updated_at
             "#
         )
         .bind(id)
+        .bind(corp_id)
+        .bind(branch_id)
+        .bind(user_id)
         .bind(&req.name)
         .bind(&req.url)
         .bind(refresh_interval)
@@ -86,11 +99,15 @@ impl WebviewServiceTrait for WebviewServiceImpl {
         &self,
         request: Request<GetWebviewRequest>,
     ) -> Result<Response<Webview>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_view_webviews")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
         let row = sqlx::query_as::<_, WebviewRow>(
-            "SELECT id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation, created_at, updated_at FROM components_webviews WHERE id = $1"
+            "SELECT id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation, created_at, updated_at FROM components_webviews WHERE id = $1 AND ($2::uuid IS NULL OR corporation_id = $2)"
         )
         .bind(id)
+        .bind(corp_id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?
@@ -103,6 +120,9 @@ impl WebviewServiceTrait for WebviewServiceImpl {
         &self,
         request: Request<ListWebviewsRequest>,
     ) -> Result<Response<ListWebviewsResponse>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_view_webviews")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+
         let req = request.into_inner();
         let search = format!("%{}%", req.search);
 
@@ -110,11 +130,13 @@ impl WebviewServiceTrait for WebviewServiceImpl {
             r#"
             SELECT id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation, created_at, updated_at
             FROM components_webviews
-            WHERE name ILIKE $1 OR url ILIKE $1
+            WHERE ($1::uuid IS NULL OR corporation_id = $1)
+              AND (name ILIKE $2 OR url ILIKE $2)
             ORDER BY created_at DESC
             LIMIT 50
             "#
         )
+        .bind(corp_id)
         .bind(&search)
         .fetch_all(&self.pool)
         .await
@@ -137,6 +159,9 @@ impl WebviewServiceTrait for WebviewServiceImpl {
         &self,
         request: Request<UpdateWebviewRequest>,
     ) -> Result<Response<Webview>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_webviews")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id).map_err(|_| Status::invalid_argument("Invalid id"))?;
 
@@ -150,7 +175,7 @@ impl WebviewServiceTrait for WebviewServiceImpl {
                 bypass_cache = $6,
                 orientation = COALESCE(NULLIF($7, ''), orientation),
                 updated_at = NOW()
-            WHERE id = $1
+            WHERE id = $1 AND ($8::uuid IS NULL OR corporation_id = $8)
             RETURNING id, name, url, refresh_interval_seconds, zoom_scale, bypass_cache, orientation, created_at, updated_at
             "#
         )
@@ -161,9 +186,11 @@ impl WebviewServiceTrait for WebviewServiceImpl {
         .bind(req.zoom_scale)
         .bind(req.bypass_cache)
         .bind(&req.orientation)
-        .fetch_one(&self.pool)
+        .bind(corp_id)
+        .fetch_optional(&self.pool)
         .await
-        .map_err(|e| Status::internal(e.to_string()))?;
+        .map_err(|e| Status::internal(e.to_string()))?
+        .ok_or_else(|| Status::not_found("Webview not found"))?;
 
         Ok(Response::new(row.into_proto()))
     }
@@ -172,12 +199,21 @@ impl WebviewServiceTrait for WebviewServiceImpl {
         &self,
         request: Request<DeleteWebviewRequest>,
     ) -> Result<Response<DeleteWebviewResponse>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_webviews")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        sqlx::query("DELETE FROM components_webviews WHERE id = $1")
+        let result = sqlx::query("DELETE FROM components_webviews WHERE id = $1 AND ($2::uuid IS NULL OR corporation_id = $2)")
             .bind(id)
+            .bind(corp_id)
             .execute(&self.pool)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
+
+        if result.rows_affected() == 0 {
+            return Err(Status::not_found("Webview not found or permission denied"));
+        }
+
         Ok(Response::new(DeleteWebviewResponse { success: true }))
     }
 }

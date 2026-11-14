@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { StreamServiceClient } from '@/lib/api/distribution/v1/stream/stream_grpc_pb';
 import { GetLatestDeviceTelemetryRequest } from '@/lib/api/distribution/v1/stream/stream.common_pb';
-import { getGrpcClient, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadata, getGrpcMetadataFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const token = getTokenFromRequest(req);
     const client = getGrpcClient(StreamServiceClient);
 
     const request = new GetLatestDeviceTelemetryRequest();
@@ -15,7 +14,7 @@ export async function POST(req: NextRequest) {
     }
 
     return new Promise<NextResponse>((resolve) => {
-      client.getLatestDeviceTelemetry(request, getGrpcMetadata(token), (error: any, response: any) => {
+      client.getLatestDeviceTelemetry(request, getGrpcMetadataFromRequest(req), (error: any, response: any) => {
         if (error) {
           resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         } else {

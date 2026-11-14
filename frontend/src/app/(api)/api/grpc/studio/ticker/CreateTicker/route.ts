@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TickerServiceClient } from '@/lib/api/components/v1/ticker/ticker_grpc_pb';
 import { CreateTickerRequest } from '@/lib/api/components/v1/ticker/ticker.common_pb';
-import { getGrpcClient, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadata, getGrpcMetadataFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const client = getGrpcClient(TickerServiceClient);
 
     return new Promise<NextResponse>((resolve) => {
-      client.createTicker(request, getGrpcMetadata(getTokenFromRequest(req)), (error, response) => {
+      client.createTicker(request, getGrpcMetadataFromRequest(req), (error, response) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));
       });

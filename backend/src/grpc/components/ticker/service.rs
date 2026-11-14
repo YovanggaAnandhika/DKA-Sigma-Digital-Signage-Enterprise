@@ -64,6 +64,13 @@ impl TickerServiceTrait for TickerServiceImpl {
         &self,
         request: Request<CreateTickerRequest>,
     ) -> Result<Response<Ticker>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_tickers")?;
+        let corp_id = claims.active_corporation_id()
+            .and_then(|c| Uuid::parse_str(c).ok())
+            .unwrap_or_else(|| Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
+        let branch_id = claims.branch_id.as_deref().and_then(|b| Uuid::parse_str(b).ok());
+        let user_id = Uuid::parse_str(&claims.sub).ok();
+
         let req = request.into_inner();
         let id = Uuid::new_v4();
         let text_content = if !req.messages.is_empty() { req.messages.join(" • ") } else { "Pengumuman".to_string() };
@@ -71,17 +78,17 @@ impl TickerServiceTrait for TickerServiceImpl {
         let row = sqlx::query_as::<_, TickerRow>(
             r#"
             INSERT INTO components_tickers (
-                id, corporation_id, name, text_content, badge_label, speed, font_size,
+                id, corporation_id, branch_id, created_by_user_id,
+                name, text_content, badge_label, speed, font_size,
                 background_color, text_color, badge_bg_color, badge_text_color
             )
             VALUES (
-                $1,
-                COALESCE((SELECT id FROM system_corporations LIMIT 1), '00000000-0000-0000-0000-000000000000'::uuid),
-                $2, $3, $4, $5, $6,
-                COALESCE(NULLIF($7, ''), '#000000'),
-                COALESCE(NULLIF($8, ''), '#ffffff'),
-                COALESCE(NULLIF($9, ''), '#2563eb'),
-                COALESCE(NULLIF($10, ''), '#ffffff')
+                $1, $2, $3, $4,
+                $5, $6, $7, $8, $9,
+                COALESCE(NULLIF($10, ''), '#000000'),
+                COALESCE(NULLIF($11, ''), '#ffffff'),
+                COALESCE(NULLIF($12, ''), '#2563eb'),
+                COALESCE(NULLIF($13, ''), '#ffffff')
             )
             RETURNING id, name, text_content, badge_label, speed, font_size,
                       background_color, text_color, badge_bg_color, badge_text_color,
@@ -89,6 +96,9 @@ impl TickerServiceTrait for TickerServiceImpl {
             "#
         )
         .bind(id)
+        .bind(corp_id)
+        .bind(branch_id)
+        .bind(user_id)
         .bind(&req.name)
         .bind(&text_content)
         .bind(&req.badge)
@@ -109,11 +119,15 @@ impl TickerServiceTrait for TickerServiceImpl {
         &self,
         request: Request<GetTickerRequest>,
     ) -> Result<Response<Ticker>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_view_tickers")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
         let row = sqlx::query_as::<_, TickerRow>(
-            "SELECT id, name, text_content, badge_label, speed, font_size, background_color, text_color, badge_bg_color, badge_text_color, created_at, updated_at FROM components_tickers WHERE id = $1"
+            "SELECT id, name, text_content, badge_label, speed, font_size, background_color, text_color, badge_bg_color, badge_text_color, created_at, updated_at FROM components_tickers WHERE id = $1 AND ($2::uuid IS NULL OR corporation_id = $2)"
         )
         .bind(id)
+        .bind(corp_id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?
@@ -126,6 +140,9 @@ impl TickerServiceTrait for TickerServiceImpl {
         &self,
         request: Request<ListTickersRequest>,
     ) -> Result<Response<ListTickersResponse>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_view_tickers")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+
         let req = request.into_inner();
         let search = format!("%{}%", req.search);
 
@@ -135,11 +152,13 @@ impl TickerServiceTrait for TickerServiceImpl {
                    background_color, text_color, badge_bg_color, badge_text_color,
                    created_at, updated_at
             FROM components_tickers
-            WHERE name ILIKE $1 OR text_content ILIKE $1 OR badge_label ILIKE $1
+            WHERE ($1::uuid IS NULL OR corporation_id = $1)
+              AND (name ILIKE $2 OR text_content ILIKE $2 OR badge_label ILIKE $2)
             ORDER BY created_at DESC
             LIMIT 50
             "#
         )
+        .bind(corp_id)
         .bind(&search)
         .fetch_all(&self.pool)
         .await
@@ -162,6 +181,9 @@ impl TickerServiceTrait for TickerServiceImpl {
         &self,
         request: Request<UpdateTickerRequest>,
     ) -> Result<Response<Ticker>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_tickers")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id).map_err(|_| Status::invalid_argument("Invalid id"))?;
         let text_content = if !req.messages.is_empty() { Some(req.messages.join(" • ")) } else { None };
@@ -179,7 +201,7 @@ impl TickerServiceTrait for TickerServiceImpl {
                 badge_bg_color = COALESCE(NULLIF($9, ''), badge_bg_color),
                 badge_text_color = COALESCE(NULLIF($10, ''), badge_text_color),
                 updated_at = NOW()
-            WHERE id = $1
+            WHERE id = $1 AND ($11::uuid IS NULL OR corporation_id = $11)
             RETURNING id, name, text_content, badge_label, speed, font_size,
                       background_color, text_color, badge_bg_color, badge_text_color,
                       created_at, updated_at
@@ -195,9 +217,11 @@ impl TickerServiceTrait for TickerServiceImpl {
         .bind(&req.text_color)
         .bind(&req.badge_background_color)
         .bind(&req.badge_text_color)
-        .fetch_one(&self.pool)
+        .bind(corp_id)
+        .fetch_optional(&self.pool)
         .await
-        .map_err(|e| Status::internal(e.to_string()))?;
+        .map_err(|e| Status::internal(e.to_string()))?
+        .ok_or_else(|| Status::not_found("Ticker not found"))?;
 
         Ok(Response::new(row.into_proto()))
     }
@@ -206,12 +230,21 @@ impl TickerServiceTrait for TickerServiceImpl {
         &self,
         request: Request<DeleteTickerRequest>,
     ) -> Result<Response<DeleteTickerResponse>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_tickers")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        sqlx::query("DELETE FROM components_tickers WHERE id = $1")
+        let result = sqlx::query("DELETE FROM components_tickers WHERE id = $1 AND ($2::uuid IS NULL OR corporation_id = $2)")
             .bind(id)
+            .bind(corp_id)
             .execute(&self.pool)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
+
+        if result.rows_affected() == 0 {
+            return Err(Status::not_found("Ticker not found or permission denied"));
+        }
+
         Ok(Response::new(DeleteTickerResponse { success: true }))
     }
 }

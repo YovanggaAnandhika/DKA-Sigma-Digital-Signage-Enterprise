@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS components_album_photos (
     media_item_id UUID NOT NULL REFERENCES studio_media_items(id) ON DELETE CASCADE,
     order_index INT NOT NULL DEFAULT 0,
     caption TEXT,
+    price_tag VARCHAR(100) NOT NULL DEFAULT '',
     created_by_user_id UUID REFERENCES iam_users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

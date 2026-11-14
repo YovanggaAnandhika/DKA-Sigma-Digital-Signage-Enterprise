@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { BranchServiceClient } from '@/lib/api/iam/v1/branch/branch_grpc_pb';
 import { ListBranchesRequest } from '@/lib/api/iam/v1/branch/branch.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadataFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadataFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const client = new BranchServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = getGrpcClient(BranchServiceClient);
 
     const request = new ListBranchesRequest();
     if (body.corporationId) request.setCorporationId(body.corporationId);

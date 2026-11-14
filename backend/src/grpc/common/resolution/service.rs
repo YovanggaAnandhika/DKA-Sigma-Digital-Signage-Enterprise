@@ -83,6 +83,7 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
         &self,
         request: Request<CreateResolutionRequest>,
     ) -> Result<Response<Resolution>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let id = Uuid::new_v4();
         let aspect_ratio = if req.aspect_ratio.is_empty() { "16:9".to_string() } else { req.aspect_ratio };
@@ -117,6 +118,7 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
         &self,
         request: Request<UpdateResolutionRequest>,
     ) -> Result<Response<Resolution>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id).map_err(|_| Status::invalid_argument("Invalid id"))?;
         let aspect_ratio = if req.aspect_ratio.is_empty() { "16:9".to_string() } else { req.aspect_ratio };
@@ -153,6 +155,7 @@ impl ResolutionServiceTrait for ResolutionServiceImpl {
         &self,
         request: Request<DeleteResolutionRequest>,
     ) -> Result<Response<DeleteResolutionResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
         sqlx::query("DELETE FROM common_resolutions WHERE id = $1")
             .bind(id)

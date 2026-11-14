@@ -497,6 +497,7 @@ impl DeviceServiceTrait for DeviceServiceImpl {
         &self,
         request: Request<GetDeviceAnalyticsHistoryRequest>,
     ) -> Result<Response<GetDeviceAnalyticsHistoryResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_view_devices")?;
         let req = request.into_inner();
         let device_id = Uuid::parse_str(&req.device_id)
             .map_err(|_| Status::invalid_argument("ID Device tidak valid"))?;

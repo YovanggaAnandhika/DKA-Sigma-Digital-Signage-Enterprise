@@ -21,28 +21,37 @@ impl CanaryService {
     pub async fn get_canary_group_by_id(
         pool: &DbPool,
         id: Uuid,
+        corp_id: Option<Uuid>,
     ) -> Result<CanaryGroupEntity, AppError> {
-        CanaryRepository::find_by_id(pool, id)
+        CanaryRepository::find_by_id(pool, id, corp_id)
             .await?
             .ok_or_else(|| AppError::NotFound(format!("Canary group {} not found", id)))
     }
 
-    pub async fn list_canary_groups(pool: &DbPool) -> Result<Vec<CanaryGroupEntity>, AppError> {
-        let groups = CanaryRepository::find_all(pool).await?;
+    pub async fn list_canary_groups(
+        pool: &DbPool,
+        corp_id: Option<Uuid>,
+    ) -> Result<Vec<CanaryGroupEntity>, AppError> {
+        let groups = CanaryRepository::find_all(pool, corp_id).await?;
         Ok(groups)
     }
 
     pub async fn update_canary_group(
         pool: &DbPool,
         id: Uuid,
+        corp_id: Option<Uuid>,
         dto: UpdateCanaryGroupDto,
     ) -> Result<CanaryGroupEntity, AppError> {
-        let group = CanaryRepository::update(pool, id, dto).await?;
+        let group = CanaryRepository::update(pool, id, corp_id, dto).await?;
         Ok(group)
     }
 
-    pub async fn delete_canary_group(pool: &DbPool, id: Uuid) -> Result<bool, AppError> {
-        let deleted = CanaryRepository::delete(pool, id).await?;
+    pub async fn delete_canary_group(
+        pool: &DbPool,
+        id: Uuid,
+        corp_id: Option<Uuid>,
+    ) -> Result<bool, AppError> {
+        let deleted = CanaryRepository::delete(pool, id, corp_id).await?;
         Ok(deleted)
     }
 
@@ -54,7 +63,7 @@ impl CanaryService {
         default_layout_id: Uuid,
     ) -> Result<CanaryEvaluationResult, AppError> {
         if let Some(group_id) = canary_group_id {
-            if let Some(group) = CanaryRepository::find_by_id(pool, group_id).await? {
+            if let Some(group) = CanaryRepository::find_by_id(pool, group_id, None).await? {
                 if group.is_active {
                     if let Some(target_layout_id) = group.target_layout_id {
                         // Deterministic bucket calculation: hash(device_id) % 100

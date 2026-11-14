@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { IotDeviceServiceClient } from '@/lib/api/iot/v1/device/device_grpc_pb';
 import { ApproveIotDeviceRequest } from '@/lib/api/iot/v1/device/device.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadata, getGrpcMetadataFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,9 +11,9 @@ export async function POST(req: NextRequest) {
     if (body.verificationCode || body.verification_code) {
       request.setVerificationCode(String(body.verificationCode || body.verification_code));
     }
-    const client = new IotDeviceServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = getGrpcClient(IotDeviceServiceClient);
     return await new Promise<NextResponse>((resolve) => {
-      client.approveDevice(request, getGrpcMetadata(getTokenFromRequest(req)), (error, response) => {
+      client.approveDevice(request, getGrpcMetadataFromRequest(req), (error, response) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));
       });

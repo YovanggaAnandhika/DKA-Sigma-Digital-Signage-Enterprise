@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { VisualFilterServiceClient } from '@/lib/api/studio/v1/visual_filter/visual_filter_grpc_pb';
 import { UpdateVisualFilterRequest } from '@/lib/api/studio/v1/visual_filter/visual_filter.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadata, getGrpcMetadataFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const token = getTokenFromRequest(req);
-    const client = new VisualFilterServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = getGrpcClient(VisualFilterServiceClient);
     
     const request = new UpdateVisualFilterRequest();
     if (body.id) request.setId(body.id);
@@ -19,7 +18,7 @@ export async function POST(req: NextRequest) {
     if (body.blurPx !== undefined) request.setBlurPx(body.blurPx);
     
     return new Promise<NextResponse>((resolve) => {
-      client.updateVisualFilter(request, getGrpcMetadata(token), (error: any, response: any) => {
+      client.updateVisualFilter(request, getGrpcMetadataFromRequest(req), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));
       });

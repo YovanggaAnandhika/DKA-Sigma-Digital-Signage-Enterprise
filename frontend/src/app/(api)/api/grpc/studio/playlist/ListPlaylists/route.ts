@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PlaylistServiceClient } from '@/lib/api/studio/v1/playlist/playlist/playlist_grpc_pb';
 import { ListPlaylistsRequest } from '@/lib/api/studio/v1/playlist/playlist/playlist.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadata, getGrpcMetadataFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const token = getTokenFromRequest(req);
-    const client = new PlaylistServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = getGrpcClient(PlaylistServiceClient);
     
     const request = new ListPlaylistsRequest();
     if (body.search) request.setSearch(body.search);
@@ -19,7 +18,7 @@ export async function POST(req: NextRequest) {
     }
 
     return new Promise<NextResponse>((resolve) => {
-      client.listPlaylists(request, getGrpcMetadata(token), (error: any, response: any) => {
+      client.listPlaylists(request, getGrpcMetadataFromRequest(req), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else { const o = response.toObject(); resolve(NextResponse.json({ itemsList: (o.itemsList || []), pagination: o.pagination })); }
       });

@@ -20,8 +20,9 @@ impl DisplayGroupService {
     pub async fn get_display_group_by_id(
         pool: &DbPool,
         id: Uuid,
+        corp_id: Option<Uuid>,
     ) -> Result<DisplayGroupEntity, AppError> {
-        let group = DisplayGroupRepository::find_by_id(pool, id)
+        let group = DisplayGroupRepository::find_by_id(pool, id, corp_id)
             .await
             .map_err(AppError::Database)?
             .ok_or_else(|| AppError::NotFound("Display group not found".to_string()))?;
@@ -29,8 +30,11 @@ impl DisplayGroupService {
         Ok(group)
     }
 
-    pub async fn list_display_groups(pool: &DbPool) -> Result<Vec<DisplayGroupEntity>, AppError> {
-        let groups = DisplayGroupRepository::find_all(pool)
+    pub async fn list_display_groups(
+        pool: &DbPool,
+        corp_id: Option<Uuid>,
+    ) -> Result<Vec<DisplayGroupEntity>, AppError> {
+        let groups = DisplayGroupRepository::find_all(pool, corp_id)
             .await
             .map_err(AppError::Database)?;
         Ok(groups)
@@ -39,9 +43,10 @@ impl DisplayGroupService {
     pub async fn update_display_group(
         pool: &DbPool,
         id: Uuid,
+        corp_id: Option<Uuid>,
         dto: UpdateDisplayGroupDto,
     ) -> Result<DisplayGroupEntity, AppError> {
-        let group = DisplayGroupRepository::update(pool, id, dto)
+        let group = DisplayGroupRepository::update(pool, id, corp_id, dto)
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => AppError::NotFound("Display group not found".to_string()),
@@ -50,8 +55,12 @@ impl DisplayGroupService {
         Ok(group)
     }
 
-    pub async fn delete_display_group(pool: &DbPool, id: Uuid) -> Result<bool, AppError> {
-        let success = DisplayGroupRepository::delete(pool, id)
+    pub async fn delete_display_group(
+        pool: &DbPool,
+        id: Uuid,
+        corp_id: Option<Uuid>,
+    ) -> Result<bool, AppError> {
+        let success = DisplayGroupRepository::delete(pool, id, corp_id)
             .await
             .map_err(AppError::Database)?;
 

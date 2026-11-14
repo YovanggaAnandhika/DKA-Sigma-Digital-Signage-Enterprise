@@ -242,8 +242,9 @@ impl StreamServiceTrait for StreamServiceImpl {
                             }
                             Ok(Ok(None)) | Ok(Err(_)) => {
                                 if let Some(id) = registered_device_id {
-                                    manager.unregister_connection(&id).await;
-                                    set_device_online_state(&pool, &manager, id, false).await;
+                                    if manager.unregister_connection(&id, &tx).await {
+                                        set_device_online_state(&pool, &manager, id, false).await;
+                                    }
                                 }
                                 break;
                             }
@@ -251,8 +252,9 @@ impl StreamServiceTrait for StreamServiceImpl {
                                 // 45s socket timeout: player stopped pinging (dead connection or dropped wifi/cell)
                                 tracing::warn!("Dead socket detected: device {:?} inactive for 45s, disconnecting", registered_device_id);
                                 if let Some(id) = registered_device_id {
-                                    manager.unregister_connection(&id).await;
-                                    set_device_online_state(&pool, &manager, id, false).await;
+                                    if manager.unregister_connection(&id, &tx).await {
+                                        set_device_online_state(&pool, &manager, id, false).await;
+                                    }
                                 }
                                 break;
                             }
@@ -277,8 +279,9 @@ impl StreamServiceTrait for StreamServiceImpl {
                     }
                     else => {
                         if let Some(id) = registered_device_id {
-                            manager.unregister_connection(&id).await;
-                            set_device_online_state(&pool, &manager, id, false).await;
+                            if manager.unregister_connection(&id, &tx).await {
+                                set_device_online_state(&pool, &manager, id, false).await;
+                            }
                         }
                         break;
                     }
@@ -390,7 +393,7 @@ impl StreamServiceTrait for StreamServiceImpl {
 
         #[derive(sqlx::FromRow)]
         struct Row {
-            id: i64,
+            id: Uuid,
             device_id: Uuid,
             device_name: Option<String>,
             media_id: Option<Uuid>,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MediaServiceClient } from '@/lib/api/studio/v1/media/media_grpc_pb';
 import { StreamMediaFileRequest } from '@/lib/api/studio/v1/media/media.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadata, getGrpcMetadataFromRequest } from '@/lib/core/grpcClient';
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,8 +12,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'filename diperlukan' }, { status: 400 });
     }
 
-    const token = getTokenFromRequest(req);
-    const client = new MediaServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = getGrpcClient(MediaServiceClient);
 
     const request = new StreamMediaFileRequest();
     request.setFilename(filename);
@@ -25,7 +24,7 @@ export async function GET(req: NextRequest) {
       let mimeType = 'application/octet-stream';
       let totalSize = 0;
 
-      const stream = client.streamMediaFile(request, getGrpcMetadata(token));
+      const stream = client.streamMediaFile(request, getGrpcMetadataFromRequest(req));
 
       stream.on('data', (response: any) => {
         // Get raw binary chunk from gRPC response

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AlbumServiceClient } from '@/lib/api/components/v1/album/album/album_grpc_pb';
 import { AddAlbumPhotoInput, CreateAlbumRequest } from '@/lib/api/components/v1/album/album/album.common_pb';
-import { getGrpcCredentials, getGrpcHost, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadata, getGrpcMetadataFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,10 +19,10 @@ export async function POST(req: NextRequest) {
           .setDurationSeconds(body.slideDurationSeconds || 0)
           .setPriceTag(photo.priceTag || '')
       ));
-    const client = new AlbumServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = getGrpcClient(AlbumServiceClient);
 
     return new Promise<NextResponse>((resolve) => {
-      client.createAlbum(request, getGrpcMetadata(getTokenFromRequest(req)), (error, response) => {
+      client.createAlbum(request, getGrpcMetadataFromRequest(req), (error, response) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));
       });

@@ -41,6 +41,7 @@ impl LayerItemOverrideServiceTrait for LayerItemOverrideServiceImpl {
         &self,
         request: Request<CreateLayerItemOverrideRequest>,
     ) -> Result<Response<ProtoOverride>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layers")?;
         let req = request.into_inner();
         let layer_block_id = Uuid::from_str(&req.layer_playlist_id)
             .map_err(|_| Status::invalid_argument("Invalid layer_playlist_id"))?;
@@ -65,6 +66,7 @@ impl LayerItemOverrideServiceTrait for LayerItemOverrideServiceImpl {
         &self,
         request: Request<GetLayerItemOverrideRequest>,
     ) -> Result<Response<ProtoOverride>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_view_layers")?;
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid id"))?;
@@ -80,6 +82,7 @@ impl LayerItemOverrideServiceTrait for LayerItemOverrideServiceImpl {
         &self,
         request: Request<ListLayerItemOverridesRequest>,
     ) -> Result<Response<ListLayerItemOverridesResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_view_layers")?;
         let req = request.into_inner();
         let layer_playlist_id = req.layer_playlist_id.and_then(|id| Uuid::from_str(&id).ok());
 
@@ -99,6 +102,7 @@ impl LayerItemOverrideServiceTrait for LayerItemOverrideServiceImpl {
         &self,
         request: Request<UpdateLayerItemOverrideRequest>,
     ) -> Result<Response<ProtoOverride>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layers")?;
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid id"))?;
@@ -119,6 +123,7 @@ impl LayerItemOverrideServiceTrait for LayerItemOverrideServiceImpl {
         &self,
         request: Request<DeleteLayerItemOverrideRequest>,
     ) -> Result<Response<DeleteLayerItemOverrideResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layers")?;
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid id"))?;

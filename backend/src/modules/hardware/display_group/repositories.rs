@@ -9,15 +9,19 @@ impl DisplayGroupRepository {
         pool: &DbPool,
         dto: CreateDisplayGroupDto,
     ) -> Result<DisplayGroupEntity, sqlx::Error> {
-        let group = sqlx::query_as::<_, DisplayGroupEntity>(
+        let inserted_id = sqlx::query_scalar::<_, Uuid>(
             r#"
             INSERT INTO hardware_display_groups (
-                name, description, default_layout_id, schedule_id, schedule_assigned_at
+                corporation_id, branch_id, created_by_user_id, name, description,
+                default_layout_id, schedule_id, schedule_assigned_at
             )
-            VALUES ($1, $2, $3, $4, CASE WHEN $4 IS NOT NULL THEN NOW() END)
-            RETURNING *
+            VALUES ($1, $2, $3, $4, $5, $6, $7, CASE WHEN $7 IS NOT NULL THEN NOW() END)
+            RETURNING id
             "#,
         )
+        .bind(dto.corporation_id)
+        .bind(dto.branch_id)
+        .bind(dto.user_id)
         .bind(dto.name)
         .bind(dto.description)
         .bind(dto.default_layout_id)
@@ -25,29 +29,56 @@ impl DisplayGroupRepository {
         .fetch_one(pool)
         .await?;
 
-        Ok(group)
+        Self::find_by_id(pool, inserted_id, Some(dto.corporation_id))
+            .await?
+            .ok_or(sqlx::Error::RowNotFound)
     }
 
     pub async fn find_by_id(
         pool: &DbPool,
         id: Uuid,
+        corp_id: Option<Uuid>,
     ) -> Result<Option<DisplayGroupEntity>, sqlx::Error> {
-        let group = sqlx::query_as::<_, DisplayGroupEntity>(
-            "SELECT * FROM hardware_display_groups WHERE id = $1",
-        )
-        .bind(id)
-        .fetch_optional(pool)
-        .await?;
+        let query = r#"
+            SELECT 
+                g.id, g.corporation_id, g.branch_id, g.name, g.description,
+                g.default_layout_id, l.name AS default_layout_name,
+                g.schedule_id, s.name AS schedule_name,
+                g.schedule_assigned_at, g.created_at, g.updated_at
+            FROM hardware_display_groups g
+            LEFT JOIN studio_layouts l ON l.id = g.default_layout_id
+            LEFT JOIN studio_schedules s ON s.id = g.schedule_id
+            WHERE g.id = $1 AND ($2::uuid IS NULL OR g.corporation_id = $2)
+        "#;
+        let group = sqlx::query_as::<_, DisplayGroupEntity>(query)
+            .bind(id)
+            .bind(corp_id)
+            .fetch_optional(pool)
+            .await?;
 
         Ok(group)
     }
 
-    pub async fn find_all(pool: &DbPool) -> Result<Vec<DisplayGroupEntity>, sqlx::Error> {
-        let groups = sqlx::query_as::<_, DisplayGroupEntity>(
-            "SELECT * FROM hardware_display_groups ORDER BY created_at DESC",
-        )
-        .fetch_all(pool)
-        .await?;
+    pub async fn find_all(
+        pool: &DbPool,
+        corp_id: Option<Uuid>,
+    ) -> Result<Vec<DisplayGroupEntity>, sqlx::Error> {
+        let query = r#"
+            SELECT 
+                g.id, g.corporation_id, g.branch_id, g.name, g.description,
+                g.default_layout_id, l.name AS default_layout_name,
+                g.schedule_id, s.name AS schedule_name,
+                g.schedule_assigned_at, g.created_at, g.updated_at
+            FROM hardware_display_groups g
+            LEFT JOIN studio_layouts l ON l.id = g.default_layout_id
+            LEFT JOIN studio_schedules s ON s.id = g.schedule_id
+            WHERE ($1::uuid IS NULL OR g.corporation_id = $1)
+            ORDER BY g.created_at DESC
+        "#;
+        let groups = sqlx::query_as::<_, DisplayGroupEntity>(query)
+            .bind(corp_id)
+            .fetch_all(pool)
+            .await?;
 
         Ok(groups)
     }
@@ -55,9 +86,10 @@ impl DisplayGroupRepository {
     pub async fn update(
         pool: &DbPool,
         id: Uuid,
+        corp_id: Option<Uuid>,
         dto: UpdateDisplayGroupDto,
     ) -> Result<DisplayGroupEntity, sqlx::Error> {
-        let group = sqlx::query_as::<_, DisplayGroupEntity>(
+        let result = sqlx::query(
             r#"
             UPDATE hardware_display_groups
             SET 
@@ -71,8 +103,7 @@ impl DisplayGroupRepository {
                 END,
                 schedule_id = COALESCE($5, schedule_id),
                 updated_at = NOW()
-            WHERE id = $1
-            RETURNING *
+            WHERE id = $1 AND ($6::uuid IS NULL OR corporation_id = $6)
             "#,
         )
         .bind(id)
@@ -80,15 +111,23 @@ impl DisplayGroupRepository {
         .bind(dto.description)
         .bind(dto.default_layout_id)
         .bind(dto.schedule_id)
-        .fetch_one(pool)
+        .bind(corp_id)
+        .execute(pool)
         .await?;
 
-        Ok(group)
+        if result.rows_affected() == 0 {
+            return Err(sqlx::Error::RowNotFound);
+        }
+
+        Self::find_by_id(pool, id, corp_id)
+            .await?
+            .ok_or(sqlx::Error::RowNotFound)
     }
 
-    pub async fn delete(pool: &DbPool, id: Uuid) -> Result<bool, sqlx::Error> {
-        let result = sqlx::query("DELETE FROM hardware_display_groups WHERE id = $1")
+    pub async fn delete(pool: &DbPool, id: Uuid, corp_id: Option<Uuid>) -> Result<bool, sqlx::Error> {
+        let result = sqlx::query("DELETE FROM hardware_display_groups WHERE id = $1 AND ($2::uuid IS NULL OR corporation_id = $2)")
             .bind(id)
+            .bind(corp_id)
             .execute(pool)
             .await?;
 

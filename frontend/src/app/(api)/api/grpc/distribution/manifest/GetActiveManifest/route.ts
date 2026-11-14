@@ -11,7 +11,7 @@ import { WebviewServiceClient } from '@/lib/api/components/v1/webview/webview_gr
 import { GetWebviewRequest } from '@/lib/api/components/v1/webview/webview.common_pb';
 import { LiveStreamServiceClient } from '@/lib/api/components/v1/live_stream/live_stream_grpc_pb';
 import { GetLiveStreamRequest } from '@/lib/api/components/v1/live_stream/live_stream.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcCredentials, getGrpcHost, getGrpcMetadata, getGrpcMetadataFromRequest } from '@/lib/core/grpcClient';
 import * as grpc from '@grpc/grpc-js';
 
 async function fetchWidgetData(block: any, metadata: grpc.Metadata): Promise<any> {
@@ -84,8 +84,7 @@ async function fetchWidgetData(block: any, metadata: grpc.Metadata): Promise<any
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const token = getTokenFromRequest(req);
-    const client = new ManifestServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = getGrpcClient(ManifestServiceClient);
     const request = new GetActiveManifestRequest();
 
     if (body.deviceId || body.device_id) {
@@ -99,14 +98,14 @@ export async function POST(req: NextRequest) {
     }
 
     return new Promise<NextResponse>((resolve) => {
-      client.getActiveManifest(request, getGrpcMetadata(token), async (error: any, response: any) => {
+      client.getActiveManifest(request, getGrpcMetadataFromRequest(req), async (error: any, response: any) => {
         if (error) {
           const status = error.code === grpc.status.NOT_FOUND ? 404 : error.code === grpc.status.UNAUTHENTICATED ? 401 : 500;
           resolve(NextResponse.json({ error: error.message, code: error.code }, { status }));
         } else {
           const manifestObj = response.toObject();
           if (manifestObj?.manifest?.layout?.layersList) {
-            const meta = getGrpcMetadata(token);
+            const meta = getGrpcMetadataFromRequest(req);
             await Promise.all(
               manifestObj.manifest.layout.layersList.flatMap((layer: any) =>
                 (layer.blocksList || []).map(async (block: any) => {

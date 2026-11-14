@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UserServiceClient } from '@/lib/api/iam/v1/user/user_grpc_pb';
 import { CreateUserRequest } from '@/lib/api/iam/v1/user/user.common_pb';
-import { getGrpcHost, getGrpcCredentials, getGrpcMetadata, getTokenFromRequest } from '@/lib/core/grpcClient';
+import { getGrpcClient, getGrpcMetadata, getGrpcMetadataFromRequest } from '@/lib/core/grpcClient';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const token = getTokenFromRequest(req);
-    const client = new UserServiceClient(getGrpcHost(), getGrpcCredentials());
+    const client = getGrpcClient(UserServiceClient);
     
     const request = new CreateUserRequest();
     if(body.email) request.setEmail(body.email); if(body.full_name) request.setFullName(body.full_name); if(body.role_id) request.setRoleIdsList([body.role_id]); if(body.password) request.setPassword(body.password);
 
     return new Promise<NextResponse>((resolve) => {
-      client.createUser(request, getGrpcMetadata(token), (error: any, response: any) => {
+      client.createUser(request, getGrpcMetadataFromRequest(req), (error: any, response: any) => {
         if (error) resolve(NextResponse.json({ error: error.message }, { status: 500 }));
         else resolve(NextResponse.json(response.toObject()));
       });

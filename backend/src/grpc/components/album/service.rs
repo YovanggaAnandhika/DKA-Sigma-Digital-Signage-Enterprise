@@ -18,7 +18,7 @@ use crate::grpc::proto::common::v1::PaginationResponse;
 struct AlbumRow {
     id: Uuid,
     name: String,
-    description: String,
+    description: Option<String>,
     transition_effect: String,
     slide_duration_seconds: i32,
     created_at: chrono::DateTime<chrono::Utc>,
@@ -37,8 +37,8 @@ struct AlbumPhotoRow {
     id: Uuid,
     album_id: Uuid,
     media_item_id: Uuid,
-    position: i32,
-    promo_badge: Option<String>,
+    order_index: i32,
+    caption: Option<String>,
     price_tag: String,
     created_at: chrono::DateTime<chrono::Utc>,
     media_name: String,
@@ -66,26 +66,37 @@ impl AlbumServiceImpl {
         Self { pool }
     }
 
-    async fn fetch_album_detail(&self, id: Uuid) -> Result<AlbumDetail, Status> {
-        let album = sqlx::query_as::<_, AlbumRow>(
-            "SELECT id, name, description, transition_effect, slide_duration_seconds, created_at, updated_at FROM components_albums WHERE id = $1"
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(|e| Status::internal(e.to_string()))?
+    async fn fetch_album_detail(&self, id: Uuid, corp_id: Option<Uuid>) -> Result<AlbumDetail, Status> {
+        let album = if let Some(cid) = corp_id {
+            sqlx::query_as::<_, AlbumRow>(
+                "SELECT id, name, description, transition_effect, slide_duration_seconds, created_at, updated_at FROM components_albums WHERE id = $1 AND corporation_id = $2"
+            )
+            .bind(id)
+            .bind(cid)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+        } else {
+            sqlx::query_as::<_, AlbumRow>(
+                "SELECT id, name, description, transition_effect, slide_duration_seconds, created_at, updated_at FROM components_albums WHERE id = $1"
+            )
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+        }
         .ok_or_else(|| Status::not_found("Album not found"))?;
 
         let photos = sqlx::query_as::<_, AlbumPhotoRow>(
             r#"
-            SELECT p.id, p.album_id, p.media_item_id, p.position, p.promo_badge, p.price_tag, p.created_at,
+            SELECT p.id, p.album_id, p.media_item_id, p.order_index, p.caption, p.price_tag, p.created_at,
                    m.name AS media_name, m.original_filename, m.file_path, m.public_url, m.file_size_bytes,
                    m.mime_type, m.sha256_hash, m.media_type, m.width, m.height, m.duration_seconds,
                    m.thumbnail_url, m.created_at AS media_created_at, m.updated_at AS media_updated_at
             FROM components_album_photos p
             JOIN studio_media_items m ON m.id = p.media_item_id
             WHERE p.album_id = $1
-            ORDER BY p.position ASC, p.created_at ASC
+            ORDER BY p.order_index ASC, p.created_at ASC
             "#
         )
         .bind(id)
@@ -105,8 +116,8 @@ impl AlbumServiceImpl {
                 id: p.id.to_string(),
                 album_id: p.album_id.to_string(),
                 media_item_id: p.media_item_id.to_string(),
-                order_index: p.position,
-                caption: p.promo_badge.unwrap_or_default(),
+                order_index: p.order_index,
+                caption: p.caption.unwrap_or_default(),
                 duration_seconds: album.slide_duration_seconds,
                 created_at: p.created_at.to_rfc3339(),
                 media_item: Some(crate::grpc::proto::studio::v1::media::MediaItem {
@@ -134,7 +145,7 @@ impl AlbumServiceImpl {
         Ok(AlbumDetail {
             id: album.id.to_string(),
             name: album.name,
-            description: album.description,
+            description: album.description.unwrap_or_default(),
             transition_effect: album.transition_effect,
             slide_duration_seconds: album.slide_duration_seconds,
             photos,
@@ -150,6 +161,13 @@ impl AlbumServiceTrait for AlbumServiceImpl {
         &self,
         request: Request<CreateAlbumRequest>,
     ) -> Result<Response<AlbumDetail>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_albums")?;
+        let corp_id = claims.active_corporation_id()
+            .and_then(|c| Uuid::parse_str(c).ok())
+            .unwrap_or_else(|| Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
+        let branch_id = claims.branch_id.as_deref().and_then(|b| Uuid::parse_str(b).ok());
+        let user_id = Uuid::parse_str(&claims.sub).ok();
+
         let req = request.into_inner();
         if req.name.trim().is_empty() {
             return Err(Status::invalid_argument("Album name is required"));
@@ -161,15 +179,18 @@ impl AlbumServiceTrait for AlbumServiceImpl {
 
         sqlx::query(
             r#"
-            INSERT INTO components_albums (id, name, description, transition_effect, slide_duration_seconds)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO components_albums (id, corporation_id, branch_id, name, description, transition_effect, slide_duration_seconds, created_by_user_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             "#
         )
         .bind(album_id)
+        .bind(corp_id)
+        .bind(branch_id)
         .bind(&req.name)
-        .bind(&req.description)
+        .bind(if req.description.trim().is_empty() { None } else { Some(&req.description) })
         .bind(&transition)
         .bind(slide_duration)
+        .bind(user_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -179,51 +200,68 @@ impl AlbumServiceTrait for AlbumServiceImpl {
                 .map_err(|_| Status::invalid_argument("Invalid media_item_id"))?;
             sqlx::query(
                 r#"
-                INSERT INTO components_album_photos (id, album_id, media_item_id, position, promo_badge, price_tag)
-                VALUES ($1, $2, $3, $4, $5, $6)
+                INSERT INTO components_album_photos (id, corporation_id, branch_id, album_id, media_item_id, order_index, caption, price_tag, created_by_user_id)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 "#
             )
             .bind(Uuid::new_v4())
+            .bind(corp_id)
+            .bind(branch_id)
             .bind(album_id)
             .bind(media_id)
             .bind(p.order_index)
             .bind(&p.caption)
             .bind(&p.price_tag)
+            .bind(user_id)
             .execute(&mut *tx)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         }
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
-        self.fetch_album_detail(album_id).await.map(Response::new)
+        self.fetch_album_detail(album_id, Some(corp_id)).await.map(Response::new)
     }
 
     async fn get_album(
         &self,
         request: Request<GetAlbumRequest>,
     ) -> Result<Response<AlbumDetail>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_view_albums")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        self.fetch_album_detail(id).await.map(Response::new)
+        self.fetch_album_detail(id, corp_id).await.map(Response::new)
     }
 
     async fn list_albums(
         &self,
         request: Request<ListAlbumsRequest>,
     ) -> Result<Response<ListAlbumsResponse>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_view_albums")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
         let req = request.into_inner();
         let search = format!("%{}%", req.search);
 
-        let rows = sqlx::query_as::<_, (Uuid,)>(
-            "SELECT id FROM components_albums WHERE name ILIKE $1 ORDER BY created_at DESC LIMIT 50"
-        )
-        .bind(&search)
-        .fetch_all(&self.pool)
-        .await
+        let rows = if let Some(cid) = corp_id {
+            sqlx::query_as::<_, (Uuid,)>(
+                "SELECT id FROM components_albums WHERE corporation_id = $1 AND name ILIKE $2 ORDER BY created_at DESC LIMIT 50"
+            )
+            .bind(cid)
+            .bind(&search)
+            .fetch_all(&self.pool)
+            .await
+        } else {
+            sqlx::query_as::<_, (Uuid,)>(
+                "SELECT id FROM components_albums WHERE name ILIKE $1 ORDER BY created_at DESC LIMIT 50"
+            )
+            .bind(&search)
+            .fetch_all(&self.pool)
+            .await
+        }
         .map_err(|e| Status::internal(e.to_string()))?;
 
         let mut items = Vec::new();
         for r in rows {
-            items.push(self.fetch_album_detail(r.0).await?);
+            items.push(self.fetch_album_detail(r.0, corp_id).await?);
         }
 
         Ok(Response::new(ListAlbumsResponse {
@@ -241,6 +279,13 @@ impl AlbumServiceTrait for AlbumServiceImpl {
         &self,
         request: Request<UpdateAlbumRequest>,
     ) -> Result<Response<AlbumDetail>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_albums")?;
+        let corp_id = claims.active_corporation_id()
+            .and_then(|c| Uuid::parse_str(c).ok())
+            .unwrap_or_else(|| Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
+        let branch_id = claims.branch_id.as_deref().and_then(|b| Uuid::parse_str(b).ok());
+        let user_id = Uuid::parse_str(&claims.sub).ok();
+
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id).map_err(|_| Status::invalid_argument("Invalid id"))?;
 
@@ -248,15 +293,16 @@ impl AlbumServiceTrait for AlbumServiceImpl {
         let result = sqlx::query(
             r#"
             UPDATE components_albums
-            SET name = COALESCE(NULLIF($2, ''), name),
-                description = COALESCE(NULLIF($3, ''), description),
-                transition_effect = COALESCE(NULLIF($4, ''), transition_effect),
-                slide_duration_seconds = CASE WHEN $5 > 0 THEN $5 ELSE slide_duration_seconds END,
+            SET name = COALESCE(NULLIF($3, ''), name),
+                description = COALESCE(NULLIF($4, ''), description),
+                transition_effect = COALESCE(NULLIF($5, ''), transition_effect),
+                slide_duration_seconds = CASE WHEN $6 > 0 THEN $6 ELSE slide_duration_seconds END,
                 updated_at = NOW()
-            WHERE id = $1
+            WHERE id = $1 AND corporation_id = $2
             "#
         )
         .bind(id)
+        .bind(corp_id)
         .bind(&req.name)
         .bind(&req.description)
         .bind(&req.transition_effect)
@@ -268,8 +314,9 @@ impl AlbumServiceTrait for AlbumServiceImpl {
             return Err(Status::not_found("Album not found"));
         }
 
-        sqlx::query("DELETE FROM components_album_photos WHERE album_id = $1")
+        sqlx::query("DELETE FROM components_album_photos WHERE album_id = $1 AND corporation_id = $2")
             .bind(id)
+            .bind(corp_id)
             .execute(&mut *tx)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -279,35 +326,51 @@ impl AlbumServiceTrait for AlbumServiceImpl {
                 .map_err(|_| Status::invalid_argument("Invalid media_item_id"))?;
             sqlx::query(
                 r#"
-                INSERT INTO components_album_photos (id, album_id, media_item_id, position, promo_badge, price_tag)
-                VALUES ($1, $2, $3, $4, $5, $6)
+                INSERT INTO components_album_photos (id, corporation_id, branch_id, album_id, media_item_id, order_index, caption, price_tag, created_by_user_id)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 "#
             )
             .bind(Uuid::new_v4())
+            .bind(corp_id)
+            .bind(branch_id)
             .bind(id)
             .bind(media_id)
             .bind(p.order_index)
             .bind(&p.caption)
             .bind(&p.price_tag)
+            .bind(user_id)
             .execute(&mut *tx)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         }
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
-        self.fetch_album_detail(id).await.map(Response::new)
+        self.fetch_album_detail(id, Some(corp_id)).await.map(Response::new)
     }
 
     async fn delete_album(
         &self,
         request: Request<DeleteAlbumRequest>,
     ) -> Result<Response<DeleteAlbumResponse>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_albums")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        sqlx::query("DELETE FROM components_albums WHERE id = $1")
-            .bind(id)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let result = if let Some(cid) = corp_id {
+            sqlx::query("DELETE FROM components_albums WHERE id = $1 AND corporation_id = $2")
+                .bind(id)
+                .bind(cid)
+                .execute(&self.pool)
+                .await
+        } else {
+            sqlx::query("DELETE FROM components_albums WHERE id = $1")
+                .bind(id)
+                .execute(&self.pool)
+                .await
+        }
+        .map_err(|e| Status::internal(e.to_string()))?;
+        if result.rows_affected() == 0 {
+            return Err(Status::not_found("Album not found"));
+        }
         Ok(Response::new(DeleteAlbumResponse { success: true }))
     }
 }
@@ -318,6 +381,13 @@ impl AlbumPhotoServiceTrait for AlbumPhotoServiceImpl {
         &self,
         request: Request<AddAlbumPhotoRequest>,
     ) -> Result<Response<AlbumPhoto>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_albums")?;
+        let corp_id = claims.active_corporation_id()
+            .and_then(|c| Uuid::parse_str(c).ok())
+            .unwrap_or_else(|| Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
+        let branch_id = claims.branch_id.as_deref().and_then(|b| Uuid::parse_str(b).ok());
+        let user_id = Uuid::parse_str(&claims.sub).ok();
+
         let req = request.into_inner();
         let album_id = Uuid::from_str(&req.album_id).map_err(|_| Status::invalid_argument("Invalid album_id"))?;
         let media_id = Uuid::from_str(&req.media_item_id).map_err(|_| Status::invalid_argument("Invalid media_item_id"))?;
@@ -325,16 +395,19 @@ impl AlbumPhotoServiceTrait for AlbumPhotoServiceImpl {
 
         sqlx::query(
             r#"
-            INSERT INTO components_album_photos (id, album_id, media_item_id, position, promo_badge, price_tag)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO components_album_photos (id, corporation_id, branch_id, album_id, media_item_id, order_index, caption, price_tag, created_by_user_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             "#
         )
         .bind(pid)
+        .bind(corp_id)
+        .bind(branch_id)
         .bind(album_id)
         .bind(media_id)
         .bind(req.order_index)
         .bind(&req.caption)
         .bind(&req.price_tag)
+        .bind(user_id)
         .execute(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -356,12 +429,25 @@ impl AlbumPhotoServiceTrait for AlbumPhotoServiceImpl {
         &self,
         request: Request<DeleteAlbumPhotoRequest>,
     ) -> Result<Response<DeleteAlbumPhotoResponse>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_albums")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
         let id = Uuid::from_str(&request.into_inner().id).map_err(|_| Status::invalid_argument("Invalid id"))?;
-        sqlx::query("DELETE FROM components_album_photos WHERE id = $1")
-            .bind(id)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let result = if let Some(cid) = corp_id {
+            sqlx::query("DELETE FROM components_album_photos WHERE id = $1 AND corporation_id = $2")
+                .bind(id)
+                .bind(cid)
+                .execute(&self.pool)
+                .await
+        } else {
+            sqlx::query("DELETE FROM components_album_photos WHERE id = $1")
+                .bind(id)
+                .execute(&self.pool)
+                .await
+        }
+        .map_err(|e| Status::internal(e.to_string()))?;
+        if result.rows_affected() == 0 {
+            return Err(Status::not_found("Album photo not found"));
+        }
         Ok(Response::new(DeleteAlbumPhotoResponse { success: true }))
     }
 }

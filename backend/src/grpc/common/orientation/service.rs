@@ -70,6 +70,7 @@ impl OrientationServiceTrait for OrientationServiceImpl {
         &self,
         request: Request<CreateOrientationRequest>,
     ) -> Result<Response<ProtoOrientation>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let o = OrientationService::create_orientation(&self.pool, &req.name, &req.value)
             .await
@@ -88,6 +89,7 @@ impl OrientationServiceTrait for OrientationServiceImpl {
         &self,
         request: Request<UpdateOrientationRequest>,
     ) -> Result<Response<ProtoOrientation>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let id = Uuid::from_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid id"))?;
@@ -109,6 +111,7 @@ impl OrientationServiceTrait for OrientationServiceImpl {
         &self,
         request: Request<DeleteOrientationRequest>,
     ) -> Result<Response<DeleteOrientationResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let id = Uuid::from_str(&request.into_inner().id)
             .map_err(|_| Status::invalid_argument("Invalid id"))?;
 

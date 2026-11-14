@@ -91,6 +91,7 @@ impl VisualFilterService for MyVisualFilterService {
         &self,
         request: Request<CreateVisualFilterRequest>,
     ) -> Result<Response<VisualFilter>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let f = self
             .repository
@@ -122,6 +123,7 @@ impl VisualFilterService for MyVisualFilterService {
         &self,
         request: Request<UpdateVisualFilterRequest>,
     ) -> Result<Response<VisualFilter>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let id = Uuid::parse_str(&req.id).map_err(|_| Status::invalid_argument("Invalid ID format"))?;
 
@@ -156,6 +158,7 @@ impl VisualFilterService for MyVisualFilterService {
         &self,
         request: Request<DeleteVisualFilterRequest>,
     ) -> Result<Response<DeleteVisualFilterResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_layouts")?;
         let req = request.into_inner();
         let id = Uuid::parse_str(&req.id).map_err(|_| Status::invalid_argument("Invalid ID format"))?;
 

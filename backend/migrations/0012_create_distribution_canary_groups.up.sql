@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS distribution_canary_groups (
     description TEXT,
     rollout_percentage INT NOT NULL DEFAULT 10,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    target_layout_id UUID REFERENCES studio_layouts(id) ON DELETE SET NULL,
     created_by_user_id UUID REFERENCES iam_users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -13,3 +14,4 @@ CREATE TABLE IF NOT EXISTS distribution_canary_groups (
 
 CREATE INDEX IF NOT EXISTS idx_canary_groups_corp ON distribution_canary_groups(corporation_id);
 CREATE INDEX IF NOT EXISTS idx_canary_groups_branch ON distribution_canary_groups(branch_id);
+CREATE INDEX IF NOT EXISTS idx_canary_groups_target_layout ON distribution_canary_groups(target_layout_id);

@@ -92,6 +92,9 @@ impl AppUpdateService for AppUpdateServiceImpl {
         &self,
         request: Request<GetAppReleaseRequest>,
     ) -> Result<Response<AppReleaseDetailResponse>, Status> {
+        let claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
+        let corp_id = claims.active_corporation_id().and_then(|c| Uuid::parse_str(c).ok());
+
         let req = request.into_inner();
         let release_id = Uuid::parse_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid UUID format for release id"))?;
@@ -117,9 +120,10 @@ impl AppUpdateService for AppUpdateServiceImpl {
             "SELECT d.id, d.name, b.name as branch_name, d.ip_address, d.app_version, d.is_online, d.last_heartbeat_at \
              FROM hardware_devices d \
              LEFT JOIN system_branches b ON d.branch_id = b.id \
-             WHERE d.is_paired = true \
+             WHERE d.is_paired = true AND ($1::uuid IS NULL OR d.corporation_id = $1) \
              ORDER BY d.is_online DESC, d.name ASC",
         )
+        .bind(corp_id)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| Status::internal(format!("Failed to query hardware devices: {}", e)))?;
@@ -163,6 +167,7 @@ impl AppUpdateService for AppUpdateServiceImpl {
         &self,
         request: Request<ListAppReleasesRequest>,
     ) -> Result<Response<ListAppReleasesResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
         let req = request.into_inner();
         let page = if req.page <= 0 { 1 } else { req.page };
         let page_size = if req.page_size <= 0 { 20 } else { req.page_size };
@@ -225,6 +230,7 @@ impl AppUpdateService for AppUpdateServiceImpl {
         &self,
         request: Request<CreateAppReleaseRequest>,
     ) -> Result<Response<AppRelease>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
         let req = request.into_inner();
 
         if req.version_code <= 0 {
@@ -265,6 +271,7 @@ impl AppUpdateService for AppUpdateServiceImpl {
         &self,
         request: Request<DeleteAppReleaseRequest>,
     ) -> Result<Response<DeleteAppReleaseResponse>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
         let req = request.into_inner();
         let id = Uuid::parse_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid UUID format"))?;
@@ -284,6 +291,7 @@ impl AppUpdateService for AppUpdateServiceImpl {
         &self,
         request: Request<ToggleAppReleaseActiveRequest>,
     ) -> Result<Response<AppRelease>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_devices")?;
         let req = request.into_inner();
         let id = Uuid::parse_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid UUID format"))?;

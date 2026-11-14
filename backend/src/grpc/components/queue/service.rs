@@ -91,7 +91,7 @@ struct QueueLayoutItemRow {
     font_size: Option<i32>,
     font_weight: Option<String>,
     text_align: Option<String>,
-    template_content: String,
+    template_content: Option<String>,
     config: serde_json::Value,
     is_visible: bool,
     opacity: f64,
@@ -305,7 +305,7 @@ impl QueueServiceImpl {
             font_size: it.font_size.unwrap_or(24),
             font_weight: it.font_weight.unwrap_or_default(),
             text_align: it.text_align.unwrap_or_default(),
-            template_content: it.template_content,
+            template_content: it.template_content.unwrap_or_default(),
             config_json: it.config.to_string(),
             is_visible: it.is_visible,
             created_at: it.created_at.to_rfc3339(),
@@ -843,7 +843,7 @@ impl QueueDisplayServiceTrait for QueueServiceImpl {
                 .bind(id)
                 .execute(&self.pool)
                 .await
-                .ok();
+                .map_err(|e| Status::internal(format!("Failed to delete existing audios: {}", e)))?;
             for a in req.audios {
                 let aid = Uuid::from_str(&a.id).unwrap_or_else(|_| Uuid::new_v4());
                 let mid = Uuid::from_str(&a.media_item_id).ok();
@@ -868,7 +868,7 @@ impl QueueDisplayServiceTrait for QueueServiceImpl {
                 .bind(a.is_active)
                 .execute(&self.pool)
                 .await
-                .ok();
+                .map_err(|e| Status::internal(format!("Failed to insert audio {}: {}", a.name, e)))?;
             }
         }
 
@@ -962,7 +962,7 @@ impl QueueLayoutItemServiceTrait for QueueServiceImpl {
                 font_size: it.font_size,
                 font_weight: it.font_weight,
                 text_align: it.text_align,
-                template_content: it.template_content,
+                template_content: it.template_content.unwrap_or_default(),
                 config_json: it.config_json,
                 is_visible: it.is_visible,
                 created_at: chrono::Utc::now().to_rfc3339(),
@@ -1016,7 +1016,7 @@ impl QueueLayoutItemServiceTrait for QueueServiceImpl {
             font_size: it.font_size.unwrap_or(24),
             font_weight: it.font_weight.unwrap_or_default(),
             text_align: it.text_align.unwrap_or_default(),
-            template_content: it.template_content,
+            template_content: it.template_content.unwrap_or_default(),
             config_json: it.config.to_string(),
             is_visible: it.is_visible,
             created_at: it.created_at.to_rfc3339(),
@@ -1909,18 +1909,31 @@ impl QueueAudioServiceTrait for QueueServiceImpl {
         &self,
         request: Request<AddAudioRequest>,
     ) -> Result<Response<QueueAudio>, Status> {
+        let _claims = crate::grpc::middleware::require_permission(&request, "can_manage_queue_audio")
+            .or_else(|_| crate::grpc::middleware::require_permission(&request, "can_manage_queue"))?;
+        let user_id = Uuid::parse_str(&_claims.sub).ok();
         let req = request.into_inner();
         let display_id = Uuid::from_str(&req.queue_display_id).map_err(|_| Status::invalid_argument("Invalid queue_display_id"))?;
         let media_id = req.media_item_id.and_then(|m| Uuid::from_str(&m).ok());
         let aid = Uuid::new_v4();
 
+        let (disp_corp_id, disp_branch_id): (Uuid, Option<Uuid>) = sqlx::query_as(
+            "SELECT corporation_id, branch_id FROM components_queue_displays WHERE id = $1"
+        )
+        .bind(display_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| Status::not_found(format!("Queue display not found: {}", e)))?;
+
         sqlx::query(
             r#"
-            INSERT INTO components_queue_audios (id, queue_display_id, name, audio_type, media_item_id, file_url, volume_percent, is_active)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO components_queue_audios (id, corporation_id, branch_id, queue_display_id, name, audio_type, media_item_id, file_url, volume_percent, is_active, created_by_user_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             "#,
         )
         .bind(aid)
+        .bind(disp_corp_id)
+        .bind(disp_branch_id)
         .bind(display_id)
         .bind(&req.name)
         .bind(&req.audio_type)
@@ -1928,6 +1941,7 @@ impl QueueAudioServiceTrait for QueueServiceImpl {
         .bind(req.file_url.as_ref().filter(|s| !s.is_empty()))
         .bind(req.volume_percent)
         .bind(req.is_active)
+        .bind(user_id)
         .execute(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;

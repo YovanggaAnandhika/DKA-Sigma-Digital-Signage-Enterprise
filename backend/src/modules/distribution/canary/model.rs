@@ -6,6 +6,8 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CanaryGroupEntity {
     pub id: Uuid,
+    pub corporation_id: Uuid,
+    pub branch_id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
     pub rollout_percentage: i32,
@@ -17,6 +19,9 @@ pub struct CanaryGroupEntity {
 
 #[derive(Debug, Deserialize)]
 pub struct CreateCanaryGroupDto {
+    pub corporation_id: Uuid,
+    pub branch_id: Option<Uuid>,
+    pub user_id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
     pub rollout_percentage: Option<i32>,

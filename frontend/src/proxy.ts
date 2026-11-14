@@ -13,11 +13,8 @@ export function proxy(request: NextRequest) {
 
   const response = NextResponse.next();
 
-  // If the response is an error (status 400 or above), log it as an error
-  if (response.status >= 400) {
-    console.error(`[Frontend API] ERROR ${response.status}: ${method} ${url}`);
-  } else if (!isProduction) {
-    console.log(`[Frontend API] Success ${response.status}: ${method} ${url}`);
+  if (!isProduction) {
+    console.log(`[Frontend API] Completed: ${method} ${url}`);
   }
 
   return response;
