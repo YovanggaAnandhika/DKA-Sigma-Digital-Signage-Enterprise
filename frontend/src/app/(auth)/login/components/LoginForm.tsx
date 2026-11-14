@@ -105,7 +105,7 @@ export default function LoginForm({ setIsExiting }: LoginFormProps) {
           </div>
         )}
 
-        <form onSubmit={handleLogin} method="post" action="/login" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <form onSubmit={handleLogin} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Email */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label htmlFor="email" style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151' }}>
