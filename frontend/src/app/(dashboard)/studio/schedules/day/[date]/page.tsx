@@ -405,11 +405,11 @@ export default function DailyRundownPage() {
                         />
                       </td>
                       <td>
-                        <TableDataValue icon={CalendarDays} detail={cleanDescription}>
+                        <div>
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                             <Link
                               href={`/studio/schedules/${schedule.id}?eventId=${event.id}`}
-                              style={{ color: 'inherit', textDecoration: 'none' }}
+                              style={{ color: 'var(--text-primary)', textDecoration: 'none', fontWeight: 650, fontSize: '0.85rem' }}
                             >
                               {schedule.name}
                             </Link>
@@ -419,12 +419,9 @@ export default function DailyRundownPage() {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '5px',
-                                  padding: '3px 9px',
-                                  borderRadius: '999px',
-                                  backgroundColor: 'rgba(16, 185, 129, 0.12)',
                                   color: 'var(--accent-emerald)',
-                                  fontSize: '0.7rem',
-                                  fontWeight: 650,
+                                  fontSize: '0.74rem',
+                                  fontWeight: 600,
                                 }}
                               >
                                 <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--accent-emerald)', boxShadow: '0 0 6px var(--accent-emerald)' }} />
@@ -432,21 +429,27 @@ export default function DailyRundownPage() {
                               </span>
                             )}
                           </div>
-                        </TableDataValue>
+                          {cleanDescription && (
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                              {cleanDescription}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td>
-                        <TableDataValue icon={LayoutTemplate} tone="primary">
+                        <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.84rem' }}>
                           {event.layoutName || 'Layout Template'}
-                        </TableDataValue>
+                        </span>
                       </td>
                       <td style={{ whiteSpace: 'nowrap' }}>
-                        <TableDataValue
-                          icon={Clock}
-                          tone="cyan"
-                          detail={`${formatDays(event.daysOfWeek)} · ${periodLabel}`}
-                        >
-                          {(event.startTime || '00:00').slice(0, 5)} – {(event.endTime || '23:59').slice(0, 5)}
-                        </TableDataValue>
+                        <div>
+                          <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.82rem', fontFamily: 'monospace' }}>
+                            {(event.startTime || '00:00').slice(0, 5)} – {(event.endTime || '23:59').slice(0, 5)}
+                          </div>
+                          <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            {formatDays(event.daysOfWeek)} · {periodLabel}
+                          </div>
+                        </div>
                       </td>
                       <td>
                         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', maxWidth: '280px' }}>
@@ -459,7 +462,7 @@ export default function DailyRundownPage() {
                                 gap: '5px',
                                 color: 'var(--text-primary)',
                                 fontSize: '0.78rem',
-                                fontWeight: 600,
+                                fontWeight: 500,
                               }}
                             >
                               <Monitor size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
@@ -475,7 +478,7 @@ export default function DailyRundownPage() {
                                 gap: '5px',
                                 color: 'var(--text-primary)',
                                 fontSize: '0.78rem',
-                                fontWeight: 600,
+                                fontWeight: 500,
                               }}
                             >
                               <Users size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />

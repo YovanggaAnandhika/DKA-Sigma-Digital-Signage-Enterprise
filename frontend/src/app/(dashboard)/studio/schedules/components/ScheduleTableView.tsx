@@ -472,30 +472,29 @@ export default function ScheduleTableView() {
                         />
                       </td>
                       <td>
-                        <TableDataValue
-                          icon={CalendarDays}
-                          detail={layoutTitle || s.description || undefined}
-                        >
+                        <div>
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            <Link href={detailHref} style={{ textDecoration: 'none', color: 'inherit' }}>
+                            <Link href={detailHref} style={{ textDecoration: 'none', color: 'var(--text-primary)', fontWeight: 650, fontSize: '0.85rem' }}>
                               {s.name}
                             </Link>
                             <span
                               style={{
-                                fontSize: '0.68rem',
-                                padding: '1px 6px',
-                                borderRadius: '999px',
-                                backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                                color: 'var(--primary-400)',
+                                fontSize: '0.7rem',
+                                color: 'var(--text-muted)',
                                 fontFamily: 'monospace',
-                                fontWeight: 700,
+                                fontWeight: 600,
                               }}
                               title={`Prioritas: ${priority}`}
                             >
                               P{priority}
                             </span>
                           </div>
-                        </TableDataValue>
+                          {(layoutTitle || s.description) && (
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                              {layoutTitle || s.description}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', maxWidth: '240px' }}>
@@ -508,7 +507,7 @@ export default function ScheduleTableView() {
                                 gap: '5px',
                                 color: 'var(--text-primary)',
                                 fontSize: '0.78rem',
-                                fontWeight: 600,
+                                fontWeight: 500,
                               }}
                             >
                               <Monitor size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
@@ -524,7 +523,7 @@ export default function ScheduleTableView() {
                                 gap: '5px',
                                 color: 'var(--text-primary)',
                                 fontSize: '0.78rem',
-                                fontWeight: 600,
+                                fontWeight: 500,
                               }}
                             >
                               <Users size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
@@ -546,13 +545,10 @@ export default function ScheduleTableView() {
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '7px',
-                            padding: '4px 10px',
-                            borderRadius: '999px',
-                            backgroundColor: status.bg,
+                            gap: '6px',
                             color: status.color,
-                            fontSize: '0.74rem',
-                            fontWeight: 650,
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
                           }}
                         >
                           <span
@@ -561,7 +557,7 @@ export default function ScheduleTableView() {
                               height: '6px',
                               borderRadius: '50%',
                               backgroundColor: status.color,
-                              boxShadow: status.isLive ? `0 0 8px ${status.color}` : 'none',
+                              boxShadow: status.isLive ? `0 0 6px ${status.color}` : 'none',
                             }}
                           />
                           {status.label}
@@ -569,22 +565,23 @@ export default function ScheduleTableView() {
                       </td>
                       <td>
                         {ev ? (
-                          <TableDataValue
-                            icon={Clock}
-                            tone="cyan"
-                            detail={`${formatDays(ev.daysOfWeek)} · ${periodLabel}`}
-                          >
-                            {ev.startTime.slice(0, 5)} – {ev.endTime.slice(0, 5)}
-                          </TableDataValue>
+                          <div>
+                            <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.82rem', fontFamily: 'monospace' }}>
+                              {ev.startTime.slice(0, 5)} – {ev.endTime.slice(0, 5)}
+                            </div>
+                            <div style={{ fontSize: '0.73rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                              {formatDays(ev.daysOfWeek)} · {periodLabel}
+                            </div>
+                          </div>
                         ) : (
                           '-'
                         )}
                       </td>
                       <td style={{ whiteSpace: 'nowrap' }}>
                         {createdDate ? (
-                          <TableDataValue icon={CalendarDays} tone="amber">
+                          <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
                             {new Date(createdDate).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
-                          </TableDataValue>
+                          </span>
                         ) : (
                           '-'
                         )}
