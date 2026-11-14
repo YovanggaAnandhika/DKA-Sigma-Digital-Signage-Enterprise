@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, CalendarDays, Clock, Monitor, Users, Eye, RefreshCw, Layers, Search, ArrowRight, Trash2, Trash, LayoutTemplate } from 'lucide-react';
 import { TableDataValue } from '@/components/ui/TableDataValue';
+import { Pagination } from '@/components/ui/Pagination';
 import { api, Device, DisplayGroup } from '@/lib/services';
 import type { Schedule } from '@/lib/services/studio/schedule.types';
 
@@ -48,6 +49,8 @@ export default function DailyRundownPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loadError, setLoadError] = useState('');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   const targetDate = useMemo(() => {
     if (!dateKey) return new Date();
@@ -137,6 +140,11 @@ export default function DailyRundownPage() {
       (event.layoutName || '').toLowerCase().includes(query)
     );
   }, [schedules, dateKey, targetDate, search]);
+
+  const paginatedTasks = useMemo(() => {
+    const start = (page - 1) * limit;
+    return dayTasks.slice(start, start + limit);
+  }, [dayTasks, page, limit]);
 
   const uniqueScheduleIdsOnDay = useMemo(() => {
     return [...new Set(dayTasks.map((t) => t.schedule.id))];
@@ -294,7 +302,10 @@ export default function DailyRundownPage() {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             placeholder="Cari berdasarkan nama jadwal atau layout..."
             className="form-input"
             style={{ paddingLeft: '36px' }}
@@ -348,17 +359,15 @@ export default function DailyRundownPage() {
                 </th>
                 <th>NAMA RUNDOWN / JADWAL</th>
                 <th>TEMPLATE LAYOUT</th>
-                <th>JAM TAYANG AKTIF</th>
+                <th>WAKTU & HARI TAYANG</th>
                 <th>TARGET DISPLAY & KELOMPOK</th>
-                <th>PERIODE BERLAKU</th>
-                <th>HARI AKTIF</th>
                 <th style={{ textAlign: 'right' }}>AKSI</th>
               </tr>
             </thead>
             <tbody>
               {dayTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
                       <CalendarDays size={32} style={{ opacity: 0.35 }} />
                       <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>
@@ -373,11 +382,17 @@ export default function DailyRundownPage() {
                   </td>
                 </tr>
               ) : (
-                dayTasks.map(({ schedule, event }, index) => {
+                paginatedTasks.map(({ schedule, event }, index) => {
                   const targets = scheduleTargets.get(schedule.id);
                   const displayLabels = targets?.displays || [];
                   const groupLabels = targets?.groups || [];
                   const isSelected = selectedIds.includes(schedule.id);
+                  const cleanDescription = schedule.description && !/Dipush dari template layout [0-9a-f-]{36}/i.test(schedule.description)
+                    ? schedule.description
+                    : 'Rundown terjadwal';
+                  const periodLabel = event.startDate
+                    ? `${event.startDate.slice(0, 10)}${event.endDate ? ` – ${event.endDate.slice(0, 10)}` : ' – Selamanya'}`
+                    : 'Selamanya';
 
                   return (
                     <tr key={`${schedule.id}-${event.id || index}`} style={{ backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.08)' : undefined }}>
@@ -390,7 +405,7 @@ export default function DailyRundownPage() {
                         />
                       </td>
                       <td>
-                        <TableDataValue icon={CalendarDays} detail={schedule.description || 'Rundown aktif'}>
+                        <TableDataValue icon={CalendarDays} detail={cleanDescription}>
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                             <Link
                               href={`/studio/schedules/${schedule.id}?eventId=${event.id}`}
@@ -404,16 +419,15 @@ export default function DailyRundownPage() {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '5px',
-                                  padding: '2px 8px',
+                                  padding: '3px 9px',
                                   borderRadius: '999px',
-                                  backgroundColor: 'rgba(16, 185, 129, 0.14)',
-                                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                                  backgroundColor: 'rgba(16, 185, 129, 0.12)',
                                   color: 'var(--accent-emerald)',
-                                  fontSize: '0.68rem',
-                                  fontWeight: 700,
+                                  fontSize: '0.7rem',
+                                  fontWeight: 650,
                                 }}
                               >
-                                <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--accent-emerald)' }} />
+                                <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--accent-emerald)', boxShadow: '0 0 6px var(--accent-emerald)' }} />
                                 Sedang Berfungsi
                               </span>
                             )}
@@ -426,27 +440,29 @@ export default function DailyRundownPage() {
                         </TableDataValue>
                       </td>
                       <td style={{ whiteSpace: 'nowrap' }}>
-                        <TableDataValue icon={Clock} tone="cyan">
-                          {event.startTime || '00:00'} – {event.endTime || '23:59'}
+                        <TableDataValue
+                          icon={Clock}
+                          tone="cyan"
+                          detail={`${formatDays(event.daysOfWeek)} · ${periodLabel}`}
+                        >
+                          {(event.startTime || '00:00').slice(0, 5)} – {(event.endTime || '23:59').slice(0, 5)}
                         </TableDataValue>
                       </td>
                       <td>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '320px' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', maxWidth: '280px' }}>
                           {displayLabels.map((name) => (
                             <span
                               key={`disp-${name}`}
                               style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '3px',
-                                padding: '2px 6px',
-                                borderRadius: '4px',
-                                backgroundColor: 'var(--bg-surface-elevated)',
-                                color: 'var(--text-secondary)',
-                                fontSize: '0.72rem',
+                                gap: '5px',
+                                color: 'var(--text-primary)',
+                                fontSize: '0.78rem',
+                                fontWeight: 600,
                               }}
                             >
-                              <Monitor size={10} />
+                              <Monitor size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                               {name}
                             </span>
                           ))}
@@ -456,15 +472,13 @@ export default function DailyRundownPage() {
                               style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '3px',
-                                padding: '2px 6px',
-                                borderRadius: '4px',
-                                backgroundColor: 'var(--bg-surface-elevated)',
-                                color: 'var(--text-secondary)',
-                                fontSize: '0.72rem',
+                                gap: '5px',
+                                color: 'var(--text-primary)',
+                                fontSize: '0.78rem',
+                                fontWeight: 600,
                               }}
                             >
-                              <Users size={10} />
+                              <Users size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                               {name}
                             </span>
                           ))}
@@ -473,21 +487,10 @@ export default function DailyRundownPage() {
                           )}
                         </div>
                       </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <TableDataValue icon={CalendarDays} tone="amber">
-                          {event.startDate ? event.startDate.slice(0, 10) : 'Permanen'}
-                          {event.endDate ? ` – ${event.endDate.slice(0, 10)}` : ''}
-                        </TableDataValue>
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <span style={{ padding: '3px 8px', borderRadius: '4px', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary-400)', fontSize: '0.75rem', fontWeight: 600 }}>
-                          {formatDays(event.daysOfWeek)}
-                        </span>
-                      </td>
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                           <Link
-                            href={`/studio/schedules/${schedule.id}`}
+                            href={`/studio/schedules/${schedule.id}?eventId=${event.id}`}
                             className="btn btn-outline"
                             style={{ padding: '5px 8px' }}
                             title="Lihat Detail Jadwal"
@@ -513,6 +516,21 @@ export default function DailyRundownPage() {
             </tbody>
           </table>
         </div>
+
+        {dayTasks.length > 0 && (
+          <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-subtle)' }}>
+            <Pagination
+              page={page}
+              limit={limit}
+              total={dayTasks.length}
+              onPageChange={(newPage) => setPage(newPage)}
+              onLimitChange={(newLimit) => {
+                setLimit(newLimit);
+                setPage(1);
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
