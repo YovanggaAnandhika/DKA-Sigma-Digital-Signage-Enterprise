@@ -46,7 +46,8 @@ class VideoZoneRenderer(
     fun createPlaylistView(
         parent: ViewGroup,
         playlist: List<VideoPlaylistItem>,
-        startWhenReady: Boolean = true
+        startWhenReady: Boolean = true,
+        useTextureView: Boolean = false
     ): PlayerView {
         this.playlistItems = playlist
 
@@ -169,7 +170,12 @@ class VideoZoneRenderer(
         exoPlayer = player
 
         val inflater = android.view.LayoutInflater.from(context)
-        val view = (inflater.inflate(com.dkaapis.sigma.R.layout.item_video_player, parent, false) as PlayerView).apply {
+        val layoutRes = if (useTextureView) {
+            com.dkaapis.sigma.R.layout.item_video_player_texture
+        } else {
+            com.dkaapis.sigma.R.layout.item_video_player
+        }
+        val view = (inflater.inflate(layoutRes, parent, false) as PlayerView).apply {
             this.player = player
             keepScreenOn = true
             resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM

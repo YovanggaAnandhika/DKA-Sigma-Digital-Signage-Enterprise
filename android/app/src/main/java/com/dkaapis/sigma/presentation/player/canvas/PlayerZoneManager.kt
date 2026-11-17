@@ -59,7 +59,8 @@ class PlayerZoneManager {
             activity.resources.displayMetrics.heightPixels.toFloat() / it
         } ?: 1.0f
 
-        for ((index, zone) in manifest.zones.withIndex()) {
+        val sortedZones = manifest.zones.sortedBy { it.zIndex }
+        for ((index, zone) in sortedZones.withIndex()) {
             val zoneView = ZoneContainerView(activity).apply {
                 this.scaleFactorX = initialScaleX
                 this.scaleFactorY = initialScaleY
@@ -109,7 +110,20 @@ class PlayerZoneManager {
                     val renderer = VideoZoneRenderer(activity, zone.name.ifEmpty { "Zone ${videoRenderers.size + 1}" })
                     videoRenderers.add(renderer)
                     videoRenderersByZone[zone.id] = renderer
-                    val view = renderer.createPlaylistView(zoneView, videoItems, startWhenReady = false)
+                    // Use TextureView whenever a video zone is cropped/inset/rounded or shares canvas with other zones
+                    // so ZoneContainerView clipping prevents RESIZE_MODE_ZOOM overflow from covering neighboring zones.
+                    val isFullscreenZone = zone.x == 0 &&
+                        zone.y == 0 &&
+                        zone.width == manifest.canvasWidth &&
+                        zone.height == manifest.canvasHeight &&
+                        zone.borderRadius <= 0
+                    val useTextureView = !isFullscreenZone
+                    val view = renderer.createPlaylistView(
+                        parent = zoneView,
+                        playlist = videoItems,
+                        startWhenReady = false,
+                        useTextureView = useTextureView
+                    )
                     zoneView.addView(view)
                 } else if (firstImageFile != null) {
                     val renderer = ImageZoneRenderer(activity)
