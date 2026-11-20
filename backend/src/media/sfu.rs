@@ -77,7 +77,6 @@ struct WhepSubscriber {
     video_mid: Option<Mid>,
     audio_mid: Option<Mid>,
     ice_connected: bool,
-    has_received_video_keyframe: bool,
     created_at: Instant,
 }
 
@@ -159,7 +158,6 @@ struct OutboundMedia {
     time: MediaTime,
     network_time: Instant,
     data: Arc<[u8]>,
-    is_keyframe: bool,
 }
 
 async fn run_sfu_loop(
@@ -401,7 +399,6 @@ async fn handle_command(
                     video_mid: None,
                     audio_mid: None,
                     ice_connected: false,
-                    has_received_video_keyframe: false,
                     created_at: now,
                 };
                 Ok((answer.to_sdp_string(), session_id, sub))
@@ -628,7 +625,6 @@ async fn drain_publisher(
                         time: data.time,
                         network_time: data.network_time,
                         data: data.data,
-                        is_keyframe,
                     });
                 }
                 _ => {}
@@ -716,12 +712,6 @@ async fn fan_out_media(
         for frame in frames {
             if sub.stream_id != frame.stream_id {
                 continue;
-            }
-            if frame.kind == MediaKind::Video && !sub.has_received_video_keyframe {
-                if !frame.is_keyframe {
-                    continue;
-                }
-                sub.has_received_video_keyframe = true;
             }
             let target_mid = match frame.kind {
                 MediaKind::Video => sub.video_mid,
