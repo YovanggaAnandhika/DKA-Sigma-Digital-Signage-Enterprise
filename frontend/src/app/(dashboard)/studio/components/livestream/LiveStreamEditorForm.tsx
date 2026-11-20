@@ -93,6 +93,27 @@ function LiveStreamEditorContent() {
     save();
   };
 
+  const previewStreamMode =
+    draft.sourceType === 'YOUTUBE' ||
+    draft.sourceType === 'HLS' ||
+    draft.sourceType === 'EMBED' ||
+    (draft.sourceType === 'RTSP' && draft.protocols.RTSP.relayMode === 'DIRECT')
+      ? 'EXTERNAL_EMBED'
+      : 'SERVER_HOSTED_HLS';
+
+  const previewSourceUrl =
+    previewStreamMode === 'SERVER_HOSTED_HLS'
+      ? `/streams/${streamKey}/whep`
+      : draft.sourceType === 'RTSP'
+        ? draft.protocols.RTSP.sourceUrl
+        : draft.sourceType === 'YOUTUBE'
+          ? draft.protocols.YOUTUBE.sourceUrl
+          : draft.sourceType === 'HLS'
+            ? draft.protocols.HLS.sourceUrl
+            : draft.sourceType === 'EMBED'
+              ? draft.protocols.EMBED.sourceUrl
+              : `/streams/${streamKey}/whep`;
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -364,7 +385,8 @@ function LiveStreamEditorContent() {
         {/* Right Uncropped Live Video Monitor Stage (Real-time Preview from Draft Context) */}
         <StreamPreviewMonitor
           sourceType={draft.sourceType}
-          sourceUrl={draft.sourceType === 'RTSP' ? draft.protocols.RTSP.sourceUrl : `/streams/${streamKey}/live.m3u8`}
+          streamMode={previewStreamMode}
+          sourceUrl={previewSourceUrl}
           streamKey={streamKey}
           serverHost={serverHost}
           isRelayActive={draft.isRelayActive}

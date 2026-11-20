@@ -227,6 +227,22 @@ export default function WhipSourceConfig({
           </div>
         )}
       </div>
+
+      <div
+        style={{
+          padding: '8px 10px',
+          borderRadius: 'var(--radius-sm)',
+          backgroundColor: 'var(--bg-surface-elevated)',
+          border: '1px solid var(--border-subtle)',
+          fontSize: '0.72rem',
+          color: 'var(--text-muted)',
+          lineHeight: 1.45,
+        }}
+      >
+        OBS Studio &rarr; Settings &rarr; Stream &rarr; Service: <strong>WHIP</strong>. Disarankan
+        output <strong>720p 30fps</strong>, Keyframe <strong>1s</strong>,{' '}
+        <strong>Max B-frames: 0</strong> agar TV low-RAM mulus lewat UDP 8189.
+      </div>
     </div>
   );
 }

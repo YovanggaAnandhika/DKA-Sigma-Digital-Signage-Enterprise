@@ -721,7 +721,7 @@ export default function ComponentPickerModal() {
                           {item.name}
                         </span>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {item.sourceType} &bull; {item.streamMode === 'SERVER_HOSTED_HLS' ? 'Server HLS Relay' : 'Direct Embed'}
+                          {item.sourceType} &bull; {item.streamMode === 'SERVER_HOSTED_HLS' ? 'UDP SFU Relay' : 'Direct Embed'}
                         </div>
                       </div>
                     </div>

@@ -125,7 +125,7 @@ data class LiveStreamConfigPayload(
     val name: String = "Live Stream",
     val streamId: String = "",
     val streamMode: String = "SERVER_HOSTED_HLS",
-    val sourceType: String = "RTMP",
+    val sourceType: String = "WHIP",
     val sourceUrl: String = "",
     val effectivePlaybackUrl: String = "",
     val isRelayActive: Boolean = true,
@@ -138,15 +138,22 @@ data class LiveStreamConfigPayload(
         fun fromJson(json: JSONObject): LiveStreamConfigPayload {
             val rawSource = json.optString("sourceUrl", "")
             val streamId = json.optString("id", "")
+            val streamMode = json.optString("streamMode", "SERVER_HOSTED_HLS")
             val serverEndpoint = json.optString("serverHlsEndpoint", "")
             val effective = json.optString("effectivePlaybackUrl", "")
                 .ifBlank { serverEndpoint }
-                .ifBlank { if (streamId.isNotBlank()) "/streams/$streamId/live.m3u8" else rawSource }
+                .ifBlank {
+                    if (streamMode == "SERVER_HOSTED_HLS" && streamId.isNotBlank()) {
+                        "/streams/$streamId/whep"
+                    } else {
+                        rawSource
+                    }
+                }
             return LiveStreamConfigPayload(
                 name = json.optString("name", "Live Stream"),
                 streamId = streamId,
-                streamMode = json.optString("streamMode", "SERVER_HOSTED_HLS"),
-                sourceType = json.optString("sourceType", "RTMP"),
+                streamMode = streamMode,
+                sourceType = json.optString("sourceType", "WHIP"),
                 sourceUrl = rawSource,
                 effectivePlaybackUrl = effective,
                 isRelayActive = json.optBoolean("isRelayActive", true),

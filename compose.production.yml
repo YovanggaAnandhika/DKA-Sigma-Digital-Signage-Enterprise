@@ -34,34 +34,6 @@ services:
         published: 8083
         protocol: tcp
         host_ip: 0.0.0.0
-      - target: 50051
-        published: 50051
-        protocol: tcp
-        host_ip: 0.0.0.0
-      - target: 1935
-        published: 1935
-        protocol: tcp
-        host_ip: 0.0.0.0
-      - target: 8189
-        published: 8189
-        protocol: udp
-        host_ip: 0.0.0.0
-      - target: 8189
-        published: 8189
-        protocol: tcp
-        host_ip: 0.0.0.0
-      - target: 8890
-        published: 8890
-        protocol: udp
-        host_ip: 0.0.0.0
-      - target: 8554
-        published: 8554
-        protocol: tcp
-        host_ip: 0.0.0.0
-      - target: 8889
-        published: 8889
-        protocol: tcp
-        host_ip: 0.0.0.0
     volumes:
       - type: volume
         source: sigma_nginx_data
@@ -95,9 +67,7 @@ services:
       GRPC_SERVER_HOST: dka-product-sigma-backend
       GRPC_SERVER_PORT: 50051
       GRPC_SERVER_SECURE: "false"
-      STREAMER_INTERNAL_HOST: dka-product-sigma-streamer
-      STREAMER_INTERNAL_PORT: 8889
-      STREAMER_HLS_PORT: 8888
+      BACKEND_MEDIA_URL: http://dka-product-sigma-backend:50052
     healthcheck:
       test:
         - CMD
@@ -142,16 +112,22 @@ services:
       MQTT_USERNAME: ""
       MQTT_PASSWORD: ""
       UPLOAD_DIR: /home/app/uploads
-      STREAMER_API_HOST: dka-product-sigma-streamer
-      STREAMER_API_PORT: 9997
-      STREAMER_RTMP_HOST: dka-product-sigma-streamer
-      STREAMER_RTMP_PORT: 8554
+      MEDIA_UDP_PORT: 8189
+      MEDIA_PUBLIC_IP: "${MEDIA_PUBLIC_IP:-signage.hndtech.id}"
+    ports:
+      - target: 50051
+        published: 50051
+        protocol: tcp
+        host_ip: 0.0.0.0
+      - target: 8189
+        published: 8189
+        protocol: udp
+        host_ip: 0.0.0.0
     volumes:
       - type: volume
         source: sigma_uploads
         target: /home/app/uploads
     depends_on:
-      - dka-product-sigma-streamer
       - dka-product-sigma-postgres
       - dka-product-sigma-mqtt
     logging:
@@ -162,10 +138,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.15"
-          memory: 192M
+          cpus: "0.50"
+          memory: 256M
     networks:
       - sigma-internal
+      - sigma-public
 
   dka-product-sigma-postgres:
     image: yovanggaanandhika/postgresql:17.2
@@ -215,59 +192,6 @@ services:
         limits:
           cpus: "0.25"
           memory: 512M
-    networks:
-      - sigma-internal
-
-  dka-product-sigma-streamer:
-    image: bluenviron/mediamtx:latest-ffmpeg
-    restart: always
-    pull_policy: always
-    environment:
-      TZ: Asia/Makassar
-      MTX_API: "yes"
-      MTX_APIADDRESS: ":9997"
-      MTX_AUTHMETHOD: http
-      MTX_AUTHHTTPADDRESS: http://dka-product-sigma-backend:50052/api/streamer/auth
-      MTX_AUTHHTTPEXCLUDE: '[{"action":"read"}]'
-      MTX_RTMP: "yes"
-      MTX_RTMPADDRESS: ":1935"
-      MTX_RTSP: "yes"
-      MTX_RTSPADDRESS: ":8554"
-      MTX_RTSPTRANSPORTS: '["udp","tcp"]'
-      MTX_RTPADDRESS: ":8000"
-      MTX_RTCPADDRESS: ":8001"
-      MTX_SRT: "yes"
-      MTX_SRTADDRESS: ":8890"
-      MTX_WEBRTC: "yes"
-      MTX_WEBRTCADDRESS: ":8889"
-      MTX_WEBRTCALLOWORIGINS: '["*"]'
-      MTX_WEBRTCLOCALUDPADDRESS: ":8189"
-      MTX_WEBRTCLOCALTCPADDRESS: ":8189"
-      MTX_WEBRTCADDITIONALHOSTS: "signage.hndtech.id"
-      MTX_HLS: "yes"
-      MTX_HLSADDRESS: ":8888"
-      MTX_HLSVARIANT: mpegts
-      MTX_HLSSEGMENTCOUNT: "5"
-      MTX_HLSSEGMENTDURATION: 1s
-      MTX_HLSALLOWORIGINS: '["*"]'
-      MTX_HLSALWAYSREMUX: "yes"
-      MTX_PATHDEFAULTS_RUNONDEMAND: "sh -c 'case \"$$MTX_PATH\" in sd/live/*) ffmpeg -hide_banner -loglevel error -fflags +nobuffer+discardcorrupt+flush_packets -flags low_delay -rtsp_transport tcp -i \"rtsp://127.0.0.1:8554/$${MTX_PATH#sd/}\" -map 0:v:0 -map 0:a:0? -c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -level:v 3.1 -bf 0 -vf \"fps=30,scale=min(960\\,iw):-2,format=yuv420p\" -b:v 1000k -maxrate 1200k -bufsize 600k -g 30 -keyint_min 30 -sc_threshold 0 -c:a aac -b:a 96k -ar 48000 -ac 2 -f rtsp -rtsp_transport tcp \"rtsp://127.0.0.1:8554/$$MTX_PATH\" ;; *) exit 0 ;; esac'"
-      MTX_PATHDEFAULTS_RUNONDEMANDRESTART: "yes"
-      MTX_PATHDEFAULTS_RUNONDEMANDSTARTTIMEOUT: "10s"
-      MTX_PATHDEFAULTS_RUNONDEMANDCLOSEAFTER: "10s"
-      MTX_HLSCDNSECRET: "bc13c6b35bd693b4b4fc02a5641eedcc4926412dcf9ab5a95453b71caab5a671"
-      MTX_PATHDEFAULTS_RUNONREADY: "sh -c 'case \"$$MTX_PATH\" in live/*) ffmpeg -hide_banner -loglevel error -fflags +nobuffer+discardcorrupt+flush_packets -flags low_delay -rtsp_transport tcp -i rtsp://127.0.0.1:8554/$$MTX_PATH -map 0:v:0 -map 0:a:0? -c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -bf 0 -vf \"scale=min(1280\\,iw):-2,format=yuv420p\" -b:v 1800k -maxrate 2200k -bufsize 1100k -g 30 -keyint_min 30 -sc_threshold 0 -c:a libopus -b:a 96k -ar 48000 -ac 2 -f rtsp -rtsp_transport tcp rtsp://127.0.0.1:8554/webrtc/$$MTX_PATH & ffmpeg -hide_banner -loglevel error -fflags +nobuffer+discardcorrupt+flush_packets -flags low_delay -rtsp_transport tcp -i rtsp://127.0.0.1:8554/$$MTX_PATH -map 0:v:0 -map 0:a:0? -c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -level:v 3.1 -bf 0 -vf \"fps=30,scale=min(1280\\,iw):-2,format=yuv420p\" -b:v 1300k -maxrate 1500k -bufsize 750k -g 30 -keyint_min 30 -sc_threshold 0 -c:a aac -b:a 128k -ar 48000 -ac 2 -f rtsp -rtsp_transport tcp rtsp://127.0.0.1:8554/hd/$$MTX_PATH & wait ;; *) sleep 86400 ;; esac'"
-      MTX_PATHDEFAULTS_RUNONREADYRESTART: "yes"
-    logging:
-      driver: json-file
-      options:
-        max-size: 2m
-        max-file: "3"
-    deploy:
-      resources:
-        limits:
-          cpus: "1.20"
-          memory: 640M
     networks:
       - sigma-internal
 

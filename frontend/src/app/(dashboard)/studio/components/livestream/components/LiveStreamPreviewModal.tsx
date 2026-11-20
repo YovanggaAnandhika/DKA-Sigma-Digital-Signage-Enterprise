@@ -254,7 +254,13 @@ export default function LiveStreamPreviewModal({ item, onClose }: LiveStreamPrev
             }}
           >
             <HlsPlayer
-              src={item.serverHlsEndpoint || `/streams/${item.id}/live.m3u8`}
+              src={
+                item.streamMode === 'SERVER_HOSTED_HLS'
+                  ? item.serverHlsEndpoint || `/streams/${item.id}/whep`
+                  : item.sourceUrl
+              }
+              sourceType={item.sourceType}
+              streamMode={item.streamMode}
               poster={item.posterImageUrl || undefined}
               isMuted={isMuted}
               volume={volume}

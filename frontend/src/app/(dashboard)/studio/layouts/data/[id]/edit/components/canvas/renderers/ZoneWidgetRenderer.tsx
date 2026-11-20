@@ -538,7 +538,10 @@ export default function ZoneWidgetRenderer({
   if (activeBlock.widgetType === 'livestream') {
     const ls = activeBlock.widgetData || {};
     const url = ls.sourceUrl || '';
-    const streamEndpoint = ls.serverHlsEndpoint || (ls.id ? `/streams/${ls.id}/live.m3u8` : url);
+    const streamEndpoint =
+      ls.streamMode === 'SERVER_HOSTED_HLS'
+        ? ls.serverHlsEndpoint || (ls.id ? `/streams/${ls.id}/whep` : url)
+        : url || ls.serverHlsEndpoint;
 
     return (
       <div
@@ -553,6 +556,8 @@ export default function ZoneWidgetRenderer({
       >
         <HlsPlayer
           src={streamEndpoint}
+          sourceType={ls.sourceType}
+          streamMode={ls.streamMode}
           poster={ls.posterImageUrl || undefined}
           isMuted={ls.isMuted ?? true}
           volume={ls.volumeLevel ? ls.volumeLevel / 100 : 0.8}

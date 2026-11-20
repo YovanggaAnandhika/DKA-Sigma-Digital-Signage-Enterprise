@@ -37,10 +37,11 @@ This project is an enterprise-grade digital signage management and streaming pla
 | `iot/esp32_queue_button/` | ESP32 Wi-Fi/MQTT queue-button firmware and flashing/wiring guide. |
 | `iot/arduino_nano_queue_button/` | Arduino Nano USB-serial queue-button firmware and guide. |
 | `docs/` | DDL, player integration, and operational/planning documents. |
-| `compose.yml` | Development container orchestration for frontend (`dka-product-sigma-frontend`), backend (`dka-product-sigma-backend`), and ultra-low latency streaming engine (`dka-product-sigma-streamer`). |
-| `backend/src/workers/live_stream_relay.rs` | Live stream relay supervisor & real-time telemetry monitor connected to internal `dka-product-sigma-streamer`. |
-| `frontend/src/app/streams/[streamId]/[file]/route.ts` | Next.js streaming bridge for WebRTC WHEP signaling (`/streams/<id>/whep`) and HLS segment fallback (`/streams/<id>/live.m3u8`). |
-| `frontend/src/components/ui/HlsPlayer.tsx` | Unified real-time player supporting sub-second WebRTC UDP (`RTCPeerConnection`) and adaptive HLS with Two-Tier Live-Edge Sync. |
+| `compose.yml` | Development container orchestration for frontend (`dka-product-sigma-frontend`) and backend (`dka-product-sigma-backend`, including native UDP WebRTC SFU on port `8189/udp`). |
+| `backend/src/media/` | Pure-Rust WebRTC WHIP/WHEP SFU (`str0m`) + RTSP Pull (`retina`) engine & HTTP signaling (`:50052`) directly inside `dka-product-sigma-backend`. |
+| `backend/src/workers/live_stream_relay.rs` | Live stream relay supervisor managing `RTSP` pull workers and `MediaHub` publisher lifecycle. |
+| `frontend/src/app/streams/[streamId]/[file]/route.ts` | Next.js streaming bridge forwarding WHIP/WHEP SDP signaling (`/streams/<id>/whip|whep`) directly to `BACKEND_MEDIA_URL`. |
+| `frontend/src/components/ui/HlsPlayer.tsx` | Unified CMS player supporting sub-second WebRTC UDP (`RTCPeerConnection`), YouTube Live IFrame, external Web Embed, and adaptive HLS (`hls.js`). |
 | `graphify-out/` | Generated knowledge graph and reports; derived analysis, not a source of truth. |
 
 ### Instruction File Hierarchy
@@ -114,51 +115,35 @@ This project is an enterprise-grade digital signage management and streaming pla
 
 ---
 
-## Live Stream & Ultra-Low Latency Relay Architecture (WebRTC UDP / SRT / RTMP / HLS)
+## Live Stream & Ultra-Low Latency Pure-Rust UDP SFU Architecture
 
-### 1. Container & Network Topology (`dka-internal` + `dka-development-nginx`)
-- **Zero Direct Host Ports in Project `compose.yml`**: All external ingress traffic enters exclusively through the central gateway container **`dka-development-nginx`** (Nginx Proxy Manager) and routes over the internal Docker network `dka-internal`.
-- **Gateway Stream Port Forwarding (`dka-development-nginx`)**:
-  - `1935/tcp` → `dka-product-sigma-streamer:1935` (RTMP Ingest from OBS Studio / Hardware Encoders)
-  - `8189/udp` & `8189/tcp` → `dka-product-sigma-streamer:8189` (WebRTC ICE Media Transport for sub-second `150–350 ms` playback)
-  - `8890/udp` → `dka-product-sigma-streamer:8890` (SRT UDP Ingest)
-  - `8554/tcp` → `dka-product-sigma-streamer:8554` (RTSP control untuk Android player; WAJIB di-forward di gateway)
-  - `8000/udp` → `dka-product-sigma-streamer:8000` (RTP untuk RTSP-over-UDP; WAJIB di-forward bila UDP dipakai)
-  - `8001/udp` → `dka-product-sigma-streamer:8001` (RTCP untuk RTSP-over-UDP; WAJIB di-forward bila UDP dipakai)
-  - `50051/tcp+udp` → `dka-product-sigma-backend:50051` (Tonic gRPC Server)
-  - `80/tcp` (`sigma.dkaapis.test`) → `dka-product-sigma-frontend:80` (Next.js App Router)
-  - *Catatan Port Privilege*: Port < 1024 (seperti port 80) merupakan privileged port pada OS Unix/Android yang rentan mengalami *Connection Reset* pada lingkungan virtualisasi Docker Desktop VPNKit atau firewall AP Wi-Fi kantor. RTSP control Android memakai TCP 8554; media memilih UDP RTP/RTCP, lalu retry TCP interleaved bila playback error. Jalur UDP hanya dapat dipakai bila port RTP/RTCP di gateway dan jaringan player tersedia.
-- **Host LAN Wi-Fi IP Invariant (`MTX_WEBRTCADDITIONALHOSTS`)**:
-  - `MTX_WEBRTCADDITIONALHOSTS` di `compose.yml` WAJIB selalu menyertakan IP Wi-Fi lokal komputer pengembang (misalnya `192.168.1.52`) di samping domain lokal `sigma.dkaapis.test`, agar negosiasi ICE UDP WebRTC dari perangkat Android fisik di jaringan Wi-Fi lokal tidak mengalami kegagalan/timeout.
-- **Internal Docker Service URLs (`compose.yml`)**:
-  - `dka-product-sigma-backend` communicates with `dka-product-sigma-streamer` via internal Docker DNS:
-    - `STREAMER_API_URL: "http://dka-product-sigma-streamer:9997"` (Control & Telemetry REST API)
-    - `STREAMER_RTMP_URL: "rtsp://dka-product-sigma-streamer:8554"` (Internal RTSP/RTMP relay bus)
-    - `STREAMER_WEBRTC_URL: "http://dka-product-sigma-streamer:8889"` (Internal WebRTC WHEP/WHIP endpoint)
-    - `STREAMER_HLS_URL: "http://dka-product-sigma-streamer:8888"` (Internal HLS fallback muxer)
-  - `dka-product-sigma-frontend` communicates with `dka-product-sigma-streamer` via `STREAMER_INTERNAL_HOST` + `STREAMER_INTERNAL_PORT` and with `dka-product-sigma-backend` via `GRPC_SERVER_HOST` + `GRPC_SERVER_PORT`.
+### 1. Container & Network Topology (Direct UDP on Backend, Zero MediaMTX, Zero Nginx Media Proxy)
+- **No MediaMTX Container**: `dka-product-sigma-streamer` is removed. Media fan-out runs directly inside `dka-product-sigma-backend` using Pure-Rust `str0m` (`rust-crypto`) + `retina` (zero C FFI, zero FFmpeg transcoding).
+- **Direct Host Ports on `dka-product-sigma-backend`**:
+  - `8189/udp` exposed directly on `dka-product-sigma-backend` in both `compose.yml` and `compose.production.yml` for all WHIP (OBS ingest) and WHEP (Android/Browser playback) WebRTC media over ICE-Lite + DTLS-SRTP.
+  - `50051/tcp` (Tonic gRPC) exposed directly on `dka-product-sigma-backend` in `compose.production.yml`.
+  - Nginx (`nginx-proxy-manager` / `dka-development-nginx`) serves Web CMS HTTP/HTTPS (`80/443/81`) and MQTT (`1883/18083/8083`) ONLY — **no streaming port forwarding through Nginx**.
+- **Public ICE Candidate Configuration (`MEDIA_PUBLIC_IP` & `MEDIA_UDP_PORT`)**:
+  - `MEDIA_PUBLIC_IP` on `dka-product-sigma-backend` MUST be set to the host LAN IP in development (e.g. `10.20.30.97`) or the server's public IP/hostname in production (`signage.hndtech.id`) so `str0m` emits a reachable UDP host candidate on `MEDIA_UDP_PORT` (`8189`).
+- **Internal Frontend-Backend Signaling URL**:
+  - `dka-product-sigma-frontend` forwards WHIP/WHEP HTTP signaling to `BACKEND_MEDIA_URL` (`http://dka-product-sigma-backend:50052`).
 
-### 2. Zero-B-Frame & Opus Auto-Normalization Pipeline
-- **Browser WebRTC Specification Constraint**: WebRTC (RFC 7742) strictly rejects H.264 streams containing B-frames (`WebRTC doesn't support H264 streams with B-frames`) and requires **Opus** audio (`48 kHz`), whereas OBS Studio defaults to H.264 High/Main profile with `B-frames = 2` and `AAC` audio.
-- **Automatic In-Memory Normalization (`MTX_PATHDEFAULTS_RUNONREADY`)**:
-  - When OBS publishes an RTMP stream to `rtmp://sigma.dkaapis.test:1935/live/<stream_id>`, `dka-product-sigma-streamer` triggers an ultra-fast FFmpeg pipeline (`-c:v libx264 -preset ultrafast -tune zerolatency -profile:v baseline -bf 0 -g 30 -c:a libopus`) into the internal path `webrtc/live/<stream_id>`.
-  - This guarantees 100% WebRTC compatibility across Safari (macOS/iOS), Chrome, Edge, and Firefox without requiring users to manually tune OBS Studio encoder settings.
+### 2. Zero-Transcode Multi-Source Support (0 DB Migration)
+- **OBS Studio (`WHIP`)**: OBS 30+ connects via standard WHIP (`POST /streams/<id>/whip`) with `Authorization: Bearer <token>` validated against PostgreSQL (`requires_auth`, `ingest_password`, `is_relay_active`) and encrypted via DTLS-SRTP over `8189/udp`. OBS encoder must output H.264 with `720p 30fps`, `Keyframe = 1s`, `B-frames = 0`.
+- **CCTV (`RTSP`)**: Supports Server UDP Relay (1 `retina` TCP pull connection per camera fanned out via `str0m` WHEP UDP to all screens; AAC audio is skipped in WebRTC SFU mode — `shortcut: use Direct LAN RTSP mode if CCTV AAC audio is required`) OR Direct LAN (`EXTERNAL_EMBED` played directly by ExoPlayer).
+- **External Sources (`YOUTUBE`, `HLS`, `EMBED`)**: Stored as `EXTERNAL_EMBED` and played directly on clients (`YouTube IFrame Player API` supporting `watch?v=`, `/live/`, `youtu.be/`, `/embed/`, and `/channel/UC.../live`; ExoPlayer/`hls.js` for `.m3u8`; `WebView`/`iframe` for generic embeds).
 
-### 3. Real-Time Frontend Playback (`HlsPlayer.tsx` & `/streams/[streamId]/[file]/route.ts`)
-- **Primary Transport — WebRTC WHEP (`POST /streams/[streamId]/whep`)**:
-  - For local server relays (`/streams/<streamId>/...`), `HlsPlayer.tsx` establishes a native `RTCPeerConnection` and posts an SDP Offer to `/streams/<streamId>/whep`.
-  - `route.ts` forwards the SDP Offer internally to `http://dka-product-sigma-streamer:8889/webrtc/live/<streamId>/whep` (falling back to `/live/<streamId>/whep` for native 0-B-frame WHIP/SRT sources) and returns the SDP Answer.
-  - Video and audio flow over UDP port `8189` with sub-second latency (`150–350 ms`) and immediate `< 50 ms` state transitions (`LIVE` / `BUFFERING` / `STREAM OFF`).
-- **Fallback Transport — Adaptive HLS (`GET /streams/[streamId]/live.m3u8`)**:
-  - Used for external HLS embeds or legacy clients.
-  - Implements **Adaptive Device & Network Profiling** (`getAdaptiveStreamProfile` inspecting `navigator.connection`, `hardwareConcurrency`, `deviceMemory`, and dynamic stall counters) plus **Two-Tier Live-Edge Sync**:
-    - *Tier 1 (Smooth Catch-Up)*: Adjusts `video.playbackRate` (`1.08x–1.18x`) when lag exceeds `maxLagSeconds` (`2.8s–4.5s`).
-    - *Tier 2 (Hard Frame-Drop)*: Immediately drops stale frames and snaps to `liveEdge - 1.0s` when lag exceeds `hardDropSeconds` (`5.5s–8.5s`), guarded by a `4s` cooldown.
+### 3. Real-Time Frontend & Android Playback
+- **Frontend (`HlsPlayer.tsx` & `/streams/[streamId]/[file]/route.ts`)**: Proxies `POST/PATCH/DELETE` WHIP/WHEP directly to `BACKEND_MEDIA_URL`, handles YouTube/Embed iframes, and preserves `hls.js`/Safari adaptive playback for external `.m3u8`.
+- **Android (`LiveStreamZoneRenderer.kt`)**:
+  - Server SFU streams (`WHIP`, `RTSP` Server Relay) negotiate SDP over gRPC (`LiveStreamService.NegotiateWhep` / `CloseWhepSession`) and render via `SharedWebRtcRuntime` (`EglBase` singleton + hardware `DefaultVideoDecoderFactory` + `SurfaceViewRenderer.setZOrderMediaOverlay(true)`) over `8189/udp`.
+  - `YOUTUBE` and `EMBED` render via managed `WebView` (`loadDataWithBaseURL("https://www.youtube.com", ...)` + `SigmaYtBridge` JS audio/error hook).
+  - External `HLS` and Direct LAN `RTSP` render via Media3 `ExoPlayer`.
 
 ### 4. Container Performance & Lifecycle Invariants
-- **Singleton gRPC Channel Multiplexing**: All high-frequency Next.js route handlers (`ListMedia`, `GetLiveStream`, `ListLiveStreams`, `/streams/[streamId]/[file]`) must use `getGrpcClient(ServiceClient)` from `frontend/src/lib/core/grpcClient.ts` to reuse a single HTTP/2 connection instead of instantiating `new ServiceClient()` per request, and parse JSON bodies safely with `await req.json().catch(() => ({}))`.
-- **Lightweight Healthcheck (`/up`)**: Container healthchecks in `dka-product-sigma-frontend` must hit the lightweight `GET /up` route (`frontend/src/app/up/route.ts`) rather than SSR pages (`/`) to prevent zombie curl processes and CPU/memory exhaustion during `next dev`.
-- **Graceful Shutdown & Encoder Disconnect**: `backend/src/main.rs` uses `serve_with_shutdown` listening for `SIGTERM`/`SIGINT` to invoke `relay_manager.stop_all()`, ensuring active FFmpeg child processes (`kill_on_drop(true)`) are terminated cleanly when containers restart.
+- **Singleton gRPC Channel Multiplexing**: High-frequency Next.js route handlers must use `getGrpcClient(ServiceClient)` from `frontend/src/lib/core/grpcClient.ts` and parse JSON bodies safely with `await req.json().catch(() => ({}))`.
+- **Lightweight Healthcheck (`/up`)**: Container healthchecks in `dka-product-sigma-frontend` must hit `GET /up` (`frontend/src/app/up/route.ts`) rather than SSR pages.
+- **Graceful Shutdown**: `backend/src/main.rs` uses `serve_with_shutdown` listening for `SIGTERM`/`SIGINT` to invoke `relay_manager.stop_all()`, terminating active `rtsp_pull` workers and the `MediaHub` SFU cleanly.
 
 ---
 
@@ -238,9 +223,7 @@ This project is an enterprise-grade digital signage management and streaming pla
   - Player WAJIB mempertahankan tampilan **"Siaran Offline"** yang elegan (menggunakan UI glassmorphism modern dengan indikator retry halus).
   - **DILARANG KERAS meloncat ke state "BUFFERING"** di setiap interval percobaan reconnecting (`reconnectRunnable`) ketika belum ada aliran paket/frame riil yang diterima. State buffering HANYA boleh aktif ketika media source telah terhubung dan sedang mengisi buffer playback frame pertama.
 
-### 8. Android Live Stream = RTSP (Bukan HLS / gRPC Chunk)
-- Android player memutar siaran server-hosted via RTSP/Media3; UDP diprioritaskan untuk RTP dan TCP interleaved menjadi fallback setelah playback error. RTSP control tetap melalui TCP 8554.
-- Profil awal low-spec memakai `hd/live/<stream_id>` (maksimal 720p, 30 fps, H.264 Baseline Level 3.1, 0 B-frame, bitrate 1.3 Mbps, AAC). `sd/live/<stream_id>` (maksimal 540p, 30 fps, bitrate 1.0 Mbps) dibuat saat diminta dan dipilih bila dropped frames/buffering berulang; player naik kembali setelah stabil.
-- Buffer RTSP low-spec 750-2000 ms, live offset 500 ms dan playback speed 0.97-1.03. Perubahan profil adaptif menukar RTSP source, sehingga dapat menimbulkan jeda singkat saat transisi.
-- `webrtc/live/` tetap memakai Opus untuk WHEP browser.
-- Callback auth MediaMTX dilayani backend internal di port `50052`, terpisah dari Next.js; bila callback gagal, publish stream ditolak dan log backend mencatat kegagalan query autentikasi.
+### 8. Android Live Stream = WebRTC WHEP UDP (Server SFU) + Multi-Source
+- Android player memutar siaran server-hosted (`WHIP` & `RTSP` Server Relay) melalui **WebRTC WHEP UDP (`8189/udp`)** dengan negosiasi SDP via gRPC `LiveStreamService.NegotiateWhep` / `CloseWhepSession` (`50051/tcp`), menggunakan `SharedWebRtcRuntime` (`EglBase` singleton + hardware `DefaultVideoDecoderFactory` + `SurfaceViewRenderer.setZOrderMediaOverlay(true)`).
+- Sumber `YOUTUBE` dan `EMBED` memakai `WebView` terkelola (`YouTubeLiveUrlParser`), sedangkan `HLS` eksternal dan `RTSP` Direct LAN tetap memakai Media3 `ExoPlayer`.
+- Signaling WHIP/WHEP HTTP dilayani backend internal di port `50052` (dan dibungkus Next.js di `/streams/<id>/whip|whep`).

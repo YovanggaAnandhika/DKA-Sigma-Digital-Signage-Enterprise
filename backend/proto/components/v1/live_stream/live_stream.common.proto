@@ -84,3 +84,21 @@ message ToggleRelayHostRequest {
   bool is_relay_active = 2;
 }
 
+message NegotiateWhepRequest {
+  string stream_id = 1;
+  string sdp_offer = 2;
+}
+
+message NegotiateWhepResponse {
+  string sdp_answer = 1;
+  string session_id = 2;
+}
+
+message CloseWhepSessionRequest {
+  string session_id = 1;
+}
+
+message CloseWhepSessionResponse {
+  bool success = 1;
+}
+

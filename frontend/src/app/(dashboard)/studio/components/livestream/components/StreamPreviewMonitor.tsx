@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Volume2, VolumeX } from 'lucide-react';
-import { StreamSourceType } from '../types';
+import { StreamMode, StreamSourceType } from '../types';
 import type { StreamPlaybackStatus } from '@/components/ui/HlsPlayer';
 
 const HlsPlayer = dynamic(() => import('@/components/ui/HlsPlayer'), {
@@ -29,6 +29,7 @@ const HlsPlayer = dynamic(() => import('@/components/ui/HlsPlayer'), {
 interface StreamPreviewMonitorProps {
   name?: string;
   sourceType: StreamSourceType;
+  streamMode?: StreamMode;
   sourceUrl?: string;
   streamKey: string;
   serverHost?: string;
@@ -43,6 +44,8 @@ interface StreamPreviewMonitorProps {
 
 export default function StreamPreviewMonitor({
   sourceType,
+  streamMode = 'SERVER_HOSTED_HLS',
+  sourceUrl,
   streamKey,
   lowLatencyMode = true,
   isMuted: initialMuted = true,
@@ -203,18 +206,32 @@ export default function StreamPreviewMonitor({
           }}
         >
           <HlsPlayer
-            src={`/streams/${streamKey}/live.m3u8`}
+            src={sourceUrl || `/streams/${streamKey}/whep`}
+            sourceType={sourceType}
+            streamMode={streamMode}
             poster={posterImageUrl || undefined}
             isMuted={isMuted}
             volume={volume}
             lowLatencyMode={lowLatencyMode}
             autoPlay
             controls={false}
-            fallbackTitle="STREAM OFF"
+            fallbackTitle={
+              sourceType === 'RTSP' && streamMode === 'EXTERNAL_EMBED'
+                ? 'DIRECT LAN RTSP'
+                : 'STREAM OFF'
+            }
             fallbackDescription={
-              sourceType === 'RTMP' || sourceType === 'WHIP'
-                ? 'Siaran OBS Studio sedang tidak aktif. Mulai streaming dari OBS untuk menayangkan video secara langsung.'
-                : 'Aliran video dari sumber kamera sedang tidak aktif.'
+              sourceType === 'WHIP' || sourceType === 'RTMP'
+                ? 'Siaran OBS Studio sedang tidak aktif. Mulai streaming dari OBS (WHIP UDP) untuk menayangkan video secara langsung.'
+                : sourceType === 'RTSP' && streamMode === 'EXTERNAL_EMBED'
+                  ? 'Mode Direct LAN memutar kamera RTSP langsung dari perangkat Android TV tanpa melewati server.'
+                  : sourceType === 'YOUTUBE'
+                    ? 'Masukkan URL YouTube Live yang valid untuk menampilkan pratinjau.'
+                    : sourceType === 'HLS'
+                      ? 'Masukkan URL playlist .m3u8 aktif untuk menampilkan pratinjau.'
+                      : sourceType === 'EMBED'
+                        ? 'Masukkan URL web embed live (https://...) untuk menampilkan pratinjau.'
+                        : 'Aliran video dari sumber kamera sedang tidak aktif.'
             }
             onStatusChange={setPlaybackStatus}
           />

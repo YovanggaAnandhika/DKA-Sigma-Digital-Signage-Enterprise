@@ -5,9 +5,9 @@ mod common;
 mod config;
 mod db;
 mod grpc;
+mod media;
 mod modules;
 mod seeders;
-mod streamer_auth;
 mod workers;
 
 use crate::modules::distribution::stream::services::StreamConnectionManager;
@@ -158,24 +158,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Starting Pure gRPC Digital Signage Platform Backend...");
     info!(
-        "Configuration loaded. Host: {}, gRPC Port: {}, Streamer Auth Port: {}",
-        config.host, config.grpc_port, 50052
+        "Configuration loaded. Host: {}, gRPC Port: {}, Media HTTP Port: {}, Media UDP Port: {}, Public IP: {}",
+        config.host, config.grpc_port, 50052, config.media_udp_port, config.media_public_ip
     );
 
+    str0m::crypto::from_feature_flags().install_process_default();
     workers::upload_cleanup::start(&config.upload_dir).await?;
 
     let grpc_addr: SocketAddr = format!("{}:{}", config.host, config.grpc_port).parse()?;
-    let auth_addr: SocketAddr = format!("{}:50052", config.host).parse()?;
+    let media_http_addr: SocketAddr = format!("{}:50052", config.host).parse()?;
     info!("Pure gRPC Server listening on {}", grpc_addr);
 
     let stream_manager = StreamConnectionManager::new();
     grpc::iot::mqtt::spawn_mqtt_worker(pool.clone(), stream_manager.clone());
 
-    let relay_manager = crate::workers::live_stream_relay::LiveStreamRelayManager::new(
-        config.upload_dir.clone(),
-        config.streamer_api_url.clone(),
-        config.streamer_rtmp_url.clone(),
-    );
+    let media_hub = media::MediaHub::start(
+        pool.clone(),
+        config.media_udp_port,
+        config.media_public_ip.clone(),
+    )
+    .await?;
+    let relay_manager = crate::workers::live_stream_relay::LiveStreamRelayManager::new(media_hub.clone());
     let relay_manager_startup = relay_manager.clone();
     let pool_startup = pool.clone();
     tokio::spawn(async move {
@@ -183,7 +186,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
     let relay_manager_shutdown = relay_manager.clone();
 
-    let auth_pool = pool.clone();
     let mut router = Server::builder().layer(
         tower_http::trace::TraceLayer::new(GrpcEndpointClassifier).on_failure(
             |failure: GrpcEndpointFailure, latency: Duration, _span: &tracing::Span| {
@@ -207,19 +209,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             _ = sigterm.recv() => {},
         }
         let _ = shutdown_tx.send(true);
-        info!("Shutdown signal received, terminating active RTMP/HLS relays so encoders disconnect cleanly...");
+        info!("Shutdown signal received, terminating active UDP SFU & RTSP pull sessions...");
         relay_manager_shutdown.stop_all().await;
     });
 
     let grpc_server = router.serve_with_shutdown(grpc_addr, wait_for_shutdown(shutdown_rx.clone()));
-    let auth_listener = tokio::net::TcpListener::bind(auth_addr).await?;
-    let auth_server = axum::serve(auth_listener, streamer_auth::router(auth_pool))
+    let media_http_listener = tokio::net::TcpListener::bind(media_http_addr).await?;
+    let media_http_server = axum::serve(media_http_listener, media::http::router(media_hub))
         .with_graceful_shutdown(wait_for_shutdown(shutdown_rx));
-    info!("Streamer auth callback listening on {}", auth_addr);
+    info!("Media WHIP/WHEP HTTP signaling listening on {}", media_http_addr);
 
     tokio::select! {
         result = grpc_server => result?,
-        result = auth_server => result?,
+        result = media_http_server => result?,
     }
     Ok(())
 }

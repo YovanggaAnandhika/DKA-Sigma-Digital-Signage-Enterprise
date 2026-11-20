@@ -327,8 +327,12 @@ impl ManifestServiceImpl {
             )
             .bind(lsid)
             .fetch_optional(pool).await {
-                let effective_url = if row.stream_mode == "SERVER_HOSTED_HLS" && row.is_relay_active && !row.server_hls_endpoint.is_empty() {
-                    row.server_hls_endpoint.clone()
+                let effective_url = if row.stream_mode == "SERVER_HOSTED_HLS" && row.is_relay_active {
+                    if row.server_hls_endpoint.is_empty() {
+                        format!("/streams/{}/whep", row.id)
+                    } else {
+                        row.server_hls_endpoint.clone()
+                    }
                 } else {
                     row.source_url.clone()
                 };

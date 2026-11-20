@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Tv, Loader2 } from 'lucide-react';
+import { parseYouTubeLiveUrl, buildYouTubeEmbedUrl } from '@/lib/core/youtubeLive';
 
 export type StreamPlaybackStatus = 'IDLE' | 'OFFLINE' | 'BUFFERING' | 'LIVE';
 
 interface HlsPlayerProps {
   src: string;
+  sourceType?: string;
+  streamMode?: string;
   poster?: string;
   isMuted?: boolean;
   volume?: number;
@@ -59,6 +62,8 @@ function getAdaptiveStreamProfile(stallCount: number) {
 
 export default function HlsPlayer({
   src,
+  sourceType,
+  streamMode,
   poster,
   isMuted = true,
   volume = 0.8,
@@ -71,6 +76,26 @@ export default function HlsPlayer({
   fallbackDescription = 'Siaran langsung sedang tidak aktif. Mulai streaming dari perangkat pengirim untuk menayangkan video.',
   onStatusChange,
 }: HlsPlayerProps) {
+  const normalizedType = (sourceType || '').toUpperCase();
+  const isYoutube = normalizedType === 'YOUTUBE';
+  const isEmbed = normalizedType === 'EMBED';
+  const isDirectRtsp = normalizedType === 'RTSP' && streamMode === 'EXTERNAL_EMBED';
+  const isIframeMode = isYoutube || isEmbed;
+
+  const parsedYoutube = useMemo(
+    () => (isYoutube ? parseYouTubeLiveUrl(src) : null),
+    [isYoutube, src]
+  );
+  const iframeUrl = useMemo(() => {
+    if (isYoutube) {
+      return parsedYoutube ? buildYouTubeEmbedUrl(parsedYoutube, isMuted) : '';
+    }
+    if (isEmbed && /^https?:\/\/.+/i.test(src.trim())) {
+      return src.trim();
+    }
+    return '';
+  }, [isYoutube, isEmbed, parsedYoutube, src, isMuted]);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [status, setStatus] = useState<StreamPlaybackStatus>('OFFLINE');
   const [hasFirstFrame, setHasFirstFrame] = useState<boolean>(false);
@@ -79,24 +104,21 @@ export default function HlsPlayer({
   const hasFirstFrameRef = useRef<boolean>(false);
   const hlsInstanceRef = useRef<any>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
+  const whepLocationRef = useRef<string | null>(null);
   const isStreamOnlineRef = useRef<boolean>(false);
   const lastMediaTimeRef = useRef<number>(-1);
   const lastAdvanceAtRef = useRef<number>(Date.now());
   const stallCountRef = useRef<number>(0);
   const lastHardDropAtRef = useRef<number>(0);
 
-  const updateStatus = useCallback(
-    (next: StreamPlaybackStatus) => {
-      statusRef.current = next;
-      setStatus((prev) => {
-        if (prev !== next) {
-          onStatusChange?.(next);
-        }
-        return next;
-      });
-    },
-    [onStatusChange]
-  );
+  const updateStatus = useCallback((next: StreamPlaybackStatus) => {
+    statusRef.current = next;
+    setStatus(next);
+  }, []);
+
+  useEffect(() => {
+    onStatusChange?.(status);
+  }, [status, onStatusChange]);
 
   // Sync muted & volume directly to DOM element without reloading stream
   useEffect(() => {
@@ -108,6 +130,11 @@ export default function HlsPlayer({
   }, [isMuted, volume]);
 
   const stopAndResetVideo = useCallback(() => {
+    if (whepLocationRef.current) {
+      const loc = whepLocationRef.current;
+      whepLocationRef.current = null;
+      fetch(loc, { method: 'DELETE' }).catch(() => { });
+    }
     if (pcRef.current) {
       try {
         pcRef.current.onconnectionstatechange = null;
@@ -185,7 +212,7 @@ export default function HlsPlayer({
             .then(() => {
               handlePlaying();
             })
-            .catch(() => {});
+            .catch(() => { });
         }
       }
       return;
@@ -217,7 +244,7 @@ export default function HlsPlayer({
           video
             .play()
             .then(() => handlePlaying())
-            .catch(() => {});
+            .catch(() => { });
         }
       });
 
@@ -259,6 +286,18 @@ export default function HlsPlayer({
 
   // Ultra-Low Latency WebRTC (UDP WHEP) Connection for Local Server Relay
   useEffect(() => {
+    if (isIframeMode) {
+      stopAndResetVideo();
+      updateStatus(iframeUrl ? 'LIVE' : 'OFFLINE');
+      return;
+    }
+
+    if (isDirectRtsp) {
+      stopAndResetVideo();
+      updateStatus('IDLE');
+      return;
+    }
+
     if (!src) {
       stopAndResetVideo();
       updateStatus('OFFLINE');
@@ -278,7 +317,7 @@ export default function HlsPlayer({
     }
 
     const streamId = localMatch[1];
-    const whepUrl = `/streams/${streamId}/whep?mode=${lowLatencyMode ? 'll' : 'hd'}`;
+    const whepUrl = `/streams/${streamId}/whep`;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
     const connectWebRtc = async () => {
@@ -318,7 +357,7 @@ export default function HlsPlayer({
                   isStreamOnlineRef.current = true;
                   handlePlaying();
                 })
-                .catch(() => {});
+                .catch(() => { });
             }
           }
         };
@@ -394,6 +433,10 @@ export default function HlsPlayer({
           updateStatus('BUFFERING');
         }
 
+        const loc = res.headers.get('location');
+        if (loc) {
+          whepLocationRef.current = loc;
+        }
         const answerSdp = await res.text();
         await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
       } catch {
@@ -438,7 +481,7 @@ export default function HlsPlayer({
       stopAndResetVideo();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [src, lowLatencyMode]);
+  }, [src, lowLatencyMode, isIframeMode, isDirectRtsp, Boolean(iframeUrl)]);
 
   const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const video = e.currentTarget;
@@ -499,6 +542,14 @@ export default function HlsPlayer({
     }
   };
 
+  const liveBadgeText = isYoutube
+    ? 'LIVE • YOUTUBE'
+    : isEmbed
+      ? 'LIVE • EMBED'
+      : src.startsWith('/streams/')
+        ? 'LIVE • UDP'
+        : 'LIVE • HLS';
+
   return (
     <div
       style={{
@@ -514,30 +565,46 @@ export default function HlsPlayer({
       }}
       className={className}
     >
-      <video
-        ref={videoRef}
-        poster={poster}
-        muted={isMuted}
-        autoPlay={autoPlay}
-        controls={controls}
-        playsInline
-        onPlaying={handlePlaying}
-        onCanPlay={handlePlaying}
-        onLoadedData={handlePlaying}
-        onTimeUpdate={handleTimeUpdate}
-        onWaiting={handleWaiting}
-        onEnded={handleVideoError}
-        onError={handleVideoError}
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'contain',
-          position: 'relative',
-          zIndex: 1,
-          opacity: status === 'OFFLINE' ? 0 : 1,
-          transition: 'opacity 0.2s ease',
-        }}
-      />
+      {isIframeMode && iframeUrl ? (
+        <iframe
+          src={iframeUrl}
+          title={fallbackTitle}
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+          allowFullScreen
+          style={{
+            width: '100%',
+            height: '100%',
+            border: 'none',
+            position: 'relative',
+            zIndex: 1,
+          }}
+        />
+      ) : (
+        <video
+          ref={videoRef}
+          poster={poster}
+          muted={isMuted}
+          autoPlay={autoPlay}
+          controls={controls}
+          playsInline
+          onPlaying={handlePlaying}
+          onCanPlay={handlePlaying}
+          onLoadedData={handlePlaying}
+          onTimeUpdate={handleTimeUpdate}
+          onWaiting={handleWaiting}
+          onEnded={handleVideoError}
+          onError={handleVideoError}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            position: 'relative',
+            zIndex: 1,
+            opacity: status === 'OFFLINE' || status === 'IDLE' ? 0 : 1,
+            transition: 'opacity 0.2s ease',
+          }}
+        />
+      )}
 
       {/* Live Micro Glass Pill */}
       {status === 'LIVE' && (
@@ -573,7 +640,7 @@ export default function HlsPlayer({
               boxShadow: '0 0 8px #10b981',
             }}
           />
-          LIVE &bull; WHEP
+          {liveBadgeText}
         </div>
       )}
 
@@ -647,8 +714,8 @@ export default function HlsPlayer({
         </div>
       )}
 
-      {/* Stream Off Frosted Glass Overlay */}
-      {status === 'OFFLINE' && (
+      {/* Stream Off / Direct LAN RTSP Frosted Glass Overlay */}
+      {(status === 'OFFLINE' || status === 'IDLE') && (
         <div
           style={{
             position: 'absolute',

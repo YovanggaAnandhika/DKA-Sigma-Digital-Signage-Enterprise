@@ -7,9 +7,12 @@ use crate::grpc::proto::components::v1::live_stream::{
     live_stream_service_server::LiveStreamService as LiveStreamServiceTrait,
     CreateLiveStreamRequest, GetLiveStreamRequest, ListLiveStreamsRequest, ListLiveStreamsResponse,
     UpdateLiveStreamRequest, DeleteLiveStreamRequest, DeleteLiveStreamResponse,
-    ToggleRelayHostRequest, LiveStream,
+    ToggleRelayHostRequest, NegotiateWhepRequest, NegotiateWhepResponse,
+    CloseWhepSessionRequest, CloseWhepSessionResponse, LiveStream,
 };
 use crate::grpc::proto::common::v1::PaginationResponse;
+use crate::media::hub::MediaError;
+use crate::workers::live_stream_relay::LiveStreamRelayManager;
 
 #[derive(FromRow)]
 struct LiveStreamRow {
@@ -58,8 +61,6 @@ impl LiveStreamRow {
     }
 }
 
-use crate::workers::live_stream_relay::LiveStreamRelayManager;
-
 pub struct LiveStreamServiceImpl {
     pub pool: PgPool,
     pub relay_manager: LiveStreamRelayManager,
@@ -68,6 +69,41 @@ pub struct LiveStreamServiceImpl {
 impl LiveStreamServiceImpl {
     pub fn new(pool: PgPool, relay_manager: LiveStreamRelayManager) -> Self {
         Self { pool, relay_manager }
+    }
+}
+
+fn resolve_stream_mode(source_type: &str, requested_mode: &str) -> String {
+    match source_type {
+        "WHIP" => "SERVER_HOSTED_HLS".to_string(),
+        "YOUTUBE" | "HLS" | "EMBED" => "EXTERNAL_EMBED".to_string(),
+        "RTSP" => {
+            if requested_mode == "EXTERNAL_EMBED" {
+                "EXTERNAL_EMBED".to_string()
+            } else {
+                "SERVER_HOSTED_HLS".to_string()
+            }
+        }
+        _ => {
+            if requested_mode.is_empty() {
+                "EXTERNAL_EMBED".to_string()
+            } else {
+                requested_mode.to_string()
+            }
+        }
+    }
+}
+
+fn resolve_source_url(id: Uuid, source_type: &str, raw_url: &str) -> Result<String, Status> {
+    match source_type {
+        "WHIP" => Ok(format!("/streams/{}/whip", id)),
+        "RTMP" => Ok(format!("/live/{}", id)),
+        _ => {
+            let trimmed = raw_url.trim();
+            if trimmed.is_empty() {
+                return Err(Status::invalid_argument("URL sumber stream wajib diisi"));
+            }
+            Ok(trimmed.to_string())
+        }
     }
 }
 
@@ -90,35 +126,20 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         }
 
         let id = Uuid::new_v4();
-        let stream_mode = if req.stream_mode.is_empty() {
-            "EXTERNAL_EMBED".to_string()
+        let source_type = if req.source_type.trim().is_empty() {
+            "WHIP".to_string()
         } else {
-            req.stream_mode
+            req.source_type.trim().to_uppercase()
         };
-        let source_type = if req.source_type.is_empty() {
-            "HLS".to_string()
-        } else {
-            req.source_type
-        };
-
-        // Ensure source_url uses the generated id for WHIP and RTMP to prevent client-generated UUID mismatch
-        let source_url = match source_type.to_uppercase().as_str() {
-            "WHIP" => format!("/streams/{}/whip", id),
-            "RTMP" => format!("/live/{}", id),
-            _ => {
-                if req.source_url.trim().is_empty() {
-                    return Err(Status::invalid_argument("URL sumber stream wajib diisi"));
-                }
-                req.source_url
-            }
-        };
+        let stream_mode = resolve_stream_mode(&source_type, &req.stream_mode);
+        let source_url = resolve_source_url(id, &source_type, &req.source_url)?;
 
         let server_hls_endpoint = if stream_mode == "SERVER_HOSTED_HLS" {
-            format!("/streams/{}/live.m3u8", id)
+            format!("/streams/{}/whep", id)
         } else {
             String::new()
         };
-        let is_relay_active = stream_mode == "SERVER_HOSTED_HLS";
+        let is_relay_active = true;
 
         let row = sqlx::query_as::<_, LiveStreamRow>(
             r#"
@@ -157,13 +178,13 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        if is_relay_active {
+        if stream_mode == "SERVER_HOSTED_HLS" {
             self.relay_manager
                 .start_relay(
                     id,
+                    &stream_mode,
                     &source_type,
                     &source_url,
-                    req.low_latency_mode,
                     req.requires_auth,
                     &req.ingest_username,
                     &req.ingest_password,
@@ -258,8 +279,19 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         let id = Uuid::from_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid live stream id"))?;
 
-        let server_hls_endpoint = if req.stream_mode == "SERVER_HOSTED_HLS" {
-            format!("/streams/{}/live.m3u8", id)
+        let source_type = req.source_type.trim().to_uppercase();
+        let stream_mode = if source_type.is_empty() {
+            req.stream_mode.clone()
+        } else {
+            resolve_stream_mode(&source_type, &req.stream_mode)
+        };
+        let normalized_url = if source_type.is_empty() {
+            req.source_url.clone()
+        } else {
+            resolve_source_url(id, &source_type, &req.source_url)?
+        };
+        let server_hls_endpoint = if stream_mode == "SERVER_HOSTED_HLS" {
+            format!("/streams/{}/whep", id)
         } else {
             String::new()
         };
@@ -292,9 +324,9 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         .bind(id)
         .bind(&req.name)
         .bind(&req.description)
-        .bind(&req.stream_mode)
-        .bind(&req.source_type)
-        .bind(&req.source_url)
+        .bind(&stream_mode)
+        .bind(&source_type)
+        .bind(&normalized_url)
         .bind(&server_hls_endpoint)
         .bind(req.is_relay_active)
         .bind(req.auto_reconnect)
@@ -310,21 +342,19 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         .map_err(|e| Status::internal(e.to_string()))?
         .ok_or_else(|| Status::not_found("Live stream not found"))?;
 
-        if req.stream_mode == "SERVER_HOSTED_HLS" && req.is_relay_active {
-            self.relay_manager.kick_streamer_publishers(&id).await;
+        self.relay_manager.stop_relay(&id).await;
+        if row.stream_mode == "SERVER_HOSTED_HLS" && row.is_relay_active {
             self.relay_manager
                 .start_relay(
                     id,
-                    &req.source_type,
-                    &req.source_url,
-                    req.low_latency_mode,
-                    req.requires_auth,
-                    &req.ingest_username,
-                    &req.ingest_password,
+                    &row.stream_mode,
+                    &row.source_type,
+                    &row.source_url,
+                    row.requires_auth,
+                    &row.ingest_username,
+                    &row.ingest_password,
                 )
                 .await;
-        } else {
-            self.relay_manager.stop_relay(&id).await;
         }
 
         Ok(Response::new(row.into_proto()))
@@ -367,7 +397,7 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         let id = Uuid::from_str(&req.id)
             .map_err(|_| Status::invalid_argument("Invalid live stream id"))?;
 
-        let endpoint = format!("/streams/{}/live.m3u8", id);
+        let endpoint = format!("/streams/{}/whep", id);
 
         let row = sqlx::query_as::<_, LiveStreamRow>(
             r#"
@@ -395,9 +425,9 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
             self.relay_manager
                 .start_relay(
                     id,
+                    &row.stream_mode,
                     &row.source_type,
                     &row.source_url,
-                    row.low_latency_mode,
                     row.requires_auth,
                     &row.ingest_username,
                     &row.ingest_password,
@@ -408,5 +438,45 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         }
 
         Ok(Response::new(row.into_proto()))
+    }
+
+    async fn negotiate_whep(
+        &self,
+        request: Request<NegotiateWhepRequest>,
+    ) -> Result<Response<NegotiateWhepResponse>, Status> {
+        let req = request.into_inner();
+        let stream_id = Uuid::from_str(req.stream_id.trim())
+            .map_err(|_| Status::invalid_argument("Invalid stream_id"))?;
+        if req.sdp_offer.trim().is_empty() {
+            return Err(Status::invalid_argument("sdp_offer is required"));
+        }
+
+        match self
+            .relay_manager
+            .media_hub()
+            .negotiate_whep(stream_id, req.sdp_offer)
+            .await
+        {
+            Ok((sdp_answer, session_id)) => Ok(Response::new(NegotiateWhepResponse {
+                sdp_answer,
+                session_id: session_id.to_string(),
+            })),
+            Err(MediaError::NotFound(msg)) => Err(Status::failed_precondition(msg)),
+            Err(MediaError::BadRequest(msg)) => Err(Status::invalid_argument(msg)),
+            Err(MediaError::Unauthorized(msg)) => Err(Status::unauthenticated(msg)),
+            Err(MediaError::Forbidden(msg)) => Err(Status::permission_denied(msg)),
+            Err(MediaError::Internal(msg)) => Err(Status::internal(msg)),
+        }
+    }
+
+    async fn close_whep_session(
+        &self,
+        request: Request<CloseWhepSessionRequest>,
+    ) -> Result<Response<CloseWhepSessionResponse>, Status> {
+        let req = request.into_inner();
+        if let Ok(session_id) = Uuid::from_str(req.session_id.trim()) {
+            self.relay_manager.media_hub().close_session(session_id);
+        }
+        Ok(Response::new(CloseWhepSessionResponse { success: true }))
     }
 }

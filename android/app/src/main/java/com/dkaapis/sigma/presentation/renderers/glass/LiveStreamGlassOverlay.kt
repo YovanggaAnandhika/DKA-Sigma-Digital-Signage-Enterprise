@@ -280,7 +280,7 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
         }
     }
 
-    fun setLive(isLowLatency: Boolean = true) {
+    fun setLive(isLowLatency: Boolean = true, badgeLabel: String? = null) {
         mainHandler.post {
             currentState = StreamState.LIVE
 
@@ -312,7 +312,7 @@ class LiveStreamGlassOverlay(context: Context) : FrameLayout(context) {
             liveBadgePill.alpha = 0f
             liveBadgePill.scaleX = 0.90f
             liveBadgePill.scaleY = 0.90f
-            liveBadgeText.text = if (isLowLatency) "LIVE • WHEP 0.2s" else "LIVE • RTSP"
+            liveBadgeText.text = badgeLabel ?: if (isLowLatency) "LIVE • UDP" else "LIVE • RTSP"
             liveBadgePill.animate()
                 .alpha(1f)
                 .scaleX(1f)

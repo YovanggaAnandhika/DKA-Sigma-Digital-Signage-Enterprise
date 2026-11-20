@@ -8,8 +8,8 @@ pub struct Config {
     pub jwt_secret: String,
     pub jwt_expiration_hours: i64,
     pub upload_dir: String,
-    pub streamer_api_url: String,
-    pub streamer_rtmp_url: String,
+    pub media_udp_port: u16,
+    pub media_public_ip: String,
 }
 
 impl Config {
@@ -23,8 +23,6 @@ impl Config {
                 .expect("GRPC_PORT must be a number"),
             host: env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
             database_url: env::var("DATABASE_URL").unwrap_or_else(|_| {
-                // Fallback sesuai compose.yml: user=sigma, password=bZ9qL4vX7kM2pT8w, db=sigma
-                // Host "db" untuk container, "localhost:54321" untuk development lokal
                 let host = env::var("DB_HOST").unwrap_or_else(|_| "db".to_string());
                 let port = env::var("DB_PORT").unwrap_or_else(|_| "5432".to_string());
                 let user = env::var("DB_USERNAME").unwrap_or_else(|_| "sigma".to_string());
@@ -39,18 +37,12 @@ impl Config {
                 .parse()
                 .unwrap_or(24),
             upload_dir: env::var("UPLOAD_DIR").unwrap_or_else(|_| "./uploads".to_string()),
-            streamer_api_url: format!(
-                "http://{}:{}",
-                env::var("STREAMER_API_HOST")
-                    .unwrap_or_else(|_| "dka-product-sigma-streamer".to_string()),
-                env::var("STREAMER_API_PORT").unwrap_or_else(|_| "9997".to_string())
-            ),
-            streamer_rtmp_url: format!(
-                "rtsp://{}:{}",
-                env::var("STREAMER_RTMP_HOST")
-                    .unwrap_or_else(|_| "dka-product-sigma-streamer".to_string()),
-                env::var("STREAMER_RTMP_PORT").unwrap_or_else(|_| "8554".to_string())
-            ),
+            media_udp_port: env::var("MEDIA_UDP_PORT")
+                .unwrap_or_else(|_| "8189".to_string())
+                .parse()
+                .unwrap_or(8189),
+            media_public_ip: env::var("MEDIA_PUBLIC_IP")
+                .unwrap_or_else(|_| "127.0.0.1".to_string()),
         }
     }
 }

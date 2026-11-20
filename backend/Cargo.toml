@@ -44,6 +44,12 @@ chrono-tz = "0.10.4"
 tower = { version = "0.5.3", features = ["util"] }
 tower-http = { version = "0.7.1", features = ["trace"] }
 
+# Native UDP WebRTC SFU & RTSP Pull (Pure Rust, Zero MediaMTX / Zero FFmpeg)
+str0m = { version = "0.25.0", default-features = false, features = ["rust-crypto"] }
+retina = "=0.4.21"
+futures-util = "0.3.34"
+url = "2"
+
 [build-dependencies]
 tonic-prost-build = "0.14.9"
 

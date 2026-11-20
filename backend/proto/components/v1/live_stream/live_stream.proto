@@ -11,5 +11,7 @@ service LiveStreamService {
   rpc UpdateLiveStream(UpdateLiveStreamRequest) returns (LiveStream);
   rpc DeleteLiveStream(DeleteLiveStreamRequest) returns (DeleteLiveStreamResponse);
   rpc ToggleRelayHost(ToggleRelayHostRequest) returns (LiveStream);
+  rpc NegotiateWhep(NegotiateWhepRequest) returns (NegotiateWhepResponse);
+  rpc CloseWhepSession(CloseWhepSessionRequest) returns (CloseWhepSessionResponse);
 }
 

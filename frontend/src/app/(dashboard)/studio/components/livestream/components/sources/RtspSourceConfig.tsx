@@ -6,6 +6,8 @@ import { Eye, EyeOff } from 'lucide-react';
 interface RtspSourceConfigProps {
   sourceUrl: string;
   onChangeSourceUrl: (val: string) => void;
+  relayMode: 'SERVER' | 'DIRECT';
+  onChangeRelayMode: (mode: 'SERVER' | 'DIRECT') => void;
   requiresAuth: boolean;
   onToggleAuth: (val: boolean) => void;
   username: string;
@@ -17,6 +19,8 @@ interface RtspSourceConfigProps {
 export default function RtspSourceConfig({
   sourceUrl,
   onChangeSourceUrl,
+  relayMode,
+  onChangeRelayMode,
   requiresAuth,
   onToggleAuth,
   username,
@@ -29,7 +33,15 @@ export default function RtspSourceConfig({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <div>
-        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+        <label
+          style={{
+            display: 'block',
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            color: 'var(--text-secondary)',
+            marginBottom: '4px',
+          }}
+        >
           URL RTSP Feed Kamera
         </label>
         <input
@@ -41,6 +53,78 @@ export default function RtspSourceConfig({
           style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}
           required
         />
+      </div>
+
+      {/* Mode Pengiriman RTSP */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <label
+          style={{
+            display: 'block',
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            color: 'var(--text-secondary)',
+          }}
+        >
+          Mode Pengiriman RTSP
+        </label>
+        <div
+          role="radiogroup"
+          aria-label="Mode Pengiriman RTSP"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '3px',
+            borderRadius: 'var(--radius-full)',
+            backgroundColor: 'var(--bg-primary)',
+            border: '1px solid var(--border-subtle)',
+            width: 'fit-content',
+            gap: '4px',
+          }}
+        >
+          <button
+            type="button"
+            role="radio"
+            aria-checked={relayMode === 'SERVER'}
+            onClick={() => onChangeRelayMode('SERVER')}
+            style={{
+              padding: '5px 12px',
+              borderRadius: 'var(--radius-full)',
+              border: 'none',
+              backgroundColor:
+                relayMode === 'SERVER' ? 'var(--bg-surface-elevated)' : 'transparent',
+              color: relayMode === 'SERVER' ? 'var(--text-primary)' : 'var(--text-muted)',
+              fontSize: '0.74rem',
+              fontWeight: relayMode === 'SERVER' ? 600 : 500,
+              cursor: 'pointer',
+            }}
+          >
+            Relay Server UDP (Multi-Layar)
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={relayMode === 'DIRECT'}
+            onClick={() => onChangeRelayMode('DIRECT')}
+            style={{
+              padding: '5px 12px',
+              borderRadius: 'var(--radius-full)',
+              border: 'none',
+              backgroundColor:
+                relayMode === 'DIRECT' ? 'var(--bg-surface-elevated)' : 'transparent',
+              color: relayMode === 'DIRECT' ? 'var(--text-primary)' : 'var(--text-muted)',
+              fontSize: '0.74rem',
+              fontWeight: relayMode === 'DIRECT' ? 600 : 500,
+              cursor: 'pointer',
+            }}
+          >
+            Direct LAN (Player ke Kamera)
+          </button>
+        </div>
+        <div style={{ fontSize: '0.71rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+          {relayMode === 'SERVER'
+            ? 'Backend menarik 1 koneksi H.264 dari kamera lalu menyebar lewat UDP 8189 ke banyak layar & CMS.'
+            : 'Android terhubung langsung ke IP kamera di jaringan LAN (termasuk audio AAC kamera).'}
+        </div>
       </div>
 
       {/* RTSP Camera Authentication */}
@@ -73,7 +157,7 @@ export default function RtspSourceConfig({
                 width: '14px',
                 height: '14px',
                 borderRadius: '50%',
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--bg-surface)',
                 transform: requiresAuth ? 'translateX(14px)' : 'translateX(0)',
                 transition: 'transform 0.15s ease',
               }}
