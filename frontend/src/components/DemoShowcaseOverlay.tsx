@@ -79,16 +79,61 @@ const BASE_TOUR_STEPS: TourStep[] = [
     id: 'layouts',
     route: '/studio/layouts/data',
     selector: 'main table, main .card-elevated',
-    stepLabel: 'Langkah 7 dari 10 • Tata Letak',
-    title: 'Studio Tata Letak Multi-Zona',
+    stepLabel: 'Langkah 7 dari 15 • Tata Letak',
+    title: 'Daftar Template Tata Letak',
     description:
-      'Susun video split-screen, siaran langsung, running text, jam digital, dan antrean dalam satu kanvas bebas atur tanpa saling menimpa.',
+      'Semua template tata letak tersimpan di sini, lengkap dengan dimensi kanvas, orientasi, jumlah layer, dan status sinkronisasi jadwal.',
+  },
+  {
+    id: 'layout-edit-toolbar',
+    route: '/studio/layouts/data',
+    selector: 'main header, main button',
+    stepLabel: 'Langkah 8 dari 15 • Editor: Toolbar',
+    title: 'Toolbar Simpan & Fullscreen',
+    description:
+      'Simpan setiap perubahan tata letak dengan riwayat versi otomatis, atau aktifkan mode Fullscreen untuk ruang kerja yang lebih lega.',
+  },
+  {
+    id: 'layout-edit-layers',
+    route: '/studio/layouts/data',
+    selector: 'main aside:first-of-type, main > div > div > div:first-child',
+    stepLabel: 'Langkah 9 dari 15 • Editor: Layers & Konten',
+    title: 'Panel Layers & Konten Layer',
+    description:
+      'Kelola daftar lapisan, atur urutan tumpukan, lalu masukkan video, gambar, atau widget melalui tombol tambah Media dan Komponen.',
+  },
+  {
+    id: 'layout-edit-canvas',
+    route: '/studio/layouts/data',
+    selector: 'main [style*="aspect-ratio"], main > div > div > div:nth-child(2)',
+    stepLabel: 'Langkah 10 dari 15 • Editor: Kanvas 16:9',
+    title: 'Kanvas Workspace Multi-Zona',
+    description:
+      'Kanvas desain 1920 kali 1080 bebas atur dengan drag-and-drop. Setiap zona video split-screen terisolasi presisi tanpa saling menimpa.',
+  },
+  {
+    id: 'layout-edit-properties',
+    route: '/studio/layouts/data',
+    selector: 'main aside:last-of-type, main > div > div > div:last-child',
+    stepLabel: 'Langkah 11 dari 15 • Editor: Properti',
+    title: 'Panel Properti Layer',
+    description:
+      'Atur koordinat Posisi X dan Y, Lebar, Tinggi, Z-Index, Preset Posisi seperti Split Kiri atau Kanan, Opacity, serta Overlay Scrim.',
+  },
+  {
+    id: 'layout-edit-timeline',
+    route: '/studio/layouts/data',
+    selector: 'main > div > div:last-child',
+    stepLabel: 'Langkah 12 dari 15 • Editor: Timeline',
+    title: 'Timeline Editor Multi-Track',
+    description:
+      'Atur durasi tayang per detik antar lapisan, jalankan simulasi Play, dan sinkronkan waktu blok konten secara presisi.',
   },
   {
     id: 'schedule',
     route: '/studio/schedules/calendar',
     selector: 'a[href="/studio/layouts/data"], main .card-elevated',
-    stepLabel: 'Langkah 8 dari 10 • Assign ke Layar',
+    stepLabel: 'Langkah 13 dari 15 • Assign ke Layar',
     title: 'Jadwalkan & Assign ke Layar Target',
     description:
       'Pilih layout, tentukan jam tayang di kalender rundown, lalu kirim serentak ke layar atau grup layar tertentu.',
@@ -97,7 +142,7 @@ const BASE_TOUR_STEPS: TourStep[] = [
     id: 'ota',
     route: '/system/apk',
     selector: 'main .card-elevated, main table, main > div > div',
-    stepLabel: 'Langkah 9 dari 10 • Pembaruan OTA',
+    stepLabel: 'Langkah 14 dari 15 • Pembaruan OTA',
     title: 'Pembaruan APK Otomatis (Silent OTA)',
     description:
       'Distribusikan pembaruan aplikasi player ke seluruh cabang secara otomatis di latar belakang tanpa teknisi datang ke toko.',
@@ -106,7 +151,7 @@ const BASE_TOUR_STEPS: TourStep[] = [
     id: 'display-detail',
     route: '/hardware/displays/player',
     selector: 'main .card-elevated',
-    stepLabel: 'Langkah 10 dari 10 • Detail Layar',
+    stepLabel: 'Langkah 15 dari 15 • Detail Layar',
     title: 'Smart Control Hub, Metrik & Live Screenshot',
     description:
       'Kendalikan daya layar (Wake/Sleep), Sinkron Konten, Restart, pantau CPU/RAM/Suhu real-time, serta lihat Tangkapan Layar langsung dari TV.',
@@ -149,22 +194,30 @@ function speakNarration(text: string) {
     stopNarration();
     const token = activeNarrationToken;
 
-    // Split into natural phrases/sentences for realistic human breath pauses
-    const segments = text
-      .split(/(?<=[.!?])\s+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
+    // Split into natural phrases (commas + sentence endings) for realistic human breath pauses
+    const rawParts = text.split(/([,.!?]\s+)/);
+    const segments: { text: string; pauseMs: number }[] = [];
+    for (let i = 0; i < rawParts.length; i += 2) {
+      const phrase = rawParts[i]?.trim();
+      const punct = rawParts[i + 1] || '';
+      if (phrase) {
+        segments.push({
+          text: phrase,
+          pauseMs: punct.includes(',') ? 180 : 380,
+        });
+      }
+    }
 
     if (segments.length === 0) return;
 
-    const voice = pickBestIndonesianFemaleVoice(window.speechSynthesis.getVoices());
-
     const speakSegment = (idx: number) => {
       if (token !== activeNarrationToken || idx >= segments.length) return;
-      const utterance = new SpeechSynthesisUtterance(segments[idx]);
+      const seg = segments[idx];
+      const voice = pickBestIndonesianFemaleVoice(window.speechSynthesis.getVoices());
+      const utterance = new SpeechSynthesisUtterance(seg.text);
       utterance.lang = 'id-ID';
       utterance.rate = 0.96;
-      utterance.pitch = 1.12;
+      utterance.pitch = idx % 2 === 0 ? 1.12 : 1.15;
       if (voice) utterance.voice = voice;
 
       utterance.onend = () => {
@@ -172,7 +225,7 @@ function speakNarration(text: string) {
         if (idx + 1 < segments.length) {
           activePauseTimer = window.setTimeout(() => {
             speakSegment(idx + 1);
-          }, 380);
+          }, seg.pauseMs);
         }
       };
 
@@ -210,7 +263,7 @@ function playTourChime(isSuccess: boolean) {
     });
 
     setTimeout(() => {
-      void ctx.close().catch(() => {});
+      void ctx.close().catch(() => { });
     }, 900);
   } catch {
     // Ignore audio errors
@@ -260,6 +313,9 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
     return BASE_TOUR_STEPS.map((s) => {
       if (s.id === 'display-detail' && firstDeviceId) {
         return { ...s, route: `/hardware/displays/${firstDeviceId}/overview` };
+      }
+      if (s.id.startsWith('layout-edit-') && firstLayoutId) {
+        return { ...s, route: `/studio/layouts/data/${firstLayoutId}/edit` };
       }
       if (s.id === 'schedule' && firstLayoutId) {
         return {
@@ -407,36 +463,32 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
 
   if (!isOpen || typeof document === 'undefined') return null;
 
-  // Compute spotlight circle geometry and smart non-overlapping callout position
-  const spotlight = targetRect && !isSuccessFinale
+  // Compute smart non-overlapping callout position around the rectangular spotlight
+  const calloutPos = targetRect && !isSuccessFinale
     ? (() => {
-        const cx = targetRect.left + targetRect.width / 2;
-        const cy = targetRect.top + targetRect.height / 2;
-        const diameter = Math.max(220, Math.min(420, Math.max(targetRect.width, targetRect.height) * 0.65));
-        const r = diameter / 2;
-        const cardW = Math.min(380, window.innerWidth - 32);
-        const cardH = 240;
-        let top = Math.min(Math.max(24, cy - cardH / 2), window.innerHeight - cardH - 24);
-        let left = 24;
+      const cardW = Math.min(380, window.innerWidth - 32);
+      const cardH = 240;
+      let top = Math.min(Math.max(20, targetRect.top), window.innerHeight - cardH - 20);
+      let left = Math.min(Math.max(20, targetRect.left), window.innerWidth - cardW - 20);
 
-        if (cy + r + 18 + cardH < window.innerHeight) {
-          top = cy + r + 18;
-          left = Math.min(Math.max(20, cx - cardW / 2), window.innerWidth - cardW - 20);
-        } else if (cy - r - 18 - cardH > 16) {
-          top = cy - r - 18 - cardH;
-          left = Math.min(Math.max(20, cx - cardW / 2), window.innerWidth - cardW - 20);
-        } else if (cx - r - 18 - cardW > 16) {
-          left = cx - r - 18 - cardW;
-        } else {
-          left = Math.min(window.innerWidth - cardW - 20, cx + r + 18);
-        }
+      if (targetRect.top + targetRect.height + 16 + cardH < window.innerHeight) {
+        top = targetRect.top + targetRect.height + 16;
+      } else if (targetRect.top - 16 - cardH > 16) {
+        top = targetRect.top - 16 - cardH;
+      } else if (targetRect.left - 16 - cardW > 16) {
+        left = targetRect.left - 16 - cardW;
+      } else if (targetRect.left + targetRect.width + 16 + cardW < window.innerWidth) {
+        left = targetRect.left + targetRect.width + 16;
+      } else {
+        top = window.innerHeight - cardH - 24;
+      }
 
-        return { cx, cy, diameter, calloutTop: top, calloutLeft: left };
-      })()
+      return { top, left };
+    })()
     : null;
 
-  const calloutTop: number | string = spotlight ? spotlight.calloutTop : '50%';
-  const calloutLeft: number | string = spotlight ? spotlight.calloutLeft : '50%';
+  const calloutTop: number | string = calloutPos ? calloutPos.top : '50%';
+  const calloutLeft: number | string = calloutPos ? calloutPos.left : '50%';
 
   return createPortal(
     <div
@@ -453,19 +505,19 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
         backdropFilter: targetRect && !isSuccessFinale ? 'none' : 'blur(4px)',
       }}
     >
-      {/* Circular Pulsing Spotlight Cutout */}
-      {spotlight && (
+      {/* Rectangular Rounded Spotlight Cutout */}
+      {targetRect && !isSuccessFinale && (
         <div
-          className="demo-spotlight-circle"
           style={{
             position: 'fixed',
-            top: spotlight.cy,
-            left: spotlight.cx,
-            width: spotlight.diameter,
-            height: spotlight.diameter,
-            borderRadius: '50%',
-            border: '2px solid rgba(56, 189, 248, 0.75)',
-            transition: 'top 0.35s cubic-bezier(0.16, 1, 0.3, 1), left 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1), height 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+            top: targetRect.top,
+            left: targetRect.left,
+            width: targetRect.width,
+            height: targetRect.height,
+            borderRadius: '14px',
+            border: '2px solid var(--primary-500)',
+            boxShadow: '0 0 0 9999px rgba(5, 8, 18, 0.62), 0 0 24px rgba(37, 99, 235, 0.45)',
+            transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
             pointerEvents: 'none',
           }}
         />
