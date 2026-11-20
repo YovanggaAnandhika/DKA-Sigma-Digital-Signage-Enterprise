@@ -463,7 +463,8 @@ export default function HlsPlayer({
       if (
         isStreamOnlineRef.current &&
         statusRef.current === 'LIVE' &&
-        Date.now() - lastAdvanceAtRef.current > 2400
+        !pcRef.current &&
+        Date.now() - lastAdvanceAtRef.current > 4000
       ) {
         // Verify stream still active via lightweight WHEP probe or reset
         isStreamOnlineRef.current = false;
@@ -471,7 +472,7 @@ export default function HlsPlayer({
         updateStatus('OFFLINE');
         connectWebRtc();
       }
-    }, 1200);
+    }, 2000);
 
     return () => {
       isCancelled = true;
