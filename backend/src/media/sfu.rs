@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use serde::Serialize;
 use str0m::change::SdpOffer;
-use str0m::format::{Codec, CodecExtra};
+use str0m::format::{Codec, CodecExtra, PayloadParams};
 use str0m::media::{Frequency, KeyframeRequestKind, MediaKind, MediaTime, Mid};
 use str0m::net::{Protocol, Receive};
 use str0m::{Candidate, Event, IceConnectionState, Input, Output, Rtc};
@@ -154,7 +154,9 @@ struct OutboundMedia {
     stream_id: Uuid,
     kind: MediaKind,
     codec: Codec,
+    params: Option<PayloadParams>,
     time: MediaTime,
+    network_time: Instant,
     data: Arc<[u8]>,
 }
 
@@ -308,10 +310,10 @@ async fn handle_raw_udp_packet<'a>(
             let stream_id = sub.stream_id;
             let became_connected = drain_subscriber(sub, socket, &mut keyframe_reqs).await;
             if became_connected {
-                request_publisher_keyframe(stream_id, publishers, socket, KeyframeRequestKind::Pli).await;
+                request_publisher_keyframe(stream_id, publishers, socket, KeyframeRequestKind::Pli, true).await;
             }
             for kind in keyframe_reqs {
-                request_publisher_keyframe(stream_id, publishers, socket, kind).await;
+                request_publisher_keyframe(stream_id, publishers, socket, kind, false).await;
             }
             return;
         }
@@ -408,7 +410,6 @@ async fn handle_command(
                     let mut keyframe_reqs = Vec::new();
                     let _ = drain_subscriber(&mut sub, socket, &mut keyframe_reqs).await;
                     subscribers.push(sub);
-                    request_publisher_keyframe(stream_id, publishers, socket, KeyframeRequestKind::Pli).await;
                     debug!("📺 [MediaSFU] WHEP subscriber [{}] joined stream [{}]", session_id, stream_id);
                     let _ = reply.send(Ok((answer_sdp, session_id)));
                 }
@@ -472,7 +473,9 @@ async fn handle_command(
                 stream_id,
                 kind,
                 codec,
+                params: None,
                 time: rtp_time,
+                network_time: Instant::now(),
                 data,
             };
             fan_out_media(&[frame], subscribers, socket).await;
@@ -530,7 +533,7 @@ async fn handle_timeouts(
         disconnect_stream_subscribers(stream_id, subscribers);
     }
 
-    let mut keyframe_streams = Vec::new();
+    let mut keyframe_streams: Vec<(Uuid, KeyframeRequestKind, bool)> = Vec::new();
     for sub in subscribers.iter_mut() {
         if sub.timeout <= now && sub.rtc.is_alive() {
             if let Err(e) = sub.rtc.handle_input(Input::Timeout(now)) {
@@ -540,16 +543,16 @@ async fn handle_timeouts(
             let mut kfs = Vec::new();
             let connected = drain_subscriber(sub, socket, &mut kfs).await;
             if connected {
-                keyframe_streams.push((sub.stream_id, KeyframeRequestKind::Pli));
+                keyframe_streams.push((sub.stream_id, KeyframeRequestKind::Pli, true));
             }
             for kind in kfs {
-                keyframe_streams.push((sub.stream_id, kind));
+                keyframe_streams.push((sub.stream_id, kind, false));
             }
         }
     }
 
-    for (stream_id, kind) in keyframe_streams {
-        request_publisher_keyframe(stream_id, publishers, socket, kind).await;
+    for (stream_id, kind, force) in keyframe_streams {
+        request_publisher_keyframe(stream_id, publishers, socket, kind, force).await;
     }
 }
 
@@ -618,7 +621,9 @@ async fn drain_publisher(
                         stream_id,
                         kind,
                         codec,
+                        params: Some(data.params),
                         time: data.time,
+                        network_time: data.network_time,
                         data: data.data,
                     });
                 }
@@ -718,16 +723,36 @@ async fn fan_out_media(
             let Some(writer) = sub.rtc.writer(mid) else {
                 continue;
             };
-            let Some(pt) = writer
-                .payload_params()
-                .find(|p| p.spec().codec == frame.codec)
-                .map(|p| p.pt())
-            else {
+            let pt = if let Some(in_params) = frame.params {
+                writer
+                    .match_params(in_params)
+                    .filter(|matched| writer.payload_params().any(|p| p.pt() == *matched))
+                    .or_else(|| {
+                        writer
+                            .payload_params()
+                            .find(|p| p.spec().codec == frame.codec)
+                            .map(|p| p.pt())
+                    })
+            } else {
+                writer
+                    .payload_params()
+                    .find(|p| {
+                        p.spec().codec == frame.codec
+                            && (frame.codec != Codec::H264
+                                || p.spec().format.packetization_mode.unwrap_or(1) == 1)
+                    })
+                    .or_else(|| {
+                        writer
+                            .payload_params()
+                            .find(|p| p.spec().codec == frame.codec)
+                    })
+                    .map(|p| p.pt())
+            };
+            let Some(pt) = pt else {
                 continue;
             };
             let rtp_time = adjust_rtp_time(frame.codec, frame.time);
-            let send_now = Instant::now();
-            if let Err(e) = writer.write(pt, send_now, rtp_time, frame.data.clone()) {
+            if let Err(e) = writer.write(pt, frame.network_time, rtp_time, frame.data.clone()) {
                 debug!("WHEP write error for [{}]: {:?}", sub.session_id, e);
                 sub.rtc.disconnect();
                 break;
@@ -760,6 +785,7 @@ async fn request_publisher_keyframe(
     publishers: &mut HashMap<Uuid, WhipPublisher>,
     socket: &UdpSocket,
     kind: KeyframeRequestKind,
+    force: bool,
 ) {
     let Some(pub_entry) = publishers.get_mut(&stream_id) else {
         return;
@@ -767,10 +793,11 @@ async fn request_publisher_keyframe(
     if !pub_entry.rtc.is_alive() {
         return;
     }
-    let throttled = pub_entry
-        .last_keyframe_req
-        .map(|t| t.elapsed() < Duration::from_millis(400))
-        .unwrap_or(false);
+    let throttled = !force
+        && pub_entry
+            .last_keyframe_req
+            .map(|t| t.elapsed() < Duration::from_millis(400))
+            .unwrap_or(false);
     if throttled {
         return;
     }

@@ -187,7 +187,12 @@ export default function HlsPlayer({
   const handlePlaying = useCallback(() => {
     if (!isStreamOnlineRef.current && src.startsWith('/streams/')) return;
     const video = videoRef.current;
-    if (video && video.srcObject && (video.videoWidth === 0 || video.videoHeight === 0)) {
+    if (
+      video &&
+      video.srcObject instanceof MediaStream &&
+      video.srcObject.getVideoTracks().length > 0 &&
+      (video.videoWidth === 0 || video.videoHeight === 0)
+    ) {
       return;
     }
     lastAdvanceAtRef.current = Date.now();
@@ -396,11 +401,19 @@ export default function HlsPlayer({
           }
 
           const tryPlay = () => {
+            const videoWithRvfc = video as HTMLVideoElement & {
+              requestVideoFrameCallback?: (cb: () => void) => number;
+            };
+            videoWithRvfc.requestVideoFrameCallback?.(() => {
+              isStreamOnlineRef.current = true;
+              handlePlaying();
+            });
             const playPromise = video.play();
             if (playPromise !== undefined) {
               playPromise
                 .then(() => {
                   isStreamOnlineRef.current = true;
+                  handlePlaying();
                 })
                 .catch(() => {
                   if (!video.muted) {
@@ -409,6 +422,7 @@ export default function HlsPlayer({
                       .play()
                       .then(() => {
                         isStreamOnlineRef.current = true;
+                        handlePlaying();
                       })
                       .catch(() => { });
                   }
@@ -646,9 +660,10 @@ export default function HlsPlayer({
           controls={controls}
           playsInline
           onLoadedMetadata={handlePlaying}
-          onPlaying={handlePlaying}
-          onCanPlay={handlePlaying}
           onLoadedData={handlePlaying}
+          onCanPlay={handlePlaying}
+          onPlaying={handlePlaying}
+          onResize={handlePlaying}
           onTimeUpdate={handleTimeUpdate}
           onWaiting={handleWaiting}
           onEnded={handleVideoError}
