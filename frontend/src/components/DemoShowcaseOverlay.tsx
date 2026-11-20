@@ -344,6 +344,7 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
   const [targetRect, setTargetRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const soundRef = useRef(soundEnabled);
+  const lastNavigatedStepRef = useRef<string | null>(null);
 
   useEffect(() => {
     soundRef.current = soundEnabled;
@@ -354,9 +355,11 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
 
   useEffect(() => {
     if (!isOpen) {
+      lastNavigatedStepRef.current = null;
       stopNarration();
       return;
     }
+    lastNavigatedStepRef.current = null;
     setStepIndex(0);
     setIsSuccessFinale(false);
     setTargetRect(null);
@@ -423,9 +426,13 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
     return () => window.clearInterval(interval);
   }, [isOpen, isSuccessFinale, currentStep?.id]);
 
-  // Navigate to the step's route when stepIndex changes
+  // Navigate to the step's route once per step change (prevents redirect loops)
   useEffect(() => {
     if (!isOpen || isSuccessFinale || !currentStep) return;
+    const stepKey = `${currentStep.id}:${currentStep.route}`;
+    if (lastNavigatedStepRef.current === stepKey) return;
+    lastNavigatedStepRef.current = stepKey;
+
     const normalized = pathname?.replace(/\/$/, '') || '/';
     const targetRoute = currentStep.route === '/' ? '/' : currentStep.route.replace(/\/$/, '');
     if (normalized !== targetRoute) {
