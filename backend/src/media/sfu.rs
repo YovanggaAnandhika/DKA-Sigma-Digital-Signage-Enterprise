@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use serde::Serialize;
 use str0m::change::SdpOffer;
-use str0m::format::{Codec, CodecExtra, PayloadParams};
+use str0m::format::{Codec, PayloadParams};
 use str0m::media::{Frequency, KeyframeRequestKind, MediaKind, MediaTime, Mid};
 use str0m::net::{Protocol, Receive};
 use str0m::{Candidate, Event, IceConnectionState, Input, Output, Rtc};
@@ -65,6 +65,7 @@ struct WhipPublisher {
     audio_mid: Option<Mid>,
     last_keyframe_req: Option<Instant>,
     ice_connected: bool,
+    logged_video_codec: bool,
     created_at: Instant,
 }
 
@@ -76,6 +77,7 @@ struct WhepSubscriber {
     video_mid: Option<Mid>,
     audio_mid: Option<Mid>,
     ice_connected: bool,
+    warned_codec_mismatch: bool,
     created_at: Instant,
 }
 
@@ -132,6 +134,7 @@ fn build_rtc(advertised_addr: SocketAddr, now: Instant) -> Result<Rtc, String> {
         .set_ice_lite(true)
         .clear_codecs()
         .enable_h264(true)
+        .enable_h265(true)
         .enable_opus(true, false)
         .enable_pcmu(true, false)
         .enable_pcma(true, false)
@@ -354,6 +357,7 @@ async fn handle_command(
                     audio_mid: None,
                     last_keyframe_req: None,
                     ice_connected: false,
+                    logged_video_codec: false,
                     created_at: now,
                 };
                 Ok((answer.to_sdp_string(), session_id, pub_entry))
@@ -400,6 +404,7 @@ async fn handle_command(
                     video_mid: None,
                     audio_mid: None,
                     ice_connected: false,
+                    warned_codec_mismatch: false,
                     created_at: now,
                 };
                 Ok((answer.to_sdp_string(), session_id, sub))
@@ -599,10 +604,15 @@ async fn drain_publisher(
                     } else {
                         MediaKind::Video
                     };
-                    let _is_keyframe = matches!(
-                        data.codec_extra,
-                        CodecExtra::H264(extra) if extra.is_keyframe
-                    ) || kind == MediaKind::Audio;
+                    if kind == MediaKind::Video && !pub_entry.logged_video_codec {
+                        pub_entry.logged_video_codec = true;
+                        info!(
+                            "🎥 [MediaSFU] WHIP publisher [{}] receiving video codec {:?} (PT {})",
+                            stream_id,
+                            codec,
+                            data.params.pt()
+                        );
+                    }
 
                     if !data.contiguous && kind == MediaKind::Video {
                         let should_req = pub_entry
@@ -749,6 +759,13 @@ async fn fan_out_media(
                     .map(|p| p.pt())
             };
             let Some(pt) = pt else {
+                if frame.kind == MediaKind::Video && !sub.warned_codec_mismatch {
+                    sub.warned_codec_mismatch = true;
+                    warn!(
+                        "⚠️ [MediaSFU] WHEP subscriber [{}] does not support publisher video codec {:?}",
+                        sub.session_id, frame.codec
+                    );
+                }
                 continue;
             };
             let rtp_time = adjust_rtp_time(frame.codec, frame.time);
@@ -768,7 +785,7 @@ async fn fan_out_media(
 
 fn adjust_rtp_time(codec: Codec, time: MediaTime) -> MediaTime {
     let target_freq = match codec {
-        Codec::H264 => Frequency::NINETY_KHZ,
+        Codec::H264 | Codec::H265 => Frequency::NINETY_KHZ,
         Codec::Opus => Frequency::FORTY_EIGHT_KHZ,
         Codec::PCMU | Codec::PCMA => Frequency::EIGHT_KHZ,
         _ => return time,
