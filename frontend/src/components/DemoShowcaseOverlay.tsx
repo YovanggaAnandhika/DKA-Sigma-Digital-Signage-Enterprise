@@ -223,12 +223,22 @@ const BASE_TOUR_STEPS: TourStep[] = [
 
 let activeNarrationToken = 0;
 let activePauseTimer: number | null = null;
+let activeAudioEl: HTMLAudioElement | null = null;
 
 function stopNarration() {
   activeNarrationToken++;
   if (activePauseTimer !== null) {
     window.clearTimeout(activePauseTimer);
     activePauseTimer = null;
+  }
+  if (activeAudioEl) {
+    try {
+      activeAudioEl.pause();
+      activeAudioEl.currentTime = 0;
+    } catch {
+      // Ignore audio stop errors
+    }
+    activeAudioEl = null;
   }
   try {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -298,6 +308,28 @@ function speakNarration(text: string) {
     speakSegment(0);
   } catch {
     // Ignore speechSynthesis errors
+  }
+}
+
+function playStepAudio(stepId: string, fallbackText: string) {
+  try {
+    if (typeof window === 'undefined') return;
+    stopNarration();
+    const token = activeNarrationToken;
+    const audio = new Audio(`/audio/tour/${stepId}.mp3`);
+    activeAudioEl = audio;
+    audio.onerror = () => {
+      if (token === activeNarrationToken) {
+        speakNarration(fallbackText);
+      }
+    };
+    audio.play().catch(() => {
+      if (token === activeNarrationToken) {
+        speakNarration(fallbackText);
+      }
+    });
+  } catch {
+    speakNarration(fallbackText);
   }
 }
 
@@ -404,9 +436,9 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
       return;
     }
     if (isSuccessFinale) {
-      speakNarration('Simulasi selesai. Seluruh alur HNDSignage siap tayang di seluruh layar.');
+      playStepAudio('finale', 'Simulasi selesai. Seluruh alur HNDSignage siap tayang di seluruh layar.');
     } else if (currentStep) {
-      speakNarration(`${currentStep.title}. ${currentStep.description}`);
+      playStepAudio(currentStep.id, `${currentStep.title}. ${currentStep.description}`);
     }
   }, [isOpen, isSuccessFinale, currentStep, soundEnabled]);
 
