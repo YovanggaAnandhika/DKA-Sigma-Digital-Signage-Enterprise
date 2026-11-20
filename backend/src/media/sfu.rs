@@ -465,7 +465,7 @@ async fn handle_command(
             codec,
             rtp_time,
             data,
-            is_keyframe,
+            is_keyframe: _,
         } => {
             if !rtsp_streams.contains(&stream_id) {
                 return;
@@ -599,7 +599,7 @@ async fn drain_publisher(
                     } else {
                         MediaKind::Video
                     };
-                    let is_keyframe = matches!(
+                    let _is_keyframe = matches!(
                         data.codec_extra,
                         CodecExtra::H264(extra) if extra.is_keyframe
                     ) || kind == MediaKind::Audio;
