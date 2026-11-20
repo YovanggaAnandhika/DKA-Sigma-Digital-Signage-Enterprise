@@ -77,7 +77,7 @@ const BASE_TOUR_STEPS: TourStep[] = [
   },
   {
     id: 'comp-playlists',
-    route: '/studio/playlists',
+    route: '/studio/components/playlists',
     selector: 'main table, main .card-elevated, main > div > div',
     stepLabel: 'Langkah 7 dari 22 • Daftar Putar',
     title: 'Susun Urutan Iklan Otomatis',
@@ -86,7 +86,7 @@ const BASE_TOUR_STEPS: TourStep[] = [
   },
   {
     id: 'comp-queue',
-    route: '/studio/components/queue',
+    route: '/studio/components/ticket',
     selector: 'main table, main .card-elevated, main > div > div',
     stepLabel: 'Langkah 8 dari 22 • Sistem Antrean',
     title: 'Ruang Tunggu Lebih Tertib & Nyaman',
