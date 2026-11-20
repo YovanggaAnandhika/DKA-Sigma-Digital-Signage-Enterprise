@@ -181,6 +181,7 @@ async fn run_sfu_loop(
                 match recv {
                     Ok((n, source)) => {
                         let recv_now = Instant::now();
+                        debug!("📦 [MediaSFU] UDP packet {} bytes from {}", n, source);
                         if let Ok(contents) = buf[..n].try_into() {
                             let input = Input::Receive(
                                 recv_now,
@@ -304,7 +305,10 @@ async fn handle_udp_input(
         for kind in keyframe_reqs {
             request_publisher_keyframe(stream_id, publishers, socket, kind).await;
         }
+        return;
     }
+
+    debug!("⚠️ [MediaSFU] Unmatched UDP packet");
 }
 
 async fn handle_command(
