@@ -397,7 +397,6 @@ export default function HlsPlayer({
               playPromise
                 .then(() => {
                   isStreamOnlineRef.current = true;
-                  handlePlaying();
                 })
                 .catch(() => {
                   if (!video.muted) {
@@ -406,7 +405,6 @@ export default function HlsPlayer({
                       .play()
                       .then(() => {
                         isStreamOnlineRef.current = true;
-                        handlePlaying();
                       })
                       .catch(() => { });
                   }

@@ -255,7 +255,7 @@ async fn handle_raw_udp_packet<'a>(
 ) {
     let loopback_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), advertised_addr.port());
     let internal_container_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(172, 23, 0, 2)), advertised_addr.port());
-    let candidate_addrs = [advertised_addr, loopback_addr, internal_container_addr];
+    let candidate_addrs = [loopback_addr, advertised_addr, internal_container_addr];
 
     for dest in candidate_addrs {
         let Ok(contents) = buf.try_into() else {

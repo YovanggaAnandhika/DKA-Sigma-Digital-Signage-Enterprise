@@ -60,6 +60,7 @@ services:
       MEDIA_UDP_PORT: 8189
       MEDIA_PUBLIC_IP: ${MEDIA_PUBLIC_IP:-192.168.1.65}
     ports:
+      - "127.0.0.1:8189:8189/udp"
       - "8189:8189/udp"
     volumes:
       - type: bind
