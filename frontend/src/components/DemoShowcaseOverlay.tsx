@@ -69,11 +69,11 @@ const BASE_TOUR_STEPS: TourStep[] = [
   {
     id: 'components',
     route: '/studio/components',
-    selector: 'main .card-elevated, main table',
+    selector: 'main .card-elevated, main table, main > div > div',
     stepLabel: 'Langkah 6 dari 10 • Komponen & Siaran Langsung',
     title: 'Siaran Langsung, Antrean, Jam & Ticker',
     description:
-      'Kelola widget Siaran Langsung WebRTC/RTSP sub-detik (150–350 ms), Antrean Kasir, Jam Digital, Running Text, WebView, dan Album Foto.',
+      'Kelola widget Siaran Langsung WebRTC/RTSP sub-detik, Antrean Kasir, Jam Digital, Running Text, WebView, dan Album Foto.',
   },
   {
     id: 'layouts',
@@ -223,6 +223,7 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
   const [stepIndex, setStepIndex] = useState(0);
   const [isSuccessFinale, setIsSuccessFinale] = useState(false);
   const [firstDeviceId, setFirstDeviceId] = useState<string | null>(null);
+  const [firstLayoutId, setFirstLayoutId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [targetRect, setTargetRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -243,23 +244,33 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
     setStepIndex(0);
     setIsSuccessFinale(false);
     setTargetRect(null);
-    api.getDevices({ limit: 1 })
-      .then((res) => {
-        const first = res.data?.[0];
-        if (first?.id) setFirstDeviceId(first.id);
-      })
-      .catch(() => {});
+    Promise.all([
+      api.getDevices({ limit: 1 }).catch(() => ({ data: [] })),
+      api.getLayouts({ limit: 1 }).catch(() => ({ data: [] })),
+    ]).then(([devRes, layRes]) => {
+      const firstDev = devRes.data?.[0];
+      const firstLay = layRes.data?.[0];
+      if (firstDev?.id) setFirstDeviceId(firstDev.id);
+      if (firstLay?.id) setFirstLayoutId(firstLay.id);
+    });
     return () => stopNarration();
   }, [isOpen]);
 
   const steps = React.useMemo(() => {
-    if (!firstDeviceId) return BASE_TOUR_STEPS;
-    return BASE_TOUR_STEPS.map((s) =>
-      s.id === 'display-detail'
-        ? { ...s, route: `/hardware/displays/${firstDeviceId}/overview` }
-        : s
-    );
-  }, [firstDeviceId]);
+    return BASE_TOUR_STEPS.map((s) => {
+      if (s.id === 'display-detail' && firstDeviceId) {
+        return { ...s, route: `/hardware/displays/${firstDeviceId}/overview` };
+      }
+      if (s.id === 'schedule' && firstLayoutId) {
+        return {
+          ...s,
+          route: `/studio/schedules/assign/${firstLayoutId}`,
+          selector: 'main form, main .card-elevated',
+        };
+      }
+      return s;
+    });
+  }, [firstDeviceId, firstLayoutId]);
 
   const currentStep = steps[stepIndex];
 
