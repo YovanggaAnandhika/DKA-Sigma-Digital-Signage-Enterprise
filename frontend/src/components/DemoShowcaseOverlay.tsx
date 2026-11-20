@@ -70,16 +70,79 @@ const BASE_TOUR_STEPS: TourStep[] = [
     id: 'components',
     route: '/studio/components',
     selector: 'main .card-elevated, main table, main > div > div',
-    stepLabel: 'Langkah 6 dari 10 • Komponen & Siaran Langsung',
-    title: 'Siaran Langsung, Antrean, Jam & Ticker',
+    stepLabel: 'Langkah 6 dari 22 • Komponen Layer',
+    title: 'Pusat Widget & Komponen Interaktif',
     description:
-      'Kelola widget Siaran Langsung WebRTC/RTSP sub-detik, Antrean Kasir, Jam Digital, Running Text, WebView, dan Album Foto.',
+      'Semua elemen dinamis mulai dari Daftar Putar, Antrean, WebView, Album Foto, Teks Berjalan, Jam Cuaca, hingga Siaran Langsung.',
+  },
+  {
+    id: 'comp-playlists',
+    route: '/studio/playlists',
+    selector: 'main table, main .card-elevated, main > div > div',
+    stepLabel: 'Langkah 7 dari 22 • Komponen: Daftar Putar',
+    title: 'Daftar Putar (Playlist)',
+    description:
+      'Gabungkan beberapa video dan gambar promosi ke dalam satu urutan putar otomatis dengan durasi dan volume masing-masing.',
+  },
+  {
+    id: 'comp-queue',
+    route: '/studio/components/queue',
+    selector: 'main table, main .card-elevated, main > div > div',
+    stepLabel: 'Langkah 8 dari 22 • Komponen: Antrean',
+    title: 'Sistem Nomor Antrean & Audio TTS',
+    description:
+      'Atur loket layanan, suara panggilan Bahasa Indonesia, serta integrasi langsung dengan tombol fisik IoT di meja kasir.',
+  },
+  {
+    id: 'comp-webview',
+    route: '/studio/components/webview',
+    selector: 'main table, main .card-elevated, main > div > div',
+    stepLabel: 'Langkah 9 dari 22 • Komponen: Web View',
+    title: 'Sematkan Halaman Web (WebView)',
+    description:
+      'Tampilkan dashboard analitik, menu digital, atau sistem berbasis web langsung di dalam zona layar signage.',
+  },
+  {
+    id: 'comp-album',
+    route: '/studio/components/album',
+    selector: 'main table, main .card-elevated, main > div > div',
+    stepLabel: 'Langkah 10 dari 22 • Komponen: Album Foto',
+    title: 'Album Foto & Katalog Produk',
+    description:
+      'Sajikan galeri foto promosi atau katalog harga produk dengan transisi halus dan badge promo otomatis.',
+  },
+  {
+    id: 'comp-ticker',
+    route: '/studio/components/ticker',
+    selector: 'main table, main .card-elevated, main > div > div',
+    stepLabel: 'Langkah 11 dari 22 • Komponen: Teks Berjalan',
+    title: 'Teks Berjalan (Running Text)',
+    description:
+      'Tampilkan pengumuman singkat, berita toko, atau info diskon berjalan di bagian bawah atau atas layar.',
+  },
+  {
+    id: 'comp-clock',
+    route: '/studio/components/clock',
+    selector: 'main table, main .card-elevated, main > div > div',
+    stepLabel: 'Langkah 12 dari 22 • Komponen: Jam & Cuaca',
+    title: 'Jam Digital & Informasi Cuaca',
+    description:
+      'Tampilkan waktu lokal presisi dan prakiraan cuaca kota setempat secara real-time dengan desain kaca modern.',
+  },
+  {
+    id: 'comp-livestream',
+    route: '/studio/components/livestream',
+    selector: 'main table, main .card-elevated, main > div > div',
+    stepLabel: 'Langkah 13 dari 22 • Komponen: Siaran Langsung',
+    title: 'Siaran Langsung Sub-Detik (WebRTC & RTSP)',
+    description:
+      'Hubungkan OBS Studio, kamera CCTV RTSP, atau stream HLS dengan auto-normalisasi Zero-B-Frame agar tayang di bawah 350 milidetik.',
   },
   {
     id: 'layouts',
     route: '/studio/layouts/data',
     selector: 'main table, main .card-elevated',
-    stepLabel: 'Langkah 7 dari 15 • Tata Letak',
+    stepLabel: 'Langkah 14 dari 22 • Tata Letak',
     title: 'Daftar Template Tata Letak',
     description:
       'Semua template tata letak tersimpan di sini, lengkap dengan dimensi kanvas, orientasi, jumlah layer, dan status sinkronisasi jadwal.',
@@ -88,7 +151,7 @@ const BASE_TOUR_STEPS: TourStep[] = [
     id: 'layout-edit-toolbar',
     route: '/studio/layouts/data',
     selector: 'main header, main button',
-    stepLabel: 'Langkah 8 dari 15 • Editor: Toolbar',
+    stepLabel: 'Langkah 15 dari 22 • Editor: Toolbar',
     title: 'Toolbar Simpan & Fullscreen',
     description:
       'Simpan setiap perubahan tata letak dengan riwayat versi otomatis, atau aktifkan mode Fullscreen untuk ruang kerja yang lebih lega.',
@@ -97,7 +160,7 @@ const BASE_TOUR_STEPS: TourStep[] = [
     id: 'layout-edit-layers',
     route: '/studio/layouts/data',
     selector: 'main aside:first-of-type, main > div > div > div:first-child',
-    stepLabel: 'Langkah 9 dari 15 • Editor: Layers & Konten',
+    stepLabel: 'Langkah 16 dari 22 • Editor: Layers & Konten',
     title: 'Panel Layers & Konten Layer',
     description:
       'Kelola daftar lapisan, atur urutan tumpukan, lalu masukkan video, gambar, atau widget melalui tombol tambah Media dan Komponen.',
@@ -106,7 +169,7 @@ const BASE_TOUR_STEPS: TourStep[] = [
     id: 'layout-edit-canvas',
     route: '/studio/layouts/data',
     selector: 'main [style*="aspect-ratio"], main > div > div > div:nth-child(2)',
-    stepLabel: 'Langkah 10 dari 15 • Editor: Kanvas 16:9',
+    stepLabel: 'Langkah 17 dari 22 • Editor: Kanvas 16:9',
     title: 'Kanvas Workspace Multi-Zona',
     description:
       'Kanvas desain 1920 kali 1080 bebas atur dengan drag-and-drop. Setiap zona video split-screen terisolasi presisi tanpa saling menimpa.',
@@ -115,7 +178,7 @@ const BASE_TOUR_STEPS: TourStep[] = [
     id: 'layout-edit-properties',
     route: '/studio/layouts/data',
     selector: 'main aside:last-of-type, main > div > div > div:last-child',
-    stepLabel: 'Langkah 11 dari 15 • Editor: Properti',
+    stepLabel: 'Langkah 18 dari 22 • Editor: Properti',
     title: 'Panel Properti Layer',
     description:
       'Atur koordinat Posisi X dan Y, Lebar, Tinggi, Z-Index, Preset Posisi seperti Split Kiri atau Kanan, Opacity, serta Overlay Scrim.',
@@ -124,7 +187,7 @@ const BASE_TOUR_STEPS: TourStep[] = [
     id: 'layout-edit-timeline',
     route: '/studio/layouts/data',
     selector: 'main > div > div:last-child',
-    stepLabel: 'Langkah 12 dari 15 • Editor: Timeline',
+    stepLabel: 'Langkah 19 dari 22 • Editor: Timeline',
     title: 'Timeline Editor Multi-Track',
     description:
       'Atur durasi tayang per detik antar lapisan, jalankan simulasi Play, dan sinkronkan waktu blok konten secara presisi.',
@@ -133,7 +196,7 @@ const BASE_TOUR_STEPS: TourStep[] = [
     id: 'schedule',
     route: '/studio/schedules/calendar',
     selector: 'a[href="/studio/layouts/data"], main .card-elevated',
-    stepLabel: 'Langkah 13 dari 15 • Assign ke Layar',
+    stepLabel: 'Langkah 20 dari 22 • Assign ke Layar',
     title: 'Jadwalkan & Assign ke Layar Target',
     description:
       'Pilih layout, tentukan jam tayang di kalender rundown, lalu kirim serentak ke layar atau grup layar tertentu.',
@@ -142,7 +205,7 @@ const BASE_TOUR_STEPS: TourStep[] = [
     id: 'ota',
     route: '/system/apk',
     selector: 'main .card-elevated, main table, main > div > div',
-    stepLabel: 'Langkah 14 dari 15 • Pembaruan OTA',
+    stepLabel: 'Langkah 21 dari 22 • Pembaruan OTA',
     title: 'Pembaruan APK Otomatis (Silent OTA)',
     description:
       'Distribusikan pembaruan aplikasi player ke seluruh cabang secara otomatis di latar belakang tanpa teknisi datang ke toko.',
@@ -151,7 +214,7 @@ const BASE_TOUR_STEPS: TourStep[] = [
     id: 'display-detail',
     route: '/hardware/displays/player',
     selector: 'main .card-elevated',
-    stepLabel: 'Langkah 15 dari 15 • Detail Layar',
+    stepLabel: 'Langkah 22 dari 22 • Detail Layar',
     title: 'Smart Control Hub, Metrik & Live Screenshot',
     description:
       'Kendalikan daya layar (Wake/Sleep), Sinkron Konten, Restart, pantau CPU/RAM/Suhu real-time, serta lihat Tangkapan Layar langsung dari TV.',
