@@ -25,7 +25,7 @@ const BASE_TOUR_STEPS: TourStep[] = [
     id: 'overview',
     route: '/',
     selector: 'main h1',
-    stepLabel: 'Langkah 1 dari 8 • Pusat Kendali',
+    stepLabel: 'Langkah 1 dari 10 • Pusat Kendali',
     title: 'Dashboard Ringkasan HNDSignage',
     description:
       'Semua layar Android, jadwal tayang, dan status sistem terpantau real-time dari satu pusat kendali.',
@@ -34,7 +34,7 @@ const BASE_TOUR_STEPS: TourStep[] = [
     id: 'overview-chart',
     route: '/',
     selector: 'main .card-elevated',
-    stepLabel: 'Langkah 2 dari 8 • Metrik & Grafik',
+    stepLabel: 'Langkah 2 dari 10 • Metrik & Grafik',
     title: 'Grafik Aktivitas & Kesehatan Armada',
     description:
       'Pantau tren konektivitas layar, metrik performa, dan status layanan backend secara langsung tanpa refresh manual.',
@@ -43,7 +43,7 @@ const BASE_TOUR_STEPS: TourStep[] = [
     id: 'devices',
     route: '/hardware/displays/player',
     selector: 'main table, main .card-elevated',
-    stepLabel: 'Langkah 3 dari 8 • Perangkat Layar',
+    stepLabel: 'Langkah 3 dari 10 • Perangkat Layar',
     title: 'Perangkat Layar Terhubung',
     description:
       'Setiap TV Android yang sudah pairing muncul di sini lengkap dengan status Online/Offline, resolusi, dan alamat IP.',
@@ -52,7 +52,7 @@ const BASE_TOUR_STEPS: TourStep[] = [
     id: 'iot',
     route: '/hardware/iot/devices',
     selector: 'main .card-elevated, main table',
-    stepLabel: 'Langkah 4 dari 8 • Integrasi IoT',
+    stepLabel: 'Langkah 4 dari 10 • Integrasi IoT',
     title: 'Tombol Antrean IoT & Audio Cerdas',
     description:
       'Tombol fisik ESP32 di meja kasir merespon di bawah 0.1 detik dengan chime melodis dan suara TTS tanpa tabrakan.',
@@ -61,39 +61,129 @@ const BASE_TOUR_STEPS: TourStep[] = [
     id: 'media',
     route: '/studio/media',
     selector: 'main .card-elevated, main table',
-    stepLabel: 'Langkah 5 dari 8 • Pustaka Media',
+    stepLabel: 'Langkah 5 dari 10 • Pustaka Media',
     title: 'Pustaka Media Offline-First',
     description:
       'Video dan gambar diverifikasi dengan SHA-256 dan disimpan lokal di perangkat, sehingga tetap tayang mulus meski internet putus.',
   },
   {
+    id: 'components',
+    route: '/studio/components',
+    selector: 'main .card-elevated, main table',
+    stepLabel: 'Langkah 6 dari 10 • Komponen & Siaran Langsung',
+    title: 'Siaran Langsung, Antrean, Jam & Ticker',
+    description:
+      'Kelola widget Siaran Langsung WebRTC/RTSP sub-detik (150–350 ms), Antrean Kasir, Jam Digital, Running Text, WebView, dan Album Foto.',
+  },
+  {
     id: 'layouts',
     route: '/studio/layouts/data',
     selector: 'main table, main .card-elevated',
-    stepLabel: 'Langkah 6 dari 8 • Tata Letak',
+    stepLabel: 'Langkah 7 dari 10 • Tata Letak',
     title: 'Studio Tata Letak Multi-Zona',
     description:
-      'Susun video split-screen, running text, jam digital, dan antrean dalam satu kanvas bebas atur tanpa saling menimpa.',
+      'Susun video split-screen, siaran langsung, running text, jam digital, dan antrean dalam satu kanvas bebas atur tanpa saling menimpa.',
   },
   {
     id: 'schedule',
     route: '/studio/schedules/calendar',
     selector: 'a[href="/studio/layouts/data"], main .card-elevated',
-    stepLabel: 'Langkah 7 dari 8 • Assign ke Layar',
+    stepLabel: 'Langkah 8 dari 10 • Assign ke Layar',
     title: 'Jadwalkan & Assign ke Layar Target',
     description:
       'Pilih layout, tentukan jam tayang di kalender rundown, lalu kirim serentak ke layar atau grup layar tertentu.',
   },
   {
+    id: 'ota',
+    route: '/system/apk',
+    selector: 'main .card-elevated, main table, main > div > div',
+    stepLabel: 'Langkah 9 dari 10 • Pembaruan OTA',
+    title: 'Pembaruan APK Otomatis (Silent OTA)',
+    description:
+      'Distribusikan pembaruan aplikasi player ke seluruh cabang secara otomatis di latar belakang tanpa teknisi datang ke toko.',
+  },
+  {
     id: 'display-detail',
     route: '/hardware/displays/player',
     selector: 'main .card-elevated',
-    stepLabel: 'Langkah 8 dari 8 • Detail Layar',
+    stepLabel: 'Langkah 10 dari 10 • Detail Layar',
     title: 'Smart Control Hub, Metrik & Live Screenshot',
     description:
       'Kendalikan daya layar (Wake/Sleep), Sinkron Konten, Restart, pantau CPU/RAM/Suhu real-time, serta lihat Tangkapan Layar langsung dari TV.',
   },
 ];
+
+let activeNarrationToken = 0;
+let activePauseTimer: number | null = null;
+
+function stopNarration() {
+  activeNarrationToken++;
+  if (activePauseTimer !== null) {
+    window.clearTimeout(activePauseTimer);
+    activePauseTimer = null;
+  }
+  try {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+  } catch {
+    // Ignore speechSynthesis errors
+  }
+}
+
+function pickBestIndonesianFemaleVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined {
+  const idVoices = voices.filter((v) => v.lang.toLowerCase().startsWith('id'));
+  if (idVoices.length === 0) return undefined;
+
+  const preferredKeywords = ['gadis', 'google', 'damayanti', 'siti', 'natural', 'online', 'female'];
+  for (const kw of preferredKeywords) {
+    const match = idVoices.find((v) => v.name.toLowerCase().includes(kw));
+    if (match) return match;
+  }
+  return idVoices[0];
+}
+
+function speakNarration(text: string) {
+  try {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    stopNarration();
+    const token = activeNarrationToken;
+
+    // Split into natural phrases/sentences for realistic human breath pauses
+    const segments = text
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (segments.length === 0) return;
+
+    const voice = pickBestIndonesianFemaleVoice(window.speechSynthesis.getVoices());
+
+    const speakSegment = (idx: number) => {
+      if (token !== activeNarrationToken || idx >= segments.length) return;
+      const utterance = new SpeechSynthesisUtterance(segments[idx]);
+      utterance.lang = 'id-ID';
+      utterance.rate = 0.96;
+      utterance.pitch = 1.12;
+      if (voice) utterance.voice = voice;
+
+      utterance.onend = () => {
+        if (token !== activeNarrationToken) return;
+        if (idx + 1 < segments.length) {
+          activePauseTimer = window.setTimeout(() => {
+            speakSegment(idx + 1);
+          }, 380);
+        }
+      };
+
+      window.speechSynthesis.speak(utterance);
+    };
+
+    speakSegment(0);
+  } catch {
+    // Ignore speechSynthesis errors
+  }
+}
 
 function playTourChime(isSuccess: boolean) {
   try {
@@ -139,14 +229,17 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
   const soundRef = useRef(soundEnabled);
 
   useEffect(() => {
-    soundEnabledRefCheck();
-    function soundEnabledRefCheck() {
-      soundRef.current = soundEnabled;
+    soundRef.current = soundEnabled;
+    if (!soundEnabled) {
+      stopNarration();
     }
   }, [soundEnabled]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      stopNarration();
+      return;
+    }
     setStepIndex(0);
     setIsSuccessFinale(false);
     setTargetRect(null);
@@ -156,6 +249,7 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
         if (first?.id) setFirstDeviceId(first.id);
       })
       .catch(() => {});
+    return () => stopNarration();
   }, [isOpen]);
 
   const steps = React.useMemo(() => {
@@ -168,6 +262,20 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
   }, [firstDeviceId]);
 
   const currentStep = steps[stepIndex];
+
+  // Speak narration for the current step (cancelling any previous unfinished TTS)
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!soundEnabled) {
+      stopNarration();
+      return;
+    }
+    if (isSuccessFinale) {
+      speakNarration('Simulasi selesai. Seluruh alur HNDSignage siap tayang di seluruh layar.');
+    } else if (currentStep) {
+      speakNarration(`${currentStep.title}. ${currentStep.description}`);
+    }
+  }, [isOpen, isSuccessFinale, currentStep, soundEnabled]);
 
   // Simulated media upload progress bar when on the media step
   useEffect(() => {
@@ -313,22 +421,56 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
         backdropFilter: targetRect && !isSuccessFinale ? 'none' : 'blur(4px)',
       }}
     >
-      {/* Spotlight Cutout */}
+      {/* Spotlight Cutout + Pulsing Circular Beacon */}
       {targetRect && !isSuccessFinale && (
-        <div
-          style={{
-            position: 'fixed',
-            top: targetRect.top,
-            left: targetRect.left,
-            width: targetRect.width,
-            height: targetRect.height,
-            borderRadius: '14px',
-            border: '2px solid var(--primary-500)',
-            boxShadow: '0 0 0 9999px rgba(5, 8, 18, 0.62), 0 0 24px rgba(37, 99, 235, 0.45)',
-            transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
-            pointerEvents: 'none',
-          }}
-        />
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              top: targetRect.top,
+              left: targetRect.left,
+              width: targetRect.width,
+              height: targetRect.height,
+              borderRadius: '14px',
+              border: '2px solid var(--primary-500)',
+              boxShadow: '0 0 0 9999px rgba(5, 8, 18, 0.62), 0 0 24px rgba(37, 99, 235, 0.45)',
+              transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+              pointerEvents: 'none',
+            }}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              top: targetRect.top - 10,
+              left: targetRect.left - 10,
+              width: '24px',
+              height: '24px',
+              display: 'grid',
+              placeItems: 'center',
+              pointerEvents: 'none',
+              transition: 'top 0.35s cubic-bezier(0.16, 1, 0.3, 1), left 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          >
+            <span
+              className="demo-pulse-ring"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '50%',
+                border: '2px solid var(--primary-500)',
+              }}
+            />
+            <span
+              style={{
+                width: '10px',
+                height: '10px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--primary-500)',
+                boxShadow: '0 0 10px var(--primary-500)',
+              }}
+            />
+          </div>
+        </>
       )}
 
       {/* Top-Right Controls */}
