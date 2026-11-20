@@ -256,13 +256,13 @@ async fn handle_raw_udp_packet<'a>(
     publishers: &mut HashMap<Uuid, WhipPublisher>,
     subscribers: &mut Vec<WhepSubscriber>,
 ) {
-    let Ok(contents) = buf.try_into() else {
-        return;
-    };
     let loopback_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), advertised_addr.port());
     let candidate_addrs = [advertised_addr, loopback_addr];
 
     for dest in candidate_addrs {
+        let Ok(contents) = buf.try_into() else {
+            return;
+        };
         let input = Input::Receive(
             recv_now,
             Receive {
