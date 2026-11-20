@@ -421,57 +421,28 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
         backdropFilter: targetRect && !isSuccessFinale ? 'none' : 'blur(4px)',
       }}
     >
-      {/* Spotlight Cutout + Pulsing Circular Beacon */}
-      {targetRect && !isSuccessFinale && (
-        <>
+      {/* Circular Pulsing Spotlight Cutout */}
+      {targetRect && !isSuccessFinale && (() => {
+        const cx = targetRect.left + targetRect.width / 2;
+        const cy = targetRect.top + targetRect.height / 2;
+        const diameter = Math.max(240, Math.min(520, Math.max(targetRect.width, targetRect.height) * 0.72));
+        return (
           <div
+            className="demo-spotlight-circle"
             style={{
               position: 'fixed',
-              top: targetRect.top,
-              left: targetRect.left,
-              width: targetRect.width,
-              height: targetRect.height,
-              borderRadius: '14px',
-              border: '2px solid var(--primary-500)',
-              boxShadow: '0 0 0 9999px rgba(5, 8, 18, 0.62), 0 0 24px rgba(37, 99, 235, 0.45)',
-              transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+              top: cy,
+              left: cx,
+              width: diameter,
+              height: diameter,
+              borderRadius: '50%',
+              border: '2px solid rgba(56, 189, 248, 0.75)',
+              transition: 'top 0.35s cubic-bezier(0.16, 1, 0.3, 1), left 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1), height 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
               pointerEvents: 'none',
             }}
           />
-          <div
-            style={{
-              position: 'fixed',
-              top: targetRect.top - 10,
-              left: targetRect.left - 10,
-              width: '24px',
-              height: '24px',
-              display: 'grid',
-              placeItems: 'center',
-              pointerEvents: 'none',
-              transition: 'top 0.35s cubic-bezier(0.16, 1, 0.3, 1), left 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
-            }}
-          >
-            <span
-              className="demo-pulse-ring"
-              style={{
-                position: 'absolute',
-                inset: 0,
-                borderRadius: '50%',
-                border: '2px solid var(--primary-500)',
-              }}
-            />
-            <span
-              style={{
-                width: '10px',
-                height: '10px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--primary-500)',
-                boxShadow: '0 0 10px var(--primary-500)',
-              }}
-            />
-          </div>
-        </>
-      )}
+        );
+      })()}
 
       {/* Top-Right Controls */}
       <div

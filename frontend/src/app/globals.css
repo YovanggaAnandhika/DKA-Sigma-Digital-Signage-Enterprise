@@ -1085,6 +1085,21 @@ main table td:last-child .btn:focus-visible {
   animation: demoPulseRing 2.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 
+@keyframes demoSpotlightPulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 0 0 9999px rgba(5, 8, 18, 0.62), 0 0 28px rgba(37, 99, 235, 0.45);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.045);
+    box-shadow: 0 0 0 9999px rgba(5, 8, 18, 0.62), 0 0 46px rgba(56, 189, 248, 0.65);
+  }
+}
+
+.demo-spotlight-circle {
+  animation: demoSpotlightPulse 2s ease-in-out infinite;
+}
+
 .demo-shimmer-text {
   background: linear-gradient(90deg, var(--text-primary) 0%, var(--primary-500) 50%, var(--text-primary) 100%);
   background-size: 200% auto;
