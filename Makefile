@@ -17,6 +17,10 @@ push:
 	@echo "Building and pushing frontend image..."
 	docker buildx build --platform $(PLATFORMS) -f frontend/Dockerfile -t $(FRONTEND_IMAGE) --push .
 
+push-frontend:
+	@echo "Building and pushing frontend image..."
+	docker buildx build --platform $(PLATFORMS) -f frontend/Dockerfile -t $(FRONTEND_IMAGE) --push .
+
 deploy:
 	@echo "Deploying to production..."
 	docker compose -f compose.production.yml up -d
