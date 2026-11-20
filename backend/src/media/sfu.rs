@@ -141,6 +141,14 @@ fn build_rtc(advertised_addr: SocketAddr, now: Instant) -> Result<Rtc, String> {
 
     let candidate = Candidate::host(advertised_addr, "udp").map_err(|e| e.to_string())?;
     rtc.add_local_candidate(candidate);
+
+    if advertised_addr.ip() != IpAddr::V4(Ipv4Addr::LOCALHOST) {
+        let loopback_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), advertised_addr.port());
+        if let Ok(c_loopback) = Candidate::host(loopback_addr, "udp") {
+            rtc.add_local_candidate(c_loopback);
+        }
+    }
+
     Ok(rtc)
 }
 
@@ -556,6 +564,7 @@ async fn drain_publisher(
             }
             Ok(Output::Event(ev)) => match ev {
                 Event::IceConnectionStateChange(state) => {
+                    info!("⚡ [MediaSFU] WHIP publisher [{}] ICE state: {:?}", stream_id, state);
                     if matches!(state, IceConnectionState::Connected | IceConnectionState::Completed) {
                         pub_entry.ice_connected = true;
                     } else if state == IceConnectionState::Disconnected {
@@ -565,6 +574,7 @@ async fn drain_publisher(
                     }
                 }
                 Event::MediaAdded(added) => {
+                    info!("⚡ [MediaSFU] WHIP publisher [{}] media added: {:?} {:?}", stream_id, added.kind, added.direction);
                     if added.direction.is_receiving() {
                         match added.kind {
                             MediaKind::Video => pub_entry.video_mid = Some(added.mid),
@@ -637,12 +647,14 @@ async fn drain_subscriber(
             }
             Ok(Output::Event(ev)) => match ev {
                 Event::Connected => {
+                    info!("⚡ [MediaSFU] WHEP subscriber [{}] Connected!", sub.session_id);
                     if !sub.ice_connected {
                         sub.ice_connected = true;
                         became_connected = true;
                     }
                 }
                 Event::IceConnectionStateChange(state) => {
+                    info!("⚡ [MediaSFU] WHEP subscriber [{}] ICE state: {:?}", sub.session_id, state);
                     if matches!(state, IceConnectionState::Connected | IceConnectionState::Completed) {
                         if !sub.ice_connected {
                             sub.ice_connected = true;
@@ -654,6 +666,7 @@ async fn drain_subscriber(
                     }
                 }
                 Event::MediaAdded(added) => {
+                    info!("⚡ [MediaSFU] WHEP subscriber [{}] media added: {:?} {:?}", sub.session_id, added.kind, added.direction);
                     if added.direction.is_sending() {
                         match added.kind {
                             MediaKind::Video => sub.video_mid = Some(added.mid),
