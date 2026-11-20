@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Sun, Moon, LogOut, Menu, X, ChevronDown, ShieldCheck, Sparkles, ShieldAlert } from 'lucide-react';
+import { Sun, Moon, LogOut, Menu, X, ChevronDown, ShieldCheck, ShieldAlert, Presentation } from 'lucide-react';
+import { DemoShowcaseOverlay } from './DemoShowcaseOverlay';
 import { useSidebar } from './SidebarProvider';
 import { useTheme } from './ThemeProvider';
 import { useImpersonation } from '@/context/ImpersonationContext';
@@ -14,6 +15,7 @@ export function Navbar() {
   const { theme, toggleTheme } = useTheme();
   const { impersonatedCorp, stopImpersonation } = useImpersonation();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [demoOpen, setDemoOpen] = useState(false);
   const [session, setSession] = useState<UserSession | null>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -146,6 +148,41 @@ export function Navbar() {
 
       {/* Right Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        {/* Demo Launching Mode Button (Rounded) */}
+        <button
+          type="button"
+          onClick={() => setDemoOpen(true)}
+          aria-label="Aktifkan Demo Launching Mode"
+          title="Aktifkan Demo Launching Mode"
+          style={{
+            width: '38px',
+            height: '38px',
+            padding: 0,
+            borderRadius: '9999px',
+            backgroundColor: 'var(--bg-surface-elevated)',
+            color: 'var(--text-secondary)',
+            border: '1px solid var(--border-subtle)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s ease',
+            boxShadow: '0 2px 5px rgba(0,0,0,0.02)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.1)';
+            e.currentTarget.style.color = 'var(--primary-500)';
+            e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.35)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--bg-surface-elevated)';
+            e.currentTarget.style.color = 'var(--text-secondary)';
+            e.currentTarget.style.borderColor = 'var(--border-subtle)';
+          }}
+        >
+          <Presentation size={17} />
+        </button>
+
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
@@ -314,6 +351,7 @@ export function Navbar() {
           )}
         </div>
       </div>
+      <DemoShowcaseOverlay isOpen={demoOpen} onClose={() => setDemoOpen(false)} />
     </header>
   );
 }
