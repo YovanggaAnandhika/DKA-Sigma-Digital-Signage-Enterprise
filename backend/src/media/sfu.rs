@@ -49,7 +49,6 @@ pub enum SfuCommand {
         codec: Codec,
         rtp_time: MediaTime,
         data: Arc<[u8]>,
-        is_keyframe: bool,
     },
     QueryStatus {
         stream_id: Uuid,
@@ -465,7 +464,6 @@ async fn handle_command(
             codec,
             rtp_time,
             data,
-            is_keyframe: _,
         } => {
             if !rtsp_streams.contains(&stream_id) {
                 return;
