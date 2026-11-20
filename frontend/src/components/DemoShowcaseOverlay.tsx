@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter, usePathname } from 'next/navigation';
 import { CheckCircle2, ChevronLeft, ChevronRight, X, Volume2, VolumeX } from 'lucide-react';
+import { api } from '@/lib/services';
 
 interface DemoShowcaseOverlayProps {
   isOpen: boolean;
@@ -19,30 +20,48 @@ interface TourStep {
   description: string;
 }
 
-const TOUR_STEPS: TourStep[] = [
+const BASE_TOUR_STEPS: TourStep[] = [
   {
     id: 'overview',
     route: '/',
     selector: 'main h1',
-    stepLabel: 'Langkah 1 dari 6 • Pusat Kendali',
+    stepLabel: 'Langkah 1 dari 8 • Pusat Kendali',
     title: 'Dashboard Ringkasan HNDSignage',
     description:
       'Semua layar Android, jadwal tayang, dan status sistem terpantau real-time dari satu pusat kendali.',
   },
   {
+    id: 'overview-chart',
+    route: '/',
+    selector: 'main .card-elevated',
+    stepLabel: 'Langkah 2 dari 8 • Metrik & Grafik',
+    title: 'Grafik Aktivitas & Kesehatan Armada',
+    description:
+      'Pantau tren konektivitas layar, metrik performa, dan status layanan backend secara langsung tanpa refresh manual.',
+  },
+  {
     id: 'devices',
     route: '/hardware/displays/player',
     selector: 'main table, main .card-elevated',
-    stepLabel: 'Langkah 2 dari 6 • Perangkat Layar',
+    stepLabel: 'Langkah 3 dari 8 • Perangkat Layar',
     title: 'Perangkat Layar Terhubung',
     description:
       'Setiap TV Android yang sudah pairing muncul di sini lengkap dengan status Online/Offline, resolusi, dan alamat IP.',
   },
   {
+    id: 'iot',
+    route: '/hardware/iot/devices',
+    selector: 'main .card-elevated, main table',
+    stepLabel: 'Langkah 4 dari 8 • Integrasi IoT',
+    title: 'Tombol Antrean IoT & Audio Cerdas',
+    description:
+      'Tombol fisik ESP32 di meja kasir merespon di bawah 0.1 detik dengan chime melodis dan suara TTS tanpa tabrakan.',
+  },
+  {
     id: 'media',
     route: '/studio/media',
     selector: 'main .card-elevated, main table',
-    stepLabel: 'Langkah 3 dari 6 • Pustaka Media',
+    stepLabel: 'Langkah 5 dari 8 • Pustaka Media',
     title: 'Pustaka Media Offline-First',
     description:
       'Video dan gambar diverifikasi dengan SHA-256 dan disimpan lokal di perangkat, sehingga tetap tayang mulus meski internet putus.',
@@ -51,7 +70,7 @@ const TOUR_STEPS: TourStep[] = [
     id: 'layouts',
     route: '/studio/layouts/data',
     selector: 'main table, main .card-elevated',
-    stepLabel: 'Langkah 4 dari 6 • Tata Letak',
+    stepLabel: 'Langkah 6 dari 8 • Tata Letak',
     title: 'Studio Tata Letak Multi-Zona',
     description:
       'Susun video split-screen, running text, jam digital, dan antrean dalam satu kanvas bebas atur tanpa saling menimpa.',
@@ -60,19 +79,19 @@ const TOUR_STEPS: TourStep[] = [
     id: 'schedule',
     route: '/studio/schedules/calendar',
     selector: 'a[href="/studio/layouts/data"], main .card-elevated',
-    stepLabel: 'Langkah 5 dari 6 • Assign ke Layar',
+    stepLabel: 'Langkah 7 dari 8 • Assign ke Layar',
     title: 'Jadwalkan & Assign ke Layar Target',
     description:
       'Pilih layout, tentukan jam tayang di kalender rundown, lalu kirim serentak ke layar atau grup layar tertentu.',
   },
   {
-    id: 'iot',
-    route: '/hardware/iot/devices',
-    selector: 'main .card-elevated, main table',
-    stepLabel: 'Langkah 6 dari 6 • Integrasi IoT',
-    title: 'Tombol Antrean IoT & Audio Cerdas',
+    id: 'display-detail',
+    route: '/hardware/displays/player',
+    selector: 'main .card-elevated',
+    stepLabel: 'Langkah 8 dari 8 • Detail Layar',
+    title: 'Smart Control Hub, Metrik & Live Screenshot',
     description:
-      'Tombol fisik ESP32 di meja kasir merespon di bawah 0.1 detik dengan chime melodis dan suara TTS tanpa tabrakan.',
+      'Kendalikan daya layar (Wake/Sleep), Sinkron Konten, Restart, pantau CPU/RAM/Suhu real-time, serta lihat Tangkapan Layar langsung dari TV.',
   },
 ];
 
@@ -113,12 +132,17 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
   const pathname = usePathname();
   const [stepIndex, setStepIndex] = useState(0);
   const [isSuccessFinale, setIsSuccessFinale] = useState(false);
+  const [firstDeviceId, setFirstDeviceId] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [targetRect, setTargetRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const soundRef = useRef(soundEnabled);
 
   useEffect(() => {
-    soundRef.current = soundEnabled;
+    soundEnabledRefCheck();
+    function soundEnabledRefCheck() {
+      soundRef.current = soundEnabled;
+    }
   }, [soundEnabled]);
 
   useEffect(() => {
@@ -126,9 +150,40 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
     setStepIndex(0);
     setIsSuccessFinale(false);
     setTargetRect(null);
+    api.getDevices({ limit: 1 })
+      .then((res) => {
+        const first = res.data?.[0];
+        if (first?.id) setFirstDeviceId(first.id);
+      })
+      .catch(() => {});
   }, [isOpen]);
 
-  const currentStep = TOUR_STEPS[stepIndex];
+  const steps = React.useMemo(() => {
+    if (!firstDeviceId) return BASE_TOUR_STEPS;
+    return BASE_TOUR_STEPS.map((s) =>
+      s.id === 'display-detail'
+        ? { ...s, route: `/hardware/displays/${firstDeviceId}/overview` }
+        : s
+    );
+  }, [firstDeviceId]);
+
+  const currentStep = steps[stepIndex];
+
+  // Simulated media upload progress bar when on the media step
+  useEffect(() => {
+    if (!isOpen || isSuccessFinale || currentStep?.id !== 'media') {
+      setUploadProgress(0);
+      return;
+    }
+    setUploadProgress(12);
+    const interval = window.setInterval(() => {
+      setUploadProgress((prev) => {
+        if (prev >= 100) return 100;
+        return Math.min(100, prev + 14);
+      });
+    }, 260);
+    return () => window.clearInterval(interval);
+  }, [isOpen, isSuccessFinale, currentStep?.id]);
 
   // Navigate to the step's route when stepIndex changes
   useEffect(() => {
@@ -192,26 +247,26 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
       onClose();
       return;
     }
-    if (stepIndex < TOUR_STEPS.length - 1) {
+    if (stepIndex < steps.length - 1) {
       setStepIndex((i) => i + 1);
       if (soundRef.current) playTourChime(false);
     } else {
       setIsSuccessFinale(true);
       if (soundRef.current) playTourChime(true);
     }
-  }, [isSuccessFinale, stepIndex, onClose]);
+  }, [isSuccessFinale, stepIndex, steps.length, onClose]);
 
   const handlePrev = useCallback(() => {
     if (isSuccessFinale) {
       setIsSuccessFinale(false);
-      setStepIndex(TOUR_STEPS.length - 1);
+      setStepIndex(steps.length - 1);
       return;
     }
     if (stepIndex > 0) {
       setStepIndex((i) => i - 1);
       if (soundRef.current) playTourChime(false);
     }
-  }, [isSuccessFinale, stepIndex]);
+  }, [isSuccessFinale, stepIndex, steps.length]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -364,6 +419,35 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
             {currentStep.description}
           </p>
 
+          {currentStep.id === 'media' && (
+            <div
+              style={{
+                marginTop: '12px',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                backgroundColor: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', fontWeight: 600, marginBottom: '6px' }}>
+                <span style={{ color: 'var(--text-primary)' }}>promo_display_4k.mp4</span>
+                <span style={{ color: uploadProgress >= 100 ? 'var(--accent-emerald)' : 'var(--primary-500)' }}>
+                  {uploadProgress >= 100 ? 'SHA-256 Terverifikasi' : `${uploadProgress}%`}
+                </span>
+              </div>
+              <div style={{ height: '6px', borderRadius: '9999px', backgroundColor: 'var(--border-subtle)', overflow: 'hidden' }}>
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${uploadProgress}%`,
+                    backgroundColor: uploadProgress >= 100 ? 'var(--accent-emerald)' : 'var(--primary-500)',
+                    transition: 'width 0.25s ease, background-color 0.25s ease',
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '18px', paddingTop: '14px', borderTop: '1px solid var(--border-subtle)' }}>
             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
               Klik di mana saja untuk lanjut
@@ -409,7 +493,7 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
                   cursor: 'pointer',
                 }}
               >
-                <span>{stepIndex === TOUR_STEPS.length - 1 ? 'Selesai' : 'Lanjut'}</span>
+                <span>{stepIndex === steps.length - 1 ? 'Selesai' : 'Lanjut'}</span>
                 <ChevronRight size={15} />
               </button>
             </div>
