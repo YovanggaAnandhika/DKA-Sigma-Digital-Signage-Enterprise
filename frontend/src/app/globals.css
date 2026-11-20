@@ -1100,6 +1100,24 @@ main table td:last-child .btn:focus-visible {
   animation: demoSpotlightPulse 2s ease-in-out infinite;
 }
 
+@keyframes demoConfettiBurst {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4) rotate(0deg);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--tx, 0px), var(--ty, -120px)) scale(1) rotate(var(--rot, 180deg));
+  }
+}
+
+.demo-confetti-piece {
+  animation: demoConfettiBurst 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
 .demo-shimmer-text {
   background: linear-gradient(90deg, var(--text-primary) 0%, var(--primary-500) 50%, var(--text-primary) 100%);
   background-size: 200% auto;

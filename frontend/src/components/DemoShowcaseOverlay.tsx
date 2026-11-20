@@ -763,72 +763,111 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
         </div>
       )}
 
-      {/* Success Finale Celebration */}
+      {/* Success Finale Celebration (Dead-Center Flex + Cheerful Confetti) */}
       {isSuccessFinale && (
         <div
-          onClick={(e) => e.stopPropagation()}
-          className="demo-slide-enter"
           style={{
             position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: 'min(440px, calc(100vw - 32px))',
-            backgroundColor: 'var(--bg-surface)',
-            color: 'var(--text-primary)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: '22px',
-            padding: '28px 24px',
-            textAlign: 'center',
-            boxShadow: 'var(--card-shadow-hover)',
-            cursor: 'default',
+            inset: 0,
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            gap: '14px',
+            justifyContent: 'center',
+            padding: '16px',
+            pointerEvents: 'none',
+            zIndex: 2,
           }}
         >
-          <div style={{ position: 'relative', width: '72px', height: '72px', display: 'grid', placeItems: 'center' }}>
-            <div
-              className="demo-pulse-ring"
+          {/* Cheerful Confetti Burst */}
+          {[
+            { tx: '-180px', ty: '-140px', rot: '-140deg', color: 'var(--primary-500)', delay: '0s' },
+            { tx: '170px', ty: '-150px', rot: '160deg', color: 'var(--accent-emerald)', delay: '0.1s' },
+            { tx: '-210px', ty: '-40px', rot: '-90deg', color: 'var(--accent-amber)', delay: '0.2s' },
+            { tx: '210px', ty: '-30px', rot: '110deg', color: 'var(--accent-cyan)', delay: '0.15s' },
+            { tx: '-140px', ty: '120px', rot: '-200deg', color: 'var(--accent-rose)', delay: '0.25s' },
+            { tx: '150px', ty: '110px', rot: '200deg', color: 'var(--accent-violet)', delay: '0.05s' },
+            { tx: '-70px', ty: '-180px', rot: '-60deg', color: 'var(--accent-emerald)', delay: '0.3s' },
+            { tx: '80px', ty: '-175px', rot: '85deg', color: 'var(--accent-amber)', delay: '0.18s' },
+          ].map((c, idx) => (
+            <span
+              key={idx}
+              aria-hidden="true"
+              className="demo-confetti-piece"
               style={{
                 position: 'absolute',
-                inset: 0,
-                borderRadius: '50%',
-                border: '2px solid var(--accent-emerald)',
+                width: '10px',
+                height: '18px',
+                borderRadius: '4px',
+                backgroundColor: c.color,
+                animationDelay: c.delay,
+                ['--tx' as string]: c.tx,
+                ['--ty' as string]: c.ty,
+                ['--rot' as string]: c.rot,
               }}
             />
-            <div
-              style={{
-                width: '58px',
-                height: '58px',
-                borderRadius: '50%',
-                background: 'rgba(16, 185, 129, 0.14)',
-                color: 'var(--accent-emerald)',
-                display: 'grid',
-                placeItems: 'center',
-              }}
-            >
-              <CheckCircle2 size={32} />
-            </div>
-          </div>
+          ))}
 
-          <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
-            Siap Tayang di Seluruh Layar
-          </h3>
-
-          <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
-            Dari perangkat terhubung, pustaka media offline-first, tata letak multi-zona, hingga jadwal ke layar — seluruh alur HNDSignage siap digunakan.
-          </p>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn btn-primary"
-            style={{ marginTop: '6px', padding: '10px 24px', borderRadius: '9999px', fontSize: '0.88rem', fontWeight: 700 }}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="demo-slide-enter"
+            style={{
+              pointerEvents: 'auto',
+              width: 'min(440px, 100%)',
+              backgroundColor: 'var(--bg-surface)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '22px',
+              padding: '28px 24px',
+              textAlign: 'center',
+              boxShadow: 'var(--card-shadow-hover)',
+              cursor: 'default',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '14px',
+            }}
           >
-            Mulai Demo Langsung
-          </button>
+            <div style={{ position: 'relative', width: '72px', height: '72px', display: 'grid', placeItems: 'center' }}>
+              <div
+                className="demo-pulse-ring"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  borderRadius: '50%',
+                  border: '2px solid var(--accent-emerald)',
+                }}
+              />
+              <div
+                style={{
+                  width: '58px',
+                  height: '58px',
+                  borderRadius: '50%',
+                  background: 'rgba(16, 185, 129, 0.14)',
+                  color: 'var(--accent-emerald)',
+                  display: 'grid',
+                  placeItems: 'center',
+                }}
+              >
+                <CheckCircle2 size={32} />
+              </div>
+            </div>
+
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+              Siap Tayang di Seluruh Layar
+            </h3>
+
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+              Dari perangkat terhubung, pustaka media, desain layar, hingga jadwal tayang — seluruh rangkaian HNDSignage siap memukau pelanggan Anda.
+            </p>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn btn-primary"
+              style={{ marginTop: '6px', padding: '10px 24px', borderRadius: '9999px', fontSize: '0.88rem', fontWeight: 700 }}
+            >
+              Mulai Demo Langsung
+            </button>
+          </div>
         </div>
       )}
     </div>,
