@@ -181,24 +181,15 @@ async fn run_sfu_loop(
                 match recv {
                     Ok((n, source)) => {
                         let recv_now = Instant::now();
-                        debug!("📦 [MediaSFU] UDP packet {} bytes from {}", n, source);
-                        if let Ok(contents) = buf[..n].try_into() {
-                            let input = Input::Receive(
-                                recv_now,
-                                Receive {
-                                    proto: Protocol::Udp,
-                                    source,
-                                    destination: advertised_addr,
-                                    contents,
-                                },
-                            );
-                            handle_udp_input(
-                                input,
-                                &socket,
-                                &mut publishers,
-                                &mut subscribers,
-                            ).await;
-                        }
+                        handle_raw_udp_packet(
+                            recv_now,
+                            source,
+                            &buf[..n],
+                            advertised_addr,
+                            &socket,
+                            &mut publishers,
+                            &mut subscribers,
+                        ).await;
                     }
                     Err(err) => {
                         warn!("UDP recv error on MediaSFU socket: {}", err);
@@ -256,59 +247,78 @@ fn compute_next_deadline(
     }
 }
 
-async fn handle_udp_input(
-    input: Input<'_>,
+async fn handle_raw_udp_packet<'a>(
+    recv_now: Instant,
+    source: SocketAddr,
+    buf: &'a [u8],
+    advertised_addr: SocketAddr,
     socket: &UdpSocket,
     publishers: &mut HashMap<Uuid, WhipPublisher>,
     subscribers: &mut Vec<WhepSubscriber>,
 ) {
-    let matched_stream_id = publishers
-        .iter()
-        .find(|(_, pub_entry)| pub_entry.rtc.accepts(&input))
-        .map(|(stream_id, _)| *stream_id);
+    let Ok(contents) = buf.try_into() else {
+        return;
+    };
+    let loopback_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), advertised_addr.port());
+    let candidate_addrs = [advertised_addr, loopback_addr];
 
-    if let Some(stream_id) = matched_stream_id {
-        let mut outbound = Vec::new();
-        let mut disconnect_subs = false;
-        if let Some(pub_entry) = publishers.get_mut(&stream_id) {
-            if let Err(e) = pub_entry.rtc.handle_input(input) {
-                warn!("WHIP publisher [{}] input error: {:?}", stream_id, e);
-                pub_entry.rtc.disconnect();
+    for dest in candidate_addrs {
+        let input = Input::Receive(
+            recv_now,
+            Receive {
+                proto: Protocol::Udp,
+                source,
+                destination: dest,
+                contents,
+            },
+        );
+
+        let matched_stream_id = publishers
+            .iter()
+            .find(|(_, pub_entry)| pub_entry.rtc.accepts(&input))
+            .map(|(stream_id, _)| *stream_id);
+
+        if let Some(stream_id) = matched_stream_id {
+            let mut outbound = Vec::new();
+            let mut disconnect_subs = false;
+            if let Some(pub_entry) = publishers.get_mut(&stream_id) {
+                if let Err(e) = pub_entry.rtc.handle_input(input) {
+                    warn!("WHIP publisher [{}] input error: {:?}", stream_id, e);
+                    pub_entry.rtc.disconnect();
+                }
+                disconnect_subs = drain_publisher(stream_id, pub_entry, socket, &mut outbound).await;
             }
-            disconnect_subs = drain_publisher(stream_id, pub_entry, socket, &mut outbound).await;
+            if !outbound.is_empty() {
+                fan_out_media(&outbound, subscribers, socket).await;
+            }
+            if disconnect_subs {
+                disconnect_stream_subscribers(stream_id, subscribers);
+            }
+            return;
         }
-        if !outbound.is_empty() {
-            fan_out_media(&outbound, subscribers, socket).await;
+
+        let matched_idx = subscribers
+            .iter()
+            .position(|sub| sub.rtc.accepts(&input));
+
+        if let Some(idx) = matched_idx {
+            let sub = &mut subscribers[idx];
+            if let Err(e) = sub.rtc.handle_input(input) {
+                debug!("WHEP subscriber [{}] input error: {:?}", sub.session_id, e);
+                sub.rtc.disconnect();
+            }
+            let mut keyframe_reqs = Vec::new();
+            let stream_id = sub.stream_id;
+            let became_connected = drain_subscriber(sub, socket, &mut keyframe_reqs).await;
+            if became_connected {
+                request_publisher_keyframe(stream_id, publishers, socket, KeyframeRequestKind::Pli).await;
+            }
+            for kind in keyframe_reqs {
+                request_publisher_keyframe(stream_id, publishers, socket, kind).await;
+            }
+            return;
         }
-        if disconnect_subs {
-            disconnect_stream_subscribers(stream_id, subscribers);
-        }
-        return;
     }
-
-    let matched_idx = subscribers
-        .iter()
-        .position(|sub| sub.rtc.accepts(&input));
-
-    if let Some(idx) = matched_idx {
-        let sub = &mut subscribers[idx];
-        if let Err(e) = sub.rtc.handle_input(input) {
-            debug!("WHEP subscriber [{}] input error: {:?}", sub.session_id, e);
-            sub.rtc.disconnect();
-        }
-        let mut keyframe_reqs = Vec::new();
-        let stream_id = sub.stream_id;
-        let became_connected = drain_subscriber(sub, socket, &mut keyframe_reqs).await;
-        if became_connected {
-            request_publisher_keyframe(stream_id, publishers, socket, KeyframeRequestKind::Pli).await;
-        }
-        for kind in keyframe_reqs {
-            request_publisher_keyframe(stream_id, publishers, socket, kind).await;
-        }
-        return;
-    }
-
-    debug!("⚠️ [MediaSFU] Unmatched UDP packet");
 }
 
 async fn handle_command(
