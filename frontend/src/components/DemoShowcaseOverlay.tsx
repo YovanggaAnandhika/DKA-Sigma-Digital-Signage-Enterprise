@@ -86,7 +86,7 @@ const BASE_TOUR_STEPS: TourStep[] = [
   },
   {
     id: 'comp-queue',
-    route: '/studio/components/ticket',
+    route: '/studio/components/ticket/data',
     selector: 'main table, main .card-elevated, main > div > div',
     stepLabel: 'Langkah 8 dari 22 • Sistem Antrean',
     title: 'Ruang Tunggu Lebih Tertib & Nyaman',
