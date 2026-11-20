@@ -152,7 +152,7 @@ async fn run_single_rtsp_session(
             _ = &mut *stop_rx => return SessionExit::Stopped,
             item = demuxed.next() => match item {
                 Some(Ok(CodecItem::VideoFrame(vf))) => {
-                    let is_keyframe = vf.is_random_access_point();
+                    let _is_keyframe = vf.is_random_access_point();
                     let ts = vf.timestamp();
                     let rtp_time = MediaTime::new(
                         ts.elapsed().max(0) as u64,
@@ -182,7 +182,6 @@ async fn run_single_rtsp_session(
                                 codec,
                                 rtp_time,
                                 data,
-                                is_keyframe: true,
                             });
                         }
                     }
