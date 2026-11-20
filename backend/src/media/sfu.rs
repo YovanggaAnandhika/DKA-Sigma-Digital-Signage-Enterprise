@@ -137,13 +137,13 @@ fn build_rtc(advertised_addr: SocketAddr, now: Instant) -> Result<Rtc, String> {
         .enable_pcma(true, false)
         .build(now);
 
-    let candidate = Candidate::host(advertised_addr, "udp").map_err(|e| e.to_string())?;
-    rtc.add_local_candidate(candidate);
+    let loopback_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), advertised_addr.port());
+    let candidate_loopback = Candidate::host(loopback_addr, "udp").map_err(|e| e.to_string())?;
+    rtc.add_local_candidate(candidate_loopback);
 
     if advertised_addr.ip() != IpAddr::V4(Ipv4Addr::LOCALHOST) {
-        let loopback_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), advertised_addr.port());
-        if let Ok(c_loopback) = Candidate::host(loopback_addr, "udp") {
-            rtc.add_local_candidate(c_loopback);
+        if let Ok(c_advertised) = Candidate::host(advertised_addr, "udp") {
+            rtc.add_local_candidate(c_advertised);
         }
     }
 
