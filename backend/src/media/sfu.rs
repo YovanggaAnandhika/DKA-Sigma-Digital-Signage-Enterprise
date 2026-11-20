@@ -84,18 +84,7 @@ pub async fn spawn_sfu(
     media_public_ip: String,
 ) -> Result<mpsc::UnboundedSender<SfuCommand>, std::io::Error> {
     let advertised_addr = resolve_advertised_addr(&media_public_ip, media_udp_port).await;
-    let std_sock = socket2::Socket::new(
-        socket2::Domain::IPV4,
-        socket2::Type::DGRAM,
-        Some(socket2::Protocol::UDP),
-    )?;
-    std_sock.set_nonblocking(true)?;
-    std_sock.set_reuse_address(true)?;
-    let _ = std_sock.set_recv_buffer_size(4 * 1024 * 1024);
-    let _ = std_sock.set_send_buffer_size(4 * 1024 * 1024);
-    let bind_addr: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), media_udp_port);
-    std_sock.bind(&bind_addr.into())?;
-    let socket = UdpSocket::from_std(std_sock.into())?;
+    let socket = UdpSocket::bind(("0.0.0.0", media_udp_port)).await?;
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
 
     info!(
@@ -176,7 +165,6 @@ struct OutboundMedia {
     kind: MediaKind,
     codec: Codec,
     time: MediaTime,
-    network_time: Instant,
     data: Arc<[u8]>,
 }
 
@@ -495,7 +483,6 @@ async fn handle_command(
                 kind,
                 codec,
                 time: rtp_time,
-                network_time: Instant::now(),
                 data,
             };
             fan_out_media(&[frame], subscribers, socket).await;
@@ -642,7 +629,6 @@ async fn drain_publisher(
                         kind,
                         codec,
                         time: data.time,
-                        network_time: data.network_time,
                         data: data.data,
                     });
                 }
@@ -750,7 +736,8 @@ async fn fan_out_media(
                 continue;
             };
             let rtp_time = adjust_rtp_time(frame.codec, frame.time);
-            if let Err(e) = writer.write(pt, frame.network_time, rtp_time, frame.data.clone()) {
+            let send_now = Instant::now();
+            if let Err(e) = writer.write(pt, send_now, rtp_time, frame.data.clone()) {
                 debug!("WHEP write error for [{}]: {:?}", sub.session_id, e);
                 sub.rtc.disconnect();
                 break;
