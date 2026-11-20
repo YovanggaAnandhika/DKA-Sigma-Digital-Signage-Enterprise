@@ -2,453 +2,216 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import {
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Play,
-  Pause,
-  Volume2,
-  VolumeX,
-  ShieldCheck,
-  Radio,
-  Layers,
-  Cpu,
-  Monitor,
-  Building2,
-  ArrowRight,
-  CheckCircle2,
-  WifiOff,
-  Camera,
-  Bell,
-  Tv,
-} from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { CheckCircle2, ChevronLeft, ChevronRight, X, Volume2, VolumeX } from 'lucide-react';
 
 interface DemoShowcaseOverlayProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type StageAct = 'ignition' | 'pillars' | 'finale';
-
-interface PillarSlide {
+interface TourStep {
   id: string;
-  number: string;
-  tag: string;
+  route: string;
+  selector: string;
+  stepLabel: string;
   title: string;
-  subtitle: string;
-  accent: string;
-  metrics: { label: string; value: string }[];
-  bullets: string[];
-  visualType: 'offline' | 'webrtc' | 'studio' | 'iot' | 'control' | 'enterprise';
+  description: string;
 }
 
-const PILLARS: PillarSlide[] = [
+const TOUR_STEPS: TourStep[] = [
   {
-    id: 'offline-first',
-    number: '01',
-    tag: 'RELIABILITY',
-    title: 'Offline-First & Anti Layar Hitam',
-    subtitle:
-      'Setiap aset media diverifikasi dengan hash SHA-256 sebelum tayang. Jadwal berikutnya diunduh diam-diam di latar belakang sehingga pergantian konten berjalan 0ms tanpa memblokir layar.',
-    accent: 'var(--accent-emerald)',
-    metrics: [
-      { label: 'Integritas Aset', value: 'SHA-256' },
-      { label: 'Transisi Jadwal', value: '0 ms' },
-      { label: 'Ketahanan Offline', value: '100%' },
-    ],
-    bullets: [
-      'Verifikasi integritas berkas di disk sebelum aktivasi manifest',
-      'Pre-download jadwal mendatang tanpa mengganggu tayangan aktif',
-      'Tetap memutar promosi resolusi penuh meski internet cabang terputus',
-    ],
-    visualType: 'offline',
+    id: 'overview',
+    route: '/',
+    selector: 'main h1',
+    stepLabel: 'Langkah 1 dari 6 • Pusat Kendali',
+    title: 'Dashboard Ringkasan HNDSignage',
+    description:
+      'Semua layar Android, jadwal tayang, dan status sistem terpantau real-time dari satu pusat kendali.',
   },
   {
-    id: 'webrtc-live',
-    number: '02',
-    tag: 'LOW LATENCY STREAM',
-    title: 'Siaran Langsung Sub-Detik (150–350 ms)',
-    subtitle:
-      'Pipeline normalisasi otomatis Zero-B-Frame & Opus mengubah siaran RTMP/SRT dari OBS Studio menjadi WebRTC UDP dan RTSP tanpa pengaturan rumit.',
-    accent: 'var(--accent-cyan)',
-    metrics: [
-      { label: 'Latensi WebRTC', value: '150–350 ms' },
-      { label: 'Transisi Status', value: '< 50 ms' },
-      { label: 'Protokol', value: 'WHEP / RTSP' },
-    ],
-    bullets: [
-      'Auto-normalisasi H.264 Baseline 0 B-Frame & audio Opus 48 kHz',
-      'Pemutar adaptif dengan Two-Tier Live-Edge Sync anti-slomo',
-      'Tampilan Siaran Offline glassmorphism yang rapi saat encoder standby',
-    ],
-    visualType: 'webrtc',
+    id: 'devices',
+    route: '/hardware/displays/player',
+    selector: 'main table, main .card-elevated',
+    stepLabel: 'Langkah 2 dari 6 • Perangkat Layar',
+    title: 'Perangkat Layar Terhubung',
+    description:
+      'Setiap TV Android yang sudah pairing muncul di sini lengkap dengan status Online/Offline, resolusi, dan alamat IP.',
   },
   {
-    id: 'studio-canvas',
-    number: '03',
-    tag: 'MULTI-ZONE STUDIO',
-    title: 'Editor Tata Letak Multi-Zona & Timeline Presisi',
-    subtitle:
-      'Susun video split-screen, running text, jam digital, webview, album foto, hingga siaran langsung dalam satu kanvas bebas atur yang tersinkronisasi per detik.',
-    accent: 'var(--primary-500)',
-    metrics: [
-      { label: 'Split-Screen', value: 'Zero-Bleed' },
-      { label: 'Resolusi Kanvas', value: '4K Ready' },
-      { label: 'Penjadwalan', value: 'Kalender' },
-    ],
-    bullets: [
-      'Isolasi zona presisi sehingga video kiri dan kanan tidak saling menimpa',
-      'Timeline multi-layer dengan pengaturan durasi dan prioritas jadwal',
-      'Distribusi serentak ke puluhan hingga ratusan layar via Grup Layar',
-    ],
-    visualType: 'studio',
+    id: 'media',
+    route: '/studio/media',
+    selector: 'main .card-elevated, main table',
+    stepLabel: 'Langkah 3 dari 6 • Pustaka Media',
+    title: 'Pustaka Media Offline-First',
+    description:
+      'Video dan gambar diverifikasi dengan SHA-256 dan disimpan lokal di perangkat, sehingga tetap tayang mulus meski internet putus.',
   },
   {
-    id: 'iot-queue',
-    number: '04',
-    tag: 'SMART QUEUE & IOT',
-    title: 'Tombol IoT ESP32 & Audio Antrean Bebas Tabrakan',
-    subtitle:
-      'Panggil nomor antrean dari tombol fisik nirkabel di meja kasir dengan respon di bawah 0.1 detik, lengkap dengan chime melodis dan suara TTS Bahasa Indonesia yang santun.',
-    accent: 'var(--accent-amber)',
-    metrics: [
-      { label: 'Respon Tombol', value: '< 0.1 Detik' },
-      { label: 'Audio Ducking', value: '-18 dB' },
-      { label: 'Antrean Suara', value: 'FIFO Queue' },
-    ],
-    bullets: [
-      'Volume video iklan otomatis meredup halus (60ms) saat panggilan berbunyi',
-      'Antrean audio FIFO mencegah suara panggilan kasir saling bertabrakan',
-      'Debounce tombol fisik mencegah panggilan ganda akibat salah tekan',
-    ],
-    visualType: 'iot',
+    id: 'layouts',
+    route: '/studio/layouts/data',
+    selector: 'main table, main .card-elevated',
+    stepLabel: 'Langkah 4 dari 6 • Tata Letak',
+    title: 'Studio Tata Letak Multi-Zona',
+    description:
+      'Susun video split-screen, running text, jam digital, dan antrean dalam satu kanvas bebas atur tanpa saling menimpa.',
   },
   {
-    id: 'control-telemetry',
-    number: '05',
-    tag: 'REMOTE TELEMETRY',
-    title: 'Smart Control Hub & Live Screenshot Nyata',
-    subtitle:
-      'Pantau kesehatan CPU, RAM, suhu, serta ambil tangkapan layar langsung (termasuk frame video aktif) dari kantor pusat, bahkan untuk perangkat TV Android 1 GB RAM.',
-    accent: 'var(--accent-violet)',
-    metrics: [
-      { label: 'Minimum RAM', value: '1 GB Ready' },
-      { label: 'Kendali Daya', value: 'Wake / Sleep' },
-      { label: 'Audit Visual', value: 'Live Frame' },
-    ],
-    bullets: [
-      'Live Screenshot menangkap video, live stream, ticker, dan widget sekaligus',
-      'Profil adaptif otomatis untuk perangkat spesifikasi rendah hingga tinggi',
-      'Kontrol jarak jauh: Sinkronisasi, Restart Player, Clear Cache, & Sleep',
-    ],
-    visualType: 'control',
+    id: 'schedule',
+    route: '/studio/schedules/calendar',
+    selector: 'a[href="/studio/layouts/data"], main .card-elevated',
+    stepLabel: 'Langkah 5 dari 6 • Assign ke Layar',
+    title: 'Jadwalkan & Assign ke Layar Target',
+    description:
+      'Pilih layout, tentukan jam tayang di kalender rundown, lalu kirim serentak ke layar atau grup layar tertentu.',
   },
   {
-    id: 'enterprise-ota',
-    number: '06',
-    tag: 'ENTERPRISE SCALE',
-    title: 'Multi-Tenancy, Siaran Darurat & Silent OTA',
-    subtitle:
-      'Kelola banyak merek dan cabang dari satu pusat kendali dengan isolasi data aman, interupsi siaran darurat instan, dan pembaruan APK otomatis tanpa teknisi lapangan.',
-    accent: 'var(--accent-rose)',
-    metrics: [
-      { label: 'Arsitektur', value: 'Multi-Tenant' },
-      { label: 'Siaran Darurat', value: 'Instan' },
-      { label: 'Update APK', value: 'Silent OTA' },
-    ],
-    bullets: [
-      'Isolasi konten dan hak akses per korporasi dan cabang (RBAC)',
-      'Emergency Broadcast menginterupsi seluruh layar toko dalam hitungan detik',
-      'Distribusi pembaruan APK terpantau per perangkat secara otomatis',
-    ],
-    visualType: 'enterprise',
+    id: 'iot',
+    route: '/hardware/iot/devices',
+    selector: 'main .card-elevated, main table',
+    stepLabel: 'Langkah 6 dari 6 • Integrasi IoT',
+    title: 'Tombol Antrean IoT & Audio Cerdas',
+    description:
+      'Tombol fisik ESP32 di meja kasir merespon di bawah 0.1 detik dengan chime melodis dan suara TTS tanpa tabrakan.',
   },
 ];
 
-function playKeynoteTone(type: 'ignition' | 'step' | 'finale') {
+function playTourChime(isSuccess: boolean) {
   try {
-    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
     const now = ctx.currentTime;
+    const notes = isSuccess ? [523.25, 659.25, 783.99, 1046.5] : [587.33, 880.0];
 
-    const freqs =
-      type === 'ignition'
-        ? [261.63, 329.63, 392.0, 523.25]
-        : type === 'finale'
-          ? [329.63, 440.0, 523.25, 659.25]
-          : [523.25, 659.25];
-
-    freqs.forEach((freq, idx) => {
+    notes.forEach((freq, idx) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.045);
-
-      gain.gain.setValueAtTime(0.0001, now + idx * 0.045);
-      gain.gain.exponentialRampToValueAtTime(type === 'step' ? 0.035 : 0.045, now + idx * 0.045 + 0.04);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.045 + (type === 'step' ? 0.32 : 0.95));
-
+      osc.frequency.setValueAtTime(freq, now + idx * 0.055);
+      gain.gain.setValueAtTime(0.0001, now + idx * 0.055);
+      gain.gain.exponentialRampToValueAtTime(isSuccess ? 0.045 : 0.025, now + idx * 0.055 + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.055 + (isSuccess ? 0.55 : 0.25));
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.start(now + idx * 0.045);
-      osc.stop(now + idx * 0.045 + 1.0);
+      osc.start(now + idx * 0.055);
+      osc.stop(now + idx * 0.055 + 0.6);
     });
 
     setTimeout(() => {
       void ctx.close().catch(() => {});
-    }, 1200);
+    }, 900);
   } catch {
-    // Ignore audio errors if blocked by browser policy
+    // Ignore audio errors
   }
 }
 
-function PillarVisual({ slide }: { slide: PillarSlide }) {
-  return (
-    <div
-      className="card-elevated"
-      style={{
-        position: 'relative',
-        borderRadius: '20px',
-        border: '1px solid var(--border-subtle)',
-        background: 'var(--bg-surface)',
-        padding: '24px',
-        minHeight: '300px',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        overflow: 'hidden',
-        boxShadow: 'var(--card-shadow-hover)',
-      }}
-    >
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          top: '-80px',
-          right: '-80px',
-          width: '240px',
-          height: '240px',
-          borderRadius: '50%',
-          background: `radial-gradient(circle, ${slide.accent} 0%, transparent 70%)`,
-          opacity: 0.18,
-          pointerEvents: 'none',
-        }}
-      />
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
-        <span
-          style={{
-            fontSize: '0.72rem',
-            fontWeight: 700,
-            letterSpacing: '0.08em',
-            color: slide.accent,
-            textTransform: 'uppercase',
-          }}
-        >
-          {slide.tag}
-        </span>
-        <span
-          style={{
-            fontSize: '0.72rem',
-            fontWeight: 600,
-            color: 'var(--text-muted)',
-            fontFamily: 'monospace',
-          }}
-        >
-          HNDSIGNAGE // {slide.number}
-        </span>
-      </div>
-
-      <div style={{ position: 'relative', zIndex: 1, margin: '20px 0' }}>
-        {slide.visualType === 'offline' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: '12px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: 'var(--text-primary)', fontWeight: 600 }}>
-                <WifiOff size={16} style={{ color: 'var(--accent-amber)' }} />
-                Simulasi Jaringan Terputus
-              </span>
-              <span style={{ fontSize: '0.72rem', color: 'var(--accent-emerald)', fontWeight: 700 }}>Playback Tetap Aktif</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: 'var(--text-primary)', fontWeight: 600 }}>
-                <ShieldCheck size={16} style={{ color: 'var(--accent-emerald)' }} />
-                SHA-256 Disk Cache Terverifikasi
-              </span>
-              <span style={{ fontSize: '0.72rem', color: 'var(--accent-emerald)', fontWeight: 700 }}>0 ms Switch</span>
-            </div>
-          </div>
-        )}
-
-        {slide.visualType === 'webrtc' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '10px', padding: '14px', borderRadius: '12px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)' }}>
-              <div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>INGEST</div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>OBS / SRT</div>
-              </div>
-              <ArrowRight size={16} style={{ color: 'var(--accent-cyan)' }} />
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>PLAYBACK</div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-cyan)' }}>WebRTC 150ms</div>
-              </div>
-            </div>
-            <div style={{ padding: '10px 14px', borderRadius: '10px', background: 'rgba(6, 182, 212, 0.08)', border: '1px solid rgba(6, 182, 212, 0.25)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-              Auto-Normalisasi: <strong style={{ color: 'var(--text-primary)' }}>H.264 0 B-Frame + Opus 48 kHz</strong>
-            </div>
-          </div>
-        )}
-
-        {slide.visualType === 'studio' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '96px 34px', gap: '8px', padding: '10px', borderRadius: '12px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)' }}>
-            <div style={{ borderRadius: '8px', background: 'rgba(59, 130, 246, 0.14)', border: '1px solid rgba(59, 130, 246, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.76rem', fontWeight: 700, color: 'var(--primary-500)' }}>
-              Zona Video Kiri
-            </div>
-            <div style={{ borderRadius: '8px', background: 'rgba(16, 185, 129, 0.14)', border: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.76rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>
-              Zona Video Kanan
-            </div>
-            <div style={{ gridColumn: '1 / -1', borderRadius: '6px', background: 'var(--primary-600)', display: 'flex', alignItems: 'center', padding: '0 12px', fontSize: '0.72rem', fontWeight: 600, color: '#fff' }}>
-              Running Text Promo &bull; Jam Digital &bull; Antrean
-            </div>
-          </div>
-        )}
-
-        {slide.visualType === 'iot' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                <Cpu size={17} style={{ color: 'var(--accent-amber)' }} />
-                ESP32 Queue Button
-              </span>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-amber)' }}>&lt; 0.1s Trigger</span>
-            </div>
-            <div style={{ padding: '12px 14px', borderRadius: '12px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              &ldquo;Nomor antrean <strong style={{ color: 'var(--text-primary)' }}>B-05</strong>, silakan menuju Loket 2&rdquo;
-            </div>
-          </div>
-        )}
-
-        {slide.visualType === 'control' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <div style={{ padding: '14px', borderRadius: '12px', background: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.28)' }}>
-              <Camera size={18} style={{ color: 'var(--accent-violet)', marginBottom: '8px' }} />
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>Live Screenshot</div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Video + Widget Nyata</div>
-            </div>
-            <div style={{ padding: '14px', borderRadius: '12px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)' }}>
-              <Monitor size={18} style={{ color: 'var(--primary-500)', marginBottom: '8px' }} />
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>Wake / Sleep</div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Kendali Daya Jarak Jauh</div>
-            </div>
-          </div>
-        )}
-
-        {slide.visualType === 'enterprise' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: '12px', background: 'rgba(244, 63, 94, 0.1)', border: '1px solid rgba(244, 63, 94, 0.28)' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                <Bell size={16} style={{ color: 'var(--accent-rose)' }} />
-                Siaran Darurat Seketika
-              </span>
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent-rose)' }}>All Screens</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: '12px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                <Building2 size={16} style={{ color: 'var(--primary-500)' }} />
-                Multi-Tenancy &amp; Silent OTA
-              </span>
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--primary-500)' }}>Enterprise</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', position: 'relative', zIndex: 1 }}>
-        {slide.metrics.map((m) => (
-          <div
-            key={m.label}
-            style={{
-              padding: '10px 12px',
-              borderRadius: '10px',
-              background: 'var(--bg-surface-elevated)',
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{m.label}</div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>{m.value}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProps) {
-  const [act, setAct] = useState<StageAct>('ignition');
-  const [slideIndex, setSlideIndex] = useState(0);
-  const [autoPlay, setAutoPlay] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+  const [stepIndex, setStepIndex] = useState(0);
+  const [isSuccessFinale, setIsSuccessFinale] = useState(false);
+  const [targetRect, setTargetRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const soundEnabledRef = useRef(soundEnabled);
+  const soundRef = useRef(soundEnabled);
 
   useEffect(() => {
-    soundEnabledRef.current = soundEnabled;
+    soundRef.current = soundEnabled;
   }, [soundEnabled]);
 
   useEffect(() => {
     if (!isOpen) return;
-    setAct('ignition');
-    setSlideIndex(0);
-    setAutoPlay(false);
-    if (soundEnabledRef.current) {
-      playKeynoteTone('ignition');
-    }
-    const timer = window.setTimeout(() => {
-      setAct((prev) => (prev === 'ignition' ? 'pillars' : prev));
-    }, 2800);
-    return () => window.clearTimeout(timer);
+    setStepIndex(0);
+    setIsSuccessFinale(false);
+    setTargetRect(null);
   }, [isOpen]);
 
-  const goNext = useCallback(() => {
-    if (act === 'ignition') {
-      setAct('pillars');
-      if (soundEnabledRef.current) playKeynoteTone('step');
-      return;
-    }
-    if (act === 'pillars') {
-      if (slideIndex < PILLARS.length - 1) {
-        setSlideIndex((i) => i + 1);
-        if (soundEnabledRef.current) playKeynoteTone('step');
-      } else {
-        setAct('finale');
-        setAutoPlay(false);
-        if (soundEnabledRef.current) playKeynoteTone('finale');
-      }
-      return;
-    }
-    onClose();
-  }, [act, slideIndex, onClose]);
+  const currentStep = TOUR_STEPS[stepIndex];
 
-  const goPrev = useCallback(() => {
-    if (act === 'finale') {
-      setAct('pillars');
-      setSlideIndex(PILLARS.length - 1);
-      if (soundEnabledRef.current) playKeynoteTone('step');
-      return;
+  // Navigate to the step's route when stepIndex changes
+  useEffect(() => {
+    if (!isOpen || isSuccessFinale || !currentStep) return;
+    const normalized = pathname?.replace(/\/$/, '') || '/';
+    const targetRoute = currentStep.route === '/' ? '/' : currentStep.route.replace(/\/$/, '');
+    if (normalized !== targetRoute) {
+      router.push(currentStep.route);
     }
-    if (act === 'pillars' && slideIndex > 0) {
-      setSlideIndex((i) => i - 1);
-      if (soundEnabledRef.current) playKeynoteTone('step');
+  }, [isOpen, isSuccessFinale, currentStep, pathname, router]);
+
+  // Measure target element rect on the current page
+  const updateRect = useCallback(() => {
+    if (!isOpen || isSuccessFinale || !currentStep) return;
+    const selectors = currentStep.selector.split(',').map((s) => s.trim());
+    let found: Element | null = null;
+    for (const sel of selectors) {
+      const el = document.querySelector(sel);
+      if (el) {
+        const r = el.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) {
+          found = el;
+          break;
+        }
+      }
     }
-  }, [act, slideIndex]);
+
+    if (found) {
+      const r = found.getBoundingClientRect();
+      const pad = 8;
+      setTargetRect({
+        top: Math.max(8, r.top - pad),
+        left: Math.max(8, r.left - pad),
+        width: Math.min(window.innerWidth - 16, r.width + pad * 2),
+        height: Math.min(window.innerHeight - 16, r.height + pad * 2),
+      });
+    } else {
+      setTargetRect(null);
+    }
+  }, [isOpen, isSuccessFinale, currentStep]);
 
   useEffect(() => {
-    if (!isOpen || !autoPlay || act !== 'pillars') return;
-    const interval = window.setInterval(() => {
-      goNext();
-    }, 5000);
-    return () => window.clearInterval(interval);
-  }, [isOpen, autoPlay, act, goNext]);
+    if (!isOpen || isSuccessFinale) return;
+    updateRect();
+    const t1 = window.setTimeout(updateRect, 180);
+    const t2 = window.setTimeout(updateRect, 450);
+    const t3 = window.setTimeout(updateRect, 900);
+    window.addEventListener('resize', updateRect);
+    window.addEventListener('scroll', updateRect, true);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
+      window.removeEventListener('resize', updateRect);
+      window.removeEventListener('scroll', updateRect, true);
+    };
+  }, [isOpen, isSuccessFinale, stepIndex, pathname, updateRect]);
+
+  const handleNext = useCallback(() => {
+    if (isSuccessFinale) {
+      onClose();
+      return;
+    }
+    if (stepIndex < TOUR_STEPS.length - 1) {
+      setStepIndex((i) => i + 1);
+      if (soundRef.current) playTourChime(false);
+    } else {
+      setIsSuccessFinale(true);
+      if (soundRef.current) playTourChime(true);
+    }
+  }, [isSuccessFinale, stepIndex, onClose]);
+
+  const handlePrev = useCallback(() => {
+    if (isSuccessFinale) {
+      setIsSuccessFinale(false);
+      setStepIndex(TOUR_STEPS.length - 1);
+      return;
+    }
+    if (stepIndex > 0) {
+      setStepIndex((i) => i - 1);
+      if (soundRef.current) playTourChime(false);
+    }
+  }, [isSuccessFinale, stepIndex]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -458,399 +221,270 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
         onClose();
       } else if (e.key === 'ArrowRight' || e.key === ' ') {
         e.preventDefault();
-        goNext();
+        handleNext();
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        goPrev();
+        handlePrev();
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isOpen, goNext, goPrev, onClose]);
+  }, [isOpen, handleNext, handlePrev, onClose]);
 
   if (!isOpen || typeof document === 'undefined') return null;
 
-  const currentSlide = PILLARS[slideIndex];
+  // Compute smart callout position so it never clips off-screen
+  const calloutTop = targetRect
+    ? targetRect.top + targetRect.height + 16 + 210 < window.innerHeight
+      ? targetRect.top + targetRect.height + 16
+      : Math.max(20, targetRect.top - 220)
+    : '50%';
+  const calloutLeft = targetRect
+    ? Math.min(Math.max(20, targetRect.left), window.innerWidth - 400)
+    : '50%';
 
   return createPortal(
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="HNDSignage Grand Launch Showcase"
+      aria-label="Tur Interaktif HNDSignage"
+      onClick={handleNext}
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 99999,
-        backgroundColor: 'var(--bg-primary)',
-        color: 'var(--text-primary)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        padding: '24px 32px',
-        overflow: 'hidden',
+        cursor: 'pointer',
+        backgroundColor: targetRect && !isSuccessFinale ? 'transparent' : 'rgba(5, 8, 18, 0.65)',
+        backdropFilter: targetRect && !isSuccessFinale ? 'none' : 'blur(4px)',
       }}
     >
-      {/* Atmospheric HDR Stage Glow */}
+      {/* Spotlight Cutout */}
+      {targetRect && !isSuccessFinale && (
+        <div
+          style={{
+            position: 'fixed',
+            top: targetRect.top,
+            left: targetRect.left,
+            width: targetRect.width,
+            height: targetRect.height,
+            borderRadius: '14px',
+            border: '2px solid var(--primary-500)',
+            boxShadow: '0 0 0 9999px rgba(5, 8, 18, 0.62), 0 0 24px rgba(37, 99, 235, 0.45)',
+            transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+
+      {/* Top-Right Controls */}
       <div
-        aria-hidden="true"
-        className="demo-spotlight-bg"
+        onClick={(e) => e.stopPropagation()}
         style={{
-          position: 'absolute',
-          inset: 0,
-          background:
-            'radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.22), transparent 45%), radial-gradient(circle at 80% 75%, rgba(6, 182, 212, 0.16), transparent 45%)',
-          pointerEvents: 'none',
+          position: 'fixed',
+          top: '18px',
+          right: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          zIndex: 3,
         }}
-      />
-
-      {/* Top HUD */}
-      <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, var(--primary-500), var(--primary-700))',
-              display: 'grid',
-              placeItems: 'center',
-              boxShadow: '0 4px 16px rgba(37, 99, 235, 0.4)',
-            }}
-          >
-            <Tv size={18} color="#fff" />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.92rem', fontWeight: 800, letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>HNDSignage</div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              Product Launch Showcase
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {act === 'pillars' && (
-            <button
-              type="button"
-              onClick={() => setAutoPlay((v) => !v)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '7px 14px',
-                borderRadius: '9999px',
-                border: '1px solid var(--border-subtle)',
-                background: autoPlay ? 'rgba(37, 99, 235, 0.16)' : 'var(--bg-surface-elevated)',
-                color: autoPlay ? 'var(--primary-500)' : 'var(--text-primary)',
-                fontSize: '0.76rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              {autoPlay ? <Pause size={13} /> : <Play size={13} />}
-              <span>{autoPlay ? 'Auto-Play Aktif' : 'Auto-Play'}</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setSoundEnabled((v) => !v)}
-            aria-label={soundEnabled ? 'Matikan suara efek' : 'Nyalakan suara efek'}
-            title={soundEnabled ? 'Matikan suara efek' : 'Nyalakan suara efek'}
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '9999px',
-              border: '1px solid var(--border-subtle)',
-              background: 'var(--bg-surface-elevated)',
-              color: 'var(--text-primary)',
-              display: 'grid',
-              placeItems: 'center',
-              cursor: 'pointer',
-            }}
-          >
-            {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
-          </button>
-
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Tutup Demo Mode"
-            title="Tutup (Esc)"
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '9999px',
-              border: '1px solid var(--border-subtle)',
-              background: 'var(--bg-surface-elevated)',
-              color: 'var(--text-primary)',
-              display: 'grid',
-              placeItems: 'center',
-              cursor: 'pointer',
-            }}
-          >
-            <X size={17} />
-          </button>
-        </div>
+      >
+        <button
+          type="button"
+          onClick={() => setSoundEnabled((v) => !v)}
+          aria-label={soundEnabled ? 'Matikan suara' : 'Nyalakan suara'}
+          style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '9999px',
+            border: '1px solid var(--border-subtle)',
+            background: 'var(--bg-surface)',
+            color: 'var(--text-primary)',
+            display: 'grid',
+            placeItems: 'center',
+            cursor: 'pointer',
+            boxShadow: 'var(--card-shadow)',
+          }}
+        >
+          {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Tutup Tur"
+          style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '9999px',
+            border: '1px solid var(--border-subtle)',
+            background: 'var(--bg-surface)',
+            color: 'var(--text-primary)',
+            display: 'grid',
+            placeItems: 'center',
+            cursor: 'pointer',
+            boxShadow: 'var(--card-shadow)',
+          }}
+        >
+          <X size={16} />
+        </button>
       </div>
 
-      {/* Main Stage */}
-      <div style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', maxWidth: '1160px', width: '100%', margin: '0 auto' }}>
-        {act === 'ignition' && (
-          <div className="demo-slide-enter" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', maxWidth: '760px' }}>
-            <div style={{ position: 'relative', width: '96px', height: '96px', display: 'grid', placeItems: 'center' }}>
-              <div
-                className="demo-pulse-ring"
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  borderRadius: '50%',
-                  border: '2px solid rgba(56, 189, 248, 0.5)',
-                }}
-              />
-              <div
-                style={{
-                  width: '72px',
-                  height: '72px',
-                  borderRadius: '20px',
-                  background: 'linear-gradient(135deg, #2563eb, #06b6d4)',
-                  display: 'grid',
-                  placeItems: 'center',
-                  boxShadow: '0 12px 40px rgba(37, 99, 235, 0.55)',
-                }}
-              >
-                <Radio size={34} color="#fff" />
-              </div>
-            </div>
-
-            <div style={{ fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.18em', color: '#38bdf8', textTransform: 'uppercase' }}>
-              Enterprise Digital Signage Platform
-            </div>
-
-            <h1
-              className="demo-shimmer-text"
-              style={{
-                fontSize: 'clamp(2.4rem, 5vw, 4rem)',
-                fontWeight: 800,
-                letterSpacing: '-0.03em',
-                lineHeight: 1.08,
-                margin: 0,
-              }}
-            >
-              HNDSignage
-            </h1>
-
-            <p style={{ fontSize: '1.08rem', color: 'var(--text-secondary)', maxWidth: '580px', lineHeight: 1.6, margin: 0 }}>
-              Satu platform terpadu untuk visual promosi multi-zona, siaran langsung sub-detik, dan sistem antrean IoT skala enterprise.
-            </p>
-
-            <button
-              type="button"
-              onClick={() => setAct('pillars')}
-              style={{
-                marginTop: '8px',
-                padding: '10px 22px',
-                borderRadius: '9999px',
-                border: '1px solid var(--border-subtle)',
-                background: 'var(--bg-surface-elevated)',
-                color: 'var(--text-primary)',
-                fontSize: '0.84rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              <span>Mulai Presentasi</span>
-              <ArrowRight size={15} />
-            </button>
+      {/* Tutorial Callout Card */}
+      {!isSuccessFinale && currentStep && (
+        <div
+          key={currentStep.id}
+          onClick={(e) => e.stopPropagation()}
+          className="demo-slide-enter"
+          style={{
+            position: 'fixed',
+            top: calloutTop,
+            left: calloutLeft,
+            transform: targetRect ? 'none' : 'translate(-50%, -50%)',
+            width: 'min(380px, calc(100vw - 32px))',
+            backgroundColor: 'var(--bg-surface)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: '18px',
+            padding: '20px',
+            boxShadow: 'var(--card-shadow-hover)',
+            zIndex: 2,
+            cursor: 'default',
+            transition: 'top 0.35s cubic-bezier(0.16, 1, 0.3, 1), left 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+          }}
+        >
+          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--primary-500)', letterSpacing: '0.03em' }}>
+            {currentStep.stepLabel}
           </div>
-        )}
 
-        {act === 'pillars' && (
-          <div
-            key={currentSlide.id}
-            className="demo-slide-enter"
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-              gap: '40px',
-              alignItems: 'center',
-              width: '100%',
-            }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
-                <span
-                  style={{
-                    padding: '4px 12px',
-                    borderRadius: '9999px',
-                    background: 'var(--bg-surface-elevated)',
-                    border: '1px solid var(--border-subtle)',
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    color: currentSlide.accent,
-                  }}
-                >
-                  KEUNGGULAN {currentSlide.number} / 0{PILLARS.length}
-                </span>
-              </div>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '6px 0 8px', color: 'var(--text-primary)' }}>
+            {currentStep.title}
+          </h3>
 
-              <h2 style={{ fontSize: 'clamp(1.75rem, 3.2vw, 2.5rem)', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.15, margin: 0, color: 'var(--text-primary)' }}>
-                {currentSlide.title}
-              </h2>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0 }}>
+            {currentStep.description}
+          </p>
 
-              <p style={{ fontSize: '0.98rem', color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>
-                {currentSlide.subtitle}
-              </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '18px', paddingTop: '14px', borderTop: '1px solid var(--border-subtle)' }}>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+              Klik di mana saja untuk lanjut
+            </span>
 
-              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
-                {currentSlide.bullets.map((b) => (
-                  <li key={b} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.88rem', color: 'var(--text-primary)' }}>
-                    <CheckCircle2 size={17} style={{ color: currentSlide.accent, flexShrink: 0, marginTop: '2px' }} />
-                    <span>{b}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <PillarVisual slide={currentSlide} />
-          </div>
-        )}
-
-        {act === 'finale' && (
-          <div className="demo-slide-enter" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', maxWidth: '680px' }}>
-            <div
-              style={{
-                width: '68px',
-                height: '68px',
-                borderRadius: '50%',
-                background: 'rgba(16, 185, 129, 0.16)',
-                border: '1px solid rgba(16, 185, 129, 0.45)',
-                display: 'grid',
-                placeItems: 'center',
-                color: '#10b981',
-              }}
-            >
-              <CheckCircle2 size={34} />
-            </div>
-
-            <div style={{ fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.16em', color: '#10b981', textTransform: 'uppercase' }}>
-              System Ready to Perform
-            </div>
-
-            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: 800, letterSpacing: '-0.025em', margin: 0 }}>
-              Siap Mengudara di Setiap Layar
-            </h2>
-
-            <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
-              Seluruh layanan CMS gRPC, Streaming Relay, Android Player, dan IoT Queue Engine siap didemonstrasikan secara langsung.
-            </p>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <button
                 type="button"
-                onClick={onClose}
-                className="btn btn-primary"
-                style={{ padding: '12px 26px', borderRadius: '9999px', fontSize: '0.92rem', fontWeight: 700 }}
-              >
-                <span>Masuk ke Dashboard Operasional</span>
-                <ArrowRight size={16} />
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSlideIndex(0);
-                  setAct('pillars');
-                }}
+                onClick={handlePrev}
+                disabled={stepIndex === 0}
+                aria-label="Langkah sebelumnya"
                 style={{
-                  padding: '12px 20px',
+                  width: '32px',
+                  height: '32px',
                   borderRadius: '9999px',
                   border: '1px solid var(--border-subtle)',
                   background: 'var(--bg-surface-elevated)',
                   color: 'var(--text-primary)',
-                  fontSize: '0.86rem',
-                  fontWeight: 600,
+                  display: 'grid',
+                  placeItems: 'center',
+                  cursor: stepIndex === 0 ? 'not-allowed' : 'pointer',
+                  opacity: stepIndex === 0 ? 0.4 : 1,
+                }}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={handleNext}
+                aria-label="Langkah berikutnya"
+                style={{
+                  height: '32px',
+                  padding: '0 14px',
+                  borderRadius: '9999px',
+                  border: 'none',
+                  background: 'var(--primary-600)',
+                  color: '#fff',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
                   cursor: 'pointer',
                 }}
               >
-                Ulangi Presentasi
+                <span>{stepIndex === TOUR_STEPS.length - 1 ? 'Selesai' : 'Lanjut'}</span>
+                <ChevronRight size={15} />
               </button>
             </div>
           </div>
-        )}
-      </div>
-
-      {/* Bottom Navigation Bar */}
-      <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-          Navigasi: &larr; / &rarr; / Spasi &bull; Esc untuk keluar
         </div>
+      )}
 
-        {act === 'pillars' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {PILLARS.map((p, idx) => (
-              <button
-                key={p.id}
-                type="button"
-                aria-label={`Ke slide ${idx + 1}: ${p.title}`}
-                onClick={() => setSlideIndex(idx)}
-                style={{
-                  width: idx === slideIndex ? '26px' : '8px',
-                  height: '8px',
-                  borderRadius: '9999px',
-                  border: 'none',
-                  background: idx === slideIndex ? currentSlide.accent : 'var(--border-strong)',
-                  cursor: 'pointer',
-                  transition: 'all 0.25s ease',
-                }}
-              />
-            ))}
+      {/* Success Finale Celebration */}
+      {isSuccessFinale && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="demo-slide-enter"
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 'min(440px, calc(100vw - 32px))',
+            backgroundColor: 'var(--bg-surface)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: '22px',
+            padding: '28px 24px',
+            textAlign: 'center',
+            boxShadow: 'var(--card-shadow-hover)',
+            cursor: 'default',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '14px',
+          }}
+        >
+          <div style={{ position: 'relative', width: '72px', height: '72px', display: 'grid', placeItems: 'center' }}>
+            <div
+              className="demo-pulse-ring"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '50%',
+                border: '2px solid var(--accent-emerald)',
+              }}
+            />
+            <div
+              style={{
+                width: '58px',
+                height: '58px',
+                borderRadius: '50%',
+                background: 'rgba(16, 185, 129, 0.14)',
+                color: 'var(--accent-emerald)',
+                display: 'grid',
+                placeItems: 'center',
+              }}
+            >
+              <CheckCircle2 size={32} />
+            </div>
           </div>
-        )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+            Siap Tayang di Seluruh Layar
+          </h3>
+
+          <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+            Dari perangkat terhubung, pustaka media offline-first, tata letak multi-zona, hingga jadwal ke layar — seluruh alur HNDSignage siap digunakan.
+          </p>
+
           <button
             type="button"
-            onClick={goPrev}
-            disabled={act === 'ignition' || (act === 'pillars' && slideIndex === 0)}
-            aria-label="Sebelumnya"
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '9999px',
-              border: '1px solid var(--border-subtle)',
-              background: 'var(--bg-surface-elevated)',
-              color: 'var(--text-primary)',
-              display: 'grid',
-              placeItems: 'center',
-              cursor: act === 'ignition' || (act === 'pillars' && slideIndex === 0) ? 'not-allowed' : 'pointer',
-              opacity: act === 'ignition' || (act === 'pillars' && slideIndex === 0) ? 0.35 : 1,
-            }}
+            onClick={onClose}
+            className="btn btn-primary"
+            style={{ marginTop: '6px', padding: '10px 24px', borderRadius: '9999px', fontSize: '0.88rem', fontWeight: 700 }}
           >
-            <ChevronLeft size={18} />
-          </button>
-          <button
-            type="button"
-            onClick={goNext}
-            aria-label="Berikutnya"
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '9999px',
-              border: '1px solid rgba(255,255,255,0.2)',
-              background: 'var(--primary-600)',
-              color: '#fff',
-              display: 'grid',
-              placeItems: 'center',
-              cursor: 'pointer',
-            }}
-          >
-            <ChevronRight size={18} />
+            Mulai Demo Langsung
           </button>
         </div>
-      </div>
+      )}
     </div>,
     document.body
   );
