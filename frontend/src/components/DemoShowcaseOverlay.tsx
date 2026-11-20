@@ -396,15 +396,36 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
 
   if (!isOpen || typeof document === 'undefined') return null;
 
-  // Compute smart callout position so it never clips off-screen
-  const calloutTop = targetRect
-    ? targetRect.top + targetRect.height + 16 + 210 < window.innerHeight
-      ? targetRect.top + targetRect.height + 16
-      : Math.max(20, targetRect.top - 220)
-    : '50%';
-  const calloutLeft = targetRect
-    ? Math.min(Math.max(20, targetRect.left), window.innerWidth - 400)
-    : '50%';
+  // Compute spotlight circle geometry and smart non-overlapping callout position
+  const spotlight = targetRect && !isSuccessFinale
+    ? (() => {
+        const cx = targetRect.left + targetRect.width / 2;
+        const cy = targetRect.top + targetRect.height / 2;
+        const diameter = Math.max(220, Math.min(420, Math.max(targetRect.width, targetRect.height) * 0.65));
+        const r = diameter / 2;
+        const cardW = Math.min(380, window.innerWidth - 32);
+        const cardH = 240;
+        let top = Math.min(Math.max(24, cy - cardH / 2), window.innerHeight - cardH - 24);
+        let left = 24;
+
+        if (cy + r + 18 + cardH < window.innerHeight) {
+          top = cy + r + 18;
+          left = Math.min(Math.max(20, cx - cardW / 2), window.innerWidth - cardW - 20);
+        } else if (cy - r - 18 - cardH > 16) {
+          top = cy - r - 18 - cardH;
+          left = Math.min(Math.max(20, cx - cardW / 2), window.innerWidth - cardW - 20);
+        } else if (cx - r - 18 - cardW > 16) {
+          left = cx - r - 18 - cardW;
+        } else {
+          left = Math.min(window.innerWidth - cardW - 20, cx + r + 18);
+        }
+
+        return { cx, cy, diameter, calloutTop: top, calloutLeft: left };
+      })()
+    : null;
+
+  const calloutTop: number | string = spotlight ? spotlight.calloutTop : '50%';
+  const calloutLeft: number | string = spotlight ? spotlight.calloutLeft : '50%';
 
   return createPortal(
     <div
@@ -422,27 +443,22 @@ export function DemoShowcaseOverlay({ isOpen, onClose }: DemoShowcaseOverlayProp
       }}
     >
       {/* Circular Pulsing Spotlight Cutout */}
-      {targetRect && !isSuccessFinale && (() => {
-        const cx = targetRect.left + targetRect.width / 2;
-        const cy = targetRect.top + targetRect.height / 2;
-        const diameter = Math.max(240, Math.min(520, Math.max(targetRect.width, targetRect.height) * 0.72));
-        return (
-          <div
-            className="demo-spotlight-circle"
-            style={{
-              position: 'fixed',
-              top: cy,
-              left: cx,
-              width: diameter,
-              height: diameter,
-              borderRadius: '50%',
-              border: '2px solid rgba(56, 189, 248, 0.75)',
-              transition: 'top 0.35s cubic-bezier(0.16, 1, 0.3, 1), left 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1), height 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
-              pointerEvents: 'none',
-            }}
-          />
-        );
-      })()}
+      {spotlight && (
+        <div
+          className="demo-spotlight-circle"
+          style={{
+            position: 'fixed',
+            top: spotlight.cy,
+            left: spotlight.cx,
+            width: spotlight.diameter,
+            height: spotlight.diameter,
+            borderRadius: '50%',
+            border: '2px solid rgba(56, 189, 248, 0.75)',
+            transition: 'top 0.35s cubic-bezier(0.16, 1, 0.3, 1), left 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1), height 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+            pointerEvents: 'none',
+          }}
+        />
+      )}
 
       {/* Top-Right Controls */}
       <div
