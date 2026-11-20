@@ -128,24 +128,14 @@ async fn resolve_advertised_addr(host: &str, port: u16) -> SocketAddr {
 }
 
 fn build_rtc(advertised_addr: SocketAddr, now: Instant) -> Result<Rtc, String> {
-    let mut builder = Rtc::builder()
+    let mut rtc = Rtc::builder()
         .set_ice_lite(true)
-        .clear_codecs();
-
-    // Constrained Baseline profile (0x42e01f / 0x42001f) strictly forbids B-frames.
-    // By offering/negotiating Constrained Baseline, OBS default encoder automatically
-    // disables B-frames (Max B-frames = 0), ensuring strictly monotonic timestamps
-    // and completely eliminating motion jitter/stutter ("patah-patah pas gerak").
-    let cc = builder.codec_config();
-    cc.add_h264(108.into(), Some(109.into()), true, 0x42e01f);
-    cc.add_h264(124.into(), Some(120.into()), false, 0x42e01f);
-    cc.add_h264(127.into(), Some(121.into()), true, 0x42001f);
-    cc.add_h264(125.into(), Some(107.into()), false, 0x42001f);
-    cc.enable_opus(true, false);
-    cc.enable_pcmu(true, false);
-    cc.enable_pcma(true, false);
-
-    let mut rtc = builder.build(now);
+        .clear_codecs()
+        .enable_h264(true)
+        .enable_opus(true, false)
+        .enable_pcmu(true, false)
+        .enable_pcma(true, false)
+        .build(now);
 
     let loopback_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), advertised_addr.port());
     let candidate_loopback = Candidate::host(loopback_addr, "udp").map_err(|e| e.to_string())?;

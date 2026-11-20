@@ -342,7 +342,6 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
         .map_err(|e| Status::internal(e.to_string()))?
         .ok_or_else(|| Status::not_found("Live stream not found"))?;
 
-        self.relay_manager.stop_relay(&id).await;
         if row.stream_mode == "SERVER_HOSTED_HLS" && row.is_relay_active {
             self.relay_manager
                 .start_relay(
@@ -355,6 +354,8 @@ impl LiveStreamServiceTrait for LiveStreamServiceImpl {
                     &row.ingest_password,
                 )
                 .await;
+        } else {
+            self.relay_manager.stop_relay(&id).await;
         }
 
         Ok(Response::new(row.into_proto()))

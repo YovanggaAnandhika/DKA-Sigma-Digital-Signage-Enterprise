@@ -186,6 +186,10 @@ export default function HlsPlayer({
 
   const handlePlaying = useCallback(() => {
     if (!isStreamOnlineRef.current && src.startsWith('/streams/')) return;
+    const video = videoRef.current;
+    if (video && video.srcObject && (video.videoWidth === 0 || video.videoHeight === 0)) {
+      return;
+    }
     lastAdvanceAtRef.current = Date.now();
     hasFirstFrameRef.current = true;
     setHasFirstFrame(true);
@@ -535,7 +539,7 @@ export default function HlsPlayer({
       stopAndResetVideo();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [src, lowLatencyMode, isIframeMode, isDirectRtsp, Boolean(iframeUrl)]);
+  }, [src, isIframeMode, isDirectRtsp, Boolean(iframeUrl)]);
 
   const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const video = e.currentTarget;
@@ -641,6 +645,7 @@ export default function HlsPlayer({
           autoPlay={autoPlay}
           controls={controls}
           playsInline
+          onLoadedMetadata={handlePlaying}
           onPlaying={handlePlaying}
           onCanPlay={handlePlaying}
           onLoadedData={handlePlaying}
