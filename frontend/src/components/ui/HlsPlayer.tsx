@@ -104,6 +104,7 @@ export default function HlsPlayer({
   const hasFirstFrameRef = useRef<boolean>(false);
   const hlsInstanceRef = useRef<any>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
+  const compositeStreamRef = useRef<MediaStream | null>(null);
   const whepLocationRef = useRef<string | null>(null);
   const isStreamOnlineRef = useRef<boolean>(false);
   const lastMediaTimeRef = useRef<number>(-1);
@@ -145,6 +146,20 @@ export default function HlsPlayer({
         // ignore
       }
       pcRef.current = null;
+    }
+    if (compositeStreamRef.current) {
+      try {
+        compositeStreamRef.current.getTracks().forEach((track) => {
+          try {
+            track.stop();
+          } catch {
+            // ignore
+          }
+        });
+      } catch {
+        // ignore
+      }
+      compositeStreamRef.current = null;
     }
     if (hlsInstanceRef.current) {
       try {
@@ -341,25 +356,65 @@ export default function HlsPlayer({
         pc.addTransceiver('video', { direction: 'recvonly' });
         pc.addTransceiver('audio', { direction: 'recvonly' });
 
+        if (!compositeStreamRef.current) {
+          compositeStreamRef.current = new MediaStream();
+        }
+        const compositeStream = compositeStreamRef.current;
+
         pc.ontrack = (event) => {
           if (isCancelled) return;
           const video = videoRef.current;
-          if (video && event.streams && event.streams[0]) {
-            if (video.srcObject !== event.streams[0]) {
-              video.srcObject = event.streams[0];
-              video.muted = isMuted;
-              video.defaultMuted = isMuted;
-              video.volume = Math.max(0, Math.min(1, volume));
-              video.playsInline = true;
-              video
-                .play()
+          if (!video) return;
+
+          if (event.track) {
+            const existing = compositeStream
+              .getTracks()
+              .find((t) => t.kind === event.track.kind);
+            if (existing && existing.id !== event.track.id) {
+              compositeStream.removeTrack(existing);
+              try {
+                existing.stop();
+              } catch {
+                // ignore
+              }
+            }
+            if (!compositeStream.getTracks().some((t) => t.id === event.track.id)) {
+              compositeStream.addTrack(event.track);
+            }
+          }
+
+          if (video.srcObject !== compositeStream) {
+            video.srcObject = compositeStream;
+            video.muted = isMuted;
+            video.defaultMuted = isMuted;
+            video.volume = Math.max(0, Math.min(1, volume));
+            video.playsInline = true;
+          }
+
+          const tryPlay = () => {
+            const playPromise = video.play();
+            if (playPromise !== undefined) {
+              playPromise
                 .then(() => {
                   isStreamOnlineRef.current = true;
                   handlePlaying();
                 })
-                .catch(() => { });
+                .catch(() => {
+                  if (!video.muted) {
+                    video.muted = true;
+                    video
+                      .play()
+                      .then(() => {
+                        isStreamOnlineRef.current = true;
+                        handlePlaying();
+                      })
+                      .catch(() => { });
+                  }
+                });
             }
-          }
+          };
+
+          tryPlay();
         };
 
         const handleDisconnect = () => {

@@ -771,16 +771,19 @@ async fn request_publisher_keyframe(
     }
     let throttled = pub_entry
         .last_keyframe_req
-        .map(|t| t.elapsed() < Duration::from_millis(800))
+        .map(|t| t.elapsed() < Duration::from_millis(400))
         .unwrap_or(false);
     if throttled {
         return;
     }
     if let Some(mid) = pub_entry.video_mid {
         if let Some(mut writer) = pub_entry.rtc.writer(mid) {
-            let _ = writer.request_keyframe(None, kind);
+            let res = writer.request_keyframe(None, kind);
+            info!("🔑 [MediaSFU] Requested {:?} keyframe from WHIP publisher [{}]: {:?}", kind, stream_id, res);
             pub_entry.last_keyframe_req = Some(Instant::now());
         }
+        let now = Instant::now();
+        let _ = pub_entry.rtc.handle_input(Input::Timeout(now));
         let mut ignored = Vec::new();
         let _ = drain_publisher(stream_id, pub_entry, socket, &mut ignored).await;
     }
