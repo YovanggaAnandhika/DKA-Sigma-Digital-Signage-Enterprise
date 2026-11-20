@@ -477,7 +477,6 @@ async fn handle_command(
                 time: rtp_time,
                 network_time: Instant::now(),
                 data,
-                is_keyframe,
             };
             fan_out_media(&[frame], subscribers, socket).await;
         }
