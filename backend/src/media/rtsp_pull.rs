@@ -165,7 +165,6 @@ async fn run_single_rtsp_session(
                         codec: Codec::H264,
                         rtp_time,
                         data,
-                        is_keyframe,
                     });
                 }
                 Some(Ok(CodecItem::AudioFrame(af))) => {
