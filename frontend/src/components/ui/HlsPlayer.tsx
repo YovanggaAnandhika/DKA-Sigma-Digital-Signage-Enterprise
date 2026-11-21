@@ -99,6 +99,7 @@ export default function HlsPlayer({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [status, setStatus] = useState<StreamPlaybackStatus>('OFFLINE');
   const [hasFirstFrame, setHasFirstFrame] = useState<boolean>(false);
+  const [bframesDetected, setBframesDetected] = useState<boolean>(false);
 
   const statusRef = useRef<StreamPlaybackStatus>('OFFLINE');
   const hasFirstFrameRef = useRef<boolean>(false);
@@ -120,6 +121,31 @@ export default function HlsPlayer({
   useEffect(() => {
     onStatusChange?.(status);
   }, [status, onStatusChange]);
+
+  // Check once after going LIVE whether SFU detected B-frames from OBS
+  useEffect(() => {
+    if (status !== 'LIVE') {
+      setBframesDetected(false);
+      return;
+    }
+    const localMatch = src.match(/^\/streams\/([^/]+)\//);
+    if (!localMatch) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      fetch(`/streams/${localMatch[1]}/status`, { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (!cancelled && data && typeof data.bframes_detected === 'boolean') {
+            setBframesDetected(data.bframes_detected);
+          }
+        })
+        .catch(() => { });
+    }, 1800);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [status, src]);
 
   // Sync muted & volume directly to DOM element without reloading stream
   useEffect(() => {
@@ -182,6 +208,7 @@ export default function HlsPlayer({
     }
     hasFirstFrameRef.current = false;
     setHasFirstFrame(false);
+    setBframesDetected(false);
   }, []);
 
   const handlePlaying = useCallback(() => {
@@ -723,6 +750,42 @@ export default function HlsPlayer({
             }}
           />
           {liveBadgeText}
+        </div>
+      )}
+
+      {/* B-Frame Auto-Filter Notice Pill */}
+      {status === 'LIVE' && bframesDetected && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '12px',
+            left: '12px',
+            zIndex: 10,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '5px 10px',
+            borderRadius: '10px',
+            backgroundColor: 'rgba(15, 23, 42, 0.78)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(245, 158, 11, 0.45)',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.45)',
+            color: '#fcd34d',
+            fontSize: '0.6875rem',
+            fontWeight: 600,
+            pointerEvents: 'none',
+          }}
+        >
+          <span
+            style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              backgroundColor: '#f59e0b',
+              flexShrink: 0,
+            }}
+          />
+          B-Frame OBS difilter otomatis — matikan B-Frame di OBS untuk 30 FPS penuh
         </div>
       )}
 

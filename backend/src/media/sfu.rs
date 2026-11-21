@@ -18,6 +18,7 @@ use uuid::Uuid;
 pub struct StreamLiveStatus {
     pub live: bool,
     pub subscribers: usize,
+    pub bframes_detected: bool,
 }
 
 pub enum SfuCommand {
@@ -67,8 +68,7 @@ struct WhipPublisher {
     ice_connected: bool,
     logged_video_codec: bool,
     max_video_time: Option<MediaTime>,
-    logged_bframe_drop: bool,
-    video_trace_count: u8,
+    bframes_detected: bool,
     created_at: Instant,
 }
 
@@ -367,8 +367,7 @@ async fn handle_command(
                     ice_connected: false,
                     logged_video_codec: false,
                     max_video_time: None,
-                    logged_bframe_drop: false,
-                    video_trace_count: 0,
+                    bframes_detected: false,
                     created_at: now,
                 };
                 Ok((answer.to_sdp_string(), session_id, pub_entry))
@@ -497,10 +496,9 @@ async fn handle_command(
             fan_out_media(&[frame], subscribers, socket).await;
         }
         SfuCommand::QueryStatus { stream_id, reply } => {
-            let live = publishers
-                .get(&stream_id)
-                .is_some_and(|p| p.rtc.is_alive())
-                || rtsp_streams.contains(&stream_id);
+            let pub_entry = publishers.get(&stream_id).filter(|p| p.rtc.is_alive());
+            let live = pub_entry.is_some() || rtsp_streams.contains(&stream_id);
+            let bframes_detected = pub_entry.is_some_and(|p| p.bframes_detected);
             let sub_count = subscribers
                 .iter()
                 .filter(|s| s.stream_id == stream_id && s.rtc.is_alive())
@@ -508,6 +506,7 @@ async fn handle_command(
             let _ = reply.send(StreamLiveStatus {
                 live,
                 subscribers: sub_count,
+                bframes_detected,
             });
         }
         SfuCommand::Shutdown => {}
@@ -638,40 +637,25 @@ async fn drain_publisher(
                                 data.params.pt()
                             );
                         }
-                        if pub_entry.video_trace_count < 12 {
-                            pub_entry.video_trace_count += 1;
-                            info!(
-                                "🎞️ [MediaSFU] Video frame #{} stream [{}]: rtp_time={} kf={} contig={} bytes={}",
-                                pub_entry.video_trace_count,
-                                stream_id,
-                                data.time.numer(),
-                                is_kf,
-                                data.contiguous,
-                                data.data.len()
-                            );
-                        }
                         if is_kf {
                             pub_entry.max_video_time = Some(data.time);
-                        } else if let Some(max_t) = pub_entry.max_video_time {
-                            if data.time < max_t {
-                                let back_ticks = max_t.numer().saturating_sub(data.time.numer());
-                                // Drop backward-PTS B-frames (< 5s at 90kHz) so browser WebRTC never plays out of display order;
-                                // reset baseline if encoder clock jumped backward by >= 5s.
-                                if back_ticks < 450_000 {
-                                    if !pub_entry.logged_bframe_drop {
-                                        pub_entry.logged_bframe_drop = true;
-                                        warn!(
-                                            "⚠️ [MediaSFU] Dropping out-of-order B-frame from OBS [{}] (rtp_time {} < {}); disable B-frames (Max B-frames: 0) in OBS for full FPS",
-                                            stream_id,
-                                            data.time.numer(),
-                                            max_t.numer()
-                                        );
-                                    }
-                                    continue;
-                                }
-                            }
-                            pub_entry.max_video_time = Some(data.time);
                         } else {
+                            let is_backward_pts = pub_entry.max_video_time.is_some_and(|max_t| {
+                                data.time < max_t
+                                    && max_t.numer().saturating_sub(data.time.numer()) < 450_000
+                            });
+                            // shortcut: drops B-frames zero-transcode so browser WebRTC never plays forward-backward;
+                            // effective FPS drops to I/P frames until OBS disables B-frames (Max B-frames: 0).
+                            if is_backward_pts || is_bframe_annexb(codec, &data.data) {
+                                if !pub_entry.bframes_detected {
+                                    pub_entry.bframes_detected = true;
+                                    warn!(
+                                        "⚠️ [MediaSFU] B-frames detected from OBS [{}] ({:?}) — dropping B-frames to prevent forward-backward playback; disable B-frames in OBS for full FPS",
+                                        stream_id, codec
+                                    );
+                                }
+                                continue;
+                            }
                             pub_entry.max_video_time = Some(data.time);
                         }
                     }
@@ -868,6 +852,91 @@ fn adjust_rtp_time(codec: Codec, time: MediaTime) -> MediaTime {
     } else {
         time.rebase(target_freq)
     }
+}
+
+fn is_bframe_annexb(codec: Codec, data: &[u8]) -> bool {
+    let mut i = 0;
+    let len = data.len();
+    while i + 3 < len {
+        let start_len = if data[i] == 0 && data[i + 1] == 0 && data[i + 2] == 1 {
+            3
+        } else if i + 4 < len
+            && data[i] == 0
+            && data[i + 1] == 0
+            && data[i + 2] == 0
+            && data[i + 3] == 1
+        {
+            4
+        } else {
+            i += 1;
+            continue;
+        };
+        let nalu_start = i + start_len;
+        if nalu_start >= len {
+            break;
+        }
+        match codec {
+            Codec::H264 => {
+                let b0 = data[nalu_start];
+                let nalu_type = b0 & 0x1F;
+                if nalu_type == 1 {
+                    if (b0 & 0x60) == 0 {
+                        return true;
+                    }
+                    if let Some(slice_type) = h264_slice_type(&data[nalu_start + 1..]) {
+                        if slice_type % 5 == 1 {
+                            return true;
+                        }
+                    }
+                }
+            }
+            Codec::H265 => {
+                let nalu_type = (data[nalu_start] >> 1) & 0x3F;
+                if nalu_type < 10 && (nalu_type % 2 == 0) {
+                    return true;
+                }
+            }
+            _ => return false,
+        }
+        i = nalu_start + 1;
+    }
+    false
+}
+
+fn h264_slice_type(rbsp: &[u8]) -> Option<u32> {
+    let mut bit_pos = 0usize;
+    // Skip first_mb_in_slice (ue(v)), then read slice_type (ue(v))
+    read_ue(rbsp, &mut bit_pos)?;
+    read_ue(rbsp, &mut bit_pos)
+}
+
+fn read_ue(buf: &[u8], bit_pos: &mut usize) -> Option<u32> {
+    let total_bits = buf.len().saturating_mul(8);
+    let mut leading_zeros = 0usize;
+    while *bit_pos < total_bits {
+        let bit = (buf[*bit_pos / 8] >> (7 - (*bit_pos % 8))) & 1;
+        *bit_pos += 1;
+        if bit == 1 {
+            break;
+        }
+        leading_zeros += 1;
+        if leading_zeros > 16 {
+            return None;
+        }
+    }
+    if leading_zeros == 0 {
+        return Some(0);
+    }
+    if *bit_pos + leading_zeros > total_bits {
+        return None;
+    }
+    let mut val = 0u32;
+    for _ in 0..leading_zeros {
+        let bit = (buf[*bit_pos / 8] >> (7 - (*bit_pos % 8))) & 1;
+        *bit_pos += 1;
+        val = (val << 1) | u32::from(bit);
+    }
+    Some(((1u32 << leading_zeros) - 1) + val)
 }
 
 async fn request_publisher_keyframe(
