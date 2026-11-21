@@ -66,6 +66,9 @@ struct WhipPublisher {
     last_keyframe_req: Option<Instant>,
     ice_connected: bool,
     logged_video_codec: bool,
+    max_video_time: Option<MediaTime>,
+    logged_bframe_drop: bool,
+    video_trace_count: u8,
     created_at: Instant,
 }
 
@@ -363,6 +366,9 @@ async fn handle_command(
                     last_keyframe_req: None,
                     ice_connected: false,
                     logged_video_codec: false,
+                    max_video_time: None,
+                    logged_bframe_drop: false,
+                    video_trace_count: 0,
                     created_at: now,
                 };
                 Ok((answer.to_sdp_string(), session_id, pub_entry))
@@ -621,14 +627,53 @@ async fn drain_publisher(
                     } else {
                         MediaKind::Video
                     };
-                    if kind == MediaKind::Video && !pub_entry.logged_video_codec {
-                        pub_entry.logged_video_codec = true;
-                        info!(
-                            "🎥 [MediaSFU] WHIP publisher [{}] receiving video codec {:?} (PT {})",
-                            stream_id,
-                            codec,
-                            data.params.pt()
-                        );
+                    if kind == MediaKind::Video {
+                        let is_kf = data.is_keyframe();
+                        if !pub_entry.logged_video_codec {
+                            pub_entry.logged_video_codec = true;
+                            info!(
+                                "🎥 [MediaSFU] WHIP publisher [{}] receiving video codec {:?} (PT {})",
+                                stream_id,
+                                codec,
+                                data.params.pt()
+                            );
+                        }
+                        if pub_entry.video_trace_count < 12 {
+                            pub_entry.video_trace_count += 1;
+                            info!(
+                                "🎞️ [MediaSFU] Video frame #{} stream [{}]: rtp_time={} kf={} contig={} bytes={}",
+                                pub_entry.video_trace_count,
+                                stream_id,
+                                data.time.numer(),
+                                is_kf,
+                                data.contiguous,
+                                data.data.len()
+                            );
+                        }
+                        if is_kf {
+                            pub_entry.max_video_time = Some(data.time);
+                        } else if let Some(max_t) = pub_entry.max_video_time {
+                            if data.time < max_t {
+                                let back_ticks = max_t.numer().saturating_sub(data.time.numer());
+                                // Drop backward-PTS B-frames (< 5s at 90kHz) so browser WebRTC never plays out of display order;
+                                // reset baseline if encoder clock jumped backward by >= 5s.
+                                if back_ticks < 450_000 {
+                                    if !pub_entry.logged_bframe_drop {
+                                        pub_entry.logged_bframe_drop = true;
+                                        warn!(
+                                            "⚠️ [MediaSFU] Dropping out-of-order B-frame from OBS [{}] (rtp_time {} < {}); disable B-frames (Max B-frames: 0) in OBS for full FPS",
+                                            stream_id,
+                                            data.time.numer(),
+                                            max_t.numer()
+                                        );
+                                    }
+                                    continue;
+                                }
+                            }
+                            pub_entry.max_video_time = Some(data.time);
+                        } else {
+                            pub_entry.max_video_time = Some(data.time);
+                        }
                     }
 
                     if !data.contiguous && kind == MediaKind::Video {
