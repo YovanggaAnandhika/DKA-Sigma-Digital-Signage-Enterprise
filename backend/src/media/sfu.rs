@@ -135,6 +135,9 @@ async fn resolve_advertised_addr(host: &str, port: u16) -> SocketAddr {
 fn build_rtc(advertised_addr: SocketAddr, now: Instant) -> Result<Rtc, String> {
     let mut rtc = Rtc::builder()
         .set_ice_lite(true)
+        .set_reordering_size_video(4)
+        .set_reordering_size_audio(4)
+        .set_reordering_timeout_audio(Some(Duration::from_millis(80)))
         .clear_codecs()
         .enable_h264(true)
         .enable_h265(true)

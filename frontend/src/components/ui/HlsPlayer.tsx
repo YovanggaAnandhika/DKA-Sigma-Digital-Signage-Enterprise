@@ -375,6 +375,14 @@ export default function HlsPlayer({
           const video = videoRef.current;
           if (!video) return;
 
+          if (event.receiver && 'playoutDelayHint' in event.receiver) {
+            try {
+              (event.receiver as RTCRtpReceiver & { playoutDelayHint?: number }).playoutDelayHint = 0;
+            } catch {
+              // ignore
+            }
+          }
+
           if (event.track) {
             const existing = compositeStream
               .getTracks()
