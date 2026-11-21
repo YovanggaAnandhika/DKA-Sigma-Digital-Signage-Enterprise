@@ -176,6 +176,11 @@ async fn run_sfu_loop(
     loop {
         let now = Instant::now();
         let next_deadline = compute_next_deadline(&publishers, &subscribers, now);
+        if next_deadline <= now {
+            handle_timeouts(now, &socket, &mut publishers, &mut subscribers).await;
+            prune_dead_sessions(&mut publishers, &mut subscribers);
+            continue;
+        }
 
         tokio::select! {
             recv = socket.recv_from(&mut buf) => {
@@ -568,9 +573,21 @@ async fn drain_publisher(
     outbound: &mut Vec<OutboundMedia>,
 ) -> bool {
     let mut disconnected = false;
+    let mut timeout_steps = 0u8;
     while pub_entry.rtc.is_alive() {
         match pub_entry.rtc.poll_output() {
             Ok(Output::Timeout(t)) => {
+                let now = Instant::now();
+                if t <= now && timeout_steps < 32 {
+                    timeout_steps += 1;
+                    if let Err(e) = pub_entry.rtc.handle_input(Input::Timeout(now)) {
+                        warn!("WHIP publisher [{}] timeout flush error: {:?}", stream_id, e);
+                        pub_entry.rtc.disconnect();
+                        disconnected = true;
+                        break;
+                    }
+                    continue;
+                }
                 pub_entry.timeout = t;
                 break;
             }
@@ -656,9 +673,20 @@ async fn drain_subscriber(
     keyframe_reqs: &mut Vec<KeyframeRequestKind>,
 ) -> bool {
     let mut became_connected = false;
+    let mut timeout_steps = 0u8;
     while sub.rtc.is_alive() {
         match sub.rtc.poll_output() {
             Ok(Output::Timeout(t)) => {
+                let now = Instant::now();
+                if t <= now && timeout_steps < 64 {
+                    timeout_steps += 1;
+                    if let Err(e) = sub.rtc.handle_input(Input::Timeout(now)) {
+                        debug!("WHEP subscriber [{}] timeout flush error: {:?}", sub.session_id, e);
+                        sub.rtc.disconnect();
+                        break;
+                    }
+                    continue;
+                }
                 sub.timeout = t;
                 break;
             }
